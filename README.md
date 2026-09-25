@@ -1,6 +1,6 @@
-# 🛡️ AgencySentry: White-Label Attack Surface & Subdomain Hygiene Sentinel
+# 🛡️ Orbit Security: Attack Surface & Subdomain Hygiene Sentinel
 
-**AgencySentry** is an autonomous external perimeter auditor built for web design, development, and marketing agencies. It monitors client domains for dangling CNAME takeovers, email spoofing risks (DMARC/SPF), exposed environment secrets (`.env`, `.git`), and expiring SSL certificates—automatically compiling branded, white-label monthly audit PDFs that agencies send to their clients to justify their recurring monthly maintenance retainers.
+**Orbit Security** is an autonomous external perimeter auditor and attack surface sentinel built for web design, development, and digital marketing agencies. It monitors client domains for dangling CNAME takeovers, email spoofing risks (DMARC/SPF), exposed environment secrets (`.env`, `.git`), and expiring SSL certificates—automatically compiling co-branded, white-label monthly audit PDFs that agencies send to their clients to justify and elevate their recurring monthly maintenance retainers.
 
 ---
 
