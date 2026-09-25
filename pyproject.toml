@@ -1,0 +1,32 @@
+[project]
+name = "agency-sentry"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "CmfH009", email = "carsonmail009@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "dnspython>=2.8.0",
+    "httpx>=0.28.1",
+    "jinja2>=3.1.6",
+    "pydantic>=2.13.5",
+    "python-dotenv>=1.2.3",
+    "reportlab>=5.0.1",
+    "rich>=15.0.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.19,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+]
+
+[project.scripts]
+agency-sentry = "agency_sentry.cli:main"
+

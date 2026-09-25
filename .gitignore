@@ -1,0 +1,28 @@
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+.appdeploy
+
+# Python & Dependencies
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Testing & Caches
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs, Campaigns & Private Lead Data
+*.log
+data/leads_state.json
+data/prospects.json
+outbound_campaigns/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
