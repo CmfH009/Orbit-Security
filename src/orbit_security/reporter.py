@@ -1,3 +1,4 @@
+import html
 import os
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
@@ -212,17 +213,24 @@ class ReportGenerator:
                     Severity.INFO: colors.HexColor("#64748B"),
                 }.get(f.severity, colors.black)
 
+                safe_title = html.escape(str(f.title))
+                safe_category = html.escape(str(f.category))
+                safe_target = html.escape(str(f.target))
+                safe_desc = html.escape(str(f.description))
+                safe_evidence = html.escape(str(f.evidence)) if f.evidence else ""
+                safe_remediation = html.escape(str(f.remediation))
+
                 item_table_data = [
                     [
                         Paragraph(f"<font color='white'><b>{f.severity.value}</b></font>", ParagraphStyle("SevBadge", alignment=1, fontSize=8)),
-                        Paragraph(f"<b>{idx}. {f.title}</b> — <font color='#64748B'>[{f.category}]</font>", finding_title_style),
+                        Paragraph(f"<b>{idx}. {safe_title}</b> — <font color='#64748B'>[{safe_category}]</font>", finding_title_style),
                     ],
                     [
                         Paragraph("", body_style),
-                        Paragraph(f"<b>Target:</b> <font face='Courier'>{f.target}</font><br/>"
-                                  f"<b>Details:</b> {f.description}<br/>"
-                                  f"{f'<b>Evidence:</b> <font face=\"Courier\">{f.evidence}</font><br/>' if f.evidence else ''}"
-                                  f"<b>Remediation:</b> {f.remediation}", body_style)
+                        Paragraph(f"<b>Target:</b> <font face='Courier'>{safe_target}</font><br/>"
+                                  f"<b>Details:</b> {safe_desc}<br/>"
+                                  f"{f'<b>Evidence:</b> <font face=\"Courier\">{safe_evidence}</font><br/>' if safe_evidence else ''}"
+                                  f"<b>Remediation:</b> {safe_remediation}", body_style)
                     ]
                 ]
 

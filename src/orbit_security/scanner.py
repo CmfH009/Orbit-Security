@@ -38,7 +38,7 @@ class OrbitSecurityScanner:
                         clean_name = raw_name.strip().lower()
                         if clean_name.startswith("*."):
                             clean_name = clean_name[2:]
-                        if clean_name.endswith(domain) and clean_name != domain:
+                        if clean_name.endswith(f".{domain}"):
                             discovered.add(clean_name)
         except Exception:
             pass
@@ -418,13 +418,18 @@ class OrbitSecurityScanner:
         header_findings = await self.audit_security_headers(base_url)
         result.findings.extend(header_findings)
 
-        # Run SSL check on apex
-        ssl_finding = self.audit_ssl(domain)
+        # Run SSL check on apex in worker thread to prevent event loop blocking
+        ssl_finding = await asyncio.to_thread(self.audit_ssl, domain)
         if ssl_finding:
             result.findings.append(ssl_finding)
 
-        # Run subdomain takeover checks concurrently
-        takeover_tasks = [self.check_subdomain_takeover(sub) for sub in result.subdomains_scanned]
+        # Run subdomain takeover checks concurrently with bounded semaphore
+        sem = asyncio.Semaphore(15)
+        async def bounded_takeover(sub: str):
+            async with sem:
+                return await self.check_subdomain_takeover(sub)
+
+        takeover_tasks = [bounded_takeover(sub) for sub in result.subdomains_scanned]
         takeover_results = await asyncio.gather(*takeover_tasks, return_exceptions=True)
         for res in takeover_results:
             if isinstance(res, Finding):
