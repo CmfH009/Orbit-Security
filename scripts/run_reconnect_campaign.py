@@ -394,18 +394,22 @@ async def run_reconnect(send_live: bool = False):
 
         if send_live:
             if dispatcher.is_configured():
-                dispatcher.send_email(
-                    recipient_email=item["recipient"],
-                    subject=item["subject"],
-                    body_text=item["body"],
-                    pdf_attachment_path=None
-                )
-                print(f"    [✔] Live email dispatched via Gmail SMTP to {item['recipient']}!")
-                await asyncio.sleep(4.0)
+                try:
+                    dispatcher.send_email(
+                        recipient_email=item["recipient"],
+                        subject=item["subject"],
+                        body_text=item["body"],
+                        pdf_attachment_path=None
+                    )
+                    print(f"    [✔] Live email dispatched via Gmail SMTP to {item['recipient']}!")
+                    await asyncio.sleep(4.0)
+                except Exception as e:
+                    print(f"    [!] Error sending to {item['recipient']}: {e}")
             else:
                 print(f"    [!] SMTP not configured in .env. Draft saved to {eml_path}.")
 
-    print("\n[✔] Reconnect staging complete!")
+    print("\n[✔] Reconnect campaign processing complete!")
+
 
 
 def main():
