@@ -56,7 +56,48 @@ def test_classify_intent_not_interested():
         assert intent == LeadIntent.NOT_INTERESTED
 
 
+def test_classify_intent_request_human():
+    agent = InboxAgent(state_file=tempfile.mktemp())
+    text_samples = [
+        "Can I speak to a human about our agency's needs?",
+        "Is there a phone number where I can talk to Carson?",
+        "Are you an AI? I'd like to jump on a quick Zoom call with a real person.",
+        "Can we schedule a call to discuss custom terms?",
+    ]
+    for sample in text_samples:
+        intent = agent.classify_intent(sample)
+        assert intent == LeadIntent.REQUEST_HUMAN
+
+
+def test_generate_reply_and_human_escalation():
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        state_file = f.name
+    try:
+        agent = InboxAgent(state_file=state_file)
+        mock_dispatcher = MagicMock()
+        agent.dispatcher = mock_dispatcher
+
+        reply_text, needs_escalation = agent.handle_message(
+            sender_email="cto@agencypartners.com",
+            subject="Re: Questions regarding retainers",
+            message_body="Can we schedule a call with Carson? We want to talk to a human before deciding."
+        )
+
+        assert needs_escalation is True
+        assert "Carson here" in reply_text
+        assert "direct, personal access to me" in reply_text
+        mock_dispatcher.send_email.assert_called_once()
+        kwargs = mock_dispatcher.send_email.call_args.kwargs
+        assert "carsonmail009@gmail.com" in kwargs["recipient_email"]
+        assert "URGENT HUMAN ESCALATION" in kwargs["subject"]
+        assert "cto@agencypartners.com" in kwargs["subject"]
+    finally:
+        if os.path.exists(state_file):
+            os.remove(state_file)
+
+
 def test_generate_reply_and_escalation():
+
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
         state_file = f.name
     try:

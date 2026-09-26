@@ -16,6 +16,7 @@ load_dotenv()
 
 class LeadIntent(str, Enum):
     READY_TO_BUY = "READY_TO_BUY"
+    REQUEST_HUMAN = "REQUEST_HUMAN"
     INQUIRY_PRICING = "INQUIRY_PRICING"
     INQUIRY_TECHNICAL = "INQUIRY_TECHNICAL"
     NOT_INTERESTED = "NOT_INTERESTED"
@@ -56,6 +57,17 @@ class InboxAgent:
         if any(w in lower for w in ["unsubscribe", "not interested", "remove me", "don't email", "do not email", "already have", "stop emailing"]):
             return LeadIntent.NOT_INTERESTED
 
+        # Check for explicit request to speak with a human, phone call, Zoom, or Carson directly
+        human_signals = [
+            "talk to a human", "speak to a human", "speak with a human", "real person",
+            "human being", "talk to carson", "speak with carson", "call me", "phone number",
+            "schedule a call", "book a call", "jump on a call", "hop on a call", "zoom",
+            "google meet", "are you an ai", "is this an ai", "are you a bot", "is this a bot",
+            "connect me with", "talk directly", "reach carson", "can i call", "phone call",
+            "speak with a real person", "talk to a real person", "need a human", "representative"
+        ]
+        if any(h in lower for h in human_signals):
+            return LeadIntent.REQUEST_HUMAN
 
         # Ready to buy / sign up / send payment link / payment methods
         buy_signals = [
@@ -90,12 +102,48 @@ class InboxAgent:
     def handle_message(
         self, sender_email: str, subject: str, message_body: str
     ) -> Tuple[str, bool]:
-        """Processes message body, determines response, and triggers operator escalation if ready to buy."""
+        """Processes message body, determines response, and triggers operator escalation if ready to buy or human requested."""
         intent = self.classify_intent(message_body)
         needs_escalation = False
         reply_text = ""
+        lower = message_body.lower()
 
-        if intent == LeadIntent.READY_TO_BUY:
+        if intent == LeadIntent.REQUEST_HUMAN:
+            needs_escalation = True
+            reply_text = (
+                f"Hi there,\n\n"
+                f"Carson here. I received your note directly. I want to make sure you have direct, personal access to me rather than automated back-and-forths.\n\n"
+                f"I am reviewing your message right now and will follow up with you personally shortly. If you'd like to jump on a quick 10-minute call or Zoom, let me know your best time and number or reply directly here.\n\n"
+                f"Looking forward to speaking with you,\n"
+                f"Carson\n"
+                f"Founder & Software Engineer, Orbit Security\n"
+                f"Direct: {self.operator_email}\n"
+                f"https://cmfh009.github.io/Orbit-Security/"
+            )
+
+            escalation_subject = f"🚨 [URGENT HUMAN ESCALATION] Agency Lead Requested Human / Carson: {sender_email}"
+            escalation_body = (
+                f"Carson,\n\n"
+                f"URGENT ACTION REQUIRED: A prospective agency lead has explicitly requested to speak with you or a real human!\n\n"
+                f"Lead Email: {sender_email}\n"
+                f"Subject Thread: {subject}\n\n"
+                f"--- Message Body ---\n"
+                f"{message_body}\n"
+                f"--------------------\n\n"
+                f"ACTION REQUIRED:\n"
+                f"Please reply or call {sender_email} directly. They are waiting for direct contact with the founder.\n\n"
+                f"- Orbit Security Autonomous Sentinel"
+            )
+            try:
+                self.dispatcher.send_email(
+                    recipient_email=self.operator_email,
+                    subject=escalation_subject,
+                    body_text=escalation_body
+                )
+            except Exception as e:
+                print(f"[!] Failed to dispatch urgent human escalation email to operator: {e}")
+
+        elif intent == LeadIntent.READY_TO_BUY:
             needs_escalation = True
             reply_text = (
                 f"Hi there,\n\n"
@@ -174,18 +222,44 @@ class InboxAgent:
                 f"Hi there,\n\n"
                 f"Understood completely—thank you for letting us know. We have noted your preference and will not follow up further.\n\n"
                 f"Best regards,\n"
-                f"Antigravity (on behalf of Carson)"
+                f"Carson | Founder, Orbit Security"
             )
 
         else:
+            is_auto_reply = any(w in lower for w in ["out of office", "autoreply", "auto-reply", "delivery status", "mailer-daemon", "failure notice"])
+            if not is_auto_reply and len(message_body.strip()) > 10:
+                needs_escalation = True
+                escalation_subject = f"⚠️ [ACTION REQUIRED] Review Inbound Message from: {sender_email}"
+                escalation_body = (
+                    f"Carson,\n\n"
+                    f"An inbound email arrived that could not be automatically resolved with standard responses.\n\n"
+                    f"Lead Email: {sender_email}\n"
+                    f"Subject: {subject}\n\n"
+                    f"--- Message Body ---\n"
+                    f"{message_body}\n"
+                    f"--------------------\n\n"
+                    f"Please review and reply directly to {sender_email} if appropriate.\n\n"
+                    f"- Orbit Security Inbox Sentinel"
+                )
+                try:
+                    self.dispatcher.send_email(
+                        recipient_email=self.operator_email,
+                        subject=escalation_subject,
+                        body_text=escalation_body
+                    )
+                except Exception as e:
+                    print(f"[!] Failed to dispatch unclear escalation email to operator: {e}")
+
             reply_text = (
                 f"Hi there,\n\n"
-                f"Thank you for getting back to us. Carson has received your note and will review it directly.\n\n"
+                f"Thank you for getting back to me. I've received your note and am reviewing it personally.\n\n"
                 f"Best regards,\n"
-                f"Antigravity (on behalf of Carson)"
+                f"Carson | Founder, Orbit Security\n"
+                f"https://cmfh009.github.io/Orbit-Security/"
             )
 
         return reply_text, needs_escalation
+
 
     def check_stripe_payments(self) -> List[Dict]:
         """Checks Stripe API for completed checkout sessions and notifies Carson immediately."""
