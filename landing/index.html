@@ -34,6 +34,8 @@
     
     <!-- Production Compiled Stylesheet (Zero-Render-Delay) -->
     <link rel="stylesheet" href="assets/styles.min.css">
+    <!-- PDF-Lib for In-Browser Instant Co-Branded PDF Generation -->
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.9/dist/pdf-lib.min.js"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-emerald-500 selection:text-white">
 
@@ -95,62 +97,107 @@
         </div>
     </header>
 
-    <!-- Hero Section -->
-    <section class="relative pt-20 pb-20 overflow-hidden">
-        <div class="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.15),rgba(255,255,255,0))]"></div>
+    <!-- Hero Section with Cyber-Sentinel Atmosphere -->
+    <section class="relative pt-24 pb-20 overflow-hidden bg-slate-950">
+        <!-- Cyber Grid Overlay -->
+        <div class="absolute inset-0 cyber-grid pointer-events-none z-0"></div>
+        
+        <!-- Top Telemetry Glow Line -->
+        <div class="absolute top-0 left-0 right-0 h-[1px] telemetry-beam"></div>
+
+        <!-- Ambient Orbital Nebula -->
+        <div class="absolute top-[-100px] left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-b from-emerald-500/15 via-cyan-500/10 to-transparent blur-[120px] pointer-events-none rounded-full"></div>
+
         <div class="max-w-5xl mx-auto px-6 text-center relative z-10">
-            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-700/80 text-xs font-medium text-slate-300 mb-8">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                White-label Perimeter Sentinel for Web & Shopify Agencies
+            <!-- Live Sentinel Telemetry Badge -->
+            <div class="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-slate-900/90 border border-emerald-500/30 text-xs font-mono text-slate-300 mb-8 backdrop-blur-md shadow-lg shadow-emerald-500/10">
+                <span class="relative flex h-2.5 w-2.5">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <span class="text-emerald-400 font-bold tracking-wider">ORBIT-SENTINEL v2.4</span>
+                <span class="text-slate-600">//</span>
+                <span class="text-slate-300">ACTIVE TELEMETRY MESH</span>
+                <span class="hidden sm:inline-block px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">0-LATENCY DoH</span>
             </div>
             
-            <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mb-6 leading-[1.15]">
-                Turn Client DNS & Attack Surface Hygiene into <span class="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">Recurring Retainer Value</span>
+            <!-- High-Impact Headline -->
+            <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mb-6 leading-[1.12]">
+                Turn Client DNS & Attack Surface Hygiene into <br class="hidden sm:inline" />
+                <span class="bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-400 bg-clip-text text-transparent drop-shadow-[0_0_35px_rgba(16,185,129,0.35)]">
+                    Recurring Retainer Value
+                </span>
             </h1>
             
-            <p class="text-lg sm:text-xl text-slate-400 max-w-3xl mx-auto mb-10 leading-relaxed">
-                Orbit Security automatically monitors your client domains for orphaned DNS pointers, dangling SaaS subdomains (Shopify, Unbounce, AWS, GitHub), and email spoofing risks. Deliver polished, co-branded executive PDF audits every month.
+            <!-- Refined Lead Paragraph with High-Contrast Tokens -->
+            <p class="text-lg sm:text-xl text-slate-400 max-w-3xl mx-auto mb-10 leading-relaxed font-normal">
+                Orbit Security continuously patrols your client perimeters for <span class="text-white font-medium">dangling SaaS subdomains</span> (Shopify, Unbounce, AWS, GitHub), orphaned CNAMEs, and email spoofing drift. Deliver co-branded executive PDF audits every month to easily justify <span class="text-emerald-400 font-semibold">$250/mo agency care plans</span>.
             </p>
 
-            <!-- CTA Buttons -->
-            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
-                <a href="https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-base transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2">
-                    Activate Growth Plan ($59/mo)
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            <!-- CTA Buttons with Micro-Glow -->
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+                <a href="https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800" class="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-base transition-all shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:-translate-y-0.5 flex items-center justify-center gap-2 group">
+                    <span>Activate Growth Plan ($59/mo)</span>
+                    <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                 </a>
-                <a href="sample_audit.pdf" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-semibold text-base transition-colors flex items-center justify-center gap-2">
+                <a href="sample_audit.pdf" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto px-7 py-4 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-emerald-500/40 text-slate-200 font-semibold text-base transition-all backdrop-blur-sm flex items-center justify-center gap-2 hover:-translate-y-0.5">
                     <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                    View Sample Report (PDF)
+                    <span>View Sample PDF Audit</span>
                 </a>
             </div>
 
-            <!-- Interactive Domain Audit Request Widget -->
-            <div class="max-w-2xl mx-auto bg-slate-900/90 border border-slate-700/80 p-3 sm:p-4 rounded-2xl shadow-2xl backdrop-blur-sm">
-                <div class="text-xs text-slate-400 mb-2.5 font-medium flex items-center justify-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span class="text-slate-300 font-semibold">Live Client-Side Scanner</span>
-                    <span class="text-slate-500">— Zero-Server DNS-over-HTTPS (DoH) Telemetry</span>
+            <!-- Interactive Tactical DoH Terminal Widget -->
+            <div class="max-w-3xl mx-auto bg-slate-950/90 border border-slate-800 rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden neon-border-pulse">
+                <!-- Terminal Header Bar -->
+                <div class="px-4 py-3 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-red-500/80 inline-block"></span>
+                        <span class="w-3 h-3 rounded-full bg-yellow-500/80 inline-block"></span>
+                        <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
+                        <span class="text-xs font-mono font-bold text-slate-300 ml-2">ORBIT // PERIMETER RADAR TERMINAL</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        RFC-8484 ACTIVE
+                    </div>
                 </div>
-                <form id="auditForm" onsubmit="handleAuditRequest(event)" class="flex flex-col sm:flex-row gap-2">
-                    <input 
-                        type="text" 
-                        id="targetDomain" 
-                        placeholder="Enter client domain (e.g. clientbrand.com)" 
-                        required
-                        autocomplete="off"
-                        class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono transition-colors"
-                    />
-                    <button 
-                        type="submit" 
-                        id="scanBtn"
-                        class="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm transition-all shadow-md shadow-emerald-500/20 whitespace-nowrap flex items-center justify-center gap-2">
-                        <span id="scanBtnText">Scan Perimeter</span>
-                        <svg id="scanBtnIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                    </button>
-                </form>
 
-                <!-- Live HUD Results Container -->
-                <div id="auditHUD" class="hidden mt-4 pt-4 border-t border-slate-800 text-left transition-all"></div>
+                <div class="p-4 sm:p-6">
+                    <!-- Input Form -->
+                    <form id="auditForm" onsubmit="handleAuditRequest(event)" class="flex flex-col sm:flex-row gap-2.5">
+                        <div class="relative flex-1">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 font-mono text-sm">
+                                &gt;
+                            </div>
+                            <input 
+                                type="text" 
+                                id="targetDomain" 
+                                placeholder="Enter client domain (e.g. clientbrand.com)" 
+                                required
+                                autocomplete="off"
+                                class="w-full bg-slate-900/80 border border-slate-700/80 rounded-xl pl-8 pr-4 py-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20 font-mono transition-all"
+                            />
+                        </div>
+                        <button 
+                            type="submit" 
+                            id="scanBtn"
+                            class="px-7 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-sm transition-all shadow-lg shadow-emerald-500/20 whitespace-nowrap flex items-center justify-center gap-2 group cursor-pointer">
+                            <span id="scanBtnText">Scan Perimeter</span>
+                            <svg id="scanBtnIcon" class="w-4 h-4 group-hover:rotate-45 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        </button>
+                    </form>
+
+                    <!-- Quick-Scan Preset Chips -->
+                    <div class="mt-3 flex items-center gap-2 text-xs text-slate-400 font-mono flex-wrap">
+                        <span class="text-slate-500 text-[11px]">Quick Tests:</span>
+                        <button type="button" onclick="setScanTarget('shopify.com')" class="px-2.5 py-0.5 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 hover:text-emerald-400 transition-colors">shopify.com</button>
+                        <button type="button" onclick="setScanTarget('unbounce.com')" class="px-2.5 py-0.5 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 hover:text-emerald-400 transition-colors">unbounce.com</button>
+                        <button type="button" onclick="setScanTarget('github.io')" class="px-2.5 py-0.5 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 hover:text-emerald-400 transition-colors">github.io</button>
+                    </div>
+
+                    <!-- Live HUD Results Container -->
+                    <div id="auditHUD" class="hidden mt-6 pt-5 border-t border-slate-800 text-left transition-all"></div>
+                </div>
             </div>
 
             <!-- Value Prop Badges -->
@@ -171,68 +218,151 @@
         </div>
     </section>
 
-    <!-- Live Audit Preview -->
-    <section id="audit-preview" class="py-16 bg-slate-900/50 border-y border-slate-800">
-        <div class="max-w-5xl mx-auto px-6">
-            <div class="text-center max-w-2xl mx-auto mb-12">
-                <h2 class="text-2xl sm:text-3xl font-bold text-white mb-3">Live Co-Branded Audit Sample</h2>
-                <p class="text-slate-400 text-sm">Every month, your agency receives high-res executive PDFs branded with your agency name and colors to send directly to your clients.</p>
+    <!-- Interactive Co-Branded Audit Showcase & Live Agency Studio -->
+    <section id="audit-preview" class="py-20 bg-slate-900/40 border-y border-slate-800 relative">
+        <div class="max-w-6xl mx-auto px-6">
+            <div class="text-center max-w-2xl mx-auto mb-14">
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-semibold uppercase tracking-wider mb-3">
+                    Agency Retainer Engine
+                </div>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-3">Interactive Co-Branded Audit Studio</h2>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    Test the live interactive report explorer below. See how Orbit Security automatically generates high-margin, co-branded executive deliverables in your agency's name.
+                </p>
             </div>
 
-            <!-- Mock Audit Report UI -->
-            <div class="bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden p-6 sm:p-8">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6 mb-6">
-                    <div>
-                        <div class="text-xs uppercase tracking-wider text-emerald-400 font-semibold mb-1">Executive Perimeter Audit</div>
-                        <h3 class="text-xl font-bold text-white">Client Domain: clientbrand.com</h3>
-                        <p class="text-xs text-slate-400 mt-1">Generated by <span class="text-slate-200 font-semibold">Your Agency</span> via Orbit Security Sentinel</p>
+            <!-- Explorer Container -->
+            <div class="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden">
+                <!-- Studio Toolbar / Tabs -->
+                <div class="px-6 py-4 bg-slate-950/80 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-mono text-slate-400 uppercase tracking-wider">Report Views:</span>
+                        <button type="button" onclick="switchReportView('radar')" id="viewBtn-radar" class="report-view-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 cursor-pointer">Subdomain Radar</button>
+                        <button type="button" onclick="switchReportView('dmarc')" id="viewBtn-dmarc" class="report-view-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer">Email Spoofing (DMARC)</button>
+                        <button type="button" onclick="switchReportView('contrast')" id="viewBtn-contrast" class="report-view-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer">Before vs. After</button>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <div class="px-3.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-                            Grade: A (94/100)
+                    
+                    <!-- Live Co-Branding Customizer Controls -->
+                    <div class="flex items-center gap-3 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-700/80 text-xs">
+                        <span class="text-slate-400 font-mono text-[11px]">Agency Brand:</span>
+                        <input 
+                            type="text" 
+                            id="customAgencyName" 
+                            value="Apex Digital Studio" 
+                            oninput="updateCustomBranding()" 
+                            class="bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-xs text-white font-semibold focus:outline-none focus:border-emerald-400 w-40"
+                        />
+                        <div class="flex items-center gap-1.5 pl-1">
+                            <button type="button" onclick="setBrandColor('emerald')" class="w-4 h-4 rounded-full bg-emerald-500 ring-2 ring-emerald-400/50 hover:scale-110 transition-transform cursor-pointer" title="Emerald Palette"></button>
+                            <button type="button" onclick="setBrandColor('cyan')" class="w-4 h-4 rounded-full bg-cyan-500 hover:scale-110 transition-transform cursor-pointer" title="Cyan Palette"></button>
+                            <button type="button" onclick="setBrandColor('indigo')" class="w-4 h-4 rounded-full bg-indigo-500 hover:scale-110 transition-transform cursor-pointer" title="Indigo Palette"></button>
                         </div>
-                        <div class="px-3.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs">
-                            Active Monitoring
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-                        <div class="text-xs text-slate-400 mb-1">Subdomain Takeovers</div>
-                        <div class="text-lg font-bold text-emerald-400 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> 0 Vulnerable
-                        </div>
-                        <div class="text-[11px] text-slate-400 mt-1">17 SaaS signatures checked</div>
-                    </div>
-                    <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-                        <div class="text-xs text-slate-400 mb-1">Email Spoofing (DMARC)</div>
-                        <div class="text-lg font-bold text-emerald-400 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Enforced
-                        </div>
-                        <div class="text-[11px] text-slate-400 mt-1">SPF & DKIM aligned</div>
-                    </div>
-                    <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-                        <div class="text-xs text-slate-400 mb-1">Sensitive Probes</div>
-                        <div class="text-lg font-bold text-emerald-400 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> 0 Exposed
-                        </div>
-                        <div class="text-[11px] text-slate-400 mt-1">.env, .git/HEAD protected</div>
-                    </div>
-                    <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-                        <div class="text-xs text-slate-400 mb-1">SSL/TLS Validity</div>
-                        <div class="text-lg font-bold text-emerald-400 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> 78 Days Left
-                        </div>
-                        <div class="text-[11px] text-slate-400 mt-1">Issuer: Let's Encrypt</div>
                     </div>
                 </div>
 
-                <div class="bg-slate-950/40 rounded-xl p-4 border border-slate-800/80 text-xs text-slate-400 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <span>💡 Agency Retainer Tip: Send this 1-page PDF monthly to your client stakeholders to demonstrate continuous security stewardship.</span>
-                    <a href="sample_audit.pdf" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 whitespace-nowrap">
-                        Download Actual PDF Sample &rarr;
-                    </a>
+                <!-- Dynamic Mock Audit Canvas -->
+                <div class="p-6 sm:p-8">
+                    <!-- Header with Dynamic Agency Branding -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6 mb-6">
+                        <div>
+                            <div class="text-xs uppercase tracking-wider text-emerald-400 font-mono font-semibold mb-1">Executive Perimeter Audit</div>
+                            <h3 class="text-xl font-bold text-white">Target Perimeter: <span class="font-mono text-emerald-300">clientbrand.com</span></h3>
+                            <p class="text-xs text-slate-400 mt-1">
+                                Compiled & certified by <span id="brandNameDisplay" class="text-white font-bold">Apex Digital Studio</span> via Orbit Security Sentinel Engine
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div id="brandGradeBadge" class="px-4 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm font-bold flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                Grade: A (94/100)
+                            </div>
+                            <button type="button" onclick="generateInstantPdf()" class="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 cursor-pointer">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                <span>Export Branded PDF</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- View 1: Subdomain Radar Topological Tree -->
+                    <div id="reportView-radar" class="space-y-4">
+                        <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 font-mono text-xs space-y-3">
+                            <div class="text-slate-400 flex items-center justify-between pb-2 border-b border-slate-800">
+                                <span>Perimeter Route Topology</span>
+                                <span class="text-[11px] text-emerald-400">17 SaaS Signatures Audited</span>
+                            </div>
+                            <!-- Node 1: Apex -->
+                            <div class="flex items-center justify-between p-2 rounded bg-slate-900/60 border border-slate-800">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="text-emerald-400 font-bold">&bull;</span>
+                                    <span class="text-white">clientbrand.com (Apex A/AAAA)</span>
+                                    <span class="text-slate-500">&rarr; 104.21.45.12 (Cloudflare Edge)</span>
+                                </div>
+                                <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold text-[10px]">SECURE</span>
+                            </div>
+                            <!-- Node 2: Shopify Subdomain -->
+                            <div class="flex items-center justify-between p-2 rounded bg-slate-900/60 border border-slate-800">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="text-emerald-400 font-bold">&bull;</span>
+                                    <span class="text-white">shop.clientbrand.com (CNAME)</span>
+                                    <span class="text-slate-500">&rarr; shops.myshopify.com</span>
+                                </div>
+                                <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold text-[10px]">ACTIVE STORE</span>
+                            </div>
+                            <!-- Node 3: Dangling Unbounce CNAME -->
+                            <div class="flex items-center justify-between p-2 rounded bg-red-500/10 border border-red-500/30">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="text-red-400 font-bold">&bull;</span>
+                                    <span class="text-red-200">promo.clientbrand.com (CNAME)</span>
+                                    <span class="text-red-300/80">&rarr; unbouncepages.com [ABANDONED]</span>
+                                </div>
+                                <span class="px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold text-[10px]">TAKEOVER RISK</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- View 2: DMARC & Email Spoofing Matrix -->
+                    <div id="reportView-dmarc" class="hidden space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                                <div class="text-xs font-mono text-slate-400 mb-2">Current Client DMARC Policy:</div>
+                                <div class="text-base font-bold text-emerald-400 font-mono">v=DMARC1; p=reject; sp=reject;</div>
+                                <p class="text-xs text-slate-400 mt-2">100% spoofed phishing protection. Unauthorized senders attempting to forge clientbrand.com are automatically dropped by Gmail and Microsoft 365.</p>
+                            </div>
+                            <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                                <div class="text-xs font-mono text-slate-400 mb-2">SPF Record Mechanization:</div>
+                                <div class="text-base font-bold text-white font-mono">v=spf1 include:_spf.google.com ~all</div>
+                                <p class="text-xs text-slate-400 mt-2">Soft-fail quarantine policy configured. Aligned with client's Google Workspace infrastructure.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- View 3: Before vs After Value Comparison -->
+                    <div id="reportView-contrast" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-5 rounded-xl bg-red-500/5 border border-red-500/20 space-y-3">
+                            <div class="text-xs font-bold text-red-400 uppercase tracking-wider font-mono">Without Orbit Sentinel ($0 Retainer)</div>
+                            <ul class="text-xs text-slate-300 space-y-2">
+                                <li class="flex items-center gap-2"><span class="text-red-400">&times;</span> Dangling Unbounce CNAME open to hostile hijacking</li>
+                                <li class="flex items-center gap-2"><span class="text-red-400">&times;</span> DMARC p=none leaves CEO domain open to email spoofing</li>
+                                <li class="flex items-center gap-2"><span class="text-red-400">&times;</span> Agency has zero recurring maintenance visibility</li>
+                            </ul>
+                        </div>
+                        <div class="p-5 rounded-xl bg-emerald-500/5 border border-emerald-500/30 space-y-3">
+                            <div class="text-xs font-bold text-emerald-400 uppercase tracking-wider font-mono">With Orbit Sentinel ($250/mo Retainer)</div>
+                            <ul class="text-xs text-slate-300 space-y-2">
+                                <li class="flex items-center gap-2"><span class="text-emerald-400">&check;</span> Continuous 24/7 Certificate & DNS drift surveillance</li>
+                                <li class="flex items-center gap-2"><span class="text-emerald-400">&check;</span> Automated branded executive PDF sent 1st of every month</li>
+                                <li class="flex items-center gap-2"><span class="text-emerald-400">&check;</span> Client happily pays $3,000/yr for proactive stewardship</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Footer Callout -->
+                    <div class="mt-6 bg-slate-950/60 rounded-xl p-4 border border-slate-800 text-xs text-slate-400 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <span>💡 Co-Branding Guarantee: Your clients never see Orbit Security. All reports feature your logo, brand colors, and contact info.</span>
+                        <a href="sample_audit.pdf" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 whitespace-nowrap">
+                            Download Actual PDF Sample &rarr;
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -291,16 +421,28 @@
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <!-- Sentinel 1: Interception -->
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group hover:border-emerald-500/50 transition-all shadow-xl">
+                <div class="relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group hover:border-emerald-500/60 hover:shadow-[0_0_30px_rgba(16,185,129,0.18)] transition-all duration-300 hover:-translate-y-1">
+                    <div class="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-emerald-500/40 z-20 group-hover:border-emerald-400 transition-colors"></div>
+                    <div class="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-emerald-500/40 z-20 group-hover:border-emerald-400 transition-colors"></div>
+
                     <div class="h-64 overflow-hidden relative">
-                        <img src="assets/orbit_cats_pounce.jpg" alt="Astro-Cat Threat Interception Sentinel" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
-                        <div class="absolute bottom-3 left-4 px-2.5 py-1 rounded-full bg-slate-950/80 border border-emerald-500/30 text-[11px] font-bold text-emerald-400">
+                        <img src="assets/orbit_cats_pounce.jpg" alt="Astro-Cat Threat Interception Sentinel" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent"></div>
+                        
+                        <div class="absolute top-4 left-4 px-2.5 py-1 rounded bg-slate-950/80 backdrop-blur-md border border-emerald-500/30 text-[10px] font-mono text-emerald-400 flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                            SYS.ID: SENTINEL-01 // INTERCEPT
+                        </div>
+
+                        <div class="absolute bottom-3 left-4 px-2.5 py-1 rounded-full bg-slate-950/90 border border-emerald-500/40 text-[11px] font-bold text-emerald-400 backdrop-blur-sm">
                             Threat Interceptor
                         </div>
                     </div>
                     <div class="p-6">
-                        <h3 class="text-lg font-bold text-white mb-2">Perimeter Interception</h3>
+                        <h3 class="text-lg font-bold text-white mb-2 flex items-center justify-between">
+                            <span>Perimeter Interception</span>
+                            <span class="text-xs font-mono text-slate-500">PORT: 53/DNS</span>
+                        </h3>
                         <p class="text-slate-400 text-xs leading-relaxed">
                             Actively catches dangling CNAMEs, DNS pointer drift, and high-risk hijack signatures before malicious threat actors claim them.
                         </p>
@@ -308,16 +450,28 @@
                 </div>
 
                 <!-- Sentinel 2: Gatekeeper -->
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group hover:border-cyan-500/50 transition-all shadow-xl">
+                <div class="relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group hover:border-cyan-500/60 hover:shadow-[0_0_30px_rgba(6,182,212,0.18)] transition-all duration-300 hover:-translate-y-1">
+                    <div class="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-cyan-500/40 z-20 group-hover:border-cyan-400 transition-colors"></div>
+                    <div class="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-cyan-500/40 z-20 group-hover:border-cyan-400 transition-colors"></div>
+
                     <div class="h-64 overflow-hidden relative">
-                        <img src="assets/orbit_cats_gatekeeper.jpg" alt="Cosmic Gatekeeper Firewall" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
-                        <div class="absolute bottom-3 left-4 px-2.5 py-1 rounded-full bg-slate-950/80 border border-cyan-500/30 text-[11px] font-bold text-cyan-400">
+                        <img src="assets/orbit_cats_gatekeeper.jpg" alt="Cosmic Gatekeeper Firewall" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent"></div>
+                        
+                        <div class="absolute top-4 left-4 px-2.5 py-1 rounded bg-slate-950/80 backdrop-blur-md border border-cyan-500/30 text-[10px] font-mono text-cyan-400 flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
+                            SYS.ID: SENTINEL-02 // GATEWAY
+                        </div>
+
+                        <div class="absolute bottom-3 left-4 px-2.5 py-1 rounded-full bg-slate-950/90 border border-cyan-500/40 text-[11px] font-bold text-cyan-400 backdrop-blur-sm">
                             Cosmic Gatekeeper
                         </div>
                     </div>
                     <div class="p-6">
-                        <h3 class="text-lg font-bold text-white mb-2">Portal & Staging Gateway</h3>
+                        <h3 class="text-lg font-bold text-white mb-2 flex items-center justify-between">
+                            <span>Portal & Staging Gateway</span>
+                            <span class="text-xs font-mono text-slate-500">PORT: 443/TLS</span>
+                        </h3>
                         <p class="text-slate-400 text-xs leading-relaxed">
                             Surveys staging subdomains, preview URLs, and headless API gateways to prevent pre-launch leaks and exposed build files.
                         </p>
@@ -325,29 +479,43 @@
                 </div>
 
                 <!-- Sentinel 3: Radar -->
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group hover:border-indigo-500/50 transition-all shadow-xl">
+                <div class="relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group hover:border-indigo-500/60 hover:shadow-[0_0_30px_rgba(99,102,241,0.18)] transition-all duration-300 hover:-translate-y-1">
+                    <div class="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-indigo-500/40 z-20 group-hover:border-indigo-400 transition-colors"></div>
+                    <div class="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-indigo-500/40 z-20 group-hover:border-indigo-400 transition-colors"></div>
+
                     <div class="h-64 overflow-hidden relative">
-                        <img src="assets/orbit_cats_radar.jpg" alt="Attack Surface Telemetry Sentinel" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
-                        <div class="absolute bottom-3 left-4 px-2.5 py-1 rounded-full bg-slate-950/80 border border-indigo-500/30 text-[11px] font-bold text-indigo-400">
+                        <img src="assets/orbit_cats_radar.jpg" alt="Attack Surface Telemetry Sentinel" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent"></div>
+                        
+                        <div class="absolute top-4 left-4 px-2.5 py-1 rounded bg-slate-950/80 backdrop-blur-md border border-indigo-500/30 text-[10px] font-mono text-indigo-400 flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping"></span>
+                            SYS.ID: SENTINEL-03 // RADAR
+                        </div>
+
+                        <div class="absolute bottom-3 left-4 px-2.5 py-1 rounded-full bg-slate-950/90 border border-indigo-500/40 text-[11px] font-bold text-indigo-400 backdrop-blur-sm">
                             Telemetry Scanner
                         </div>
                     </div>
                     <div class="p-6">
-                        <h3 class="text-lg font-bold text-white mb-2">Attack Surface Radar</h3>
+                        <h3 class="text-lg font-bold text-white mb-2 flex items-center justify-between">
+                            <span>Attack Surface Radar</span>
+                            <span class="text-xs font-mono text-slate-500">CT-LOGS MESH</span>
+                        </h3>
                         <p class="text-slate-400 text-xs leading-relaxed">
                             Continuous passive Certificate Transparency enumeration revealing every registered certificate and exposed asset across your clients.
                         </p>
                     </div>
                 </div>
+            </div>
+
             <!-- Official Video Ad Broadcast -->
             <div class="mt-14 max-w-4xl mx-auto bg-slate-900/90 border border-emerald-500/30 rounded-2xl overflow-hidden shadow-2xl shadow-emerald-500/10 backdrop-blur-sm">
                 <div class="px-6 py-4 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
                     <div class="flex items-center gap-2.5">
-                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span class="text-xs font-bold text-white tracking-wide">Orbit Security Official Video Ad</span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+                        <span class="text-xs font-mono font-bold text-white tracking-wide">REC ● // LIVE MISSION FEED</span>
                     </div>
-                    <span class="text-[11px] font-mono text-emerald-400/90">Zero-Drift Telemetry // 10s Broadcast</span>
+                    <span class="text-[11px] font-mono text-emerald-400/90">ZERO-DRIFT TELEMETRY // 10s TRANSMISSION</span>
                 </div>
                 <div class="aspect-video relative bg-slate-950">
                     <video 
@@ -642,7 +810,300 @@
             return null;
         }
 
-        // Live DoH Perimeter Scanner
+        // --- Agency Co-Branding Studio State & Actions ---
+        let currentBrandColorHex = '#10B981';
+
+        function updateCustomBranding() {
+            const input = document.getElementById('customAgencyName');
+            const display = document.getElementById('brandNameDisplay');
+            if (input && display) {
+                display.textContent = input.value.trim() || 'Your Agency';
+            }
+        }
+
+        function setBrandColor(color) {
+            const badge = document.getElementById('brandGradeBadge');
+            if (!badge) return;
+            badge.className = 'px-4 py-1.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors ';
+            if (color === 'cyan') {
+                currentBrandColorHex = '#06B6D4';
+                badge.className += 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400';
+            } else if (color === 'indigo') {
+                currentBrandColorHex = '#6366F1';
+                badge.className += 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-400';
+            } else {
+                currentBrandColorHex = '#10B981';
+                badge.className += 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400';
+            }
+        }
+
+        function switchReportView(viewId) {
+            ['radar', 'dmarc', 'contrast'].forEach(id => {
+                const pane = document.getElementById(`reportView-${id}`);
+                const btn = document.getElementById(`viewBtn-${id}`);
+                if (pane) pane.classList.add('hidden');
+                if (btn) {
+                    btn.className = 'report-view-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer';
+                }
+            });
+
+            const activePane = document.getElementById(`reportView-${viewId}`);
+            const activeBtn = document.getElementById(`viewBtn-${viewId}`);
+            if (activePane) activePane.classList.remove('hidden');
+            if (activeBtn) {
+                activeBtn.className = 'report-view-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 cursor-pointer';
+            }
+        }
+
+        // --- In-Browser Instant PDF Generation (pdf-lib) ---
+        async function generateInstantPdf() {
+            const agencyName = (document.getElementById('customAgencyName')?.value || 'Apex Digital Studio').trim();
+            const brandColor = currentBrandColorHex || '#10B981';
+
+            if (typeof PDFLib === 'undefined') {
+                alert('PDF engine is initializing, please try again in a moment or view the sample PDF.');
+                window.open('sample_audit.pdf', '_blank');
+                return;
+            }
+
+            try {
+                const { PDFDocument, rgb, StandardFonts } = PDFLib;
+                const pdfDoc = await PDFDocument.create();
+                const page = pdfDoc.addPage([595.28, 841.89]); // A4
+                const { width, height } = page.getSize();
+
+                const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+                const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+                const parseHex = (hex) => {
+                    const h = hex.replace('#', '');
+                    return rgb(parseInt(h.substring(0, 2), 16) / 255, parseInt(h.substring(2, 4), 16) / 255, parseInt(h.substring(4, 6), 16) / 255);
+                };
+                const primaryColor = parseHex(brandColor);
+                const darkSlate = rgb(15/255, 23/255, 42/255);
+                const midSlate = rgb(71/255, 85/255, 105/255);
+                const lightSlate = rgb(241/255, 245/255, 249/255);
+
+                // Top decorative accent line
+                page.drawRectangle({
+                    x: 0,
+                    y: height - 8,
+                    width: width,
+                    height: 8,
+                    color: primaryColor,
+                });
+
+                // Header Card
+                page.drawRectangle({
+                    x: 40,
+                    y: height - 120,
+                    width: width - 80,
+                    height: 90,
+                    color: lightSlate,
+                });
+
+                page.drawText(agencyName.toUpperCase(), {
+                    x: 55,
+                    y: height - 60,
+                    size: 16,
+                    font: helveticaBold,
+                    color: primaryColor,
+                });
+
+                page.drawText("EXECUTIVE CLIENT PERIMETER & ATTACK SURFACE AUDIT", {
+                    x: 55,
+                    y: height - 78,
+                    size: 9,
+                    font: helveticaBold,
+                    color: midSlate,
+                });
+
+                page.drawText("Target Domain: clientbrand.com   |   Certified Monthly Security Stewardship", {
+                    x: 55,
+                    y: height - 95,
+                    size: 8,
+                    font: helvetica,
+                    color: midSlate,
+                });
+
+                // Score Badge Box
+                page.drawRectangle({
+                    x: width - 150,
+                    y: height - 110,
+                    width: 80,
+                    height: 70,
+                    color: darkSlate,
+                });
+
+                page.drawText("HYGIENE SCORE", {
+                    x: width - 145,
+                    y: height - 55,
+                    size: 7,
+                    font: helveticaBold,
+                    color: rgb(148/255, 163/255, 184/255),
+                });
+
+                page.drawText("94 / 100", {
+                    x: width - 145,
+                    y: height - 75,
+                    size: 14,
+                    font: helveticaBold,
+                    color: rgb(52/255, 211/255, 153/255),
+                });
+
+                page.drawText("GRADE: A", {
+                    x: width - 145,
+                    y: height - 92,
+                    size: 9,
+                    font: helveticaBold,
+                    color: rgb(255/255, 255/255),
+                });
+
+                // Findings Section
+                page.drawText("PERIMETER AUDIT FINDINGS & SURVEILLANCE TELEMETRY", {
+                    x: 40,
+                    y: height - 150,
+                    size: 10,
+                    font: helveticaBold,
+                    color: darkSlate,
+                });
+
+                const findings = [
+                    { category: "SUBDOMAIN TAKEOVER SENTINEL", desc: "17 SaaS provider signatures audited (Shopify, Unbounce, AWS, GitHub). Zero dangling CNAMEs.", status: "PASS" },
+                    { category: "EMAIL SPOOFING PROTECTION (DMARC)", desc: "DMARC policy verified active with strict quarantine alignment. Unauthorized sender forging blocked.", status: "PASS" },
+                    { category: "SENDER POLICY FRAMEWORK (SPF)", desc: "SPF TXT record configured with valid mechanism qualifiers. Zero over-permissive (+all) rules.", status: "PASS" },
+                    { category: "SENSITIVE EXPOSURE SENTINEL", desc: "No public exposure of environment secrets (.env, .git, configuration backup files).", status: "PASS" },
+                    { category: "TLS / SSL CERTIFICATE EXPIRY", desc: "Edge certificate valid (Let's Encrypt Authority). 78 days remaining before automated rotation.", status: "PASS" },
+                ];
+
+                let startY = height - 175;
+                for (const item of findings) {
+                    page.drawRectangle({
+                        x: 40,
+                        y: startY - 45,
+                        width: width - 80,
+                        height: 40,
+                        color: lightSlate,
+                    });
+
+                    page.drawText(item.category, {
+                        x: 55,
+                        y: startY - 20,
+                        size: 8,
+                        font: helveticaBold,
+                        color: darkSlate,
+                    });
+
+                    page.drawText(item.desc, {
+                        x: 55,
+                        y: startY - 34,
+                        size: 7.5,
+                        font: helvetica,
+                        color: midSlate,
+                    });
+
+                    page.drawText(item.status, {
+                        x: width - 85,
+                        y: startY - 25,
+                        size: 9,
+                        font: helveticaBold,
+                        color: rgb(16/255, 185/255, 129/255),
+                    });
+
+                    startY -= 50;
+                }
+
+                // Care Plan Stewardship Box
+                page.drawRectangle({
+                    x: 40,
+                    y: 85,
+                    width: width - 80,
+                    height: 55,
+                    color: darkSlate,
+                });
+
+                page.drawText("CLIENT CARE PLAN STEWARDSHIP GUARANTEE", {
+                    x: 55,
+                    y: 125,
+                    size: 8,
+                    font: helveticaBold,
+                    color: primaryColor,
+                });
+
+                page.drawText(`This executive audit certifies that ${agencyName} maintains continuous perimeter surveillance over your web infrastructure. Our automated sentinel engines patrol against external hijacking, domain decay, and spoofing vectors.`, {
+                    x: 55,
+                    y: 108,
+                    size: 7,
+                    font: helvetica,
+                    color: rgb(203/255, 213/255, 225/255),
+                    maxWidth: width - 110,
+                });
+
+                // Footer
+                page.drawText(`Compiled & Certified by ${agencyName}  |  Powered by Orbit Security Sentinel Mesh  |  Confidential`, {
+                    x: 40,
+                    y: 45,
+                    size: 7,
+                    font: helvetica,
+                    color: midSlate,
+                });
+
+                const pdfBytes = await pdfDoc.save();
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const cleanName = agencyName.replace(/[^a-zA-Z0-9_-]/g, '_');
+                a.download = `${cleanName}_Executive_Perimeter_Audit.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                console.error('Instant PDF generation error:', err);
+                window.open('sample_audit.pdf', '_blank');
+            }
+        }
+
+        // --- Preset Target Helper ---
+        function setScanTarget(domain) {
+            const input = document.getElementById('targetDomain');
+            if (input) {
+                input.value = domain;
+                input.focus();
+            }
+        }
+
+        // --- Interactive HUD Tab Switching ---
+        function switchHudTab(tabId) {
+            document.querySelectorAll('.hud-tab-btn').forEach(btn => {
+                btn.classList.remove('border-emerald-500', 'text-emerald-400', 'bg-emerald-500/10');
+                btn.classList.add('border-transparent', 'text-slate-400');
+            });
+            document.querySelectorAll('.hud-tab-pane').forEach(pane => pane.classList.add('hidden'));
+
+            const activeBtn = document.getElementById(`tabBtn-${tabId}`);
+            const activePane = document.getElementById(`tabPane-${tabId}`);
+            if (activeBtn && activePane) {
+                activeBtn.classList.add('border-emerald-500', 'text-emerald-400', 'bg-emerald-500/10');
+                activeBtn.classList.remove('border-transparent', 'text-slate-400');
+                activePane.classList.remove('hidden');
+            }
+        }
+
+        function copyRawTelemetry() {
+            const pre = document.getElementById('rawTelemetryJson');
+            if (!pre) return;
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                const btn = document.getElementById('copyRawBtn');
+                if (btn) {
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => { btn.textContent = 'Copy JSON'; }, 2000);
+                }
+            });
+        }
+
+        // --- Live DoH Perimeter Scanner ---
         async function handleAuditRequest(e) {
             e.preventDefault();
             const input = document.getElementById('targetDomain');
@@ -674,7 +1135,7 @@
                 return;
             }
 
-            // Loading state
+            // Loading state with cyber telemetry lines
             scanBtn.disabled = true;
             scanBtnText.textContent = 'Auditing...';
             hud.classList.remove('hidden');
@@ -799,21 +1260,29 @@
                 // Total Score & Grade Calculation
                 const totalScore = Math.max(0, Math.min(100, dmarcScore + spfScore + cnameScore));
                 let grade = 'F';
-                let gradeColor = 'text-red-400 border-red-500/30 bg-red-500/10';
-                let scoreBarColor = 'bg-red-500';
+                let gradeTextColor = 'text-red-400';
+                let gaugeStrokeColor = 'text-red-500';
+                let riskLabel = 'HIGH RISK';
+                let riskBadgeClass = 'bg-red-500/20 text-red-400 border border-red-500/40';
 
                 if (totalScore >= 90) {
                     grade = 'A+';
-                    gradeColor = 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10';
-                    scoreBarColor = 'bg-emerald-500';
+                    gradeTextColor = 'text-emerald-400';
+                    gaugeStrokeColor = 'text-emerald-400';
+                    riskLabel = 'HARDENED';
+                    riskBadgeClass = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
                 } else if (totalScore >= 75) {
                     grade = 'B';
-                    gradeColor = 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10';
-                    scoreBarColor = 'bg-cyan-500';
+                    gradeTextColor = 'text-cyan-400';
+                    gaugeStrokeColor = 'text-cyan-400';
+                    riskLabel = 'MONITORED';
+                    riskBadgeClass = 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40';
                 } else if (totalScore >= 50) {
                     grade = 'C';
-                    gradeColor = 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10';
-                    scoreBarColor = 'bg-yellow-500';
+                    gradeTextColor = 'text-yellow-400';
+                    gaugeStrokeColor = 'text-yellow-400';
+                    riskLabel = 'ELEVATED';
+                    riskBadgeClass = 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40';
                 }
 
                 const badge = (status) => {
@@ -822,31 +1291,64 @@
                     return '<span class="px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 font-bold text-[10px]">CRITICAL</span>';
                 };
 
+                const rawTelemetry = {
+                    domain: domain,
+                    hygiene_score: totalScore,
+                    grade: grade,
+                    dmarc: dmarcRes,
+                    spf: spfRes,
+                    cname: cnameRes,
+                    apex_a: aRes,
+                    timestamp: new Date().toISOString()
+                };
+
+                const strokeDashoffset = Math.round(251 - (251 * totalScore / 100));
+
                 hud.innerHTML = `
-                    <div class="p-4 sm:p-5 rounded-xl bg-slate-950/95 border border-slate-800 shadow-2xl text-xs space-y-4">
-                        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-                            <div>
-                                <span class="text-[10px] uppercase font-mono text-slate-500">Live DoH Audit Result</span>
-                                <div class="text-base font-bold text-white font-mono">${domain}</div>
+                    <div class="p-4 sm:p-5 rounded-xl bg-slate-950/95 border border-slate-800 shadow-2xl text-xs space-y-5">
+                        <!-- Top Circular Gauge & Summary Bar -->
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
+                            <div class="flex items-center gap-4">
+                                <!-- Circular SVG Neon Gauge -->
+                                <div class="relative w-16 h-16 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="7" class="text-slate-800" fill="transparent" />
+                                        <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="7" class="${gaugeStrokeColor}" 
+                                                stroke-dasharray="251" 
+                                                stroke-dashoffset="${strokeDashoffset}" 
+                                                stroke-linecap="round" fill="transparent" 
+                                                style="transition: stroke-dashoffset 1s ease-in-out; filter: drop-shadow(0 0 6px currentColor);" />
+                                    </svg>
+                                    <div class="absolute inset-0 flex flex-col items-center justify-center font-extrabold ${gradeTextColor}">
+                                        <span class="text-lg leading-none">${grade}</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-base font-bold text-white font-mono">${domain}</span>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${riskBadgeClass}">${riskLabel}</span>
+                                    </div>
+                                    <div class="text-[11px] text-slate-400 mt-1">Perimeter Hygiene Score: <span class="text-white font-bold">${totalScore}</span>/100</div>
+                                </div>
                             </div>
-                            <div class="flex items-center gap-3">
-                                <div class="text-right">
-                                    <div class="text-[10px] text-slate-400">Hygiene Score</div>
-                                    <div class="text-lg font-extrabold text-white">${totalScore}<span class="text-xs text-slate-500">/100</span></div>
-                                </div>
-                                <div class="w-11 h-11 rounded-xl border flex items-center justify-center font-extrabold text-base ${gradeColor}">
-                                    ${grade}
-                                </div>
+                            <div class="flex items-center gap-2">
+                                <a href="mailto:carsonmail009@gmail.com?subject=Full%20Audit%20Report%20Request%20for%20${encodeURIComponent(domain)}&body=Hi%20Carson%2C%0A%0AI%20just%20ran%20a%20perimeter%20check%20for%20${encodeURIComponent(domain)}%20(Score%3A%20${totalScore}%2F100%2C%20Grade%3A%20${grade}).%20Please%20send%20over%20the%20complete%20white-label%20executive%20PDF%20audit." 
+                                   class="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition-all">
+                                    Export Executive PDF &rarr;
+                                </a>
                             </div>
                         </div>
 
-                        <!-- Progress Bar -->
-                        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                            <div class="${scoreBarColor} h-full transition-all duration-700" style="width: ${totalScore}%"></div>
+                        <!-- HUD Telemetry Navigation Tabs -->
+                        <div class="flex border-b border-slate-800/80 gap-1 overflow-x-auto pb-1">
+                            <button type="button" id="tabBtn-overview" onclick="switchHudTab('overview')" class="hud-tab-btn px-3 py-1.5 font-mono text-xs font-semibold rounded-t-lg border-b-2 border-emerald-500 text-emerald-400 bg-emerald-500/10 cursor-pointer">Overview</button>
+                            <button type="button" id="tabBtn-email" onclick="switchHudTab('email')" class="hud-tab-btn px-3 py-1.5 font-mono text-xs font-semibold rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer">Email Auth</button>
+                            <button type="button" id="tabBtn-dns" onclick="switchHudTab('dns')" class="hud-tab-btn px-3 py-1.5 font-mono text-xs font-semibold rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer">SaaS CNAMEs</button>
+                            <button type="button" id="tabBtn-raw" onclick="switchHudTab('raw')" class="hud-tab-btn px-3 py-1.5 font-mono text-xs font-semibold rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer">Raw DoH JSON</button>
                         </div>
 
-                        <!-- Findings Breakdown -->
-                        <div class="space-y-2.5 font-mono">
+                        <!-- Tab 1: Overview Pane -->
+                        <div id="tabPane-overview" class="hud-tab-pane space-y-2.5 font-mono">
                             <div class="flex items-start justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800/80">
                                 <div>
                                     <div class="font-bold text-slate-200">Email Spoofing Defense (DMARC)</div>
@@ -872,16 +1374,38 @@
                             </div>
                         </div>
 
-                        <!-- CTA Actions -->
-                        <div class="pt-2 flex flex-col sm:flex-row items-center gap-2">
-                            <a href="mailto:carsonmail009@gmail.com?subject=Full%20Audit%20Report%20Request%20for%20${encodeURIComponent(domain)}&body=Hi%20Carson%2C%0A%0AI%20just%20ran%20a%20perimeter%20check%20for%20${encodeURIComponent(domain)}%20(Score%3A%20${totalScore}%2F100%2C%20Grade%3A%20${grade}).%20Please%20send%20over%20the%20complete%20white-label%20executive%20PDF%20audit." 
-                               class="w-full sm:flex-1 py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-center text-xs transition-all shadow-md shadow-emerald-500/20">
-                                Unlock Co-Branded PDF Report
-                            </a>
-                            <a href="sample_audit.pdf" target="_blank" rel="noopener noreferrer" 
-                               class="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-center text-xs transition-colors">
-                                View Sample PDF
-                            </a>
+                        <!-- Tab 2: Email Auth Pane -->
+                        <div id="tabPane-email" class="hud-tab-pane hidden space-y-2.5 font-mono">
+                            <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-xs">
+                                <span class="text-slate-400 block mb-1">DMARC Record Query:</span>
+                                <code class="text-emerald-400">${dmarcPolicy}</code>
+                                <p class="text-slate-400 text-[11px] mt-1.5">DMARC controls email recipient action when messages fail SPF/DKIM checks.</p>
+                            </div>
+                            <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-xs">
+                                <span class="text-slate-400 block mb-1">SPF Mechanism Query:</span>
+                                <code class="text-emerald-400">${spfPolicy}</code>
+                                <p class="text-slate-400 text-[11px] mt-1.5">SPF lists internet hosts authorized to send emails on behalf of this domain.</p>
+                            </div>
+                        </div>
+
+                        <!-- Tab 3: SaaS CNAME Pane -->
+                        <div id="tabPane-dns" class="hud-tab-pane hidden space-y-2.5 font-mono">
+                            <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-xs">
+                                <span class="text-slate-400 block mb-1">Target Host CNAME Resolution:</span>
+                                <code class="text-white">${cnameTarget}</code>
+                                <p class="text-slate-400 text-[11px] mt-1.5">${takeoverWarning || 'No dangling SaaS signatures detected on apex target.'}</p>
+                            </div>
+                        </div>
+
+                        <!-- Tab 4: Raw DoH JSON Pane with Copy -->
+                        <div id="tabPane-raw" class="hud-tab-pane hidden space-y-2">
+                            <div class="flex items-center justify-between pb-1">
+                                <span class="text-[11px] font-mono text-slate-400">DNS-over-HTTPS (RFC 8484) Raw Responses</span>
+                                <button type="button" id="copyRawBtn" onclick="copyRawTelemetry()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-mono cursor-pointer">Copy JSON</button>
+                            </div>
+                            <div class="relative bg-slate-900/90 rounded-lg p-3 font-mono text-[11px] text-emerald-300 overflow-x-auto max-h-48 border border-slate-800">
+                                <pre id="rawTelemetryJson">${JSON.stringify(rawTelemetry, null, 2)}</pre>
+                            </div>
                         </div>
                     </div>
                 `;

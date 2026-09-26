@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from orbit_security.models import AgencyBranding, DomainAuditResult, Severity
+from orbit_security.models import AgencyBranding, DomainAuditResult, Finding, Severity
 from orbit_security.reporter import ReportGenerator
 from orbit_security.scanner import OrbitSecurityScanner
 
@@ -100,6 +100,7 @@ class DriftEvent:
     score_change: int
     critical_findings: int
     high_findings: int
+    findings: List[Finding] = field(default_factory=list)
     timestamp: str = field(
         default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat()
     )
@@ -163,6 +164,7 @@ class FleetSentinel:
                         score_change=score_change,
                         critical_findings=crit_count,
                         high_findings=high_count,
+                        findings=audit_result.findings,
                     )
                 )
 

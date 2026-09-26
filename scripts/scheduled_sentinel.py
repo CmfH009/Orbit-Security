@@ -26,11 +26,17 @@ from rich.table import Table
 
 from orbit_security.fleet import ClientTarget, FleetRegistry, FleetSentinel
 from orbit_security.models import AgencyBranding
+from orbit_security.notifications import AlertPayload, WebhookDispatcher
 
 console = Console()
 
 
-async def run_daily_sweep(sentinel: FleetSentinel, agency_branding: Optional[AgencyBranding] = None):
+async def run_daily_sweep(
+    sentinel: FleetSentinel,
+    agency_branding: Optional[AgencyBranding] = None,
+    slack_webhook: Optional[str] = None,
+    discord_webhook: Optional[str] = None,
+):
     console.print(
         Panel.fit(
             "[bold cyan]Orbit Security Fleet Sentinel[/bold cyan] — [bold green]Continuous Zero-Drift Sweep[/bold green]\n"
@@ -91,6 +97,29 @@ async def run_daily_sweep(sentinel: FleetSentinel, agency_branding: Optional[Age
                 str(d.critical_findings),
             )
         console.print(alert_table)
+
+        if slack_webhook or discord_webhook:
+            dispatcher = WebhookDispatcher()
+            console.print("\n[bold cyan]Dispatching real-time drift alerts to webhooks...[/bold cyan]")
+            for d in drift_events:
+                payload = AlertPayload(
+                    client_name=d.client_name,
+                    apex_domain=d.domain,
+                    current_score=d.new_score,
+                    current_grade="D" if d.new_score < 70 else ("C" if d.new_score < 80 else "B"),
+                    previous_score=d.old_score,
+                    previous_grade=None,
+                    findings=d.findings,
+                )
+                res = dispatcher.send_alert(
+                    payload,
+                    slack_webhook_url=slack_webhook,
+                    discord_webhook_url=discord_webhook,
+                )
+                if res["slack"]:
+                    console.print(f"  • [green]Slack alert sent for {d.client_name}[/green]")
+                if res["discord"]:
+                    console.print(f"  • [green]Discord alert sent for {d.client_name}[/green]")
     else:
         console.print("\n[bold green]✔ All client perimeters verified stable. Zero negative security drift.[/bold green]\n")
 
@@ -131,6 +160,16 @@ def main():
     parser.add_argument("--agency-name", default="Apex Digital Studio", help="Agency name for white-label reports")
     parser.add_argument("--agency-email", default="ops@apexdigital.io", help="Agency support email")
     parser.add_argument("--agency-website", default="https://apexdigital.io", help="Agency website")
+    parser.add_argument(
+        "--slack-webhook",
+        default=os.getenv("SLACK_WEBHOOK_URL"),
+        help="Slack Webhook URL for instant drift alerts",
+    )
+    parser.add_argument(
+        "--discord-webhook",
+        default=os.getenv("DISCORD_WEBHOOK_URL"),
+        help="Discord Webhook URL for instant drift alerts",
+    )
 
     args = parser.parse_args()
 
@@ -149,7 +188,14 @@ def main():
         for c in clients:
             console.print(f"  • [bold]{c.client_name}[/bold] ({c.apex_domain}) — Plan: {c.retainer_plan}")
     elif args.mode == "daily-drift":
-        asyncio.run(run_daily_sweep(sentinel, agency_branding=branding))
+        asyncio.run(
+            run_daily_sweep(
+                sentinel,
+                agency_branding=branding,
+                slack_webhook=args.slack_webhook,
+                discord_webhook=args.discord_webhook,
+            )
+        )
     elif args.mode == "monthly-batch":
         out_path = Path(args.output_dir) / datetime.datetime.now().strftime("%Y-%m")
         asyncio.run(run_monthly_batch(sentinel, out_path, agency_branding=branding))
