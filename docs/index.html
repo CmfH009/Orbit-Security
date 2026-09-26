@@ -4,9 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Orbit Security | Attack Surface & Subdomain Hygiene for Web Agencies</title>
+    
+    <!-- Primary SEO Meta Tags -->
+    <meta name="title" content="Orbit Security | Attack Surface & Subdomain Hygiene for Web Agencies">
+    <meta name="description" content="Turn client DNS & perimeter hygiene into high-margin recurring retainers. Automated white-label security audits for Shopify & WordPress agencies.">
+    <meta name="author" content="Carson Haynes | Founder, Orbit Security">
+    <meta name="keywords" content="web security, subdomain takeover, agency retainers, Shopify Plus security, DNS hygiene, white-label security audit, DMARC monitoring">
+
+    <!-- Open Graph / Facebook / LinkedIn -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://cmfh009.github.io/Orbit-Security/">
+    <meta property="og:title" content="Orbit Security | White-Label Perimeter Defense for Agencies">
+    <meta property="og:description" content="Automate client perimeter security, catch subdomain takeovers, and export co-branded monthly audit PDFs to justify $250/mo agency retainers.">
+    <meta property="og:image" content="https://cmfh009.github.io/Orbit-Security/assets/orbit_cats_pounce.jpg">
+    <meta property="og:image:width" content="1024">
+    <meta property="og:image:height" content="1024">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://cmfh009.github.io/Orbit-Security/">
+    <meta property="twitter:title" content="Orbit Security | Perimeter Sentinels for Web Agencies">
+    <meta property="twitter:description" content="Automated monthly white-label security audits for web and Shopify agencies.">
+    <meta property="twitter:image" content="https://cmfh009.github.io/Orbit-Security/assets/orbit_cats_pounce.jpg">
+
+    <!-- Favicon & Preconnects -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'><path d='M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z'/></svg>">
     <link rel="dns-prefetch" href="https://buy.stripe.com">
     <link rel="preconnect" href="https://buy.stripe.com" crossorigin>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -31,35 +56,62 @@
     <header class="sticky top-0 z-50 backdrop-blur-md bg-slate-950/80 border-b border-slate-800">
         <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                    <svg class="w-6 h-6 text-slate-950 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                </div>
-                <div>
-                    <span class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">Orbit Security</span>
-                    <span class="text-xs ml-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">B2B SaaS</span>
-                </div>
+                <a href="#" class="flex items-center gap-3 group">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/30 transition-all">
+                        <svg class="w-6 h-6 text-slate-950 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">Orbit Security</span>
+                        <span class="text-xs ml-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">B2B SaaS</span>
+                    </div>
+                </a>
             </div>
             
-            <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
+            <nav class="hidden md:flex items-center gap-7 text-sm font-medium text-slate-300">
                 <a href="#features" class="hover:text-emerald-400 transition-colors">Features</a>
                 <a href="#audit-preview" class="hover:text-emerald-400 transition-colors">Audit Preview</a>
-                <a href="#founder" class="hover:text-emerald-400 transition-colors">Engineering</a>
+                <a href="#sentinels" class="hover:text-emerald-400 transition-colors">Sentinels</a>
+                <a href="#founder" class="hover:text-emerald-400 transition-colors">Founder</a>
                 <a href="#pricing" class="hover:text-emerald-400 transition-colors">Pricing</a>
-                <a href="#compliance" class="hover:text-emerald-400 transition-colors">Trust & Security</a>
+                <a href="#compliance" class="hover:text-emerald-400 transition-colors">Compliance</a>
             </nav>
 
-            <div class="flex items-center gap-4">
+            <div class="hidden sm:flex items-center gap-3">
+                <a href="https://github.com/CmfH009/Orbit-Security" target="_blank" rel="noopener noreferrer" class="p-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white transition-colors" title="View Source on GitHub">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+                </a>
                 <a href="#pricing" class="px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm transition-all shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/30">
                     Get Started
                 </a>
+            </div>
+
+            <!-- Mobile Hamburger Button -->
+            <button id="mobileMenuBtn" class="md:hidden p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white" aria-label="Toggle navigation">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/></svg>
+            </button>
+        </div>
+
+        <!-- Mobile Navigation Dropdown -->
+        <div id="mobileMenu" class="hidden md:hidden px-6 pt-2 pb-6 border-b border-slate-800 bg-slate-950/95 space-y-3 text-sm font-medium">
+            <a href="#features" class="block py-2 text-slate-300 hover:text-emerald-400">Features</a>
+            <a href="#audit-preview" class="block py-2 text-slate-300 hover:text-emerald-400">Audit Preview</a>
+            <a href="#sentinels" class="block py-2 text-slate-300 hover:text-emerald-400">Astro-Cat Sentinels</a>
+            <a href="#founder" class="block py-2 text-slate-300 hover:text-emerald-400">Founder & Engineering</a>
+            <a href="#pricing" class="block py-2 text-slate-300 hover:text-emerald-400">Retainer Pricing</a>
+            <a href="#compliance" class="block py-2 text-slate-300 hover:text-emerald-400">Trust & Legal</a>
+            <div class="pt-3 border-t border-slate-800 flex items-center gap-3">
+                <a href="https://github.com/CmfH009/Orbit-Security" target="_blank" rel="noopener noreferrer" class="p-2.5 rounded-lg bg-slate-900 border border-slate-700/80 text-slate-300">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+                </a>
+                <a href="#pricing" class="flex-1 py-2.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-center text-sm">Get Started</a>
             </div>
         </div>
     </header>
 
     <!-- Hero Section -->
-    <section class="relative pt-24 pb-20 overflow-hidden">
+    <section class="relative pt-20 pb-20 overflow-hidden">
         <div class="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.15),rgba(255,255,255,0))]"></div>
         <div class="max-w-5xl mx-auto px-6 text-center relative z-10">
             <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-700/80 text-xs font-medium text-slate-300 mb-8">
@@ -75,17 +127,44 @@
                 Orbit Security automatically monitors your client domains for orphaned DNS pointers, dangling SaaS subdomains (Shopify, Unbounce, AWS, GitHub), and email spoofing risks. Deliver polished, co-branded executive PDF audits every month.
             </p>
 
-            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <!-- CTA Buttons -->
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
                 <a href="https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-base transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2">
                     Activate Growth Plan ($59/mo)
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                 </a>
-                <a href="#audit-preview" class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-semibold text-base transition-colors flex items-center justify-center">
-                    View Sample Report
+                <a href="sample_audit.pdf" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-semibold text-base transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    View Sample Report (PDF)
                 </a>
             </div>
 
-            <div class="mt-12 flex items-center justify-center gap-8 text-xs text-slate-400">
+            <!-- Interactive Domain Audit Request Widget -->
+            <div class="max-w-xl mx-auto bg-slate-900/90 border border-slate-700/80 p-2.5 rounded-2xl shadow-2xl backdrop-blur-sm">
+                <div class="text-xs text-slate-400 mb-2 font-medium flex items-center justify-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    Test an instant perimeter check on your agency or client domain:
+                </div>
+                <form id="auditForm" onsubmit="handleAuditRequest(event)" class="flex flex-col sm:flex-row gap-2">
+                    <input 
+                        type="text" 
+                        id="targetDomain" 
+                        placeholder="Enter domain (e.g. yourclient.com)" 
+                        required
+                        class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono transition-colors"
+                    />
+                    <button 
+                        type="submit" 
+                        class="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm transition-all shadow-md shadow-emerald-500/20 whitespace-nowrap flex items-center justify-center gap-2">
+                        Scan Perimeter
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    </button>
+                </form>
+                <div id="auditStatus" class="hidden text-xs text-emerald-400 mt-2 font-medium"></div>
+            </div>
+
+            <!-- Value Prop Badges -->
+            <div class="mt-12 flex flex-wrap items-center justify-center gap-6 sm:gap-8 text-xs text-slate-400">
                 <div class="flex items-center gap-2">
                     <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                     100% Non-Intrusive & Passive
@@ -96,7 +175,7 @@
                 </div>
                 <div class="flex items-center gap-2">
                     <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                    Cancel Anytime
+                    Cancel Anytime via Stripe
                 </div>
             </div>
         </div>
@@ -159,9 +238,11 @@
                     </div>
                 </div>
 
-                <div class="bg-slate-950/40 rounded-xl p-4 border border-slate-800/80 text-xs text-slate-400 flex items-center justify-between">
+                <div class="bg-slate-950/40 rounded-xl p-4 border border-slate-800/80 text-xs text-slate-400 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <span>💡 Agency Retainer Tip: Send this 1-page PDF monthly to your client stakeholders to demonstrate continuous security stewardship.</span>
-                    <span class="text-emerald-400 font-semibold cursor-pointer">Preview PDF Layout &rarr;</span>
+                    <a href="sample_audit.pdf" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 whitespace-nowrap">
+                        Download Actual PDF Sample &rarr;
+                    </a>
                 </div>
             </div>
         </div>
@@ -207,16 +288,82 @@
         </div>
     </section>
 
+    <!-- Astro-Cat Sentinels Creative Showcase Section -->
+    <section id="sentinels" class="py-20 bg-slate-900/40 border-t border-slate-800">
+        <div class="max-w-6xl mx-auto px-6">
+            <div class="text-center max-w-2xl mx-auto mb-16">
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-3">
+                    Perimeter Intelligence Suite
+                </div>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-4">Meet the Orbit Sentinels</h2>
+                <p class="text-slate-400">Three specialized surveillance engines continuously monitoring your agency's web perimeter.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Sentinel 1: Interception -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group hover:border-emerald-500/50 transition-all shadow-xl">
+                    <div class="h-64 overflow-hidden relative">
+                        <img src="assets/orbit_cats_pounce.jpg" alt="Astro-Cat Threat Interception Sentinel" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
+                        <div class="absolute bottom-3 left-4 px-2.5 py-1 rounded-full bg-slate-950/80 border border-emerald-500/30 text-[11px] font-bold text-emerald-400">
+                            Threat Interceptor
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-lg font-bold text-white mb-2">Perimeter Interception</h3>
+                        <p class="text-slate-400 text-xs leading-relaxed">
+                            Actively catches dangling CNAMEs, DNS pointer drift, and high-risk hijack signatures before malicious threat actors claim them.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Sentinel 2: Gatekeeper -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group hover:border-cyan-500/50 transition-all shadow-xl">
+                    <div class="h-64 overflow-hidden relative">
+                        <img src="assets/orbit_cats_gatekeeper.jpg" alt="Cosmic Gatekeeper Firewall" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
+                        <div class="absolute bottom-3 left-4 px-2.5 py-1 rounded-full bg-slate-950/80 border border-cyan-500/30 text-[11px] font-bold text-cyan-400">
+                            Cosmic Gatekeeper
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-lg font-bold text-white mb-2">Portal & Staging Gateway</h3>
+                        <p class="text-slate-400 text-xs leading-relaxed">
+                            Surveys staging subdomains, preview URLs, and headless API gateways to prevent pre-launch leaks and exposed build files.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Sentinel 3: Radar -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group hover:border-indigo-500/50 transition-all shadow-xl">
+                    <div class="h-64 overflow-hidden relative">
+                        <img src="assets/orbit_cats_radar.jpg" alt="Attack Surface Telemetry Sentinel" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
+                        <div class="absolute bottom-3 left-4 px-2.5 py-1 rounded-full bg-slate-950/80 border border-indigo-500/30 text-[11px] font-bold text-indigo-400">
+                            Telemetry Scanner
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-lg font-bold text-white mb-2">Attack Surface Radar</h3>
+                        <p class="text-slate-400 text-xs leading-relaxed">
+                            Continuous passive Certificate Transparency enumeration revealing every registered certificate and exposed asset across your clients.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Founder & Systems Architecture Section -->
     <section id="founder" class="py-20 bg-slate-900/30 border-t border-slate-800/80 relative overflow-hidden">
         <div class="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_100%,rgba(16,185,129,0.08),rgba(255,255,255,0))]"></div>
         <div class="max-w-5xl mx-auto px-6 relative z-10">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-                <!-- Left: Founder Card & Badge -->
+                <!-- Left: Founder Card & Verified Profiles -->
                 <div class="lg:col-span-5 flex flex-col items-center sm:items-start text-center sm:text-left">
                     <div class="relative mb-6">
-                        <div class="w-32 h-32 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 p-1 shadow-2xl shadow-emerald-500/25 overflow-hidden group">
-                            <img src="assets/orbit_cats_square.jpg" alt="Orbit Security Astro-Cats Sentinel" class="w-full h-full object-cover rounded-[14px] transition-transform duration-500 group-hover:scale-105" />
+                        <div class="w-36 h-36 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 p-1 shadow-2xl shadow-emerald-500/25 overflow-hidden group">
+                            <img src="assets/orbit_cats_square.jpg" alt="Carson - Founder Orbit Security" class="w-full h-full object-cover rounded-[14px] transition-transform duration-500 group-hover:scale-105" />
                         </div>
                         <div class="absolute -bottom-2 -right-2 px-3 py-1 rounded-full bg-slate-900 border border-emerald-500/40 text-[11px] font-bold text-emerald-400 flex items-center gap-1.5 shadow-md">
                             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -224,12 +371,32 @@
                         </div>
                     </div>
                     
-                    <h3 class="text-2xl font-bold text-white mb-1">Carson</h3>
+                    <h3 class="text-2xl font-bold text-white mb-1">Carson Haynes</h3>
                     <div class="text-emerald-400 text-sm font-semibold mb-3">Founder & Principal Systems Architect</div>
                     <p class="text-slate-400 text-xs leading-relaxed max-w-sm mb-6">
                         Directing systems architecture, non-intrusive security heuristics, and white-label client intelligence at Orbit Security.
                     </p>
                     
+                    <!-- Verified Social Profile Badges -->
+                    <div class="flex items-center gap-2.5 mb-6">
+                        <!-- LinkedIn -->
+                        <a href="https://www.linkedin.com/in/carson-haynes-1902b743a/" target="_blank" rel="noopener noreferrer" class="p-2 rounded-xl bg-slate-900 hover:bg-emerald-500/10 border border-slate-700/80 hover:border-emerald-500/40 text-slate-300 hover:text-emerald-400 transition-all" title="Carson on LinkedIn">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                        </a>
+                        <!-- Facebook -->
+                        <a href="https://www.facebook.com/carson.haynes.3" target="_blank" rel="noopener noreferrer" class="p-2 rounded-xl bg-slate-900 hover:bg-emerald-500/10 border border-slate-700/80 hover:border-emerald-500/40 text-slate-300 hover:text-emerald-400 transition-all" title="Carson on Facebook">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/></svg>
+                        </a>
+                        <!-- GitHub -->
+                        <a href="https://github.com/CmfH009" target="_blank" rel="noopener noreferrer" class="p-2 rounded-xl bg-slate-900 hover:bg-emerald-500/10 border border-slate-700/80 hover:border-emerald-500/40 text-slate-300 hover:text-emerald-400 transition-all" title="Carson on GitHub">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+                        </a>
+                        <!-- Direct Email -->
+                        <a href="mailto:carsonmail009@gmail.com?subject=Orbit%20Security%20Direct%20Inquiry" class="p-2 rounded-xl bg-slate-900 hover:bg-emerald-500/10 border border-slate-700/80 hover:border-emerald-500/40 text-slate-300 hover:text-emerald-400 transition-all" title="Email Carson Directly">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        </a>
+                    </div>
+
                     <div class="flex flex-wrap gap-2 text-[11px] justify-center sm:justify-start">
                         <span class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700/60 text-slate-300">Project ORBIT Lead</span>
                         <span class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700/60 text-slate-300">Deterministic QA</span>
@@ -297,7 +464,7 @@
                             <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Email drift & DMARC checks</li>
                         </ul>
                     </div>
-                    <a href="mailto:carsonmail009@gmail.com?subject=Inquiry%20Starter%20Agency%20Tier" class="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs text-center transition-colors">
+                    <a href="mailto:carsonmail009@gmail.com?subject=Inquiry%20Starter%20Agency%20Tier%20($29/mo)" class="w-full py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs text-center transition-colors">
                         Inquire Starter
                     </a>
                 </div>
@@ -338,12 +505,12 @@
                         </div>
                         <ul class="space-y-3 text-xs text-slate-300 mb-8">
                             <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Up to 100 client domains</li>
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Dedicated Slack / Webhook integrations</li>
+                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Dedicated Slack / Webhook alerts</li>
                             <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Automated client PDF auto-dispatch</li>
                             <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Custom SLA & Security Reviews</li>
                         </ul>
                     </div>
-                    <a href="mailto:carsonmail009@gmail.com?subject=Inquiry%20Pro%20Agency%20Tier" class="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs text-center transition-colors">
+                    <a href="mailto:carsonmail009@gmail.com?subject=Inquiry%20Pro%20Agency%20Tier%20($99/mo)" class="w-full py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs text-center transition-colors">
                         Inquire Pro
                     </a>
                 </div>
@@ -351,7 +518,7 @@
         </div>
     </section>
 
-    <!-- Trust, Compliance & Legal Footer (Essential for Stripe Merchant Verification) -->
+    <!-- Trust, Compliance & Legal Footer -->
     <footer id="compliance" class="py-16 bg-slate-950 border-t border-slate-900 text-slate-400 text-xs">
         <div class="max-w-6xl mx-auto px-6">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
@@ -363,10 +530,25 @@
                     <p class="max-w-sm text-slate-400 leading-relaxed mb-4">
                         Autonomous attack surface hygiene & white-label reporting sentinel built for modern web design and digital agencies.
                     </p>
-                    <p class="text-slate-400">
+                    <p class="text-slate-400 mb-4">
                         Operated by: <span class="text-slate-300">Orbit Security Operations</span><br>
                         Direct Inquiries: <a href="mailto:carsonmail009@gmail.com" class="text-emerald-400 hover:underline">carsonmail009@gmail.com</a>
                     </p>
+                    <!-- Social Links Cluster -->
+                    <div class="flex items-center gap-3">
+                        <a href="https://www.linkedin.com/in/carson-haynes-1902b743a/" target="_blank" rel="noopener noreferrer" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-emerald-400 transition-colors" title="Carson on LinkedIn">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                        </a>
+                        <a href="https://www.facebook.com/carson.haynes.3" target="_blank" rel="noopener noreferrer" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-emerald-400 transition-colors" title="Carson on Facebook">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/></svg>
+                        </a>
+                        <a href="https://github.com/CmfH009/Orbit-Security" target="_blank" rel="noopener noreferrer" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-emerald-400 transition-colors" title="Orbit Security on GitHub">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+                        </a>
+                        <a href="mailto:carsonmail009@gmail.com" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-emerald-400 transition-colors" title="Email Inquiries">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        </a>
+                    </div>
                 </div>
                 <div>
                     <h4 class="text-white font-semibold text-sm mb-3">Legal & Terms</h4>
@@ -395,5 +577,46 @@
         </div>
     </footer>
 
+    <!-- Interactive Scripts -->
+    <script>
+        // Mobile Navigation Toggle
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+        if (mobileMenuBtn && mobileMenu) {
+            mobileMenuBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+            // Close mobile menu on anchor click
+            mobileMenu.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => mobileMenu.classList.add('hidden'));
+            });
+        }
+
+        // Domain Audit Form Handler
+        function handleAuditRequest(e) {
+            e.preventDefault();
+            const input = document.getElementById('targetDomain');
+            const status = document.getElementById('auditStatus');
+            const domain = input.value.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+            
+            if (!domain) return;
+            
+            status.textContent = '🚀 Preparing security perimeter check for ' + domain + '...';
+            status.classList.remove('hidden');
+
+            const subject = encodeURIComponent('Perimeter Security Audit Request: ' + domain);
+            const body = encodeURIComponent(
+                'Hi Carson,\n\n' +
+                'I would like to request an automated perimeter security audit for ' + domain + '.\n\n' +
+                'Please deliver the co-branded executive PDF report to this email address.\n\n' +
+                'Best regards,'
+            );
+            
+            setTimeout(() => {
+                window.location.href = 'mailto:carsonmail009@gmail.com?subject=' + subject + '&body=' + body;
+                status.innerHTML = '✔ Opening email draft for Carson... If your client does not open, email <a href="mailto:carsonmail009@gmail.com" class="underline">carsonmail009@gmail.com</a> directly.';
+            }, 600);
+        }
+    </script>
 </body>
 </html>
