@@ -4,10 +4,10 @@ import json
 import os
 import sys
 
-from agency_sentry.mailer import EmailDispatcher
-from agency_sentry.models import AgencyBranding
-from agency_sentry.reporter import ReportGenerator
-from agency_sentry.scanner import AgencySentryScanner
+from orbit_security.mailer import EmailDispatcher
+from orbit_security.models import AgencyBranding
+from orbit_security.reporter import ReportGenerator
+from orbit_security.scanner import OrbitSecurityScanner
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -73,7 +73,7 @@ async def process_prospect(prospect: dict, output_root: str, send_live: bool = F
     pdf_path = os.path.join(out_dir, f"{safe_target}_security_audit.pdf")
 
     # If already scanned, reuse or re-scan quickly
-    scanner = AgencySentryScanner(timeout=6.0)
+    scanner = OrbitSecurityScanner(timeout=6.0)
     result = await scanner.scan_domain(target_domain, agency_branding=branding, use_crtsh=False)
 
     ReportGenerator.generate_pdf(result, pdf_path)
@@ -106,14 +106,14 @@ async def process_prospect(prospect: dict, output_root: str, send_live: bool = F
         "",
         f"I've attached the full white-labeled PDF report for your records.",
         "",
-        "We built AgencySentry so web design & dev agencies can automatically generate these co-branded PDF audits every month for all your client domains to justify your $150-$300/mo website maintenance retainers without burning engineer hours.",
+        "We built Orbit Security so web design & dev agencies can automatically generate these co-branded PDF audits every month for all your client domains to justify your $150-$300/mo website maintenance retainers without burning engineer hours.",
         "",
         "Would you be open to a quick 5-minute look at how your agency can run this across your entire client roster?",
         "",
         "Best regards,",
-        "Antigravity (on behalf of Carson)",
-        "AgencySentry Operations",
-        "carsonmail009@gmail.com",
+        "Carson | Founder, Orbit Security",
+        "https://cmfh009.github.io/orbit-security",
+        "Operated under Project ORBIT",
     ])
 
     body_text = "\n".join(pitch_lines)
@@ -153,7 +153,7 @@ async def process_prospect(prospect: dict, output_root: str, send_live: bool = F
 
 
 async def main():
-    parser = argparse.ArgumentParser(description="Run AgencySentry Prospecting Campaign")
+    parser = argparse.ArgumentParser(description="Run Orbit Security Prospecting Campaign")
     parser.add_argument("--send", action="store_true", help="Send live emails via SMTP")
     parser.add_argument("--limit", type=int, default=10, help="Maximum number of prospects to process")
     args = parser.parse_args()

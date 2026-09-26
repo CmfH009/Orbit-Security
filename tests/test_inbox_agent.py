@@ -4,7 +4,7 @@ import tempfile
 from unittest.mock import MagicMock, patch
 import pytest
 
-from agency_sentry.inbox_agent import InboxAgent, LeadIntent
+from orbit_security.inbox_agent import InboxAgent, LeadIntent
 
 
 def test_classify_intent_ready_to_buy():

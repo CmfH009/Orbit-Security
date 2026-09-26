@@ -19,18 +19,18 @@ By delivering a co-branded, high-polish Security & Perimeter Audit on the 1st of
 
 ### 1. Installation
 ```powershell
-cd A:\projects\agency-sentry
+cd A:\projects\orbit-security
 uv sync
 ```
 
 ### 2. Run a Live Audit
 ```powershell
-uv run agency-sentry scan example.com --agency-name "Apex Digital Studio" --output-pdf audit.pdf --output-md audit.md
+uv run orbit-security scan example.com --agency-name "Apex Digital Studio" --output-pdf audit.pdf --output-md audit.md
 ```
 
 ### 3. Specify Target Subdomains
 ```powershell
-uv run agency-sentry scan myclient.com --subdomains "staging.myclient.com,promo.myclient.com,dev.myclient.com" --output-pdf client_audit.pdf
+uv run orbit-security scan myclient.com --subdomains "staging.myclient.com,promo.myclient.com,dev.myclient.com" --output-pdf client_audit.pdf
 ```
 
 ---

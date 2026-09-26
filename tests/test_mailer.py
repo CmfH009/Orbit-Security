@@ -3,7 +3,7 @@ import tempfile
 from unittest.mock import MagicMock, patch
 import pytest
 
-from agency_sentry.mailer import EmailDispatcher
+from orbit_security.mailer import EmailDispatcher
 
 
 def test_build_message_with_attachment():

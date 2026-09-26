@@ -6,9 +6,9 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from agency_sentry.models import AgencyBranding, Severity
-from agency_sentry.reporter import ReportGenerator
-from agency_sentry.scanner import AgencySentryScanner
+from orbit_security.models import AgencyBranding, Severity
+from orbit_security.reporter import ReportGenerator
+from orbit_security.scanner import OrbitSecurityScanner
 
 console = Console()
 
@@ -16,7 +16,7 @@ console = Console()
 async def run_scan(args):
     console.print(
         Panel.fit(
-            f"[bold cyan]AgencySentry[/bold cyan] — [yellow]External Attack Surface & Subdomain Hygiene Sentinel[/yellow]\n"
+            f"[bold cyan]Orbit Security[/bold cyan] — [yellow]External Attack Surface & Subdomain Hygiene Sentinel[/yellow]\n"
             f"[dim]Auditing target:[/dim] [bold white]{args.domain}[/bold white]",
             border_style="cyan"
         )
@@ -32,7 +32,7 @@ async def run_scan(args):
     if args.subdomains:
         subdomains = [s.strip() for s in args.subdomains.split(",") if s.strip()]
 
-    scanner = AgencySentryScanner()
+    scanner = OrbitSecurityScanner()
     with console.status(f"[bold green]Running deterministic perimeter checks on {args.domain}...[/bold green]"):
         result = await scanner.scan_domain(args.domain, subdomains=subdomains, agency_branding=branding)
 
@@ -89,7 +89,7 @@ async def run_scan(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="AgencySentry: White-Label Attack Surface & Subdomain Hygiene Sentinel"
+        description="Orbit Security: White-Label Attack Surface & Subdomain Hygiene Sentinel"
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 

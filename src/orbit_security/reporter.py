@@ -12,7 +12,7 @@ from reportlab.platypus import (
     KeepTogether
 )
 
-from agency_sentry.models import DomainAuditResult, Severity
+from orbit_security.models import DomainAuditResult, Severity
 
 
 class ReportGenerator:
@@ -239,7 +239,7 @@ class ReportGenerator:
 
         story.append(Spacer(1, 12))
         story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#CBD5E1"), spaceBefore=8, spaceAfter=8))
-        story.append(Paragraph(f"Confidential Report compiled by {b.agency_name} for client records. Questions? Contact {b.support_email}.", subtitle_style))
+        story.append(Paragraph(f"Confidential Report compiled by {b.agency_name} for client records. Powered by Orbit Security Labs. Questions? Contact {b.support_email}.", subtitle_style))
 
         doc.build(story)
         return output_path

@@ -1,7 +1,7 @@
 [project]
-name = "agency-sentry"
+name = "orbit-security"
 version = "0.1.0"
-description = "Add your description here"
+description = "Autonomous external perimeter hygiene, subdomain takeover sentinel, and white-label client security auditing for web & Shopify agencies."
 readme = "README.md"
 authors = [
     { name = "CmfH009", email = "carsonmail009@gmail.com" }
@@ -28,5 +28,7 @@ dev = [
 ]
 
 [project.scripts]
-agency-sentry = "agency_sentry.cli:main"
+orbit-security = "orbit_security.cli:main"
+agency-sentry = "orbit_security.cli:main"
+
 

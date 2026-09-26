@@ -1,350 +1,24 @@
 import json
+import os
 import httpx
 
 APPDEPLOY_API_KEY = "ak_548cd73451c0b6ccdf5da82244ddcd2815b0412321a627a1ccf7ef8fc1ea2ca2"
 ENDPOINT = "https://api-v2.appdeploy.ai/mcp"
 
-HTML_CONTENT = """<!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgencySentry | Attack Surface & Subdomain Hygiene for Web Agencies</title>
-    <meta name="description" content="White-label continuous perimeter scanning, subdomain takeover prevention, and co-branded monthly security audits for web & Shopify agencies.">
-    <link rel="stylesheet" href="./src/styles.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              brand: {
-                50: '#ecfdf5',
-                500: '#10b981',
-                600: '#059669',
-                700: '#047857',
-              }
-            }
-          }
-        }
-      }
-    </script>
-</head>
-<body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-emerald-500 selection:text-white">
+HTML_PATH = os.path.join(os.path.dirname(__file__), "..", "docs", "index.html")
+if os.path.exists(HTML_PATH):
+    with open(HTML_PATH, "r", encoding="utf-8") as f:
+        HTML_CONTENT = f.read()
+else:
+    HTML_CONTENT = ""
 
-    <!-- Header Navigation -->
-    <header class="sticky top-0 z-50 backdrop-blur-md bg-slate-950/80 border-b border-slate-800">
-        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                    <svg class="w-6 h-6 text-slate-950 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                </div>
-                <div>
-                    <span class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">AgencySentry</span>
-                    <span class="text-xs ml-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">B2B SaaS</span>
-                </div>
-            </div>
-            
-            <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
-                <a href="#features" class="hover:text-emerald-400 transition-colors">Features</a>
-                <a href="#audit-preview" class="hover:text-emerald-400 transition-colors">Audit Preview</a>
-                <a href="#pricing" class="hover:text-emerald-400 transition-colors">Pricing</a>
-                <a href="#compliance" class="hover:text-emerald-400 transition-colors">Trust & Security</a>
-            </nav>
+headers = {
+    "Authorization": f"Bearer {APPDEPLOY_API_KEY}",
+    "Content-Type": "application/json"
+}
 
-            <div class="flex items-center gap-4">
-                <a href="#pricing" class="px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm transition-all shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/30">
-                    Get Started
-                </a>
-            </div>
-        </div>
-    </header>
-
-    <!-- Hero Section -->
-    <section class="relative pt-24 pb-20 overflow-hidden">
-        <div class="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.15),rgba(255,255,255,0))]"></div>
-        <div class="max-w-5xl mx-auto px-6 text-center relative z-10">
-            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-700/80 text-xs font-medium text-slate-300 mb-8">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                White-label Perimeter Sentinel for Web & Shopify Agencies
-            </div>
-            
-            <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mb-6 leading-[1.15]">
-                Turn Client DNS & Attack Surface Hygiene into <span class="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">Recurring Retainer Value</span>
-            </h1>
-            
-            <p class="text-lg sm:text-xl text-slate-400 max-w-3xl mx-auto mb-10 leading-relaxed">
-                AgencySentry automatically monitors your client domains for orphaned DNS pointers, dangling SaaS subdomains (Shopify, Unbounce, AWS, GitHub), and email spoofing risks. Deliver polished, co-branded executive PDF audits every month.
-            </p>
-
-            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a href="https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-base transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2">
-                    Activate Growth Plan ($59/mo)
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                </a>
-                <a href="#audit-preview" class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-semibold text-base transition-colors flex items-center justify-center">
-                    View Sample Report
-                </a>
-            </div>
-
-            <div class="mt-12 flex items-center justify-center gap-8 text-xs text-slate-400">
-                <div class="flex items-center gap-2">
-                    <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                    100% Non-Intrusive & Passive
-                </div>
-                <div class="flex items-center gap-2">
-                    <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                    Co-Branded With Your Agency Logo
-                </div>
-                <div class="flex items-center gap-2">
-                    <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                    Cancel Anytime
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Live Audit Preview -->
-    <section id="audit-preview" class="py-16 bg-slate-900/50 border-y border-slate-800">
-        <div class="max-w-5xl mx-auto px-6">
-            <div class="text-center max-w-2xl mx-auto mb-12">
-                <h2 class="text-2xl sm:text-3xl font-bold text-white mb-3">Live Co-Branded Audit Sample</h2>
-                <p class="text-slate-400 text-sm">Every month, your agency receives high-res executive PDFs branded with your agency name and colors to send directly to your clients.</p>
-            </div>
-
-            <!-- Mock Audit Report UI -->
-            <div class="bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden p-6 sm:p-8">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6 mb-6">
-                    <div>
-                        <div class="text-xs uppercase tracking-wider text-emerald-400 font-semibold mb-1">Executive Perimeter Audit</div>
-                        <h3 class="text-xl font-bold text-white">Client Domain: clientbrand.com</h3>
-                        <p class="text-xs text-slate-400 mt-1">Generated by <span class="text-slate-200 font-semibold">Your Agency</span> via AgencySentry Sentinel</p>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="px-3.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-                            Grade: A (94/100)
-                        </div>
-                        <div class="px-3.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs">
-                            Active Monitoring
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-                        <div class="text-xs text-slate-400 mb-1">Subdomain Takeovers</div>
-                        <div class="text-lg font-bold text-emerald-400 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> 0 Vulnerable
-                        </div>
-                        <div class="text-[11px] text-slate-400 mt-1">17 SaaS signatures checked</div>
-                    </div>
-                    <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-                        <div class="text-xs text-slate-400 mb-1">Email Spoofing (DMARC)</div>
-                        <div class="text-lg font-bold text-emerald-400 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Enforced
-                        </div>
-                        <div class="text-[11px] text-slate-400 mt-1">SPF & DKIM aligned</div>
-                    </div>
-                    <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-                        <div class="text-xs text-slate-400 mb-1">Sensitive Probes</div>
-                        <div class="text-lg font-bold text-emerald-400 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> 0 Exposed
-                        </div>
-                        <div class="text-[11px] text-slate-400 mt-1">.env, .git/HEAD protected</div>
-                    </div>
-                    <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-                        <div class="text-xs text-slate-400 mb-1">SSL/TLS Validity</div>
-                        <div class="text-lg font-bold text-emerald-400 flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> 78 Days Left
-                        </div>
-                        <div class="text-[11px] text-slate-400 mt-1">Issuer: Let's Encrypt</div>
-                    </div>
-                </div>
-
-                <div class="bg-slate-950/40 rounded-xl p-4 border border-slate-800/80 text-xs text-slate-400 flex items-center justify-between">
-                    <span>💡 Agency Retainer Tip: Send this 1-page PDF monthly to your client stakeholders to demonstrate continuous security stewardship.</span>
-                    <span class="text-emerald-400 font-semibold cursor-pointer">Preview PDF Layout &rarr;</span>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Features Grid -->
-    <section id="features" class="py-20 max-w-6xl mx-auto px-6">
-        <div class="text-center max-w-2xl mx-auto mb-16">
-            <h2 class="text-3xl font-bold text-white mb-4">Engineered Specifically for Web & Shopify Agencies</h2>
-            <p class="text-slate-400">Everything you need to automate client perimeter security and protect recurring maintenance revenue.</p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-800 hover:border-slate-700 transition-colors">
-                <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mb-5">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                </div>
-                <h3 class="text-lg font-bold text-white mb-2">Automated Subdomain Takeover Sentinel</h3>
-                <p class="text-slate-400 text-sm leading-relaxed">
-                    Continuously queries Certificate Transparency logs and DNS records to find dangling CNAMEs pointing to abandoned SaaS apps (Shopify, Unbounce, AWS S3, GitHub Pages).
-                </p>
-            </div>
-
-            <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-800 hover:border-slate-700 transition-colors">
-                <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mb-5">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                </div>
-                <h3 class="text-lg font-bold text-white mb-2">White-Label Co-Branded Reports</h3>
-                <p class="text-slate-400 text-sm leading-relaxed">
-                    No AgencySentry branding on your client deliverables. Every monthly executive PDF features your agency's logo, primary brand palette, and contact info.
-                </p>
-            </div>
-
-            <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-800 hover:border-slate-700 transition-colors">
-                <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mb-5">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-                </div>
-                <h3 class="text-lg font-bold text-white mb-2">Instant Drift & Breach Alerts</h3>
-                <p class="text-slate-400 text-sm leading-relaxed">
-                    If a client developer accidentally exposes a <code class="text-emerald-400 font-mono text-xs">.env</code> file or their DMARC record decays to <code class="text-emerald-400 font-mono text-xs">p=none</code>, you receive instant Slack/Email alerts.
-                </p>
-            </div>
-        </div>
-    </section>
-
-    <!-- Pricing Section -->
-    <section id="pricing" class="py-20 bg-slate-900/40 border-t border-slate-800">
-        <div class="max-w-5xl mx-auto px-6">
-            <div class="text-center max-w-2xl mx-auto mb-16">
-                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-4">Simple, Transparent Retainer Pricing</h2>
-                <p class="text-slate-400">Justify an extra $200–$500/month per client on your care plans while AgencySentry does all the heavy lifting.</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
-                <!-- Starter Tier -->
-                <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 flex flex-col justify-between">
-                    <div>
-                        <h3 class="text-lg font-bold text-white mb-1">Starter Agency</h3>
-                        <p class="text-xs text-slate-400 mb-6">For boutique studios managing up to 15 sites</p>
-                        <div class="flex items-baseline gap-1 mb-6">
-                            <span class="text-4xl font-extrabold text-white">$29</span>
-                            <span class="text-slate-400 text-sm">/month</span>
-                        </div>
-                        <ul class="space-y-3 text-xs text-slate-300 mb-8">
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Up to 15 client domains</li>
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Monthly automated PDF audits</li>
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Subdomain takeover protection</li>
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Email drift & DMARC checks</li>
-                        </ul>
-                    </div>
-                    <a href="mailto:carsonmail009@gmail.com?subject=Inquiry%20Starter%20Agency%20Tier" class="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs text-center transition-colors">
-                        Inquire Starter
-                    </a>
-                </div>
-
-                <!-- Growth Tier (Recommended) -->
-                <div class="bg-gradient-to-b from-slate-900 to-slate-950 p-8 rounded-2xl border-2 border-emerald-500 shadow-xl shadow-emerald-500/10 flex flex-col justify-between relative">
-                    <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-emerald-500 text-slate-950 font-bold text-[10px] uppercase tracking-wider">
-                        Most Popular
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-bold text-white mb-1">Growth Agency</h3>
-                        <p class="text-xs text-slate-400 mb-6">For expanding web and Shopify agencies</p>
-                        <div class="flex items-baseline gap-1 mb-6">
-                            <span class="text-4xl font-extrabold text-emerald-400">$59</span>
-                            <span class="text-slate-400 text-sm">/month</span>
-                        </div>
-                        <ul class="space-y-3 text-xs text-slate-300 mb-8">
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <strong class="text-white">Up to 40 client domains</strong></li>
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Full White-Labeling (Logo & Colors)</li>
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Continuous Daily Perimeter Scans</li>
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Critical Path & Exposure Probes</li>
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Priority Operator Support</li>
-                        </ul>
-                    </div>
-                    <a href="https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800" class="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs text-center transition-all shadow-md shadow-emerald-500/25">
-                        Subscribe Now ($59/mo)
-                    </a>
-                </div>
-
-                <!-- Pro Tier -->
-                <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 flex flex-col justify-between">
-                    <div>
-                        <h3 class="text-lg font-bold text-white mb-1">Pro Agency</h3>
-                        <p class="text-xs text-slate-400 mb-6">For premier agencies with large client rosters</p>
-                        <div class="flex items-baseline gap-1 mb-6">
-                            <span class="text-4xl font-extrabold text-white">$99</span>
-                            <span class="text-slate-400 text-sm">/month</span>
-                        </div>
-                        <ul class="space-y-3 text-xs text-slate-300 mb-8">
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Up to 100 client domains</li>
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Dedicated Slack / Webhook integrations</li>
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Automated client PDF auto-dispatch</li>
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Custom SLA & Security Reviews</li>
-                        </ul>
-                    </div>
-                    <a href="mailto:carsonmail009@gmail.com?subject=Inquiry%20Pro%20Agency%20Tier" class="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs text-center transition-colors">
-                        Inquire Pro
-                    </a>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Trust, Compliance & Legal Footer (Essential for Stripe Merchant Verification) -->
-    <footer id="compliance" class="py-16 bg-slate-950 border-t border-slate-900 text-slate-400 text-xs">
-        <div class="max-w-6xl mx-auto px-6">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
-                <div class="md:col-span-2">
-                    <div class="flex items-center gap-2 mb-3">
-                        <div class="w-6 h-6 rounded-lg bg-emerald-500 flex items-center justify-center text-slate-950 font-bold text-xs">AS</div>
-                        <span class="text-sm font-bold text-white">AgencySentry</span>
-                    </div>
-                    <p class="max-w-sm text-slate-400 leading-relaxed mb-4">
-                        Autonomous attack surface hygiene & white-label reporting sentinel built for modern web design and digital agencies.
-                    </p>
-                    <p class="text-slate-400">
-                        Operated by: <span class="text-slate-300">AgencySentry Operations</span><br>
-                        Direct Inquiries: <a href="mailto:carsonmail009@gmail.com" class="text-emerald-400 hover:underline">carsonmail009@gmail.com</a>
-                    </p>
-                </div>
-                <div>
-                    <h4 class="text-white font-semibold text-sm mb-3">Legal & Terms</h4>
-                    <ul class="space-y-2">
-                        <li><a href="#compliance" class="hover:text-slate-300">Terms of Service</a></li>
-                        <li><a href="#compliance" class="hover:text-slate-300">Privacy Policy</a></li>
-                        <li><a href="#compliance" class="hover:text-slate-300">Refund & Cancellation Policy</a></li>
-                        <li><a href="#compliance" class="hover:text-slate-300">RFC Passive Scan Disclaimer</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="text-white font-semibold text-sm mb-3">Payment & Guarantees</h4>
-                    <p class="text-slate-400 mb-2 leading-relaxed">
-                        Secure payments processed via Stripe. 256-bit encryption. Cancel subscription anytime with 1 click.
-                    </p>
-                    <div class="text-emerald-400 font-medium">
-                        ✓ 30-Day Money Back Guarantee
-                    </div>
-                </div>
-            </div>
-
-            <div class="border-t border-slate-900 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-400">
-                <p>&copy; 2026 AgencySentry. All rights reserved.</p>
-                <p class="text-center sm:text-right">Non-intrusive RFC-compliant monitoring only. No unauthorized access attempts performed.</p>
-            </div>
-        </div>
-    </footer>
-
-</body>
-</html>
-"""
 
 def deploy():
-    headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json, text/event-stream",
-        "Authorization": f"Bearer {APPDEPLOY_API_KEY}"
-    }
-
     TESTS_JSON = json.dumps([
         {
             "name": "Landing Page Renders Hero",
@@ -352,7 +26,7 @@ def deploy():
             "viewport": "desktop",
             "covers": ["hero_rendering"],
             "description": "Verify headline and hero section load properly",
-            "steps": ["Open page", "Check AgencySentry title", "Verify CTA button is visible"],
+            "steps": ["Open page", "Check Orbit Security title", "Verify CTA button is visible"],
             "expected": "Hero section is displayed with heading and CTA buttons"
         },
         {
@@ -382,8 +56,8 @@ def deploy():
             "arguments": {
                 "app_id": None,
                 "app_type": "frontend-only",
-                "app_name": "AgencySentry",
-                "description": "White-label attack surface and subdomain hygiene scanner for web agencies",
+                "app_name": "OrbitSecurity",
+                "description": "Autonomous external perimeter hygiene, subdomain takeover sentinel, and white-label client security auditing for web & Shopify agencies.",
                 "frontend_template": "html-static",
                 "model": "gemini-2.5-pro",
                 "intent": "initial app deploy",
@@ -401,12 +75,13 @@ def deploy():
         }
     }
 
-    print("[*] Deploying AgencySentry landing page to AppDeploy...")
+    print("[*] Deploying Orbit Security landing page to AppDeploy...")
     r = httpx.post(ENDPOINT, headers=headers, json=payload, timeout=60.0)
     print(f"[*] Response status: {r.status_code}")
     res = r.json()
     print(json.dumps(res, indent=2))
     return res
+
 
 if __name__ == "__main__":
     deploy()

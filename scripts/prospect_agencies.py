@@ -4,10 +4,10 @@ import os
 import sys
 from typing import List
 
-from agency_sentry.mailer import EmailDispatcher
-from agency_sentry.models import AgencyBranding
-from agency_sentry.reporter import ReportGenerator
-from agency_sentry.scanner import AgencySentryScanner
+from orbit_security.mailer import EmailDispatcher
+from orbit_security.models import AgencyBranding
+from orbit_security.reporter import ReportGenerator
+from orbit_security.scanner import OrbitSecurityScanner
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -27,11 +27,11 @@ async def prospect_domain(
     send_live: bool = False
 ):
     os.makedirs(output_dir, exist_ok=True)
-    scanner = AgencySentryScanner()
+    scanner = OrbitSecurityScanner()
     branding = AgencyBranding(
-        agency_name=os.getenv("DEFAULT_AGENCY_NAME", "AgencySentry Partner"),
-        support_email=os.getenv("DEFAULT_AGENCY_EMAIL", "audit-dispatch@agencysentry.io"),
-        website=os.getenv("DEFAULT_AGENCY_WEBSITE", "https://agencysentry.io")
+        agency_name=os.getenv("DEFAULT_AGENCY_NAME", "Orbit Security Partner"),
+        support_email=os.getenv("DEFAULT_AGENCY_EMAIL", "carsonmail009@gmail.com"),
+        website=os.getenv("DEFAULT_AGENCY_WEBSITE", "https://cmfh009.github.io/orbit-security")
     )
 
     print(f"\n[*] Scanning perimeter for {domain} (including Certificate Transparency logs)...")
@@ -69,7 +69,7 @@ async def prospect_domain(
         "",
         f"I've attached the full white-labeled PDF report for your records.",
         "",
-        "We built AgencySentry so agencies can automatically generate these co-branded PDF audits every month for all your client domains to justify your $150-$300/mo website maintenance retainers without burning engineer hours.",
+        "We built Orbit Security so agencies can automatically generate these co-branded PDF audits every month for all your client domains to justify your $150-$300/mo website maintenance retainers without burning engineer hours.",
         "",
         "Would you be open to a quick look at how your agency can run this across your entire client roster?",
         "",
@@ -113,7 +113,7 @@ async def prospect_domain(
 
 
 async def main():
-    parser = argparse.ArgumentParser(description="AgencySentry Prospector")
+    parser = argparse.ArgumentParser(description="Orbit Security Prospector")
     parser.add_argument("--send", action="store_true", help="Send live emails via SMTP (requires .env)")
     parser.add_argument("--recipient", default="founder@targetagency.com", help="Target email address")
     args = parser.parse_args()

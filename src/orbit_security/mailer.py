@@ -24,7 +24,7 @@ class EmailDispatcher:
         self.smtp_port = smtp_port or int(os.getenv("SMTP_PORT", "587"))
         self.smtp_user = smtp_user or os.getenv("SMTP_USER")
         self.smtp_password = smtp_password or os.getenv("SMTP_PASSWORD")
-        self.sender_name = sender_name or os.getenv("SENDER_NAME", "AgencySentry Security Team")
+        self.sender_name = sender_name or os.getenv("SENDER_NAME", "Carson @ Orbit Security")
 
     def is_configured(self) -> bool:
         return bool(self.smtp_host and self.smtp_user and self.smtp_password)

@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
-from agency_sentry.models import DomainAuditResult, Finding, Severity, AgencyBranding
-from agency_sentry.signatures import SAAS_TAKEOVER_SIGNATURES
-from agency_sentry.scanner import AgencySentryScanner
+from orbit_security.models import DomainAuditResult, Finding, Severity, AgencyBranding
+from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES
+from orbit_security.scanner import OrbitSecurityScanner, AgencySentryScanner
 
 
 def test_score_and_grade_calculation():

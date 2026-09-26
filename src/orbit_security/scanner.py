@@ -6,11 +6,11 @@ from typing import List, Optional, Set
 import dns.asyncresolver
 import httpx
 
-from agency_sentry.models import AgencyBranding, DomainAuditResult, Finding, Severity
-from agency_sentry.signatures import SAAS_TAKEOVER_SIGNATURES
+from orbit_security.models import AgencyBranding, DomainAuditResult, Finding, Severity
+from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES
 
 
-class AgencySentryScanner:
+class OrbitSecurityScanner:
     def __init__(self, timeout: float = 8.0):
         self.timeout = timeout
         self.resolver = dns.asyncresolver.Resolver()
@@ -432,3 +432,7 @@ class AgencySentryScanner:
 
         result.calculate_grade_and_score()
         return result
+
+
+# Backward compatibility alias
+AgencySentryScanner = OrbitSecurityScanner

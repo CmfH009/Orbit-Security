@@ -1,8 +1,8 @@
 import os
 import tempfile
 import pytest
-from agency_sentry.models import DomainAuditResult, Finding, Severity, AgencyBranding
-from agency_sentry.reporter import ReportGenerator
+from orbit_security.models import DomainAuditResult, Finding, Severity, AgencyBranding
+from orbit_security.reporter import ReportGenerator
 
 
 def test_markdown_report_generation():

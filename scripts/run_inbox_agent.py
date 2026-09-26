@@ -4,7 +4,7 @@ import os
 import sys
 import time
 
-from agency_sentry.inbox_agent import InboxAgent
+from orbit_security.inbox_agent import InboxAgent
 
 _MUTEX_HANDLE = None
 
@@ -31,7 +31,7 @@ def acquire_process_mutex(mutex_name: str) -> bool:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="AgencySentry Autonomous Inbox & Negotiation Agent"
+        description="Orbit Security Autonomous Inbox & Negotiation Agent"
     )
     parser.add_argument(
         "--once",
@@ -47,12 +47,12 @@ def main():
     args = parser.parse_args()
 
     if not args.once:
-        if not acquire_process_mutex("Global\\AgencySentryInboxDaemon"):
-            print("[!] AgencySentry Inbox Agent is already running (mutex locked). Exiting.")
+        if not acquire_process_mutex("Global\\OrbitSecurityInboxDaemon"):
+            print("[!] Orbit Security Inbox Agent is already running (mutex locked). Exiting.")
             sys.exit(0)
 
-    print("[*] Starting AgencySentry Autonomous Inbox Agent...")
-    print(f"[*] Operator Email: carsonmail009@gmail.com")
+    print("[*] Starting Orbit Security Autonomous Inbox Agent...")
+    print("[*] Operator Email: carsonmail009@gmail.com")
     agent = InboxAgent()
 
     if args.once:

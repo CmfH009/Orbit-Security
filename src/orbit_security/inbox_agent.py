@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
 
-from agency_sentry.mailer import EmailDispatcher
+from orbit_security.mailer import EmailDispatcher
 
 load_dotenv()
 
@@ -102,8 +102,9 @@ class InboxAgent:
                 f"Thank you for the update! Carson is preparing your agency workspace and onboarding details right now.\n"
                 f"He will follow up directly shortly with your secure onboarding link so we can get all your client domains configured.\n\n"
                 f"Best regards,\n"
-                f"Antigravity (on behalf of Carson)\n"
-                f"AgencySentry Operations"
+                f"Carson | Founder, Orbit Security\n"
+                f"https://cmfh009.github.io/orbit-security\n"
+                f"Operated under Project ORBIT"
             )
 
             # Trigger final notification email to Carson with links and client details
@@ -121,10 +122,10 @@ class InboxAgent:
                 f"Reply to {sender_email} with your live Stripe Payment Link:\n"
                 f"👉 {stripe_link}\n\n"
                 f"Suggested 1-click reply:\n"
-                f"\"Hi there, here is your direct link to activate AgencySentry for your client roster:\n"
+                f"\"Hi there, here is your direct link to activate Orbit Security for your client roster:\n"
                 f"{stripe_link}\n\n"
                 f"Once completed, your dashboard and monthly co-branded audits will be active immediately. Looking forward to working together! - Carson\"\n\n"
-                f"- AgencySentry Autonomous Inbox Agent"
+                f"- Orbit Security Autonomous Inbox Agent"
             )
 
             try:
@@ -139,7 +140,7 @@ class InboxAgent:
         elif intent == LeadIntent.INQUIRY_PRICING:
             reply_text = (
                 f"Hi there,\n\n"
-                f"Thank you for reaching out! Here is how AgencySentry pricing works for partner web agencies:\n\n"
+                f"Thank you for reaching out! Here is how Orbit Security pricing works for partner web agencies:\n\n"
                 f"• Starter Agency ($29/month): Up to 15 client domains\n"
                 f"• Growth Agency ($59/month): Up to 40 client domains (Most popular)\n"
                 f"• Pro Agency ($99/month): Up to 100 client domains\n\n"
@@ -149,21 +150,23 @@ class InboxAgent:
                 f"- Instant Slack/Email alerts if a client domain suffers DNS/DMARC decay\n\n"
                 f"How many client domains does your agency currently maintain? Let us know and Carson can activate your workspace immediately.\n\n"
                 f"Best regards,\n"
-                f"Antigravity (on behalf of Carson)\n"
-                f"AgencySentry Operations"
+                f"Carson | Founder, Orbit Security\n"
+                f"https://cmfh009.github.io/orbit-security\n"
+                f"Operated under Project ORBIT"
             )
 
         elif intent == LeadIntent.INQUIRY_TECHNICAL:
             reply_text = (
                 f"Hi there,\n\n"
-                f"Thanks for your question! To clarify how AgencySentry works:\n\n"
+                f"Thanks for your question! To clarify how Orbit Security works:\n\n"
                 f"1. Non-Intrusive & Zero-Impact: Our scans are strictly passive and RFC-compliant. We inspect public DNS records, Certificate Transparency logs, SSL certificates, and standard HTTP headers. There is zero load on your client web servers.\n"
                 f"2. White-Label Reports: Every monthly PDF is fully co-branded with your agency's logo, primary color, and tagline. Your clients see it as a direct deliverable from your team justifying their monthly maintenance retainer.\n"
                 f"3. Zero Setup Friction: You simply upload your list of client domains, and our sentinel automates the rest.\n\n"
                 f"Would you like us to run a sample co-branded scan across 3-5 of your client domains so you can see the reports firsthand?\n\n"
                 f"Best regards,\n"
-                f"Antigravity (on behalf of Carson)\n"
-                f"AgencySentry Operations"
+                f"Carson | Founder, Orbit Security\n"
+                f"https://cmfh009.github.io/orbit-security\n"
+                f"Operated under Project ORBIT"
             )
 
         elif intent == LeadIntent.NOT_INTERESTED:
@@ -224,9 +227,9 @@ class InboxAgent:
                                 f"Stripe Session ID: {s_id}\n\n"
                                 f"The funds will automatically transfer to your Chime checking account via Stripe payouts.\n\n"
                                 f"Next Steps:\n"
-                                f"- AgencySentry has registered their account for monthly perimeter monitoring.\n"
+                                f"- Orbit Security has registered their account for monthly perimeter monitoring.\n"
                                 f"- Their first automated monthly audit will generate on the 1st of next month.\n\n"
-                                f"- AgencySentry Autonomous Revenue Sentinel"
+                                f"- Orbit Security Autonomous Revenue Sentinel"
                             )
 
                             try:
@@ -307,6 +310,8 @@ class InboxAgent:
 
                 is_agency_outreach = (
                     "security notice regarding" in subject.lower()
+                    or "orbit security" in subject.lower()
+                    or "orbit-security" in subject.lower()
                     or "agencysentry" in subject.lower()
                     or any(agency_kw in subject.lower() for agency_kw in [
                         "candykittens", "edenbrothers", "snowdoniacheese", "brewteacompany",
