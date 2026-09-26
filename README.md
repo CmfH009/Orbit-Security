@@ -52,10 +52,75 @@ uv run orbit-security scan myclient.com --subdomains "staging.myclient.com,promo
 
 ---
 
+---
+
+## ⚡ Autonomous CLI Scanner (`orbit-recon`)
+
+`orbit-recon` is our standalone, zero-dependency external attack surface scanner:
+
+```bash
+# Scan a single domain
+python tools/orbit-recon.py example.com
+
+# Scan multiple domains with Markdown matrix export & CI/CD gate
+python tools/orbit-recon.py --targets-file domains.txt --markdown fleet_matrix.md --fail-on-critical
+```
+
+---
+
+## 🤖 CI/CD GitHub Action (`action.yml`)
+
+Gate pull requests and deployments by verifying that no staging subdomains, broken CNAMEs, or exposed secrets slip into production:
+
+```yaml
+name: Orbit Security Perimeter Sentinel
+
+on: [push, pull_request]
+
+jobs:
+  perimeter-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit External Perimeter
+        uses: CmfH009/Orbit-Security@main
+        with:
+          target: 'myagency.com'
+          # Or specify a list of client domains:
+          # targets-file: '.orbit-targets.txt'
+          fail-on-critical: 'true'
+          markdown-summary: 'true'
+```
+*When `markdown-summary` is enabled, the formatted audit table is automatically rendered right inside the GitHub Actions run summary tab!*
+
+---
+
+## 🔔 Slack & Discord Webhooks
+
+Send real-time alerts when client perimeters drift into dangerous states:
+
+```bash
+python scripts/scheduled_sentinel.py \
+  --clients-file data/clients.json \
+  --slack-webhook "https://hooks.slack.com/services/..." \
+  --discord-webhook "https://discord.com/api/webhooks/..."
+```
+
+---
+
 ## 🧪 Testing
 
-Run the automated test suite:
+Run the automated test suite (44/44 tests with 100% deterministic mocking):
 ```powershell
 uv run pytest
 ```
-All tests run with 100% deterministic mocking for DNS and network requests.
+
+---
+
+## 🌐 Live Platform & Demos
+
+- **Live Production App & Scanner:** [https://cmfh009.github.io/Orbit-Security/](https://cmfh009.github.io/Orbit-Security/)
+- **Terms of Service:** [https://cmfh009.github.io/Orbit-Security/terms.html](https://cmfh009.github.io/Orbit-Security/terms.html)
+- **Privacy Policy:** [https://cmfh009.github.io/Orbit-Security/privacy.html](https://cmfh009.github.io/Orbit-Security/privacy.html)
+- **RFC Safe Harbor:** [https://cmfh009.github.io/Orbit-Security/disclaimer.html](https://cmfh009.github.io/Orbit-Security/disclaimer.html)
+

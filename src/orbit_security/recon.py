@@ -8,8 +8,10 @@ Part of the Orbit Security Intelligence Suite (https://cmfh009.github.io/Orbit-S
 import argparse
 import json
 import socket
+import sys
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
+
 
 try:
     import dns.resolver
@@ -256,16 +258,126 @@ def run_recon(target: str, json_output: bool = False) -> Dict[str, Any]:
     return results
 
 
+def run_bulk_recon(
+    targets: List[str],
+    json_output: bool = False,
+    markdown_path: Optional[str] = None,
+    fail_on_critical: bool = False,
+) -> List[Dict[str, Any]]:
+    """Runs reconnaissance across multiple target domains concurrently/sequentially."""
+    results = []
+    has_critical_failure = False
+
+    if not json_output:
+        print(BANNER)
+        print(f"{BOLD}Executing Bulk Perimeter Audit across {len(targets)} domains...{RESET}\n")
+
+    for target in targets:
+        domain = target.replace("http://", "").replace("https://", "").split("/")[0].strip()
+        if not domain or domain.startswith("#"):
+            continue
+
+        dns_res = resolve_dns(domain)
+        web_res = check_headers_and_exposures(domain)
+        score = calculate_score(dns_res, web_res)
+
+        has_takeover = bool(dns_res.get("dangling_risk"))
+        has_exposure = bool(web_res.get("exposures"))
+        if has_takeover or has_exposure:
+            has_critical_failure = True
+
+        res = {
+            "target": domain,
+            "score": score,
+            "dns": dns_res,
+            "perimeter": web_res,
+            "has_takeover": has_takeover,
+            "has_exposure": has_exposure,
+        }
+        results.append(res)
+
+        if not json_output:
+            score_color = GREEN if score >= 85 else (YELLOW if score >= 60 else RED)
+            crit_badge = f" {RED}{BOLD}[CRITICAL DRIFT]{RESET}" if (has_takeover or has_exposure) else ""
+            print(f"  • {BOLD}{domain:30}{RESET} Score: {score_color}{score:3}/100{RESET}{crit_badge}")
+
+    if markdown_path:
+        md_lines = [
+            "# Orbit Security: Bulk Perimeter Audit Matrix",
+            f"**Audit Timestamp:** {socket.gethostname()} | **Total Targets:** {len(results)}\n",
+            "| Target Domain | Score | Routing / CNAME | Security Headers | Critical Exposures |",
+            "| :--- | :--- | :--- | :--- | :--- |",
+        ]
+        for r in results:
+            cname = r["dns"].get("cname") or "Apex Direct"
+            if r["has_takeover"]:
+                cname = f"🚨 **Dangling CNAME ({r['dns'].get('matched_service', 'SaaS')})**"
+            h_count = f"{len(r['perimeter'].get('headers_found', {}))}/5"
+            exp_text = f"🚨 {len(r['perimeter']['exposures'])} exposed" if r["has_exposure"] else "Clean"
+            md_lines.append(f"| `{r['target']}` | **{r['score']}/100** | {cname} | {h_count} | {exp_text} |")
+
+        md_content = "\n".join(md_lines) + "\n"
+        with open(markdown_path, "w", encoding="utf-8") as f:
+            f.write(md_content)
+        if not json_output:
+            print(f"\n{GREEN}[✓] Markdown Audit Matrix exported to:{RESET} {markdown_path}")
+
+    if json_output:
+        print(json.dumps(results, indent=2))
+
+    if fail_on_critical and has_critical_failure:
+        print(f"\n{RED}{BOLD}[!] CI/CD Failure: Critical vulnerabilities (takeover or exposed secrets) detected.{RESET}")
+        sys.exit(1)
+
+    return results
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Orbit Recon — Autonomous External Perimeter Reconnaissance"
     )
-    parser.add_argument("target", help="Target domain (e.g. agency.com or client.agency.com)")
+    parser.add_argument("target", nargs="?", default=None, help="Target domain (e.g. agency.com or client.agency.com)")
+    parser.add_argument("--targets-file", "-f", help="Text file with domains to scan (one per line)")
+    parser.add_argument("--markdown", "-m", help="Path to export Markdown fleet matrix")
     parser.add_argument("--json", action="store_true", help="Output results in JSON format")
+    parser.add_argument(
+        "--fail-on-critical",
+        action="store_true",
+        help="Exit with code 1 if critical takeover or secret exposure detected (CI/CD sentinel mode)",
+    )
     args = parser.parse_args()
 
-    run_recon(args.target, args.json)
+    if args.targets_file:
+        with open(args.targets_file, "r", encoding="utf-8") as f:
+            domains = [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
+        run_bulk_recon(
+            targets=domains,
+            json_output=args.json,
+            markdown_path=args.markdown,
+            fail_on_critical=args.fail_on_critical,
+        )
+    elif args.target:
+        if args.markdown:
+            run_bulk_recon(
+                targets=[args.target],
+                json_output=args.json,
+                markdown_path=args.markdown,
+                fail_on_critical=args.fail_on_critical,
+            )
+        else:
+            res = run_recon(args.target, args.json)
+            if args.fail_on_critical:
+                has_takeover = bool(res["dns"].get("dangling_risk"))
+                has_exposure = bool(res["perimeter"].get("exposures"))
+                if has_takeover or has_exposure:
+                    print(f"{RED}{BOLD}[!] CI/CD Failure: Critical posture risk detected.{RESET}")
+                    sys.exit(1)
+    else:
+
+        parser.print_help()
+        sys.exit(1)
 
 
 if __name__ == "__main__":
     main()
+

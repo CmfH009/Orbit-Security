@@ -77,3 +77,51 @@ def test_orbit_recon_ssrf_blocked():
     results = run_recon("127.0.0.1", json_output=False)
     assert "error" in results["dns"]
     assert "SSRF blocked" in results["dns"]["error"]
+
+
+def test_run_bulk_recon(tmp_path):
+    """Verify run_bulk_recon scans multiple targets and exports markdown matrix."""
+    from orbit_security.recon import run_bulk_recon
+
+    mock_clean_dns = {"cname": None, "a_records": ["93.184.216.34"], "dangling_risk": False}
+    mock_clean_web = {"status_code": 200, "headers_found": {"Strict-Transport-Security": "1"}, "missing_headers": [], "exposures": []}
+
+    md_file = tmp_path / "fleet_matrix.md"
+
+    with patch("orbit_security.recon.resolve_dns", return_value=mock_clean_dns):
+        with patch("orbit_security.recon.check_headers_and_exposures", return_value=mock_clean_web):
+            results = run_bulk_recon(
+                targets=["client1.com", "client2.com"],
+                json_output=True,
+                markdown_path=str(md_file),
+                fail_on_critical=False,
+            )
+            assert len(results) == 2
+            assert results[0]["target"] == "client1.com"
+            assert results[1]["target"] == "client2.com"
+            assert results[0]["has_takeover"] is False
+
+    assert md_file.exists()
+    content = md_file.read_text(encoding="utf-8")
+    assert "Orbit Security: Bulk Perimeter Audit Matrix" in content
+    assert "`client1.com`" in content
+    assert "`client2.com`" in content
+
+
+def test_run_bulk_recon_fail_on_critical():
+    """Verify run_bulk_recon exits with code 1 if fail_on_critical is set and critical risk is found."""
+    from orbit_security.recon import run_bulk_recon
+
+    mock_risky_dns = {"cname": "bad.trafficmanager.net", "dangling_risk": True, "matched_service": "Azure Traffic Manager"}
+    mock_risky_web = {"status_code": 200, "headers_found": {}, "missing_headers": [], "exposures": []}
+
+    with patch("orbit_security.recon.resolve_dns", return_value=mock_risky_dns):
+        with patch("orbit_security.recon.check_headers_and_exposures", return_value=mock_risky_web):
+            with pytest.raises(SystemExit) as exc_info:
+                run_bulk_recon(
+                    targets=["vulnerable-client.com"],
+                    json_output=True,
+                    fail_on_critical=True,
+                )
+            assert exc_info.value.code == 1
+

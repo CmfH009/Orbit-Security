@@ -1,0 +1,71 @@
+name: 'Orbit Security Perimeter Sentinel'
+description: 'Autonomous attack surface, DNS hygiene, dangling CNAME takeover, and perimeter exposure scanner for CI/CD gates.'
+author: 'Orbit Security (Carson Haynes @_arsoncode)'
+branding:
+  icon: 'shield'
+  color: 'cyan'
+
+inputs:
+  target:
+    description: 'Target domain to audit (e.g. agency.com or client.agency.com)'
+    required: false
+    default: ''
+  targets-file:
+    description: 'Path to text file containing domains to scan (one per line)'
+    required: false
+    default: ''
+  fail-on-critical:
+    description: 'Exit code 1 if critical takeover or secret exposure is detected'
+    required: false
+    default: 'true'
+  markdown-summary:
+    description: 'Append Markdown audit matrix to GitHub Step Summary ($GITHUB_STEP_SUMMARY)'
+    required: false
+    default: 'true'
+  export-markdown:
+    description: 'Optional file path to write Markdown report artifact to'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Orbit Security Dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install dnspython httpx
+
+    - name: Execute Orbit Perimeter Sentinel
+      shell: bash
+      run: |
+        FLAGS=""
+        if [ "${{ inputs.fail-on-critical }}" = "true" ]; then
+          FLAGS="$FLAGS --fail-on-critical"
+        fi
+
+        TEMP_MD="${RUNNER_TEMP:-/tmp}/orbit_audit_summary.md"
+        FLAGS="$FLAGS --markdown $TEMP_MD"
+
+        if [ -n "${{ inputs.targets-file }}" ]; then
+          python "${{ github.action_path }}/tools/orbit-recon.py" --targets-file "${{ inputs.targets-file }}" $FLAGS
+        elif [ -n "${{ inputs.target }}" ]; then
+          python "${{ github.action_path }}/tools/orbit-recon.py" "${{ inputs.target }}" $FLAGS
+        else
+          echo "::error::Neither 'target' nor 'targets-file' input was provided to Orbit Security Action."
+          exit 1
+        fi
+
+        if [ "${{ inputs.markdown-summary }}" = "true" ] && [ -f "$TEMP_MD" ] && [ -n "$GITHUB_STEP_SUMMARY" ]; then
+          cat "$TEMP_MD" >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+        if [ -n "${{ inputs.export-markdown }}" ] && [ -f "$TEMP_MD" ]; then
+          mkdir -p "$(dirname "${{ inputs.export-markdown }}")"
+          cp "$TEMP_MD" "${{ inputs.export-markdown }}"
+        fi
