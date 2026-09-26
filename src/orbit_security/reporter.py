@@ -65,7 +65,17 @@ class ReportGenerator:
                 lines.append(f"- **Recommended Remediation:** {f.remediation}")
                 lines.append("")
 
+        # Section 3: Agency Care Plan Value Breakdown
         lines.extend([
+            "---",
+            "",
+            "## 3. Retainer & Infrastructure Care Plan Recommendations",
+            f"As part of your managed web operations with **{b.agency_name}**, we recommend the following ongoing safeguards:",
+            "- **Continuous Subdomain Sentinel:** Automated monitoring against dangling DNS takeovers as SaaS trials (Unbounce, Webflow, Shopify, Azure) expire.",
+            "- **Google & Yahoo Bulk Sender Protection:** Active enforcement of DMARC (`p=quarantine`/`p=reject`), SPF, and MTA-STS TLS encryption to preserve 100% primary inbox deliverability.",
+            "- **BIMI Verified Brand Logo:** Publishing BIMI (RFC 8617) to display authenticated client logos in Gmail and Apple Mail.",
+            "- **Zero-Exposure Secret Hygiene:** Automated surveillance preventing accidental public exposure of `.env`, `.git`, or database backups.",
+            "",
             "---",
             "",
             f"### Managed Service Contact",

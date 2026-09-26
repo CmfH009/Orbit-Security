@@ -51,9 +51,12 @@ BANNER = f"""{CYAN}{BOLD}
 
 SENSITIVE_PATHS = [
     ("/.git/HEAD", "ref: refs/heads/"),
+    ("/.git/config", "[core]"),
     ("/.env", "DB_PASSWORD"),
     ("/.env.local", "API_KEY"),
     ("/wp-config.php.bak", "DB_NAME"),
+    ("/wp-config.php.old", "DB_NAME"),
+    ("/phpinfo.php", "phpinfo()"),
     ("/.DS_Store", "\x00\x00\x00\x01Bud1"),
 ]
 
@@ -64,6 +67,7 @@ SECURITY_HEADERS = [
     ("X-Content-Type-Options", "Prevents MIME-sniffing exploits"),
     ("Referrer-Policy", "Controls referrer leakage to external origins"),
     ("Permissions-Policy", "Restricts camera, microphone, and geolocation APIs"),
+    ("Cross-Origin-Opener-Policy", "Isolates browsing contexts against Spectre/XS-Leaks"),
 ]
 
 
@@ -72,6 +76,9 @@ def resolve_dns(domain: str) -> Dict[str, Any]:
         "cname": None,
         "a_records": [],
         "mx_records": [],
+        "dmarc_record": None,
+        "bimi_record": None,
+        "mta_sts_record": None,
         "dangling_risk": False,
         "matched_service": None,
         "remediation": None,
@@ -104,6 +111,30 @@ def resolve_dns(domain: str) -> Dict[str, Any]:
             answers = resolver.resolve(domain, "MX")
             for rdata in answers:
                 res["mx_records"].append(str(rdata.exchange).rstrip("."))
+        except Exception:
+            pass
+
+        try:
+            answers = resolver.resolve(f"_dmarc.{domain}", "TXT")
+            for rdata in answers:
+                res["dmarc_record"] = b"".join(rdata.strings).decode("utf-8", errors="ignore")
+                break
+        except Exception:
+            pass
+
+        try:
+            answers = resolver.resolve(f"default._bimi.{domain}", "TXT")
+            for rdata in answers:
+                res["bimi_record"] = b"".join(rdata.strings).decode("utf-8", errors="ignore")
+                break
+        except Exception:
+            pass
+
+        try:
+            answers = resolver.resolve(f"_mta-sts.{domain}", "TXT")
+            for rdata in answers:
+                res["mta_sts_record"] = b"".join(rdata.strings).decode("utf-8", errors="ignore")
+                break
         except Exception:
             pass
     else:
@@ -238,14 +269,22 @@ def run_recon(target: str, json_output: bool = False) -> Dict[str, Any]:
     else:
         print(f"  {GREEN}[✓] Subdomain routing stable.{RESET}")
 
-    print(f"\n{CYAN}{BOLD}--- [2] HTTP Security Headers ---{RESET}")
+    print(f"\n{CYAN}{BOLD}--- [2] Email & Phishing Defense ---{RESET}")
+    dmarc_str = f"{GREEN}[PASS]{RESET} {dns_res['dmarc_record'][:35]}..." if dns_res.get("dmarc_record") else f"{RED}[FAIL]{RESET} Missing DMARC"
+    bimi_str = f"{GREEN}[PASS]{RESET} Active" if dns_res.get("bimi_record") else f"{YELLOW}[OPPORTUNITY]{RESET} Missing BIMI Brand Logo"
+    mta_sts_str = f"{GREEN}[PASS]{RESET} Enforced" if dns_res.get("mta_sts_record") else f"{YELLOW}[WARN]{RESET} Missing MTA-STS Encryption"
+    print(f"  DMARC Policy: {dmarc_str}")
+    print(f"  BIMI Trust  : {bimi_str}")
+    print(f"  MTA-STS TLS : {mta_sts_str}")
+
+    print(f"\n{CYAN}{BOLD}--- [3] HTTP Security Headers ---{RESET}")
     for h, v in web_res.get("headers_found", {}).items():
         val_str = f"{v[:45]}..." if len(v) > 45 else v
         print(f"  {GREEN}[PASS]{RESET} {BOLD}{h}:{RESET} {DIM}{val_str}{RESET}")
     for m in web_res.get("missing_headers", []):
         print(f"  {YELLOW}[WARN]{RESET} Missing {BOLD}{m['header']}{RESET} — {m['description']}")
 
-    print(f"\n{CYAN}{BOLD}--- [3] Public Endpoint Exposures ---{RESET}")
+    print(f"\n{CYAN}{BOLD}--- [4] Public Endpoint Exposures ---{RESET}")
     if web_res.get("exposures"):
         for exp in web_res["exposures"]:
             print(f"  {RED}[CRITICAL EXPOSURE]{RESET} Publicly accessible {exp['path']}")
@@ -312,7 +351,7 @@ def run_bulk_recon(
             cname = r["dns"].get("cname") or "Apex Direct"
             if r["has_takeover"]:
                 cname = f"🚨 **Dangling CNAME ({r['dns'].get('matched_service', 'SaaS')})**"
-            h_count = f"{len(r['perimeter'].get('headers_found', {}))}/5"
+            h_count = f"{len(r['perimeter'].get('headers_found', {}))}/{len(SECURITY_HEADERS)}"
             exp_text = f"🚨 {len(r['perimeter']['exposures'])} exposed" if r["has_exposure"] else "Clean"
             md_lines.append(f"| `{r['target']}` | **{r['score']}/100** | {cname} | {h_count} | {exp_text} |")
 

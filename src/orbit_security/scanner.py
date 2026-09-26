@@ -250,6 +250,130 @@ class OrbitSecurityScanner:
                 evidence=str(e),
             )
 
+    async def audit_bimi(self, domain: str) -> Optional[Finding]:
+        """Audits BIMI (Brand Indicators for Message Identification - RFC 8617)."""
+        target = f"default._bimi.{domain}"
+        try:
+            answers = await self.resolver.resolve(target, "TXT")
+            records = []
+            for rdata in answers:
+                full_txt = b"".join(rdata.strings).decode("utf-8", errors="ignore")
+                records.append(full_txt)
+
+            bimi_record = next((r for r in records if r.strip().startswith("v=BIMI1")), None)
+            if not bimi_record:
+                return Finding(
+                    title="Missing BIMI Brand Indicator (RFC 8617)",
+                    severity=Severity.LOW,
+                    category="Email Authentication",
+                    description=(
+                        f"Domain {domain} does not have a BIMI record configured at `{target}`. "
+                        "BIMI displays verified agency/client logos next to emails in Gmail and Apple Mail, "
+                        "improving recipient open rates and preventing brand impersonation."
+                    ),
+                    remediation=f"Publish a TXT record for `{target}` with `v=BIMI1; l=https://{domain}/logo.svg;` once DMARC is enforced.",
+                    target=target,
+                    evidence="No v=BIMI1 record found.",
+                )
+            return None
+        except (dns.exception.Timeout, asyncio.TimeoutError):
+            return None
+        except Exception:
+            return Finding(
+                title="Missing BIMI Brand Indicator (RFC 8617)",
+                severity=Severity.LOW,
+                category="Email Authentication",
+                description=(
+                    f"No BIMI record discovered at `{target}`. Implementing BIMI authenticates brand logos "
+                    "in supporting inboxes (Gmail, Apple Mail, Yahoo) and prevents visual brand spoofing."
+                ),
+                remediation=f"Configure a DNS TXT record at `{target}` with `v=BIMI1; l=https://{domain}/logo.svg;`.",
+                target=target,
+                evidence="No BIMI TXT record located.",
+            )
+
+    async def audit_mta_sts(self, domain: str) -> Optional[Finding]:
+        """Audits MTA-STS (SMTP Mail Transfer Agent Strict Transport Security - RFC 8461)."""
+        target = f"_mta-sts.{domain}"
+        try:
+            answers = await self.resolver.resolve(target, "TXT")
+            records = []
+            for rdata in answers:
+                full_txt = b"".join(rdata.strings).decode("utf-8", errors="ignore")
+                records.append(full_txt)
+
+            sts_record = next((r for r in records if r.strip().startswith("v=STSv1")), None)
+            if not sts_record:
+                return Finding(
+                    title="Missing MTA-STS Transport Security (RFC 8461)",
+                    severity=Severity.LOW,
+                    category="Email Authentication",
+                    description=(
+                        f"Domain {domain} lacks an MTA-STS policy at `{target}`. Mail transfer agents can be manipulated "
+                        "via downgrade attacks (e.g. STRIPTLS) to deliver mail in unencrypted plaintext."
+                    ),
+                    remediation=(
+                        f"Publish a DNS TXT record at `{target}` with `v=STSv1; id=20260101;` and host your policy file at "
+                        f"`https://mta-sts.{domain}/.well-known/mta-sts.txt`."
+                    ),
+                    target=target,
+                    evidence="No v=STSv1 record found.",
+                )
+            return None
+        except (dns.exception.Timeout, asyncio.TimeoutError):
+            return None
+        except Exception:
+            return Finding(
+                title="Missing MTA-STS Transport Security (RFC 8461)",
+                severity=Severity.LOW,
+                category="Email Authentication",
+                description=(
+                    f"Domain {domain} has no MTA-STS DNS record. Inbound emails remain vulnerable "
+                    "to SMTP TLS downgrade attacks and eavesdropping."
+                ),
+                remediation=f"Publish `_mta-sts.{domain}` TXT record and establish mta-sts.txt policy endpoint.",
+                target=target,
+                evidence="No MTA-STS record located.",
+            )
+
+    async def audit_tls_rpt(self, domain: str) -> Optional[Finding]:
+        """Audits TLS-RPT (SMTP TLS Reporting - RFC 8460)."""
+        target = f"_smtp._tls.{domain}"
+        try:
+            answers = await self.resolver.resolve(target, "TXT")
+            records = []
+            for rdata in answers:
+                full_txt = b"".join(rdata.strings).decode("utf-8", errors="ignore")
+                records.append(full_txt)
+
+            tls_record = next((r for r in records if r.strip().startswith("v=TLSRPTv1")), None)
+            if not tls_record:
+                return Finding(
+                    title="Missing SMTP TLS Reporting (TLS-RPT RFC 8460)",
+                    severity=Severity.INFO,
+                    category="Email Authentication",
+                    description=(
+                        f"Domain {domain} has no TLS-RPT policy at `{target}`. Sending mail servers cannot deliver automated "
+                        "diagnostic reports when TLS handshakes fail."
+                    ),
+                    remediation=f"Publish a TXT record for `{target}` with `v=TLSRPTv1; rua=mailto:tls-reports@{domain}`.",
+                    target=target,
+                    evidence="No v=TLSRPTv1 record found.",
+                )
+            return None
+        except (dns.exception.Timeout, asyncio.TimeoutError):
+            return None
+        except Exception:
+            return Finding(
+                title="Missing SMTP TLS Reporting (TLS-RPT RFC 8460)",
+                severity=Severity.INFO,
+                category="Email Authentication",
+                description=f"No TLS-RPT record found for {domain}. Diagnostic telemetry on MTA transport security is unavailable.",
+                remediation=f"Publish `_smtp._tls.{domain}` TXT record with `v=TLSRPTv1; rua=mailto:...`.",
+                target=target,
+                evidence="No TLS-RPT record located.",
+            )
+
     async def check_subdomain_takeover(
         self, subdomain: str, client: Optional[httpx.AsyncClient] = None
     ) -> Optional[Finding]:
@@ -268,32 +392,54 @@ class OrbitSecurityScanner:
         for cname in cnames:
             for sig in SAAS_TAKEOVER_SIGNATURES:
                 if any(pattern in cname for pattern in sig.cname_patterns):
-                    try:
-                        should_close = False
-                        if client is None:
-                            client = self.create_http_client()
-                            should_close = True
+                    # Check NXDOMAIN vulnerability if specified
+                    if getattr(sig, "nxdomain", False):
+                        try:
+                            await self.resolver.resolve(cname, "A")
+                        except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
+                            return Finding(
+                                title=f"Dangling CNAME / Subdomain Takeover Risk (NXDOMAIN {sig.name})",
+                                severity=Severity.CRITICAL,
+                                category="Subdomain & DNS",
+                                description=(
+                                    f"Subdomain {subdomain} points via CNAME to {cname} ({sig.name}), which does not resolve (NXDOMAIN). "
+                                    "An adversary can claim this orphaned cloud resource and seize control of the subdomain."
+                                ),
+                                remediation=sig.remediation,
+                                target=subdomain,
+                                evidence=f"CNAME: {cname} | Status: NXDOMAIN (Dangling {sig.name} resource)",
+                            )
+                        except Exception:
+                            pass
 
-                        for proto in ["https", "http"]:
-                            try:
-                                url = f"{proto}://{subdomain}"
-                                resp = await client.get(url)
-                                for fp in sig.fingerprints:
-                                    if fp.lower() in resp.text.lower():
-                                        return Finding(
-                                            title=f"Dangling CNAME / Subdomain Takeover Risk ({sig.name})",
-                                            severity=Severity.CRITICAL,
-                                            category="Subdomain & DNS",
-                                            description=f"Subdomain {subdomain} points via CNAME to {cname} ({sig.name}), but the service account appears deleted or unattached. An adversary can register this endpoint and hijack the subdomain.",
-                                            remediation=sig.remediation,
-                                            target=subdomain,
-                                            evidence=f"CNAME: {cname} | Matched fingerprint: '{fp}' (Status: {resp.status_code})",
-                                        )
-                            except Exception:
-                                continue
-                    finally:
-                        if should_close and client:
-                            await client.aclose()
+                    # Check HTTP fingerprint matching
+                    if sig.fingerprints:
+                        try:
+                            should_close = False
+                            if client is None:
+                                client = self.create_http_client()
+                                should_close = True
+
+                            for proto in ["https", "http"]:
+                                try:
+                                    url = f"{proto}://{subdomain}"
+                                    resp = await client.get(url)
+                                    for fp in sig.fingerprints:
+                                        if fp.lower() in resp.text.lower():
+                                            return Finding(
+                                                title=f"Dangling CNAME / Subdomain Takeover Risk ({sig.name})",
+                                                severity=Severity.CRITICAL,
+                                                category="Subdomain & DNS",
+                                                description=f"Subdomain {subdomain} points via CNAME to {cname} ({sig.name}), but the service account appears deleted or unattached. An adversary can register this endpoint and hijack the subdomain.",
+                                                remediation=sig.remediation,
+                                                target=subdomain,
+                                                evidence=f"CNAME: {cname} | Matched fingerprint: '{fp}' (Status: {resp.status_code})",
+                                            )
+                                except Exception:
+                                    continue
+                        finally:
+                            if should_close and client:
+                                await client.aclose()
         return None
 
     async def audit_exposures(
@@ -346,6 +492,38 @@ class OrbitSecurityScanner:
                 "Remove container definition files from the public web root.",
             ),
             (
+                "/.env.local",
+                ["DB_PASSWORD", "AWS_SECRET", "SECRET_KEY", "API_KEY", "DATABASE_URL"],
+                "Exposed Local Environment Secrets (.env.local)",
+                Severity.CRITICAL,
+                "Local environment development file is exposed on the public web root, disclosing secrets and development keys.",
+                "Remove `.env.local` from production and block dotfiles in web server configuration.",
+            ),
+            (
+                "/.git/index",
+                ["DIRC"],
+                "Exposed Git Index Metadata (/.git/index)",
+                Severity.CRITICAL,
+                "The binary git index file is publicly readable, disclosing the entire project file list and commit tree structure.",
+                "Deny access to `/.git` entirely in web server configuration.",
+            ),
+            (
+                "/wp-config.php.old",
+                ["DB_PASSWORD", "DB_NAME", "AUTH_KEY", "table_prefix"],
+                "Exposed WordPress Configuration Backup (.old)",
+                Severity.CRITICAL,
+                "An unparsed backup of wp-config.php was left on the web server, exposing database credentials.",
+                "Delete `.old` backup files from the production web root.",
+            ),
+            (
+                "/phpinfo.php",
+                ["phpinfo()", "PHP Version", "Configuration File (php.ini) Path"],
+                "Exposed PHP Diagnostic File (phpinfo)",
+                Severity.HIGH,
+                "A phpinfo diagnostic file is exposed, disclosing PHP environment variables, server extensions, modules, and paths.",
+                "Remove `phpinfo.php` immediately from production.",
+            ),
+            (
                 "/.DS_Store",
                 ["Bud1"],
                 "Exposed macOS .DS_Store Metadata",
@@ -362,7 +540,7 @@ class OrbitSecurityScanner:
 
         try:
             clean_base = base_url.rstrip("/")
-            max_bytes = 256 * 1024  # 256 KB streaming cap
+            max_bytes = 128 * 1024  # 128 KB memory streaming cap (tuned for PC specs)
 
             for path, needles, title, severity, desc, remed in checks:
                 url = f"{clean_base}{path}"
@@ -452,6 +630,23 @@ class OrbitSecurityScanner:
                         evidence="Header 'Strict-Transport-Security' not present.",
                     )
                 )
+            else:
+                hsts_val = headers.get("Strict-Transport-Security", "").lower()
+                if "includesubdomains" not in hsts_val or "preload" not in hsts_val:
+                    findings.append(
+                        Finding(
+                            title="HSTS Header Incomplete (Subdomains or Preload)",
+                            severity=Severity.INFO,
+                            category="Transport Security",
+                            description=(
+                                "HSTS header is active but does not declare `includeSubDomains` or `preload`. "
+                                "Subdomains may remain susceptible to SSL stripping."
+                            ),
+                            remediation="Strengthen HSTS header to `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`.",
+                            target=base_url,
+                            evidence=f"Current HSTS: {headers.get('Strict-Transport-Security')}",
+                        )
+                    )
 
             if "Content-Security-Policy" not in headers:
                 findings.append(
@@ -476,6 +671,70 @@ class OrbitSecurityScanner:
                         remediation="Set `X-Frame-Options: SAMEORIGIN` or `DENY`.",
                         target=base_url,
                         evidence="Header 'X-Frame-Options' not present.",
+                    )
+                )
+
+            if "X-Content-Type-Options" not in headers:
+                findings.append(
+                    Finding(
+                        title="Missing X-Content-Type-Options (MIME Sniffing Defense)",
+                        severity=Severity.LOW,
+                        category="Application Security",
+                        description=(
+                            "The `X-Content-Type-Options: nosniff` header is missing. "
+                            "Browsers may ignore MIME types and execute non-script assets as executable code."
+                        ),
+                        remediation="Add `X-Content-Type-Options: nosniff` header to web server configuration.",
+                        target=base_url,
+                        evidence="Header 'X-Content-Type-Options' not present.",
+                    )
+                )
+
+            if "Referrer-Policy" not in headers:
+                findings.append(
+                    Finding(
+                        title="Missing Referrer-Policy Header",
+                        severity=Severity.LOW,
+                        category="Application Security",
+                        description=(
+                            "No Referrer-Policy header is defined. Browsers may leak confidential URLs "
+                            "and query parameters in the Referer header to external destinations."
+                        ),
+                        remediation="Set `Referrer-Policy: strict-origin-when-cross-origin`.",
+                        target=base_url,
+                        evidence="Header 'Referrer-Policy' not present.",
+                    )
+                )
+
+            if "Permissions-Policy" not in headers:
+                findings.append(
+                    Finding(
+                        title="Missing Permissions-Policy Header",
+                        severity=Severity.INFO,
+                        category="Application Security",
+                        description=(
+                            "Permissions-Policy is missing. Modern web applications should explicitly restrict "
+                            "unnecessary browser features (camera, microphone, geolocation, payment)."
+                        ),
+                        remediation="Configure `Permissions-Policy: camera=(), microphone=(), geolocation=()`.",
+                        target=base_url,
+                        evidence="Header 'Permissions-Policy' not present.",
+                    )
+                )
+
+            if "Cross-Origin-Opener-Policy" not in headers:
+                findings.append(
+                    Finding(
+                        title="Missing Cross-Origin-Opener-Policy (COOP)",
+                        severity=Severity.INFO,
+                        category="Application Security",
+                        description=(
+                            "COOP header is not set. Isolating top-level browsing contexts prevents "
+                            "cross-origin Spectre and XS-Leak interactions."
+                        ),
+                        remediation="Configure `Cross-Origin-Opener-Policy: same-origin` or `same-origin-allow-popups`.",
+                        target=base_url,
+                        evidence="Header 'Cross-Origin-Opener-Policy' not present.",
                     )
                 )
         except Exception:
@@ -592,7 +851,7 @@ class OrbitSecurityScanner:
 
             result.subdomains_scanned = sorted(list(subs_to_check))
 
-            # Run mail audits
+            # Run mail audits (SPF, DMARC, BIMI, MTA-STS, TLS-RPT)
             dmarc_finding = await self.audit_dmarc(domain)
             if dmarc_finding:
                 result.findings.append(dmarc_finding)
@@ -600,6 +859,18 @@ class OrbitSecurityScanner:
             spf_finding = await self.audit_spf(domain)
             if spf_finding:
                 result.findings.append(spf_finding)
+
+            bimi_finding = await self.audit_bimi(domain)
+            if bimi_finding:
+                result.findings.append(bimi_finding)
+
+            mta_sts_finding = await self.audit_mta_sts(domain)
+            if mta_sts_finding:
+                result.findings.append(mta_sts_finding)
+
+            tls_rpt_finding = await self.audit_tls_rpt(domain)
+            if tls_rpt_finding:
+                result.findings.append(tls_rpt_finding)
 
             # Run exposure and header audits on apex domain
             base_url = f"https://{domain}"
@@ -614,8 +885,8 @@ class OrbitSecurityScanner:
             if ssl_finding:
                 result.findings.append(ssl_finding)
 
-            # Run subdomain takeover checks concurrently with bounded semaphore
-            sem = asyncio.Semaphore(15)
+            # Run subdomain takeover checks concurrently with bounded semaphore (tuned for 8 logical threads)
+            sem = asyncio.Semaphore(8)
 
             async def bounded_takeover(sub: str):
                 async with sem:
