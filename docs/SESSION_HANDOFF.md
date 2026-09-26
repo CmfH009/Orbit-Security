@@ -18,31 +18,24 @@
 
 ## 🎯 Directives for Incoming Agent / New Session
 
-### 1. Rapid 5–10 LinkedIn Connection Acquisition (To Unlock Company Page)
-- **Problem**: LinkedIn enforces a security policy requiring ~5–10 personal connections before permitting the creation of a Company Page (`"Feature not available: You don't have enough connections"`).
-- **Execution Blueprint**:
-  1. Bring Carson's Chrome window to the foreground.
-  2. Navigate to `https://www.linkedin.com/mynetwork/grow/` or run targeted search for high-acceptance cohorts:
-     - **Cohort A**: "Shopify Agency Founder", "Web Design Agency Owner" (high business relevance).
-     - **Cohort B**: Local Missoula / Montana tech network & university alumni (high mutual trust & instant acceptance).
-     - **Cohort C**: "LION" (LinkedIn Open Networkers) who auto-accept within minutes.
-  3. Dispatch 10–15 connection requests via `pyautogui` clicks on "Connect" buttons with 1.5s human-like jitter.
-  4. Automation script template is ready in `scratch/connect_swarm.py`.
+### 1. LinkedIn Connection Swarm & Identity Clearance (Shelved)
+- **Status**: Dispatched 2 connection requests (`Billy Boone`, `Traci Beighle`). LinkedIn subsequently surfaced a mobile QR government ID verification checkpoint.
+- **Action Required**: Shelved until Carson completes mobile identity verification.
+- **Scripts Ready**: [`scripts/connect_swarm.py`](file:///A:/projects/orbit-security/scripts/connect_swarm.py) and [`scripts/publish_orbit_linkedin.py`](file:///A:/projects/orbit-security/scripts/publish_orbit_linkedin.py).
 
-### 2. Publish the Founder Launch Post
-- **Text**: Pre-authored in `marketing/linkedin_strategy.md` (Part 3) and sitting in Windows clipboard.
-- **Visual Asset**: Attach `A:\projects\orbit-security\landing\assets\orbit_ad_banner.jpg` (Studio engineering workstation 16:9).
-- **Execution**: Navigate to `https://www.linkedin.com/feed/`, click "Start a post", upload banner, paste copy, and click "Post".
+### 2. Creative Assets Rebranded (Orbit Security)
+- **Status**: [COMPLETED] Hallucinated names ("Aether Shield", "Elias Thorne") replaced with authentic branding.
+- **Assets**:
+  - [`landing/assets/orbit_ad_square.jpg`](file:///A:/projects/orbit-security/landing/assets/orbit_ad_square.jpg): 1:1 Emerald & Obsidian cyber defense HUD with Orbital Ring shield, "ORBIT SECURITY", and attack surface metrics.
+  - [`landing/assets/orbit_ad_banner.jpg`](file:///A:/projects/orbit-security/landing/assets/orbit_ad_banner.jpg): 16:9 Widescreen high-rise command desk with dual Orbit Security telemetry monitors and engraved nameplate: **"CARSON HAYNES | ORBIT SECURITY"**.
 
-### 3. Facebook Page Advertising & Organic Post
-- **Target**: Open Facebook in Carson's Chrome browser (`https://www.facebook.com/`).
-- **Asset**: `A:\projects\orbit-security\landing\assets\orbit_ad_square.jpg` (1:1 Dark slate & emerald holographic dashboard).
-- **Copy**: Pre-authored Campaign 1 (Angle A: Agency Care Plan Revenue) from `marketing/facebook_ads.md`.
-- **Execution**: Navigate to Carson's Facebook Page, click "Create Post", attach `orbit_ad_square.jpg`, paste the copy, and publish.
+### 3. Facebook Growth Post
+- **Status**: [COMPLETED & LIVE] Published directly to Carson's Facebook profile/page feed with public visibility.
+- **Asset Attached**: Fresh 1:1 [`landing/assets/orbit_ad_square.jpg`](file:///A:/projects/orbit-security/landing/assets/orbit_ad_square.jpg).
+- **Copy**: Campaign 1 Angle A (Agency Care Plan Revenue & Retainer Upsell) with live link to [`https://cmfh009.github.io/Orbit-Security/#pricing`](https://cmfh009.github.io/Orbit-Security/#pricing).
 
-### 4. Create LinkedIn Company Page (Once Connections Accept)
-- **URL**: `https://www.linkedin.com/company/setup/new/`
-- **Fields**: Documented in `marketing/linkedin_strategy.md` (Part 1).
+### 4. LinkedIn Founder Launch Post & Company Page (Pending ID)
+- **Status**: Pre-built script [`scripts/publish_orbit_linkedin.py`](file:///A:/projects/orbit-security/scripts/publish_orbit_linkedin.py) will automatically attach the new 16:9 Carson Haynes banner and publish the launch story once Carson clears the mobile ID checkpoint.
 
 ---
 
