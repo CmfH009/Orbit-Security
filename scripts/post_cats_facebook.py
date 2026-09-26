@@ -98,12 +98,15 @@ def run():
         pyautogui.hotkey('ctrl', 'v')
         time.sleep(2.0)
         
-        # 6. Click Post button center at (rect[0] + 400, rect[1] + 980)
-        post_btn_x = rect[0] + 400
-        post_btn_y = rect[1] + 980
+        # 6. Click Post button center at exact coordinates (rect[0] + 390, rect[1] + 989)
+        post_btn_x = rect[0] + 390
+        post_btn_y = rect[1] + 989
         print(f"Clicking Post button at ({post_btn_x}, {post_btn_y})...")
-        pyautogui.click(post_btn_x, post_btn_y)
-        time.sleep(5.0)
+        pyautogui.moveTo(post_btn_x, post_btn_y, duration=0.2)
+        time.sleep(0.2)
+        pyautogui.click()
+        print("Post clicked! Waiting for publication...")
+        time.sleep(7.0)
         
         # 7. Capture verification screenshot
         w = rect[2] - rect[0]
