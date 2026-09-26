@@ -169,6 +169,167 @@
             </div>
         </div>
 
+        <!-- Perimeter Arena: Gamified Benchmarks & Feature Unlocks -->
+        <div class="mt-12 mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-mono mb-2">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                        PERIMETER ARENA // PEER BENCHMARKS & SENTINEL UNLOCKS
+                    </div>
+                    <h2 class="text-2xl font-bold text-white tracking-tight">Competitive Arena & Hardening Progression</h2>
+                    <p class="text-slate-400 text-sm mt-1">Benchmark your clients against industry verticals. Earn sentinel badges and unlock enterprise automation features.</p>
+                </div>
+                <div class="hidden sm:flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-xs font-mono">
+                    <span class="text-slate-400">Current Loyalty Streak:</span>
+                    <span class="text-emerald-400 font-bold flex items-center gap-1">🔥 14 Days Zero-Drift</span>
+                </div>
+            </div>
+
+            <!-- Milestone Badges Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                <!-- Badge 1 -->
+                <div class="bg-slate-900/80 border border-emerald-500/30 rounded-xl p-4 relative overflow-hidden group hover:border-emerald-500/60 transition-all">
+                    <div class="absolute -right-4 -top-4 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/20"></div>
+                    <div class="text-2xl mb-2">🛡️</div>
+                    <div class="text-xs font-mono uppercase text-emerald-400 font-semibold mb-1">DMARC Fortress</div>
+                    <div class="text-[11px] text-slate-400 mb-2">Enforce strict p=reject or quarantine across portfolio.</div>
+                    <span class="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                        ✓ UNLOCKED (+250 XP)
+                    </span>
+                </div>
+
+                <!-- Badge 2 -->
+                <div class="bg-slate-900/80 border border-cyan-500/30 rounded-xl p-4 relative overflow-hidden group hover:border-cyan-500/60 transition-all">
+                    <div class="absolute -right-4 -top-4 w-16 h-16 bg-cyan-500/10 rounded-full blur-xl group-hover:bg-cyan-500/20"></div>
+                    <div class="text-2xl mb-2">⚡</div>
+                    <div class="text-xs font-mono uppercase text-cyan-400 font-semibold mb-1">HSTS Vanguard</div>
+                    <div class="text-[11px] text-slate-400 mb-2">Full HTTPS HSTS with 1-year max-age & subdomains.</div>
+                    <span class="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
+                        ✓ UNLOCKED (+200 XP)
+                    </span>
+                </div>
+
+                <!-- Badge 3 -->
+                <div class="bg-slate-900/80 border border-purple-500/30 rounded-xl p-4 relative overflow-hidden group hover:border-purple-500/60 transition-all">
+                    <div class="absolute -right-4 -top-4 w-16 h-16 bg-purple-500/10 rounded-full blur-xl group-hover:bg-purple-500/20"></div>
+                    <div class="text-2xl mb-2">🐾</div>
+                    <div class="text-xs font-mono uppercase text-purple-400 font-semibold mb-1">Astro-Cat Sentinel</div>
+                    <div class="text-[11px] text-slate-400 mb-2">Zero dangling CNAME takeovers across all monitored clients.</div>
+                    <span class="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
+                        ✓ ACTIVE DEFENSE
+                    </span>
+                </div>
+
+                <!-- Badge 4 (Locked) -->
+                <div class="bg-slate-900/40 border border-slate-800 rounded-xl p-4 relative overflow-hidden opacity-75">
+                    <div class="text-2xl mb-2 opacity-50">🏆</div>
+                    <div class="text-xs font-mono uppercase text-slate-400 font-semibold mb-1">30-Day Sovereign</div>
+                    <div class="text-[11px] text-slate-500 mb-2">Maintain 90+ hygiene score for 30 consecutive days.</div>
+                    <span class="inline-flex items-center gap-1 text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                        🔒 14 / 30 DAYS (46%)
+                    </span>
+                </div>
+            </div>
+
+            <!-- Feature Unlock Roadmap (Gamified Progression) -->
+            <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-6 mb-8 backdrop-blur-md">
+                <h3 class="text-sm font-mono uppercase tracking-wider text-slate-300 font-semibold mb-4 flex items-center gap-2">
+                    <span>⚡ Loyalty Feature Unlock Progression</span>
+                    <span class="text-xs font-normal text-slate-500">(Earned by maintaining client perimeter hygiene)</span>
+                </h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Level 1 -->
+                    <div class="bg-slate-950 border border-emerald-500/30 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-emerald-400 font-mono">LEVEL 1: BRONZE</span>
+                            <span class="text-emerald-400 text-xs font-mono">UNLOCKED</span>
+                        </div>
+                        <div class="text-sm font-semibold text-white mb-1">CLI Auto-Remediator (`--remediate`)</div>
+                        <p class="text-xs text-slate-400">Generate copy-paste Cloudflare DNS, AWS Route 53, and Terraform HCL snippets to fix misconfigurations in seconds.</p>
+                    </div>
+
+                    <!-- Level 2 -->
+                    <div class="bg-slate-950 border border-cyan-500/30 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-cyan-400 font-mono">LEVEL 2: SILVER</span>
+                            <span class="text-cyan-400 text-xs font-mono">UNLOCKED</span>
+                        </div>
+                        <div class="text-sm font-semibold text-white mb-1">Slack & Discord Webhook Sentinels</div>
+                        <p class="text-xs text-slate-400">Instant multi-channel webhook dispatching the moment any client domain registers DNS drift or missing records.</p>
+                    </div>
+
+                    <!-- Level 3 (Unlockable) -->
+                    <div class="bg-slate-950/60 border border-dashed border-slate-800 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-slate-500 font-mono">LEVEL 3: GOLD (LOCKED)</span>
+                            <span class="text-amber-400 text-xs font-mono">Unlocks at 30-Day Streak</span>
+                        </div>
+                        <div class="text-sm font-semibold text-slate-300 mb-1">Boardroom C-Suite Slide Exporter</div>
+                        <p class="text-xs text-slate-500">Auto-generates high-density executive quarterly slide summaries formatted for client CMO/CTO presentations.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Competitive Industry Peer Arena (Table) -->
+            <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-6 backdrop-blur-md">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                    <div>
+                        <h3 class="text-sm font-mono uppercase tracking-wider text-slate-200 font-semibold">Industry Peer Arena Benchmarks</h3>
+                        <p class="text-xs text-slate-400">How portfolio clients rank against verified enterprise peer audits in the Orbit Sentinel Registry.</p>
+                    </div>
+                    <span class="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 w-fit">
+                        Live Cross-Industry Telemetry
+                    </span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="text-slate-400 uppercase bg-slate-950/80 border-b border-slate-800">
+                            <tr>
+                                <th class="py-2.5 px-4">Sector / Category</th>
+                                <th class="py-2.5 px-4">Benchmark Leader</th>
+                                <th class="py-2.5 px-4 text-center">Top Score</th>
+                                <th class="py-2.5 px-4 text-center">Category Median</th>
+                                <th class="py-2.5 px-4">Common Vulnerability / Opportunity</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/40 text-slate-300">
+                            <tr class="hover:bg-slate-950/40">
+                                <td class="py-3 px-4 font-semibold text-white">Shopify Plus & D2C Brands</td>
+                                <td class="py-3 px-4 text-emerald-400">Candy Kittens (Charle)</td>
+                                <td class="py-3 px-4 text-center font-bold text-emerald-400">95/100</td>
+                                <td class="py-3 px-4 text-center text-slate-400">76/100</td>
+                                <td class="py-3 px-4 text-amber-400">Missing CSP & Permissions-Policy on promo subdomains</td>
+                            </tr>
+                            <tr class="hover:bg-slate-950/40">
+                                <td class="py-3 px-4 font-semibold text-white">Enterprise Media & Publishing</td>
+                                <td class="py-3 px-4 text-emerald-400">POLITICO (10up)</td>
+                                <td class="py-3 px-4 text-center font-bold text-emerald-400">100/100</td>
+                                <td class="py-3 px-4 text-center text-slate-400">82/100</td>
+                                <td class="py-3 px-4 text-amber-400">DMARC p=none monitor-only policy on newsroom hubs</td>
+                            </tr>
+                            <tr class="hover:bg-slate-950/40">
+                                <td class="py-3 px-4 font-semibold text-white">High-Trust Legal & Finance</td>
+                                <td class="py-3 px-4 text-emerald-400">Foot Anstey (Illustrate)</td>
+                                <td class="py-3 px-4 text-center font-bold text-emerald-400">90/100</td>
+                                <td class="py-3 px-4 text-center text-slate-400">80/100</td>
+                                <td class="py-3 px-4 text-amber-400">Missing MTA-STS encrypted SMTP transmission controls</td>
+                            </tr>
+                            <tr class="hover:bg-slate-950/40">
+                                <td class="py-3 px-4 font-semibold text-white">Enterprise Healthcare & NGOs</td>
+                                <td class="py-3 px-4 text-cyan-400">Adoptium (Steadfast)</td>
+                                <td class="py-3 px-4 text-center font-bold text-cyan-400">85/100</td>
+                                <td class="py-3 px-4 text-center text-slate-400">54/100</td>
+                                <td class="py-3 px-4 text-rose-400">Missing HSTS and weak SPF soft-fail (~all) configurations</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <!-- Modal: Add New Domain -->
