@@ -10,7 +10,8 @@ from reportlab.platypus import (
     Table,
     TableStyle,
     HRFlowable,
-    KeepTogether
+    KeepTogether,
+    Image as RLImage
 )
 
 from orbit_security.models import DomainAuditResult, Severity
@@ -146,22 +147,30 @@ class ReportGenerator:
 
         story = []
 
-        # Header Block
+        # Header Block with Astro-Cat Sentinel Brand Badge
+        logo_path = os.path.join(
+            os.path.dirname(__file__), "..", "..", "landing", "assets", "orbit_cats_square.jpg"
+        )
+        logo_cell = ""
+        if os.path.exists(logo_path):
+            logo_cell = RLImage(logo_path, width=38, height=38)
+
         header_data = [
             [
+                logo_cell if logo_cell else "",
                 Paragraph(f"<b>{b.agency_name}</b><br/>{b.agency_tagline}", subtitle_style),
                 Paragraph("<b>MONTHLY DOMAIN & SECURITY AUDIT</b>", ParagraphStyle(
                     "RightAlign", parent=subtitle_style, alignment=2, textColor=accent_col
                 )),
             ]
         ]
-        t_header = Table(header_data, colWidths=[300, 240])
+        t_header = Table(header_data, colWidths=[46, 264, 230] if logo_cell else [300, 240])
         t_header.setStyle(TableStyle([
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ]))
         story.append(t_header)
-        story.append(HRFlowable(width="100%", thickness=1.5, color=primary_col, spaceBefore=4, spaceAfter=14))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=primary_col, spaceBefore=6, spaceAfter=14))
 
         # Title & Target Box
         story.append(Paragraph(f"Perimeter Health Audit: {audit.domain}", title_style))
