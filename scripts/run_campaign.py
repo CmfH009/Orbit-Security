@@ -81,7 +81,7 @@ async def process_prospect(prospect: dict, output_root: str, send_live: bool = F
 
     crit_or_high = [f for f in result.findings if f.severity.value in ("CRITICAL", "HIGH", "MEDIUM")]
 
-    personal_hook = AGENCY_PERSONALIZATION.get(
+    personal_hook = prospect.get("personalization_hook") or AGENCY_PERSONALIZATION.get(
         agency_domain,
         f"We've been admiring your agency's client craftsmanship on {target_domain}."
     )
@@ -148,17 +148,40 @@ async def process_prospect(prospect: dict, output_root: str, send_live: bool = F
                 pdf_attachment_path=pdf_path
             )
             print(f"    [✔] Live email successfully dispatched via Gmail SMTP to {contact_email}!")
+            return True
         else:
             print(f"    [!] SMTP not configured in .env. Draft saved to {eml_path}.")
+            return False
+    return False
+
+
+def load_dispatched_state(file_path: str) -> dict:
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+
+def save_dispatched_state(file_path: str, state: dict):
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(state, f, indent=2)
 
 
 async def main():
     parser = argparse.ArgumentParser(description="Run Orbit Security Prospecting Campaign")
     parser.add_argument("--send", action="store_true", help="Send live emails via SMTP")
     parser.add_argument("--limit", type=int, default=10, help="Maximum number of prospects to process")
+    parser.add_argument("--force", action="store_true", help="Force re-dispatch even if already sent")
     args = parser.parse_args()
 
     prospects_file = os.path.join(os.path.dirname(__file__), "..", "data", "prospects.json")
+    dispatched_file = os.path.join(os.path.dirname(__file__), "..", "data", "dispatched_campaigns.json")
+    dispatched_state = load_dispatched_state(dispatched_file)
+
     with open(prospects_file, "r", encoding="utf-8") as f:
         prospects = json.load(f)
 
@@ -167,12 +190,28 @@ async def main():
     selected = prospects[:args.limit]
     print(f"[*] Starting personalized campaign run for {len(selected)} agencies...")
 
+    import datetime
     for p in selected:
+        agency_domain = p.get("agency_domain", "")
+        contact_email = p.get("contact_email", "")
+
+        if args.send and not args.force and agency_domain in dispatched_state:
+            prev = dispatched_state[agency_domain]
+            print(f"[*] [SKIP] {agency_domain} ({contact_email}) already dispatched on {prev.get('dispatched_at')}. (Use --force to override)")
+            continue
+
         try:
-            await process_prospect(p, out_root, send_live=args.send)
-            # Gentle delay between sends to adhere to good mail reputation
-            if args.send:
-                await asyncio.sleep(2.0)
+            sent = await process_prospect(p, out_root, send_live=args.send)
+            if sent:
+                dispatched_state[agency_domain] = {
+                    "agency_name": p.get("agency_name"),
+                    "contact_email": contact_email,
+                    "dispatched_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "status": "SENT"
+                }
+                save_dispatched_state(dispatched_file, dispatched_state)
+                # Gentle 4.0s delay between sends to adhere to good mail reputation
+                await asyncio.sleep(4.0)
         except Exception as e:
             print(f"[!] Error processing {p.get('agency_name')}: {e}")
 
