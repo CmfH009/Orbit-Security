@@ -109,5 +109,11 @@ def main():
         asyncio.run(run_scan(args))
 
 
+def main_recon():
+    from orbit_security.recon import main as recon_main
+    recon_main()
+
+
 if __name__ == "__main__":
     main()
+

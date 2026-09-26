@@ -32,23 +32,8 @@
     <link rel="dns-prefetch" href="https://buy.stripe.com">
     <link rel="preconnect" href="https://buy.stripe.com" crossorigin>
     
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              brand: {
-                50: '#ecfdf5',
-                500: '#10b981',
-                600: '#059669',
-                700: '#047857',
-              }
-            }
-          }
-        }
-      }
-    </script>
+    <!-- Production Compiled Stylesheet (Zero-Render-Delay) -->
+    <link rel="stylesheet" href="assets/styles.min.css">
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-emerald-500 selection:text-white">
 
@@ -140,27 +125,32 @@
             </div>
 
             <!-- Interactive Domain Audit Request Widget -->
-            <div class="max-w-xl mx-auto bg-slate-900/90 border border-slate-700/80 p-2.5 rounded-2xl shadow-2xl backdrop-blur-sm">
-                <div class="text-xs text-slate-400 mb-2 font-medium flex items-center justify-center gap-1.5">
-                    <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                    Test an instant perimeter check on your agency or client domain:
+            <div class="max-w-2xl mx-auto bg-slate-900/90 border border-slate-700/80 p-3 sm:p-4 rounded-2xl shadow-2xl backdrop-blur-sm">
+                <div class="text-xs text-slate-400 mb-2.5 font-medium flex items-center justify-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-slate-300 font-semibold">Live Client-Side Scanner</span>
+                    <span class="text-slate-500">— Zero-Server DNS-over-HTTPS (DoH) Telemetry</span>
                 </div>
                 <form id="auditForm" onsubmit="handleAuditRequest(event)" class="flex flex-col sm:flex-row gap-2">
                     <input 
                         type="text" 
                         id="targetDomain" 
-                        placeholder="Enter domain (e.g. yourclient.com)" 
+                        placeholder="Enter client domain (e.g. clientbrand.com)" 
                         required
+                        autocomplete="off"
                         class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono transition-colors"
                     />
                     <button 
                         type="submit" 
+                        id="scanBtn"
                         class="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm transition-all shadow-md shadow-emerald-500/20 whitespace-nowrap flex items-center justify-center gap-2">
-                        Scan Perimeter
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        <span id="scanBtnText">Scan Perimeter</span>
+                        <svg id="scanBtnIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                     </button>
                 </form>
-                <div id="auditStatus" class="hidden text-xs text-emerald-400 mt-2 font-medium"></div>
+
+                <!-- Live HUD Results Container -->
+                <div id="auditHUD" class="hidden mt-4 pt-4 border-t border-slate-800 text-left transition-all"></div>
             </div>
 
             <!-- Value Prop Badges -->
@@ -367,7 +357,10 @@
                         muted 
                         loop 
                         playsinline 
+                        preload="metadata"
                         poster="assets/orbit_cats_radar.jpg">
+                        <source src="assets/orbit_security_ad_video.webm" type="video/webm">
+                        <source src="assets/orbit_security_ad_video_web.mp4" type="video/mp4">
                         <source src="assets/orbit_security_ad_video.mp4" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
@@ -628,30 +621,280 @@
             });
         }
 
-        // Domain Audit Form Handler
-        function handleAuditRequest(e) {
+        // DNS-over-HTTPS (DoH) API Resolver with Fallback
+        async function queryDoH(name, type) {
+            try {
+                const res = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(name)}&type=${type}`, {
+                    headers: { 'Accept': 'application/dns-json' }
+                });
+                if (res.ok) return await res.json();
+            } catch (err) {
+                console.warn('Google DoH fetch error, trying Cloudflare DoH fallback:', err);
+            }
+            try {
+                const cfRes = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=${type}`, {
+                    headers: { 'Accept': 'application/dns-json' }
+                });
+                if (cfRes.ok) return await cfRes.json();
+            } catch (e) {
+                console.warn('Cloudflare DoH fallback error:', e);
+            }
+            return null;
+        }
+
+        // Live DoH Perimeter Scanner
+        async function handleAuditRequest(e) {
             e.preventDefault();
             const input = document.getElementById('targetDomain');
-            const status = document.getElementById('auditStatus');
-            const domain = input.value.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+            const hud = document.getElementById('auditHUD');
+            const scanBtn = document.getElementById('scanBtn');
+            const scanBtnText = document.getElementById('scanBtnText');
             
-            if (!domain) return;
-            
-            status.textContent = '🚀 Preparing security perimeter check for ' + domain + '...';
-            status.classList.remove('hidden');
+            let rawInput = input.value.trim().toLowerCase();
+            let domain = rawInput.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/:\d+$/, '');
 
-            const subject = encodeURIComponent('Perimeter Security Audit Request: ' + domain);
-            const body = encodeURIComponent(
-                'Hi Carson,\n\n' +
-                'I would like to request an automated perimeter security audit for ' + domain + '.\n\n' +
-                'Please deliver the co-branded executive PDF report to this email address.\n\n' +
-                'Best regards,'
-            );
-            
-            setTimeout(() => {
-                window.location.href = 'mailto:carsonmail009@gmail.com?subject=' + subject + '&body=' + body;
-                status.innerHTML = '✔ Opening email draft for Carson... If your client does not open, email <a href="mailto:carsonmail009@gmail.com" class="underline">carsonmail009@gmail.com</a> directly.';
-            }, 600);
+            if (!domain || !domain.includes('.') || domain.length < 4) {
+                hud.classList.remove('hidden');
+                hud.innerHTML = `
+                    <div class="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono">
+                        [!] Please provide a valid fully-qualified domain name (e.g. acmebrand.com).
+                    </div>
+                `;
+                return;
+            }
+
+            // Block internal hostnames / SSRF attempts
+            if (domain === 'localhost' || domain.endsWith('.local') || domain.endsWith('.internal') || /^127\.|^10\.|^192\.168\.|^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(domain)) {
+                hud.classList.remove('hidden');
+                hud.innerHTML = `
+                    <div class="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono">
+                        [!] Security Restriction: Internal and private IP ranges cannot be audited.
+                    </div>
+                `;
+                return;
+            }
+
+            // Loading state
+            scanBtn.disabled = true;
+            scanBtnText.textContent = 'Auditing...';
+            hud.classList.remove('hidden');
+            hud.innerHTML = `
+                <div class="p-4 rounded-xl bg-slate-950/80 border border-emerald-500/30 font-mono text-xs text-slate-300 space-y-2">
+                    <div class="flex items-center gap-2 text-emerald-400 font-bold">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                        Initiating Zero-Server DoH Scan for [${domain}]...
+                    </div>
+                    <div class="text-slate-400 text-[11px] space-y-1">
+                        <div>> Querying Google DoH for _dmarc.${domain} TXT record...</div>
+                        <div>> Querying SPF sender authentication TXT record...</div>
+                        <div>> Analyzing CNAME routing and SaaS takeover signatures...</div>
+                    </div>
+                </div>
+            `;
+
+            try {
+                // Execute parallel DoH queries
+                const [dmarcRes, spfRes, cnameRes, aRes] = await Promise.all([
+                    queryDoH(`_dmarc.${domain}`, 16),
+                    queryDoH(domain, 16),
+                    queryDoH(domain, 5),
+                    queryDoH(domain, 1)
+                ]);
+
+                // 1. Analyze DMARC
+                let dmarcStatus = 'missing';
+                let dmarcPolicy = 'None detected';
+                let dmarcScore = 0;
+
+                if (dmarcRes && dmarcRes.Answer) {
+                    for (const ans of dmarcRes.Answer) {
+                        const txt = (ans.data || '').replace(/^"/, '').replace(/"$/, '');
+                        if (txt.includes('v=DMARC1')) {
+                            if (txt.includes('p=reject')) {
+                                dmarcStatus = 'pass';
+                                dmarcPolicy = 'p=reject (Strict Rejection)';
+                                dmarcScore = 35;
+                            } else if (txt.includes('p=quarantine')) {
+                                dmarcStatus = 'pass';
+                                dmarcPolicy = 'p=quarantine (Spam Quarantine)';
+                                dmarcScore = 30;
+                            } else if (txt.includes('p=none')) {
+                                dmarcStatus = 'warn';
+                                dmarcPolicy = 'p=none (Monitoring Only — Spoofs Delivered)';
+                                dmarcScore = 15;
+                            } else {
+                                dmarcStatus = 'warn';
+                                dmarcPolicy = 'Valid record, custom policy';
+                                dmarcScore = 20;
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                // 2. Analyze SPF
+                let spfStatus = 'missing';
+                let spfPolicy = 'None published';
+                let spfScore = 0;
+
+                if (spfRes && spfRes.Answer) {
+                    for (const ans of spfRes.Answer) {
+                        const txt = (ans.data || '').replace(/^"/, '').replace(/"$/, '');
+                        if (txt.includes('v=spf1')) {
+                            if (txt.includes('+all')) {
+                                spfStatus = 'critical';
+                                spfPolicy = '+all (Critical: All Internet IPs Authorized)';
+                                spfScore = 0;
+                            } else if (txt.includes('~all') || txt.includes('-all')) {
+                                spfStatus = 'pass';
+                                spfPolicy = txt.includes('-all') ? '-all (Hard Fail)' : '~all (Soft Fail)';
+                                spfScore = 35;
+                            } else {
+                                spfStatus = 'warn';
+                                spfPolicy = 'Published without strict qualifier';
+                                spfScore = 20;
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                // 3. Analyze CNAME / SaaS Takeover Risks
+                let cnameStatus = 'pass';
+                let cnameTarget = 'Direct Apex A/AAAA';
+                let cnameScore = 30;
+                let takeoverWarning = null;
+
+                const saasPatterns = [
+                    { name: 'Unbounce', pattern: 'unbouncepages.com' },
+                    { name: 'AWS S3', pattern: 's3.amazonaws.com' },
+                    { name: 'GitHub Pages', pattern: 'github.io' },
+                    { name: 'Heroku', pattern: 'herokudns.com' },
+                    { name: 'Shopify', pattern: 'myshopify.com' },
+                    { name: 'CloudFront', pattern: 'cloudfront.net' },
+                    { name: 'Webflow', pattern: 'proxy.webflow.com' }
+                ];
+
+                if (cnameRes && cnameRes.Answer) {
+                    for (const ans of cnameRes.Answer) {
+                        const target = (ans.data || '').replace(/\.$/, '').toLowerCase();
+                        cnameTarget = target;
+                        for (const s of saasPatterns) {
+                            if (target.includes(s.pattern)) {
+                                const hasA = aRes && aRes.Answer && aRes.Answer.length > 0;
+                                if (!hasA) {
+                                    cnameStatus = 'critical';
+                                    takeoverWarning = `Dangling CNAME to ${s.name} detected with no active A records!`;
+                                    cnameScore = 0;
+                                } else {
+                                    cnameStatus = 'pass';
+                                    takeoverWarning = `Active CNAME routing via ${s.name}`;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // Total Score & Grade Calculation
+                const totalScore = Math.max(0, Math.min(100, dmarcScore + spfScore + cnameScore));
+                let grade = 'F';
+                let gradeColor = 'text-red-400 border-red-500/30 bg-red-500/10';
+                let scoreBarColor = 'bg-red-500';
+
+                if (totalScore >= 90) {
+                    grade = 'A+';
+                    gradeColor = 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10';
+                    scoreBarColor = 'bg-emerald-500';
+                } else if (totalScore >= 75) {
+                    grade = 'B';
+                    gradeColor = 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10';
+                    scoreBarColor = 'bg-cyan-500';
+                } else if (totalScore >= 50) {
+                    grade = 'C';
+                    gradeColor = 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10';
+                    scoreBarColor = 'bg-yellow-500';
+                }
+
+                const badge = (status) => {
+                    if (status === 'pass') return '<span class="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold text-[10px]">PASS</span>';
+                    if (status === 'warn') return '<span class="px-2 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 font-bold text-[10px]">WARN</span>';
+                    return '<span class="px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 font-bold text-[10px]">CRITICAL</span>';
+                };
+
+                hud.innerHTML = `
+                    <div class="p-4 sm:p-5 rounded-xl bg-slate-950/95 border border-slate-800 shadow-2xl text-xs space-y-4">
+                        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                            <div>
+                                <span class="text-[10px] uppercase font-mono text-slate-500">Live DoH Audit Result</span>
+                                <div class="text-base font-bold text-white font-mono">${domain}</div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="text-right">
+                                    <div class="text-[10px] text-slate-400">Hygiene Score</div>
+                                    <div class="text-lg font-extrabold text-white">${totalScore}<span class="text-xs text-slate-500">/100</span></div>
+                                </div>
+                                <div class="w-11 h-11 rounded-xl border flex items-center justify-center font-extrabold text-base ${gradeColor}">
+                                    ${grade}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                            <div class="${scoreBarColor} h-full transition-all duration-700" style="width: ${totalScore}%"></div>
+                        </div>
+
+                        <!-- Findings Breakdown -->
+                        <div class="space-y-2.5 font-mono">
+                            <div class="flex items-start justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800/80">
+                                <div>
+                                    <div class="font-bold text-slate-200">Email Spoofing Defense (DMARC)</div>
+                                    <div class="text-[11px] text-slate-400 mt-0.5">${dmarcPolicy}</div>
+                                </div>
+                                ${badge(dmarcStatus)}
+                            </div>
+
+                            <div class="flex items-start justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800/80">
+                                <div>
+                                    <div class="font-bold text-slate-200">Sender Policy Framework (SPF)</div>
+                                    <div class="text-[11px] text-slate-400 mt-0.5">${spfPolicy}</div>
+                                </div>
+                                ${badge(spfStatus)}
+                            </div>
+
+                            <div class="flex items-start justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800/80">
+                                <div>
+                                    <div class="font-bold text-slate-200">Perimeter Routing & SaaS DNS</div>
+                                    <div class="text-[11px] text-slate-400 mt-0.5">${takeoverWarning || cnameTarget}</div>
+                                </div>
+                                ${badge(cnameStatus)}
+                            </div>
+                        </div>
+
+                        <!-- CTA Actions -->
+                        <div class="pt-2 flex flex-col sm:flex-row items-center gap-2">
+                            <a href="mailto:carsonmail009@gmail.com?subject=Full%20Audit%20Report%20Request%20for%20${encodeURIComponent(domain)}&body=Hi%20Carson%2C%0A%0AI%20just%20ran%20a%20perimeter%20check%20for%20${encodeURIComponent(domain)}%20(Score%3A%20${totalScore}%2F100%2C%20Grade%3A%20${grade}).%20Please%20send%20over%20the%20complete%20white-label%20executive%20PDF%20audit." 
+                               class="w-full sm:flex-1 py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-center text-xs transition-all shadow-md shadow-emerald-500/20">
+                                Unlock Co-Branded PDF Report
+                            </a>
+                            <a href="sample_audit.pdf" target="_blank" rel="noopener noreferrer" 
+                               class="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-center text-xs transition-colors">
+                                View Sample PDF
+                            </a>
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                hud.innerHTML = `
+                    <div class="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-mono">
+                        [!] DNS-over-HTTPS query encountered network latency. Please check your connection or try again in a moment.
+                    </div>
+                `;
+            } finally {
+                scanBtn.disabled = false;
+                scanBtnText.textContent = 'Scan Perimeter';
+            }
         }
     </script>
 </body>
