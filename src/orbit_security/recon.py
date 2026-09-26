@@ -31,6 +31,7 @@ except ImportError:
 
 from orbit_security.scanner import is_safe_host
 from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES
+from orbit_security.remediation import DnsRemediationGenerator
 
 CYAN = "\033[96m"
 GREEN = "\033[92m"
@@ -233,7 +234,79 @@ def calculate_score(dns_data: Dict[str, Any], web_data: Dict[str, Any]) -> int:
     return max(0, min(100, score))
 
 
-def run_recon(target: str, json_output: bool = False) -> Dict[str, Any]:
+def build_remediation_plan(domain: str, dns_res: Dict[str, Any], web_res: Dict[str, Any]) -> Dict[str, Any]:
+    """Generates actionable DNS records, Terraform HCL, and server configs to fix detected vulnerabilities."""
+    plan: Dict[str, Any] = {
+        "domain": domain,
+        "items": [],
+        "has_actions": False,
+    }
+
+    # 1. Dangling CNAME Takeover
+    if dns_res.get("dangling_risk"):
+        matched_service = dns_res.get("matched_service", "Unknown SaaS")
+        cname = dns_res.get("cname", "unknown")
+        takeover_info = DnsRemediationGenerator.generate_takeover_remediation(
+            subdomain=domain,
+            saas_provider=matched_service,
+            cname_target=cname,
+        )
+        plan["items"].append({
+            "type": "takeover",
+            "title": f"Dangling CNAME Takeover ({matched_service})",
+            "details": takeover_info,
+        })
+        plan["has_actions"] = True
+
+    # 2. Missing DMARC
+    if not dns_res.get("dmarc_record"):
+        dmarc_snippets = DnsRemediationGenerator.generate_dmarc_fix(
+            domain=domain,
+            policy="quarantine",
+            report_email=f"dmarc@{domain}",
+        )
+        cf_snippet = next((s for s in dmarc_snippets if s.provider == "Cloudflare"), dmarc_snippets[0])
+        plan["items"].append({
+            "type": "dmarc",
+            "title": "Missing DMARC Email Anti-Spoofing Record",
+            "provider": "Cloudflare",
+            "dns_record": {
+                "type": "TXT",
+                "host": "_dmarc",
+                "value": cf_snippet.record_value.strip('"'),
+            },
+            "terraform": cf_snippet.terraform_hcl,
+        })
+        plan["has_actions"] = True
+
+    # 3. Missing Security Headers
+    missing_headers = web_res.get("missing_headers", [])
+    if missing_headers:
+        nginx_lines = []
+        for mh in missing_headers:
+            h_name = mh["header"]
+            if h_name == "Strict-Transport-Security":
+                nginx_lines.append('add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;')
+            elif h_name == "X-Content-Type-Options":
+                nginx_lines.append('add_header X-Content-Type-Options "nosniff" always;')
+            elif h_name == "X-Frame-Options":
+                nginx_lines.append('add_header X-Frame-Options "SAMEORIGIN" always;')
+            elif h_name == "Referrer-Policy":
+                nginx_lines.append('add_header Referrer-Policy "strict-origin-when-cross-origin" always;')
+            elif h_name == "Content-Security-Policy":
+                nginx_lines.append("add_header Content-Security-Policy \"default-src 'self' https: data: 'unsafe-inline';\" always;")
+
+        plan["items"].append({
+            "type": "headers",
+            "title": f"Missing {len(missing_headers)} Recommended HTTP Security Headers",
+            "nginx_config": "\n".join(nginx_lines),
+        })
+        plan["has_actions"] = True
+
+    return plan
+
+
+def run_recon(target: str, json_output: bool = False, remediate: bool = False) -> Dict[str, Any]:
     domain = target.replace("http://", "").replace("https://", "").split("/")[0].strip()
 
     dns_res = resolve_dns(domain)
@@ -246,6 +319,9 @@ def run_recon(target: str, json_output: bool = False) -> Dict[str, Any]:
         "dns": dns_res,
         "perimeter": web_res,
     }
+
+    if remediate:
+        results["remediation"] = build_remediation_plan(domain, dns_res, web_res)
 
     if json_output:
         print(json.dumps(results, indent=2))
@@ -291,6 +367,29 @@ def run_recon(target: str, json_output: bool = False) -> Dict[str, Any]:
     else:
         print(f"  {GREEN}[✓] Zero sensitive config files (.git, .env) publicly exposed.{RESET}")
 
+    if remediate:
+        rem_plan = results.get("remediation", {})
+        print(f"\n{CYAN}{BOLD}--- [5] Automated Remediation & IaC Snippets ---{RESET}")
+        if not rem_plan.get("has_actions"):
+            print(f"  {GREEN}[✓] Perimeter pristine. No DNS or header remediation needed.{RESET}")
+        else:
+            for item in rem_plan.get("items", []):
+                print(f"\n  {YELLOW}{BOLD}[ACTION: {item['title']}]{RESET}")
+                if item["type"] == "takeover":
+                    print(f"  {RED}Immediate Action:{RESET} {item['details']['action_immediate']}")
+                    print(f"  {DIM}Decommission    :{RESET} {item['details']['option_decommission']}")
+                    print(f"  {DIM}Verify command  :{RESET} {item['details']['cli_verification']}")
+                elif item["type"] == "dmarc":
+                    print(f"  {BOLD}Cloudflare DNS Record:{RESET}")
+                    print(f"    Type: {item['dns_record']['type']} | Host: {item['dns_record']['host']} | Value: {item['dns_record']['value']}")
+                    print(f"  {BOLD}Terraform HCL:{RESET}")
+                    for line in item["terraform"].split("\n"):
+                        print(f"    {DIM}{line}{RESET}")
+                elif item["type"] == "headers":
+                    print(f"  {BOLD}Nginx Server Configuration Snippet:{RESET}")
+                    for line in item["nginx_config"].split("\n"):
+                        print(f"    {DIM}{line}{RESET}")
+
     print(f"\n{DIM}Generated by Orbit Security — Continuous Zero-Drift Perimeter Sentinel{RESET}")
     print(f"{DIM}Learn more & automated reporting: https://cmfh009.github.io/Orbit-Security/{RESET}\n")
 
@@ -302,6 +401,7 @@ def run_bulk_recon(
     json_output: bool = False,
     markdown_path: Optional[str] = None,
     fail_on_critical: bool = False,
+    remediate: bool = False,
 ) -> List[Dict[str, Any]]:
     """Runs reconnaissance across multiple target domains concurrently/sequentially."""
     results = []
@@ -333,6 +433,8 @@ def run_bulk_recon(
             "has_takeover": has_takeover,
             "has_exposure": has_exposure,
         }
+        if remediate:
+            res["remediation"] = build_remediation_plan(domain, dns_res, web_res)
         results.append(res)
 
         if not json_output:
@@ -384,6 +486,12 @@ def main():
         action="store_true",
         help="Exit with code 1 if critical takeover or secret exposure detected (CI/CD sentinel mode)",
     )
+    parser.add_argument(
+        "--remediate",
+        "-r",
+        action="store_true",
+        help="Generate ready-to-paste DNS records, Terraform HCL, and server remediation snippets",
+    )
     args = parser.parse_args()
 
     if args.targets_file:
@@ -394,6 +502,7 @@ def main():
             json_output=args.json,
             markdown_path=args.markdown,
             fail_on_critical=args.fail_on_critical,
+            remediate=args.remediate,
         )
     elif args.target:
         if args.markdown:
@@ -402,9 +511,10 @@ def main():
                 json_output=args.json,
                 markdown_path=args.markdown,
                 fail_on_critical=args.fail_on_critical,
+                remediate=args.remediate,
             )
         else:
-            res = run_recon(args.target, args.json)
+            res = run_recon(args.target, json_output=args.json, remediate=args.remediate)
             if args.fail_on_critical:
                 has_takeover = bool(res["dns"].get("dangling_risk"))
                 has_exposure = bool(res["perimeter"].get("exposures"))
@@ -412,7 +522,6 @@ def main():
                     print(f"{RED}{BOLD}[!] CI/CD Failure: Critical posture risk detected.{RESET}")
                     sys.exit(1)
     else:
-
         parser.print_help()
         sys.exit(1)
 

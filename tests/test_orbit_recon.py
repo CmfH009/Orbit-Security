@@ -125,3 +125,59 @@ def test_run_bulk_recon_fail_on_critical():
                 )
             assert exc_info.value.code == 1
 
+
+def test_orbit_recon_remediation_flag():
+    """Verify run_recon with remediate=True generates actionable DNS, Terraform, and server snippets."""
+    mock_dns = {
+        "cname": "promo.unbouncepages.com",
+        "a_records": ["1.2.3.4"],
+        "mx_records": ["mail.acme.com"],
+        "dmarc_record": None,  # Missing DMARC
+        "bimi_record": None,
+        "mta_sts_record": None,
+        "dangling_risk": True,
+        "matched_service": "Unbounce",
+        "remediation": "Delete dangling CNAME.",
+    }
+    mock_web = {
+        "status_code": 200,
+        "headers_found": {},
+        "missing_headers": [
+            {"header": "Strict-Transport-Security", "description": "Enforce HTTPS"},
+            {"header": "X-Frame-Options", "description": "Anti-clickjack"},
+        ],
+        "exposures": [],
+    }
+
+    with patch("orbit_security.recon.resolve_dns", return_value=mock_dns):
+        with patch("orbit_security.recon.check_headers_and_exposures", return_value=mock_web):
+            results = run_recon("takeover-test.com", json_output=True, remediate=True)
+            assert "remediation" in results
+            rem = results["remediation"]
+            assert rem["has_actions"] is True
+            item_types = [item["type"] for item in rem["items"]]
+            assert "takeover" in item_types
+            assert "dmarc" in item_types
+            assert "headers" in item_types
+
+            # Verify DMARC Terraform HCL
+            dmarc_item = next(i for i in rem["items"] if i["type"] == "dmarc")
+            assert 'resource "cloudflare_record"' in dmarc_item["terraform"]
+
+            # Verify Takeover Instructions
+            takeover_item = next(i for i in rem["items"] if i["type"] == "takeover")
+            assert "Delete the dangling CNAME" in takeover_item["details"]["action_immediate"]
+
+
+def test_orbit_recon_cli_remediate_flag():
+    """Verify orbit-recon CLI accepts --remediate flag."""
+    res = subprocess.run(
+        [sys.executable, str(RECON_SCRIPT), "example.com", "--json", "--remediate"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    data = json.loads(res.stdout)
+    assert "remediation" in data
+    assert "has_actions" in data["remediation"]
+
