@@ -23,18 +23,24 @@
 - **Action Required**: Shelved until Carson completes mobile identity verification.
 - **Scripts Ready**: [`scripts/connect_swarm.py`](file:///A:/projects/orbit-security/scripts/connect_swarm.py) and [`scripts/publish_orbit_linkedin.py`](file:///A:/projects/orbit-security/scripts/publish_orbit_linkedin.py).
 
-### 2. Creative Assets Rebranded (Orbit Security)
-- **Status**: [COMPLETED] Hallucinated names ("Aether Shield", "Elias Thorne") replaced with authentic branding.
+### 2. Astro-Cats Brand & Creative Suite (Orbit Security)
+- **Status**: [COMPLETED] Full woodcut/engraving Astro-Cats creative suite generated with strict physical accuracy (all whiskers and ears sealed inside glass helmets, signature glowing emerald orbital ring shield).
 - **Assets**:
-  - [`landing/assets/orbit_ad_square.jpg`](file:///A:/projects/orbit-security/landing/assets/orbit_ad_square.jpg): 1:1 Emerald & Obsidian cyber defense HUD with Orbital Ring shield, "ORBIT SECURITY", and attack surface metrics.
-  - [`landing/assets/orbit_ad_banner.jpg`](file:///A:/projects/orbit-security/landing/assets/orbit_ad_banner.jpg): 16:9 Widescreen high-rise command desk with dual Orbit Security telemetry monitors and engraved nameplate: **"CARSON HAYNES | ORBIT SECURITY"**.
+  - [`landing/assets/orbit_cats_banner.jpg`](file:///A:/projects/orbit-security/landing/assets/orbit_cats_banner.jpg): 16:9 Carson's live Facebook Cover photo.
+  - [`landing/assets/orbit_cats_pounce.jpg`](file:///A:/projects/orbit-security/landing/assets/orbit_cats_pounce.jpg): 1:1 Astro-Cat Sentinel swatting cyber threat glitch (published to live Facebook feed).
+  - [`landing/assets/orbit_cats_gatekeeper.jpg`](file:///A:/projects/orbit-security/landing/assets/orbit_cats_gatekeeper.jpg): 16:9 Cosmic Gatekeeper Astro-Cats at firewall portal.
+  - [`landing/assets/orbit_cats_radar.jpg`](file:///A:/projects/orbit-security/landing/assets/orbit_cats_radar.jpg): 1:1 Astro-Cat Attack Surface Sentinel with holographic radar scanner.
+  - [`landing/assets/orbit_cats_square.jpg`](file:///A:/projects/orbit-security/landing/assets/orbit_cats_square.jpg): 1:1 Live on landing page `#founder` section.
 
-### 3. Facebook Growth Post
-- **Status**: [COMPLETED & LIVE] Published directly to Carson's Facebook profile/page feed with public visibility.
-- **Asset Attached**: Fresh 1:1 [`landing/assets/orbit_ad_square.jpg`](file:///A:/projects/orbit-security/landing/assets/orbit_ad_square.jpg).
-- **Copy**: Campaign 1 Angle A (Agency Care Plan Revenue & Retainer Upsell) with live link to [`https://cmfh009.github.io/Orbit-Security/#pricing`](https://cmfh009.github.io/Orbit-Security/#pricing).
+### 3. Facebook Growth Post & Cover Photo
+- **Cover Photo**: [LIVE & SAVED] 16:9 Astro-Cats brand banner active on Carson's profile.
+- **Feed Post**: [LIVE & PUBLIC] Published to Carson's Facebook feed with `orbit_cats_pounce.jpg` and verified link to [`https://cmfh009.github.io/Orbit-Security/`](https://cmfh009.github.io/Orbit-Security/).
 
-### 4. LinkedIn Founder Launch Post & Company Page (Pending ID)
+### 4. Agency Pipeline (Cohorts 1 & 2 Generated)
+- **Cohort 1**: 5 agencies dispatched live via SMTP.
+- **Cohort 2**: 5 agencies generated in `outbound_campaigns/` (Wholegrain Digital, Moove Agency, Steadfast Collective, Tiny Frog, Electric Eye) with client-branded executive PDF audits and tailored pitch emails. Ready for live send (`--send`).
+
+### 5. LinkedIn Founder Launch Post & Company Page (Pending ID)
 - **Status**: Pre-built script [`scripts/publish_orbit_linkedin.py`](file:///A:/projects/orbit-security/scripts/publish_orbit_linkedin.py) will automatically attach the new 16:9 Carson Haynes banner and publish the launch story once Carson clears the mobile ID checkpoint.
 
 ---
