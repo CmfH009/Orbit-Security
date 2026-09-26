@@ -21,6 +21,7 @@ htmlcov/
 *.log
 data/leads_state.json
 data/prospects.json
+data/dispatched_campaigns.json
 outbound_campaigns/
 
 # OS artifacts
