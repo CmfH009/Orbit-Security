@@ -106,6 +106,49 @@ High-converting ad copy and audience targeting parameters designed for digital a
 
 ---
 
+## Campaign 4: Angle D — "The Astro-Cat Sentinels / Craftsmanship & Telemetry"
+**Focus**: Memorable, distinctive brand mascot and signature woodcut aesthetic representing 24/7 autonomous vigil over web agency digital perimeters. High organic shareability and ad engagement.
+
+### Creative Assets:
+- **Concept 1 (Threat Interception)**: `landing/assets/orbit_cats_pounce.jpg` (1:1 Woodcut Astro-Cat swatting down cyber threat glitch)
+- **Concept 2 (Autonomous Perimeter Defense)**: `landing/assets/orbit_cats_gatekeeper.jpg` (16:9 Cosmic Gatekeeper Astro-Cats flanking firewall portal)
+- **Concept 3 (Attack Surface Sentinel)**: `landing/assets/orbit_cats_radar.jpg` (1:1 Astro-Cats with active emerald holographic telemetry radar scanner)
+- **Concept 4 (Inaugural Brand Banner)**: `landing/assets/orbit_cats_banner.jpg` (16:9 Astro-Cats gazing at glowing Orbit Security shield — Carson's Facebook Cover)
+
+### Copy Variations:
+
+#### Variation 1 (Interception / Attack Surface Vigil):
+- **Primary Text** (125 characters visible before fold):
+  Zero-drift attack surface monitoring doesn't have to be complicated.
+
+  We built Orbit Security to act as an autonomous 24/7 background sentinel for digital web and Shopify Plus agencies—catching dangling DNS, abandoned staging servers, and email spoofing risks before anyone else notices.
+
+  Built with developer craftsmanship and non-intrusive, RFC-compliant passive surveillance.
+
+  See how our agency partners package automated white-label security audits into recurring care plans:
+- **Headline** (32 characters):
+  Catch Vulnerabilities in Orbit
+- **Description** (27 characters):
+  24/7 Passive Attack Surface
+- **Call to Action (CTA) Button**: `Learn More`
+- **Destination URL**: `https://cmfh009.github.io/Orbit-Security/`
+
+#### Variation 2 (Perimeter Defense / Firewall Guardians):
+- **Primary Text** (118 characters visible before fold):
+  Guard every client portal without the overhead of enterprise bloat.
+
+  Orbit Security watches your DNS zones, SPF/DKIM policies, and staging endpoints in real time. Continuous passive audits packaged in clean, white-label client reports under your agency's name.
+
+  Start protecting your agency roster today.
+- **Headline** (34 characters):
+  Automated Perimeter Guardians
+- **Description** (25 characters):
+  White-Label Agency Care
+- **Call to Action (CTA) Button**: `Sign Up`
+- **Destination URL**: `https://cmfh009.github.io/Orbit-Security/#pricing`
+
+---
+
 ## Meta Ads Manager Targeting Configuration
 
 | Setting | Value / Recommendation |
@@ -116,4 +159,4 @@ High-converting ad copy and audience targeting parameters designed for digital a
 | **Job Titles** | Agency Owner, Founder, Chief Technology Officer, Technical Director, Head of Development, Lead Developer, Web Agency Director |
 | **Detailed Targeting (Interests)** | Shopify Partners, WooCommerce, WordPress Development, Web Design Agency, Digital Agency, B2B SaaS |
 | **Placements** | Advantage+ Placements (prioritizing Facebook Feed, Instagram Feed, Desktop Right Column) |
-| **Daily Budget Recommendation** | $15 – $25/day to start A/B testing Angle A vs Angle C |
+| **Daily Budget Recommendation** | $15 – $25/day to start A/B testing Angle A vs Angle D |
