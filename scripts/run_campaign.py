@@ -174,6 +174,7 @@ def save_dispatched_state(file_path: str, state: dict):
 async def main():
     parser = argparse.ArgumentParser(description="Run Orbit Security Prospecting Campaign")
     parser.add_argument("--send", action="store_true", help="Send live emails via SMTP")
+    parser.add_argument("--start", type=int, default=0, help="Starting index in prospects list (default: 0)")
     parser.add_argument("--limit", type=int, default=10, help="Maximum number of prospects to process")
     parser.add_argument("--force", action="store_true", help="Force re-dispatch even if already sent")
     args = parser.parse_args()
@@ -187,8 +188,8 @@ async def main():
 
     out_root = os.path.join(os.path.dirname(__file__), "..", "outbound_campaigns")
 
-    selected = prospects[:args.limit]
-    print(f"[*] Starting personalized campaign run for {len(selected)} agencies...")
+    selected = prospects[args.start : args.start + args.limit]
+    print(f"[*] Starting personalized campaign run for {len(selected)} agencies (offset {args.start})...")
 
     import datetime
     for p in selected:
