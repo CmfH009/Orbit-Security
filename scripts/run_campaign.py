@@ -79,51 +79,64 @@ async def process_prospect(prospect: dict, output_root: str, send_live: bool = F
     ReportGenerator.generate_pdf(result, pdf_path)
     ReportGenerator.generate_markdown(result)
 
-    crit_or_high = [f for f in result.findings if f.severity.value in ("CRITICAL", "HIGH", "MEDIUM")]
-
-    personal_hook = prospect.get("personalization_hook") or AGENCY_PERSONALIZATION.get(
-        agency_domain,
-        f"We've been admiring your agency's client craftsmanship on {target_domain}."
-    )
-
-    pitch_lines = [
-        f"Hi {agency_name} Team,",
-        "",
-        f"I'm reaching out on behalf of Carson (software engineer and developer). {personal_hook}",
-        "",
-        f"Our automated perimeter sentinel ran a routine, non-intrusive hygiene check on {target_domain} and flagged {len(result.findings)} item(s) (Score: {result.score}/100, Grade: {result.grade}).",
-        "",
-        "Key perimeter findings:",
-    ]
-
-    if crit_or_high:
-        for f in crit_or_high[:3]:
-            pitch_lines.append(f"- [{f.severity.value}] {f.title}: {f.description}")
-    else:
-        pitch_lines.append("- Perimeter is currently clean, but lacks automated monthly regression monitoring.")
-
-    pitch_lines.extend([
-        "",
-        f"I've attached the full white-labeled PDF report for your records.",
-        "",
-        "We built Orbit Security so web design & dev agencies can automatically generate these co-branded PDF audits every month for all your client domains to justify your $150-$300/mo website maintenance retainers without burning engineer hours.",
-        "",
-        "Would you be open to a quick 5-minute look at how your agency can run this across your entire client roster?",
-        "",
-        "Best regards,",
-        "Carson | Founder, Orbit Security",
-        "https://cmfh009.github.io/Orbit-Security/",
-        "Operated under Project ORBIT",
-    ])
-
-    body_text = "\n".join(pitch_lines)
-    subject = f"Security notice regarding {target_domain} (and a tool for your agency retainers)"
-
     email_path = os.path.join(out_dir, "pitch_email.txt")
     eml_path = os.path.join(out_dir, "pitch_email.eml")
 
-    with open(email_path, "w", encoding="utf-8") as f:
-        f.write(f"Subject: {subject}\n\n{body_text}")
+    # If a tailored, critic-approved pitch_email.txt already exists, preserve and use it!
+    if os.path.exists(email_path):
+        with open(email_path, "r", encoding="utf-8") as f:
+            raw_content = f.read()
+        lines = raw_content.splitlines()
+        if lines and lines[0].startswith("Subject: "):
+            subject = lines[0][len("Subject: "):].strip()
+            body_text = "\n".join(lines[1:]).strip()
+        else:
+            subject = f"{target_domain} hygiene check / white-label retainer reports for {agency_name}"
+            body_text = raw_content.strip()
+    else:
+        crit_or_high = [f for f in result.findings if f.severity.value in ("CRITICAL", "HIGH", "MEDIUM")]
+
+        personal_hook = prospect.get("personalization_hook") or AGENCY_PERSONALIZATION.get(
+            agency_domain,
+            f"We've been admiring your agency's client craftsmanship on {target_domain}."
+        )
+
+        pitch_lines = [
+            f"Hi {agency_name} team,",
+            "",
+            f"I'm Carson, software engineer and founder of Orbit Security. {personal_hook}",
+            "",
+            f"I ran a baseline external hygiene check on {target_domain} (Score: {result.score}/100, Grade: {result.grade}).",
+            "",
+        ]
+
+        if crit_or_high:
+            pitch_lines.append("Key perimeter observations:")
+            for f in crit_or_high[:2]:
+                pitch_lines.append(f"- [{f.severity.value}] {f.title}: {f.description}")
+        else:
+            pitch_lines.append(f"Perimeter is clean (100/100). Like most high-caliber builds, non-technical stakeholders often take this baseline for granted.")
+
+        pitch_lines.extend([
+            "",
+            f"I've attached a sample co-branded audit PDF for {target_domain}.",
+            "",
+            "We built Orbit Security so agencies can automatically generate these white-label PDF audits every month for all client domains—giving clients tangible proof of work to defend $150-$350/mo maintenance retainers without pulling senior developers away from billable work.",
+            "",
+            "Open to taking a quick look at a sample audit co-branded for your agency?",
+            "",
+            "Best,",
+            "Carson",
+            "Founder & Software Engineer, Orbit Security",
+            "https://cmfh009.github.io/Orbit-Security/",
+        ])
+
+        body_text = "\n".join(pitch_lines)
+        subject = f"{target_domain} perimeter check / white-label retainer reports for {agency_name}"
+
+        with open(email_path, "w", encoding="utf-8") as f:
+            f.write(f"Subject: {subject}\n\n{body_text}")
+
 
     dispatcher = EmailDispatcher()
     dispatcher.export_eml(
