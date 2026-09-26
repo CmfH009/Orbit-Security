@@ -60,8 +60,8 @@ def inspect_and_update():
                     # Attempt to create standard billing portal config
                     portal_data = {
                         "business_profile[headline]": "Orbit Security Labs — Agency Retainers",
-                        "business_profile[privacy_policy_url]": "https://cmfh009.github.io/orbit-security#privacy",
-                        "business_profile[terms_of_service_url]": "https://cmfh009.github.io/orbit-security#terms",
+                        "business_profile[privacy_policy_url]": "https://cmfh009.github.io/Orbit-Security/#privacy",
+                        "business_profile[terms_of_service_url]": "https://cmfh009.github.io/Orbit-Security/#terms",
                         "features[customer_update][enabled]": "true",
                         "features[customer_update][allowed_updates][0]": "email",
                         "features[customer_update][allowed_updates][1]": "address",

@@ -31,7 +31,7 @@ async def prospect_domain(
     branding = AgencyBranding(
         agency_name=os.getenv("DEFAULT_AGENCY_NAME", "Orbit Security Partner"),
         support_email=os.getenv("DEFAULT_AGENCY_EMAIL", "carsonmail009@gmail.com"),
-        website=os.getenv("DEFAULT_AGENCY_WEBSITE", "https://cmfh009.github.io/orbit-security")
+        website=os.getenv("DEFAULT_AGENCY_WEBSITE", "https://cmfh009.github.io/Orbit-Security/")
     )
 
     print(f"\n[*] Scanning perimeter for {domain} (including Certificate Transparency logs)...")

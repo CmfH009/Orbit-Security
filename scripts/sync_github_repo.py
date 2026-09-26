@@ -41,7 +41,7 @@ def main():
     # 1. Update repo metadata
     meta = {
         "description": "Orbit Security: Autonomous external perimeter hygiene, subdomain takeover sentinel, and white-label client security auditing for web & Shopify agencies.",
-        "homepage": "https://cmfh009.github.io/orbit-security"
+        "homepage": "https://cmfh009.github.io/Orbit-Security/"
     }
     r = httpx.patch("https://api.github.com/repos/CmfH009/Orbit-Security", headers=headers, json=meta)
     print(f"Update Repo Metadata: {r.status_code}")

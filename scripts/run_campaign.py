@@ -112,7 +112,7 @@ async def process_prospect(prospect: dict, output_root: str, send_live: bool = F
         "",
         "Best regards,",
         "Carson | Founder, Orbit Security",
-        "https://cmfh009.github.io/orbit-security",
+        "https://cmfh009.github.io/Orbit-Security/",
         "Operated under Project ORBIT",
     ])
 

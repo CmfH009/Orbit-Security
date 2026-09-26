@@ -103,7 +103,7 @@ class InboxAgent:
                 f"He will follow up directly shortly with your secure onboarding link so we can get all your client domains configured.\n\n"
                 f"Best regards,\n"
                 f"Carson | Founder, Orbit Security\n"
-                f"https://cmfh009.github.io/orbit-security\n"
+                f"https://cmfh009.github.io/Orbit-Security/\n"
                 f"Operated under Project ORBIT"
             )
 
@@ -151,7 +151,7 @@ class InboxAgent:
                 f"How many client domains does your agency currently maintain? Let us know and Carson can activate your workspace immediately.\n\n"
                 f"Best regards,\n"
                 f"Carson | Founder, Orbit Security\n"
-                f"https://cmfh009.github.io/orbit-security\n"
+                f"https://cmfh009.github.io/Orbit-Security/\n"
                 f"Operated under Project ORBIT"
             )
 
@@ -165,7 +165,7 @@ class InboxAgent:
                 f"Would you like us to run a sample co-branded scan across 3-5 of your client domains so you can see the reports firsthand?\n\n"
                 f"Best regards,\n"
                 f"Carson | Founder, Orbit Security\n"
-                f"https://cmfh009.github.io/orbit-security\n"
+                f"https://cmfh009.github.io/Orbit-Security/\n"
                 f"Operated under Project ORBIT"
             )
 
