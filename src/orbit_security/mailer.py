@@ -35,6 +35,7 @@ class EmailDispatcher:
         subject: str,
         body_text: str,
         pdf_attachment_path: Optional[str] = None,
+        in_reply_to: Optional[str] = None,
     ) -> MIMEMultipart:
         msg = MIMEMultipart()
         sender_header = f"{self.sender_name} <{self.smtp_user}>" if self.smtp_user else self.sender_name
@@ -42,6 +43,9 @@ class EmailDispatcher:
         msg["To"] = recipient_email
         msg["Subject"] = subject
         msg["Reply-To"] = self.smtp_user or recipient_email
+        if in_reply_to:
+            msg["In-Reply-To"] = in_reply_to
+            msg["References"] = in_reply_to
 
         # Attach text body
         msg.attach(MIMEText(body_text, "plain", "utf-8"))
@@ -76,13 +80,14 @@ class EmailDispatcher:
         subject: str,
         body_text: str,
         pdf_attachment_path: Optional[str] = None,
+        in_reply_to: Optional[str] = None,
     ) -> bool:
         if not self.is_configured():
             raise ValueError(
                 "SMTP is not configured. Please set SMTP_HOST, SMTP_USER, and SMTP_PASSWORD in your environment or .env file."
             )
 
-        msg = self.build_message(recipient_email, subject, body_text, pdf_attachment_path)
+        msg = self.build_message(recipient_email, subject, body_text, pdf_attachment_path, in_reply_to=in_reply_to)
 
         with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
             server.starttls()
