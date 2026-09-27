@@ -374,6 +374,100 @@ class OrbitSecurityScanner:
                 evidence="No TLS-RPT record located.",
             )
 
+    async def audit_caa(self, domain: str) -> Optional[Finding]:
+        """Audits DNS CAA (Certification Authority Authorization - RFC 8659 / RFC 6844)."""
+        target = domain
+        try:
+            answers = await self.resolver.resolve(domain, "CAA")
+            records = [str(rdata).strip() for rdata in answers]
+            if not records:
+                return Finding(
+                    title="Missing DNS CAA Policy (RFC 8659)",
+                    severity=Severity.LOW,
+                    category="Transport Security",
+                    description=(
+                        f"Domain {domain} does not publish a Certification Authority Authorization (CAA) record. "
+                        "Any globally recognized Certificate Authority is permitted to issue SSL/TLS certificates "
+                        "for this domain, increasing exposure to rogue or compromised CAs."
+                    ),
+                    remediation=(
+                        f"Publish a DNS CAA record for `{domain}` specifying authorized CAs "
+                        f"(e.g. `0 issue \"letsencrypt.org\"`, `0 issuewild \";\"`, `0 iodef \"mailto:security@{domain}\"`)."
+                    ),
+                    target=target,
+                    evidence="No CAA resource records found.",
+                )
+            return None
+        except (dns.exception.Timeout, asyncio.TimeoutError):
+            return None
+        except Exception as e:
+            return Finding(
+                title="Missing DNS CAA Policy (RFC 8659)",
+                severity=Severity.LOW,
+                category="Transport Security",
+                description=(
+                    f"Domain {domain} has no DNS CAA policy configured. "
+                    "Any globally trusted CA can issue certificates for this domain without restriction."
+                ),
+                remediation=f"Publish a DNS CAA record for `{domain}` restricting issuance to approved Certificate Authorities.",
+                target=target,
+                evidence=f"No CAA records found in DNS zone ({e}).",
+            )
+
+    async def audit_security_txt(
+        self, base_url: str, client: Optional[httpx.AsyncClient] = None
+    ) -> Optional[Finding]:
+        """Audits RFC 9116 Vulnerability Disclosure standard (security.txt)."""
+        parsed = urlparse(base_url)
+        domain = parsed.hostname or base_url
+        if not is_safe_host(domain):
+            return None
+
+        should_close = False
+        if client is None:
+            client = self.create_http_client()
+            should_close = True
+
+        paths = ["/.well-known/security.txt", "/security.txt"]
+        found_txt = None
+
+        try:
+            for path in paths:
+                url = f"{base_url.rstrip('/')}{path}"
+                try:
+                    resp = await client.get(url)
+                    if getattr(resp, "status_code", 0) == 200:
+                        content_type = getattr(resp, "headers", {}).get("content-type", "").lower()
+                        if "text/html" not in content_type:
+                            text = getattr(resp, "text", "")
+                            if "contact:" in text.lower():
+                                found_txt = text
+                                break
+                except Exception:
+                    continue
+
+            if not found_txt:
+                return Finding(
+                    title="Missing RFC 9116 Security Disclosure (security.txt)",
+                    severity=Severity.LOW,
+                    category="Application Security",
+                    description=(
+                        f"Domain {domain} does not publish a standardized vulnerability disclosure policy "
+                        "at `/.well-known/security.txt` per IETF RFC 9116. Ethical security researchers and bug bounty reporters "
+                        "lack a designated, confidential channel to report zero-day vulnerabilities."
+                    ),
+                    remediation=(
+                        f"Deploy a `security.txt` file at `https://{domain}/.well-known/security.txt` declaring "
+                        f"`Contact: mailto:security@{domain}` and a valid `Expires:` date."
+                    ),
+                    target=f"{base_url.rstrip('/')}/.well-known/security.txt",
+                    evidence="No valid security.txt discovered with Contact: directive.",
+                )
+            return None
+        finally:
+            if should_close and client:
+                await client.aclose()
+
     async def check_subdomain_takeover(
         self, subdomain: str, client: Optional[httpx.AsyncClient] = None
     ) -> Optional[Finding]:
@@ -737,6 +831,34 @@ class OrbitSecurityScanner:
                         evidence="Header 'Cross-Origin-Opener-Policy' not present.",
                     )
                 )
+
+            # Server & Tech Stack Version Disclosure Audit
+            server_hdr = headers.get("Server", "")
+            powered_by = headers.get("X-Powered-By", "")
+            disclosures = []
+            if server_hdr and any(c.isdigit() for c in server_hdr):
+                disclosures.append(f"Server: {server_hdr}")
+            if powered_by:
+                disclosures.append(f"X-Powered-By: {powered_by}")
+
+            if disclosures:
+                findings.append(
+                    Finding(
+                        title="Server / Tech Stack Version Disclosure",
+                        severity=Severity.LOW,
+                        category="Information Disclosure",
+                        description=(
+                            "The web server discloses detailed software or runtime version numbers in response headers. "
+                            "Adversaries use these banners to map known CVEs to your environment."
+                        ),
+                        remediation=(
+                            "Suppress detailed version numbers in server headers (e.g. 'ServerTokens Prod' in Apache, "
+                            "'server_tokens off;' in Nginx, and disable 'X-Powered-By' in runtime configuration)."
+                        ),
+                        target=base_url,
+                        evidence=" | ".join(disclosures),
+                    )
+                )
         except Exception:
             pass
         finally:
@@ -872,6 +994,11 @@ class OrbitSecurityScanner:
             if tls_rpt_finding:
                 result.findings.append(tls_rpt_finding)
 
+            # Audit CAA policy (RFC 8659)
+            caa_finding = await self.audit_caa(domain)
+            if caa_finding:
+                result.findings.append(caa_finding)
+
             # Run exposure and header audits on apex domain
             base_url = f"https://{domain}"
             exposure_findings = await self.audit_exposures(base_url, client=shared_client)
@@ -879,6 +1006,11 @@ class OrbitSecurityScanner:
 
             header_findings = await self.audit_security_headers(base_url, client=shared_client)
             result.findings.extend(header_findings)
+
+            # Audit RFC 9116 security.txt disclosure
+            security_txt_finding = await self.audit_security_txt(base_url, client=shared_client)
+            if security_txt_finding:
+                result.findings.append(security_txt_finding)
 
             # Run SSL check on apex in worker thread to prevent event loop blocking
             ssl_finding = await asyncio.to_thread(self.audit_ssl, domain)

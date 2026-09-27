@@ -317,6 +317,48 @@ SAAS_TAKEOVER_SIGNATURES: List[SaasSignature] = [
         fingerprints=["Hello! Sorry, but the website you're looking for doesn't exist."],
         remediation="Remove the Worksites CNAME record.",
     ),
+    SaasSignature(
+        name="Vercel",
+        cname_patterns=["cname.vercel-dns.com", "vercel-dns.com"],
+        fingerprints=["The deployment could not be found", "DEPLOYMENT_NOT_FOUND", "404: NOT_FOUND"],
+        remediation="Remove the orphaned Vercel CNAME or claim the custom domain in your Vercel project settings.",
+    ),
+    SaasSignature(
+        name="Supabase",
+        cname_patterns=["supabase.co"],
+        fingerprints=["Project not found", "Project not found or paused"],
+        remediation="Delete the dangling CNAME record or associate the custom domain inside your Supabase project settings.",
+    ),
+    SaasSignature(
+        name="Render",
+        cname_patterns=["onrender.com"],
+        fingerprints=["Not Found", "Render | Not Found"],
+        remediation="Remove the dangling CNAME record or configure the custom domain in your Render web service dashboard.",
+    ),
+    SaasSignature(
+        name="Cloudflare Pages",
+        cname_patterns=["pages.dev"],
+        fingerprints=["Page Not Found", "The requested page could not be found"],
+        remediation="Remove the CNAME or bind the custom domain in Cloudflare Pages project settings.",
+    ),
+    SaasSignature(
+        name="Firebase Hosting",
+        cname_patterns=["web.app", "firebaseapp.com"],
+        fingerprints=["Site Not Found", "Firebase Hosting Setup"],
+        remediation="Remove the orphaned Firebase CNAME or connect the domain inside the Firebase Console.",
+    ),
+    SaasSignature(
+        name="BigCommerce",
+        cname_patterns=["mybigcommerce.com"],
+        fingerprints=["Store not found", "This store is currently unavailable"],
+        remediation="Remove the BigCommerce CNAME or claim the domain in your BigCommerce store control panel.",
+    ),
+    SaasSignature(
+        name="Notion",
+        cname_patterns=["notion.site"],
+        fingerprints=["This page could not be found", "Notion – The all-in-one workspace"],
+        remediation="Remove the Notion CNAME record or configure Notion custom domain mapping.",
+    ),
 ]
 
 

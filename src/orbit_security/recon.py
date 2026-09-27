@@ -80,6 +80,7 @@ def resolve_dns(domain: str) -> Dict[str, Any]:
         "dmarc_record": None,
         "bimi_record": None,
         "mta_sts_record": None,
+        "caa_records": [],
         "dangling_risk": False,
         "matched_service": None,
         "remediation": None,
@@ -136,6 +137,13 @@ def resolve_dns(domain: str) -> Dict[str, Any]:
             for rdata in answers:
                 res["mta_sts_record"] = b"".join(rdata.strings).decode("utf-8", errors="ignore")
                 break
+        except Exception:
+            pass
+
+        try:
+            answers = resolver.resolve(domain, "CAA")
+            for rdata in answers:
+                res["caa_records"].append(str(rdata))
         except Exception:
             pass
     else:
@@ -344,6 +352,12 @@ def run_recon(target: str, json_output: bool = False, remediate: bool = False) -
             print(f"  {YELLOW}Remediation : {dns_res['remediation']}{RESET}")
     else:
         print(f"  {GREEN}[✓] Subdomain routing stable.{RESET}")
+
+    caa_count = len(dns_res.get("caa_records", []))
+    if caa_count > 0:
+        print(f"  CAA Policy  : {GREEN}[PASS]{RESET} {caa_count} record(s) configured")
+    else:
+        print(f"  CAA Policy  : {YELLOW}[WARN]{RESET} Missing DNS CAA record (RFC 8659)")
 
     print(f"\n{CYAN}{BOLD}--- [2] Email & Phishing Defense ---{RESET}")
     dmarc_str = f"{GREEN}[PASS]{RESET} {dns_res['dmarc_record'][:35]}..." if dns_res.get("dmarc_record") else f"{RED}[FAIL]{RESET} Missing DMARC"

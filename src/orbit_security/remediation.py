@@ -151,3 +151,88 @@ class DnsRemediationGenerator:
             "option_decommission": f"If the marketing campaign or app was retired, delete the DNS record `{subdomain} CNAME {cname_target}` in your DNS manager.",
             "cli_verification": f"orbit-recon {subdomain}",
         }
+
+    @staticmethod
+    def generate_caa_fix(
+        domain: str,
+        ca_list: Optional[List[str]] = None,
+        alert_email: Optional[str] = None,
+    ) -> List[RemediationSnippet]:
+        """Generates DNS CAA (RFC 8659) remediation snippets for Cloudflare and Route 53."""
+        cas = ca_list or ["letsencrypt.org", "digicert.com"]
+        iodef = f'0 iodef "mailto:{alert_email}"' if alert_email else ""
+
+        caa_records_cf = []
+        caa_records_r53 = []
+        for ca in cas:
+            caa_records_cf.append(f'0 issue "{ca}"')
+            caa_records_r53.append(f'0 issue "{ca}"')
+        if iodef:
+            caa_records_cf.append(iodef)
+            caa_records_r53.append(iodef)
+
+        cf_val = " | ".join(caa_records_cf)
+        r53_formatted = ", ".join([f'"{r}"' for r in caa_records_r53])
+
+        cloudflare = RemediationSnippet(
+            provider="Cloudflare",
+            record_type="CAA",
+            host_name="@",
+            record_value=cf_val,
+            ttl=1,
+            instructions="In Cloudflare Dashboard -> DNS Records -> Add Record -> Type: CAA, Name: @, Tag: Only allow specific CAs (issue), CA Domain: paste approved CAs.",
+            terraform_hcl=f'''resource "cloudflare_record" "caa" {{
+  zone_id = var.cloudflare_zone_id
+  name    = "@"
+  data {{
+    flags = "0"
+    tag   = "issue"
+    value = "{cas[0]}"
+  }}
+  type    = "CAA"
+  ttl     = 1
+}}''',
+        )
+
+        route53 = RemediationSnippet(
+            provider="AWS Route 53",
+            record_type="CAA",
+            host_name=domain,
+            record_value=f"[{r53_formatted}]",
+            ttl=300,
+            instructions="In AWS Route 53 Console -> Create record -> Record name: [apex], Record type: CAA, Value: list each rule per line.",
+            terraform_hcl=f'''resource "aws_route53_record" "caa" {{
+  zone_id = var.route53_zone_id
+  name    = "{domain}"
+  type    = "CAA"
+  ttl     = 300
+  records = [{r53_formatted}]
+}}''',
+        )
+
+        return [cloudflare, route53]
+
+    @staticmethod
+    def generate_security_txt(
+        domain: str,
+        contact_email: Optional[str] = None,
+        policy_url: Optional[str] = None,
+        days_valid: int = 365,
+    ) -> str:
+        """Generates RFC 9116 compliant security.txt content."""
+        from datetime import datetime, timezone, timedelta
+
+        email = contact_email or f"security@{domain}"
+        expiry = datetime.now(timezone.utc) + timedelta(days=days_valid)
+        expiry_str = expiry.strftime("%Y-%m-%dT%H:%M:%SZ")
+        policy = policy_url or f"https://{domain}/security"
+
+        lines = [
+            "# Orbit Security: RFC 9116 Vulnerability Disclosure Standard",
+            f"Contact: mailto:{email}",
+            f"Expires: {expiry_str}",
+            "Preferred-Languages: en",
+            f"Canonical: https://{domain}/.well-known/security.txt",
+            f"Policy: {policy}",
+        ]
+        return "\n".join(lines) + "\n"
