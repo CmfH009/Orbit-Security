@@ -36,6 +36,43 @@ class InboxAgent:
         self.dispatcher = EmailDispatcher()
         self.state = self._load_state()
 
+        # Dynamically discover all target agency domains and portfolio keywords from prospects.json
+        self.prospects_file = os.path.join(
+            os.path.dirname(__file__), "..", "..", "data", "prospects.json"
+        )
+        self.known_agency_domains = set([
+            "charleagency.com", "commandc.com", "blubolt.com", "underwaterpistol.com",
+            "matchboxdesigngroup.com", "wholegraindigital.com", "mooveagency.com",
+            "steadfastcollective.com", "tinyfrog.com", "electriceye.io", "charle.co.uk",
+            "10up.com", "humanmade.com", "kota.co.uk", "illustrate.digital", "ctidigital.com",
+            "propeller.co.uk", "neverbland.com", "alley.com", "tri.be", "rtcamp.com",
+            "impressiondigital.com", "verbalplusvisual.com", "anatta.io", "fostr.online",
+            "growthspark.com", "guidance.com", "loungelizard.com", "taoti.com", "northern.co",
+            "zeekinteractive.com", "webfx.com"
+        ])
+        self.known_keywords = set([
+            "orbit security", "orbit-security", "agencysentry", "security notice regarding",
+            "retainer", "perimeter", "dmarc", "cname", "white-label", "audit"
+        ])
+
+        if os.path.exists(self.prospects_file):
+            try:
+                with open(self.prospects_file, "r", encoding="utf-8") as f:
+                    prospects = json.load(f)
+                    for p in prospects:
+                        dom = p.get("agency_domain")
+                        if dom:
+                            self.known_agency_domains.add(dom.lower())
+                        c_email = p.get("contact_email")
+                        if c_email and "@" in c_email:
+                            self.known_agency_domains.add(c_email.split("@")[-1].lower())
+                        for port in p.get("portfolio_domains", []):
+                            prefix = port.split(".")[0].lower()
+                            if len(prefix) >= 4:
+                                self.known_keywords.add(prefix)
+            except Exception:
+                pass
+
     def _load_state(self) -> Dict:
         if os.path.exists(self.state_file):
             try:
@@ -383,21 +420,9 @@ class InboxAgent:
                 # Strict Filter: Must be from a target agency or explicitly reference AgencySentry outreach
 
                 is_agency_outreach = (
-                    "security notice regarding" in subject.lower()
-                    or "orbit security" in subject.lower()
-                    or "orbit-security" in subject.lower()
-                    or "agencysentry" in subject.lower()
-                    or any(agency_kw in subject.lower() for agency_kw in [
-                        "candykittens", "edenbrothers", "snowdoniacheese", "brewteacompany",
-                        "blueprintcoffee", "climbingtrees", "charityjob", "adoptium",
-                        "definefinancial", "giordanos", "charle", "commandc", "blubolt",
-                        "underwaterpistol", "matchbox", "wholegrain", "moove", "steadfast", "tinyfrog", "electriceye"
-                    ])
-                    or any(domain in clean_email.lower() for domain in [
-                        "charleagency.com", "commandc.com", "blubolt.com", "underwaterpistol.com",
-                        "matchboxdesigngroup.com", "wholegraindigital.com", "mooveagency.com",
-                        "steadfastcollective.com", "tinyfrog.com", "electriceye.io", "charle.co.uk"
-                    ])
+                    any(kw in subject.lower() for kw in self.known_keywords)
+                    or any(dom in clean_email.lower() for dom in self.known_agency_domains)
+                    or "charle.co.uk" in clean_email.lower()
                 )
 
                 if not is_agency_outreach:
