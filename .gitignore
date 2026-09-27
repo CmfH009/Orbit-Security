@@ -22,7 +22,9 @@ htmlcov/
 data/leads_state.json
 data/prospects.json
 data/dispatched_campaigns.json
+data/agency_x_profiles.json
 outbound_campaigns/
+
 
 # OS artifacts
 .DS_Store
