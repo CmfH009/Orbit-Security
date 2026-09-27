@@ -4,9 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Terms of Service | Orbit Security</title>
-    <meta name="description" content="Terms of Service, acceptable use policy, and safe harbor legal terms for Orbit Security perimeter sentinel and white-label auditing suite.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'><path d='M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z'/></svg>">
+    <!-- Retro Arcade & Pixel Art Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/styles.min.css">
+    <!-- Simple Cat 16-Bit Companion & Plain-English Decoder -->
+    <script src="assets/simple_cat.js"></script>
+    <style>
+        .font-arcade { font-family: 'Press Start 2P', monospace, cursive; }
+        .font-pixel { font-family: 'Silkscreen', monospace; }
+    </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-emerald-500 selection:text-white">
 
@@ -71,7 +80,7 @@
                 <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs space-y-2 text-slate-300">
                     <div class="font-bold text-emerald-400">RFC-Compliant Passive Monitoring:</div>
                     <p>
-                        All reconnaissance conducted by Orbit Security is strictly passive and limited to publicly accessible Internet metadata, including DNS records (RFC 1035, RFC 7208, RFC 7489), public Certificate Transparency logs (RFC 6962), and public HTTP response headers (RFC 9110). Orbit Security <strong>does not execute intrusive penetration testing, vulnerability exploitation, credential brute-forcing, denial of service, or unauthorized access bypasses</strong>.
+                        All reconnaissance conducted by Orbit Security is strictly passive and limited to publicly accessible Internet metadata, including DNS records (RFC 1035, <span data-cat-term="spf" class="cursor-pointer text-emerald-400 font-semibold underline decoration-dotted decoration-emerald-500 hover:text-emerald-300">RFC 7208 / SPF 🐱</span>, <span data-cat-term="dmarc" class="cursor-pointer text-emerald-400 font-semibold underline decoration-dotted decoration-emerald-500 hover:text-emerald-300">RFC 7489 / DMARC 🐱</span>), public Certificate Transparency logs (RFC 6962), and public HTTP response headers (<span data-cat-term="headers" class="cursor-pointer text-emerald-400 font-semibold underline decoration-dotted decoration-emerald-500 hover:text-emerald-300">RFC 9110 / OWASP Headers 🐱</span>). Orbit Security <strong>does not execute intrusive penetration testing, vulnerability exploitation, credential brute-forcing, denial of service, or unauthorized access bypasses</strong>.
                     </p>
                 </div>
             </section>

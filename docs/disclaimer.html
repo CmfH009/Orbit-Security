@@ -6,7 +6,17 @@
     <title>RFC Passive Reconnaissance & Safe Harbor Disclaimer | Orbit Security</title>
     <meta name="description" content="Technical RFC compliance documentation, ethical safe harbor standards, and passive reconnaissance legal guidelines for Orbit Security.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'><path d='M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z'/></svg>">
+    <!-- Retro Arcade & Pixel Art Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/styles.min.css">
+    <!-- Simple Cat 16-Bit Companion & Plain-English Decoder -->
+    <script src="assets/simple_cat.js"></script>
+    <style>
+        .font-arcade { font-family: 'Press Start 2P', monospace, cursive; }
+        .font-pixel { font-family: 'Silkscreen', monospace; }
+    </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-emerald-500 selection:text-white">
 
@@ -69,21 +79,21 @@
                     All reconnaissance procedures executed by Orbit Security (including the client-side DNS-over-HTTPS scanner and the Orbit Recon engine) strictly query open, public standards without altering, injecting, or manipulating remote server states:
                 </p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
-                    <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-                        <span class="text-emerald-400 font-bold">RFC 1035 / RFC 8482</span>
-                        <div class="text-slate-400 mt-1 font-sans text-[11px]">Domain Name System (DNS) query protocols for A, CNAME, and TXT routing records.</div>
+                    <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 cursor-pointer hover:border-emerald-500/50 transition-all" data-cat-term="cname">
+                        <span class="text-emerald-400 font-bold">RFC 1035 / RFC 8482 🐱</span>
+                        <div class="text-slate-400 mt-1 font-sans text-[11px]">Domain Name System (DNS) query protocols for A, CNAME, and TXT routing records. (Checks for abandoned lockers).</div>
                     </div>
-                    <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-                        <span class="text-emerald-400 font-bold">RFC 7208 / RFC 7489</span>
-                        <div class="text-slate-400 mt-1 font-sans text-[11px]">Public Sender Policy Framework (SPF) & DMARC authentication policy verification.</div>
+                    <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 cursor-pointer hover:border-emerald-500/50 transition-all" data-cat-term="spf">
+                        <span class="text-emerald-400 font-bold">RFC 7208 / RFC 7489 🐱</span>
+                        <div class="text-slate-400 mt-1 font-sans text-[11px]">Public Sender Policy Framework (SPF) & DMARC authentication policy verification. (The VIP guest list & bouncer).</div>
                     </div>
-                    <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-                        <span class="text-emerald-400 font-bold">RFC 6962 / RFC 9162</span>
-                        <div class="text-slate-400 mt-1 font-sans text-[11px]">Public Certificate Transparency log inspection (crt.sh) for published TLS certificates.</div>
+                    <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 cursor-pointer hover:border-emerald-500/50 transition-all" data-cat-term="doh">
+                        <span class="text-emerald-400 font-bold">RFC 8484 / RFC 6962 🐱</span>
+                        <div class="text-slate-400 mt-1 font-sans text-[11px]">DNS-over-HTTPS (DoH) encrypted queries and public Certificate Transparency log inspection (crt.sh).</div>
                     </div>
-                    <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-                        <span class="text-emerald-400 font-bold">RFC 9110 / RFC 8446</span>
-                        <div class="text-slate-400 mt-1 font-sans text-[11px]">Standard HTTP/1.1 & HTTP/2 GET requests inspecting public response headers and TLS certificates.</div>
+                    <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 cursor-pointer hover:border-emerald-500/50 transition-all" data-cat-term="headers">
+                        <span class="text-emerald-400 font-bold">RFC 9110 / RFC 8446 🐱</span>
+                        <div class="text-slate-400 mt-1 font-sans text-[11px]">Standard HTTP/1.1 & HTTP/2 GET requests inspecting public response headers and TLS deadbolts.</div>
                     </div>
                 </div>
             </section>
