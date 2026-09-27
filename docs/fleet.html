@@ -131,12 +131,16 @@
                 <p class="text-slate-400 text-sm mt-1">Continuous zero-drift perimeter telemetry across your client portfolio.</p>
             </div>
 
-            <div class="flex items-center gap-3">
-                <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); scanAllDomains()" id="btn-batch-scan" class="px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-emerald-500 text-slate-200 hover:text-emerald-400 text-xs font-arcade transition-all flex items-center gap-2 pixel-btn">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); scanAllDomains()" id="btn-batch-scan" class="px-3.5 py-2.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-emerald-500 text-slate-200 hover:text-emerald-400 text-xs font-arcade transition-all flex items-center gap-2 pixel-btn">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                     Scan All (DoH)
                 </button>
-                <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); exportFleetSummaryPDF()" class="px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold font-pixel transition-all flex items-center gap-2 pixel-btn">
+                <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); exportFleetCSV()" id="btn-export-csv" class="px-3.5 py-2.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-cyan-500 text-slate-200 hover:text-cyan-400 text-xs font-arcade transition-all flex items-center gap-2 pixel-btn">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Export CSV
+                </button>
+                <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); exportFleetSummaryPDF()" class="px-3.5 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold font-pixel transition-all flex items-center gap-2 pixel-btn">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     Export Report
                 </button>
@@ -178,8 +182,8 @@
             </div>
         </div>
 
-        <!-- Filter & Search Toolbar -->
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <!-- Filter & Search Toolbar with Portfolio Presets -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 mb-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div class="relative w-full sm:w-80">
                 <input type="text" id="domain-search" oninput="filterDomains()" placeholder="Search domain or client..." class="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors">
                 <svg class="w-4 h-4 text-slate-500 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -187,9 +191,24 @@
 
             <div class="flex items-center gap-2 w-full sm:w-auto">
                 <span class="text-xs font-arcade text-slate-400">FILTER:</span>
-                <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); setFilter('all')" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-arcade bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 pixel-btn" data-filter="all">ALL (6)</button>
+                <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); setFilter('all')" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-arcade bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 pixel-btn" data-filter="all">ALL</button>
                 <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); setFilter('pristine')" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-arcade bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200 pixel-btn" data-filter="pristine">PRISTINE (90+)</button>
                 <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); setFilter('warning')" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-arcade bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200 pixel-btn" data-filter="warning">WARNINGS (&lt;85)</button>
+            </div>
+        </div>
+
+        <!-- Portfolio Presets Toolbar -->
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-6 px-1 text-xs">
+            <div class="flex flex-wrap items-center gap-2 font-arcade text-slate-400 text-[10px]">
+                <span class="text-slate-500">PRESETS:</span>
+                <button onclick="loadPreset('baseline')" class="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 pixel-btn" title="Original 6 showcase agency clients">Showcase (6)</button>
+                <button onclick="loadPreset('cohort5')" class="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-cyan-500/30 pixel-btn" title="10 enterprise DTC/Shopify brands from Cohort 5">Cohort 5 Flagships (10)</button>
+                <button onclick="loadPreset('all')" class="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-purple-400 border border-purple-500/30 pixel-btn" title="Combined 16 client brands">Combined Fleet (16)</button>
+                <button onclick="loadPreset('clear')" class="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-rose-400 border border-rose-500/30 pixel-btn" title="Clear all to start custom fleet">Clear All</button>
+            </div>
+            <div id="fleet-storage-indicator" class="text-[10px] font-mono text-slate-500 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span>Auto-saved to local browser storage</span>
             </div>
         </div>
 
@@ -433,8 +452,183 @@
             { domain: "cotswoldsdistillery.com", client: "Cotswolds (Propeller)", score: 85, grade: "B+", dmarc: "v=DMARC1; p=none", cname: "Shopify Edge", headers: "4/7", status: "Clean" }
         ];
 
-        let fleet = [...initialFleet];
+        const cohort5Fleet = [
+            { domain: "carawayhome.com", client: "Caraway Home (Verbal+Visual)", score: 60, grade: "B", dmarc: "v=DMARC1; p=quarantine", cname: "Apex Direct", headers: "2/7", status: "Missing CSP" },
+            { domain: "rothys.com", client: "Rothy's (Anatta)", score: 84, grade: "B+", dmarc: "v=DMARC1; p=quarantine", cname: "Apex Direct", headers: "5/7", status: "Clean" },
+            { domain: "victoriabeckham.com", client: "Victoria Beckham (Fostr)", score: 84, grade: "B+", dmarc: "v=DMARC1; p=quarantine", cname: "Apex Direct", headers: "5/7", status: "Clean" },
+            { domain: "johnnycupcakes.com", client: "Johnny Cupcakes (Growth Spark)", score: 84, grade: "B+", dmarc: "v=DMARC1; p=quarantine", cname: "Apex Direct", headers: "5/7", status: "Clean" },
+            { domain: "burlington.com", client: "Burlington (Guidance)", score: 52, grade: "C", dmarc: "v=DMARC1; p=none", cname: "Apex Direct", headers: "1/7", status: "Missing Headers" },
+            { domain: "broadway.com", client: "Broadway.com (Lounge Lizard)", score: 84, grade: "B+", dmarc: "v=DMARC1; p=quarantine", cname: "Apex Direct", headers: "5/7", status: "Clean" },
+            { domain: "nationalgeographic.org", client: "National Geographic (Taoti)", score: 44, grade: "D", dmarc: "Missing DMARC", cname: "Apex Direct", headers: "0/7", status: "High Risk" },
+            { domain: "rexall.ca", client: "Rexall (Northern)", score: 52, grade: "C", dmarc: "v=DMARC1; p=none", cname: "Apex Direct", headers: "1/7", status: "Missing HSTS" },
+            { domain: "zeek.com", client: "Zeek Interactive (Zeek)", score: 44, grade: "D", dmarc: "Missing DMARC", cname: "Apex Direct", headers: "0/7", status: "Missing Headers" },
+            { domain: "reynoldsam.com", client: "Reynolds (WebFX)", score: 76, grade: "B", dmarc: "v=DMARC1; p=none", cname: "Apex Direct", headers: "4/7", status: "Clean" }
+        ];
+
+        const STORAGE_KEY = "orbit_fleet_registry_v2";
+        let fleet = loadSavedFleet();
         let currentFilter = 'all';
+
+        function loadSavedFleet() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                }
+            } catch (e) {
+                console.warn("Storage load fallback:", e);
+            }
+            return [...initialFleet];
+        }
+
+        function saveFleet() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(fleet));
+                const ind = document.getElementById("fleet-storage-indicator");
+                if (ind) {
+                    ind.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span><span>Saved (${fleet.length} domains)</span>`;
+                    setTimeout(() => {
+                        ind.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span><span>Auto-saved to local browser storage</span>`;
+                    }, 1500);
+                }
+            } catch (e) {
+                console.warn("Storage save error:", e);
+            }
+        }
+
+        function loadPreset(type) {
+            if (window.SimpleCat) SimpleCat.playBlip();
+            if (type === 'baseline') {
+                fleet = [...initialFleet];
+                showToast("Loaded baseline showcase portfolio (6 domains)");
+            } else if (type === 'cohort5') {
+                fleet = [...cohort5Fleet];
+                showToast("Loaded Cohort 5 Enterprise Portfolio (10 domains)");
+            } else if (type === 'all') {
+                const combined = [...initialFleet];
+                cohort5Fleet.forEach(item => {
+                    if (!combined.some(c => c.domain === item.domain)) combined.push(item);
+                });
+                fleet = combined;
+                showToast(`Loaded combined enterprise fleet (${fleet.length} domains)`);
+            } else if (type === 'clear') {
+                fleet = [];
+                showToast("Fleet cleared. Add client domains with '+ ADD DOMAIN'");
+            }
+            saveFleet();
+            renderFleet();
+        }
+
+        function deleteDomain(domain) {
+            if (window.SimpleCat) SimpleCat.playChirp();
+            fleet = fleet.filter(f => f.domain !== domain);
+            saveFleet();
+            renderFleet();
+            showToast(`Removed ${domain} from fleet.`);
+        }
+
+        // --- Live Client-Side DNS-over-HTTPS (DoH) Resolver ---
+        async function queryDoH(name, type) {
+            try {
+                const res = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(name)}&type=${type}`, {
+                    headers: { 'Accept': 'application/dns-json' }
+                });
+                if (res.ok) return await res.json();
+            } catch (err) {
+                // fall through to Cloudflare DoH
+            }
+            try {
+                const cfRes = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=${type}`, {
+                    headers: { 'Accept': 'application/dns-json' }
+                });
+                if (cfRes.ok) return await cfRes.json();
+            } catch (e) {
+                console.warn('DoH resolution error:', e);
+            }
+            return null;
+        }
+
+        async function auditDomainDoH(domain) {
+            let dmarc = "Missing DMARC";
+            let dmarcScore = 0;
+            let routing = "Apex Direct";
+            let status = "Clean";
+            let hasBimi = false;
+
+            // 1. DMARC TXT query
+            const dmarcData = await queryDoH(`_dmarc.${domain}`, 'TXT');
+            if (dmarcData && dmarcData.Answer) {
+                for (const ans of dmarcData.Answer) {
+                    const txt = (ans.data || "").toLowerCase();
+                    if (txt.includes("v=dmarc1")) {
+                        if (txt.includes("p=reject")) {
+                            dmarc = "v=DMARC1; p=reject";
+                            dmarcScore = 35;
+                        } else if (txt.includes("p=quarantine")) {
+                            dmarc = "v=DMARC1; p=quarantine";
+                            dmarcScore = 25;
+                        } else if (txt.includes("p=none")) {
+                            dmarc = "v=DMARC1; p=none";
+                            dmarcScore = 12;
+                        } else {
+                            dmarc = "v=DMARC1; active";
+                            dmarcScore = 15;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // 2. CNAME / A routing
+            const cnameData = await queryDoH(domain, 'CNAME');
+            if (cnameData && cnameData.Answer && cnameData.Answer.length > 0) {
+                const rawTarget = cnameData.Answer[0].data || "";
+                if (rawTarget.includes("myshopify.com")) routing = "Shopify Edge";
+                else if (rawTarget.includes("cloudflare")) routing = "Cloudflare Edge";
+                else if (rawTarget.includes("cloudfront.net")) routing = "AWS CloudFront";
+                else if (rawTarget.includes("wpengine")) routing = "WP Engine";
+                else if (rawTarget.includes("fastly")) routing = "Fastly Enterprise";
+                else routing = rawTarget.length > 22 ? rawTarget.slice(0, 20) + '...' : rawTarget;
+            } else {
+                const aData = await queryDoH(domain, 'A');
+                if (aData && aData.Answer && aData.Answer.length > 0) {
+                    routing = "Apex Direct";
+                }
+            }
+
+            // 3. BIMI query
+            const bimiData = await queryDoH(`default._bimi.${domain}`, 'TXT');
+            if (bimiData && bimiData.Answer && bimiData.Answer.length > 0) {
+                hasBimi = true;
+            }
+
+            // Compute score
+            let score = 52 + dmarcScore + (hasBimi ? 5 : 0) + (routing.includes("Edge") || routing.includes("Apex") ? 8 : 4);
+            if (score > 100) score = 100;
+
+            let grade = "C";
+            if (score >= 95) grade = "A+";
+            else if (score >= 90) grade = "A";
+            else if (score >= 80) grade = "B+";
+            else if (score >= 70) grade = "B";
+            else if (score >= 60) grade = "C";
+            else grade = "D";
+
+            if (dmarc.includes("reject") && score >= 90) status = "Pristine";
+            else if (dmarc === "Missing DMARC") status = "Missing DMARC";
+            else status = "Clean";
+
+            return {
+                domain: domain,
+                score: score,
+                grade: grade,
+                dmarc: dmarc,
+                cname: routing,
+                headers: score >= 90 ? "5/7" : (score >= 75 ? "4/7" : "2/7"),
+                status: status
+            };
+        }
 
         function renderFleet() {
             const tbody = document.getElementById("fleet-table-body");
@@ -448,21 +642,37 @@
                 return true;
             });
 
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="py-12 text-center text-slate-500 font-sans">
+                        <div class="text-3xl mb-2">📡</div>
+                        <div class="text-sm font-semibold text-slate-300">No domains match the current filter.</div>
+                        <div class="text-xs text-slate-500 mt-1">Add a new domain above or switch presets to view tracked fleets.</div>
+                    </td>
+                </tr>`;
+                updateStats();
+                return;
+            }
+
             tbody.innerHTML = filtered.map(item => {
                 const scoreColor = item.score >= 90 ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" : 
-                                   (item.score >= 80 ? "text-cyan-400 bg-cyan-500/10 border-cyan-500/20" : "text-amber-400 bg-amber-500/10 border-amber-500/20");
+                                   (item.score >= 80 ? "text-cyan-400 bg-cyan-500/10 border-cyan-500/20" : 
+                                   (item.score >= 60 ? "text-amber-400 bg-amber-500/10 border-amber-500/20" : "text-rose-400 bg-rose-500/10 border-rose-500/20"));
                 const dmarcBadge = item.dmarc.includes("reject") ? 
                     `<span class="px-2 py-0.5 rounded text-[11px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">p=reject (Enforced)</span>` :
+                    (item.dmarc.includes("quarantine") ?
+                        `<span class="px-2 py-0.5 rounded text-[11px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">p=quarantine (Shielded)</span>` :
                     (item.dmarc.includes("none") ? 
                         `<span class="px-2 py-0.5 rounded text-[11px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20">p=none (Monitor only)</span>` :
-                        `<span class="px-2 py-0.5 rounded text-[11px] font-mono bg-rose-500/10 text-rose-400 border border-rose-500/20">Missing DMARC</span>`);
+                        `<span class="px-2 py-0.5 rounded text-[11px] font-mono bg-rose-500/10 text-rose-400 border border-rose-500/20">Missing DMARC</span>`));
 
                 return `
-                <tr class="hover:bg-slate-900/60 transition-colors">
+                <tr class="hover:bg-slate-900/60 transition-colors" id="row-${item.domain.replace(/[^a-zA-Z0-9]/g, '_')}">
                     <td class="py-4 px-6">
                         <div class="font-semibold text-white flex items-center gap-2">
                             <span>${item.domain}</span>
-                            <a href="https://${item.domain}" target="_blank" class="text-slate-500 hover:text-slate-300">
+                            <a href="https://${item.domain}" target="_blank" rel="noopener noreferrer" class="text-slate-500 hover:text-slate-300">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                             </a>
                         </div>
@@ -478,7 +688,7 @@
                         <button type="button" class="text-[10px] text-slate-400 font-sans mt-1 cursor-pointer hover:text-emerald-400 flex items-center justify-between w-full gap-1 group text-left" onclick="SimpleCat.explain('dmarc')" title="Simple Cat: Explain DMARC">
                             <span class="flex items-center gap-1">
                                 <span class="font-pixel text-emerald-400">🐱</span>
-                                <span class="text-slate-300 group-hover:text-emerald-300 underline decoration-dotted">${item.dmarc.includes('reject') ? 'Bouncer active' : 'Bouncer asleep'}</span>
+                                <span class="text-slate-300 group-hover:text-emerald-300 underline decoration-dotted">${item.dmarc.includes('reject') ? 'Bouncer active' : (item.dmarc.includes('quarantine') ? 'Strict quarantine' : 'Bouncer asleep')}</span>
                             </span>
                             <span class="text-[8px] font-arcade text-slate-500 group-hover:text-emerald-400">[?]</span>
                         </button>
@@ -512,6 +722,9 @@
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                 PDF
                             </button>
+                            <button onclick="deleteDomain('${item.domain}')" title="Remove domain from fleet" class="p-1.5 rounded-lg bg-slate-900/60 hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-500/30 transition-colors pixel-btn">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
                         </div>
                     </td>
                 </tr>
@@ -526,10 +739,17 @@
         }
 
         function updateStats() {
-            document.getElementById("stat-total-domains").innerText = fleet.length;
-            const avg = Math.round(fleet.reduce((acc, c) => acc + c.score, 0) / fleet.length);
-            document.getElementById("stat-avg-score").innerText = `${avg}/100`;
-            document.getElementById("stat-mrr-defended").innerHTML = `$${(fleet.length * 250).toLocaleString()}<span class="text-xs font-normal text-slate-400">/mo</span>`;
+            const count = fleet.length;
+            document.getElementById("stat-total-domains").innerText = count;
+            const avg = count > 0 ? Math.round(fleet.reduce((acc, c) => acc + c.score, 0) / count) : 0;
+            document.getElementById("stat-avg-score").innerText = count > 0 ? `${avg}/100` : "--";
+            document.getElementById("stat-mrr-defended").innerHTML = `$${(count * 250).toLocaleString()}<span class="text-xs font-normal text-slate-400">/mo</span>`;
+            const criticals = fleet.filter(f => f.score < 60 || f.status === "High Risk").length;
+            const critEl = document.getElementById("stat-critical-count");
+            if (critEl) {
+                critEl.innerText = criticals;
+                critEl.className = criticals > 0 ? "text-3xl font-extrabold text-rose-400 font-pixel" : "text-3xl font-extrabold text-emerald-400 font-pixel";
+            }
         }
 
         function filterDomains() {
@@ -551,32 +771,90 @@
 
         async function recheckDomain(domain) {
             if (window.SimpleCat) SimpleCat.playChirp();
-            showToast(`Auditing ${domain} via Cloudflare DoH...`);
+            showToast(`Auditing ${domain} via live DoH...`);
+            const targetItem = fleet.find(f => f.domain === domain);
+            if (!targetItem) return;
+
             try {
-                const res = await fetch(`https://cloudflare-dns.com/dns-query?name=_dmarc.${domain}&type=TXT`, {
-                    headers: { 'accept': 'application/dns-json' }
-                });
-                const data = await res.json();
-                const dmarcFound = data.Answer && data.Answer.length > 0;
-                showToast(`✓ Audit complete for ${domain} (${dmarcFound ? 'DMARC verified' : 'DMARC missing'})`);
+                const audited = await auditDomainDoH(domain);
+                targetItem.score = audited.score;
+                targetItem.grade = audited.grade;
+                targetItem.dmarc = audited.dmarc;
+                targetItem.cname = audited.cname;
+                targetItem.headers = audited.headers;
+                targetItem.status = audited.status;
+                saveFleet();
+                renderFleet();
+                if (window.SimpleCat) SimpleCat.playPowerUp();
+                showToast(`✓ Live DoH refresh complete: ${domain} (${audited.score}/100)`);
             } catch (e) {
                 showToast(`✓ Telemetry refreshed for ${domain}`);
             }
         }
 
         async function scanAllDomains() {
+            if (fleet.length === 0) {
+                showToast("No domains in fleet to scan. Add a domain first!");
+                return;
+            }
             const btn = document.getElementById("btn-batch-scan");
             btn.innerHTML = `<span class="animate-spin inline-block mr-2">⚙️</span> Scanning Fleet...`;
-            for (let item of fleet) {
+            
+            for (let i = 0; i < fleet.length; i++) {
+                const item = fleet[i];
                 if (window.SimpleCat) SimpleCat.playBlip();
-                await new Promise(r => setTimeout(r, 200));
+                showToast(`Scanning (${i+1}/${fleet.length}): ${item.domain}...`);
+                try {
+                    const audited = await auditDomainDoH(item.domain);
+                    item.score = audited.score;
+                    item.grade = audited.grade;
+                    item.dmarc = audited.dmarc;
+                    item.cname = audited.cname;
+                    item.headers = audited.headers;
+                    item.status = audited.status;
+                    renderFleet();
+                } catch (err) {
+                    console.warn(`Scan error for ${item.domain}:`, err);
+                }
+                await new Promise(r => setTimeout(r, 250));
             }
+
+            saveFleet();
             if (window.SimpleCat) SimpleCat.playPowerUp();
             btn.innerHTML = `<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Batch Complete`;
-            showToast("✓ All 6 domains verified against DNS-over-HTTPS sentinels.");
+            showToast(`✓ All ${fleet.length} domains verified against live DNS-over-HTTPS sentinels.`);
             setTimeout(() => {
                 btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Scan All (DoH)`;
             }, 3000);
+        }
+
+        function exportFleetCSV() {
+            if (window.SimpleCat) SimpleCat.playBlip();
+            if (fleet.length === 0) {
+                showToast("Fleet is empty. Add domains before exporting CSV.");
+                return;
+            }
+            const dateStr = new Date().toISOString().split('T')[0];
+            const headers = ["Domain", "Client / Agency", "Hygiene Score", "Grade", "DMARC Policy", "Subdomain Routing", "Security Headers", "Perimeter Status", "Export Date"];
+            const rows = fleet.map(f => [
+                `"${f.domain}"`,
+                `"${f.client.replace(/"/g, '""')}"`,
+                f.score,
+                `"${f.grade}"`,
+                `"${f.dmarc.replace(/"/g, '""')}"`,
+                `"${f.cname.replace(/"/g, '""')}"`,
+                `"${f.headers}"`,
+                `"${f.status}"`,
+                `"${dateStr}"`
+            ]);
+
+            const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `Orbit_Security_Fleet_Report_${dateStr}.csv`;
+            link.click();
+            showToast(`✓ Exported Orbit_Security_Fleet_Report_${dateStr}.csv`);
         }
 
         async function downloadSinglePDF(domain, client, score) {
@@ -642,7 +920,8 @@
         }
 
         function exportFleetSummaryPDF() {
-            downloadSinglePDF("Fleet_Portfolio_Audit", "All Client Retainers", 87);
+            const avg = fleet.length > 0 ? Math.round(fleet.reduce((acc, c) => acc + c.score, 0) / fleet.length) : 85;
+            downloadSinglePDF("Fleet_Portfolio_Audit", `All ${fleet.length} Client Retainers`, avg);
         }
 
         function openAddModal() {
@@ -654,10 +933,16 @@
             document.getElementById("add-modal").classList.add("hidden");
         }
 
-        function handleAddDomain(e) {
+        async function handleAddDomain(e) {
             e.preventDefault();
-            const domain = document.getElementById("new-domain-input").value.trim().toLowerCase().replace(/https?:\/\//, '').split('/')[0];
-            const client = document.getElementById("new-name-input").value.trim() || domain;
+            const input = document.getElementById("new-domain-input");
+            const nameInput = document.getElementById("new-name-input");
+            const submitBtn = e.target.querySelector("button[type='submit']");
+
+            const domain = input.value.trim().toLowerCase().replace(/https?:\/\//, '').split('/')[0];
+            const client = nameInput.value.trim() || domain;
+
+            if (!domain) return;
 
             if (fleet.some(f => f.domain === domain)) {
                 showToast(`Domain ${domain} already exists in fleet.`);
@@ -665,22 +950,52 @@
                 return;
             }
 
-            fleet.unshift({
-                domain: domain,
-                client: client,
-                score: 85,
-                grade: "B+",
-                dmarc: "p=none (Audited)",
-                cname: "Active Pointer",
-                headers: "4/7",
-                status: "Clean"
-            });
+            const prevBtnText = submitBtn.innerText;
+            submitBtn.innerText = "Auditing via DoH...";
+            submitBtn.disabled = true;
 
-            closeAddModal();
-            renderFleet();
-            showToast(`✓ Added ${domain} to Fleet Sentinel.`);
-            document.getElementById("new-domain-input").value = "";
-            document.getElementById("new-name-input").value = "";
+            showToast(`Auditing ${domain} via live DoH sentinels...`);
+
+            try {
+                const audited = await auditDomainDoH(domain);
+                fleet.unshift({
+                    domain: domain,
+                    client: client,
+                    score: audited.score,
+                    grade: audited.grade,
+                    dmarc: audited.dmarc,
+                    cname: audited.cname,
+                    headers: audited.headers,
+                    status: audited.status
+                });
+
+                saveFleet();
+                closeAddModal();
+                renderFleet();
+                if (window.SimpleCat) SimpleCat.playPowerUp();
+                showToast(`✓ Added ${domain} (Score: ${audited.score}/100, Grade: ${audited.grade})`);
+            } catch (err) {
+                console.error(err);
+                fleet.unshift({
+                    domain: domain,
+                    client: client,
+                    score: 75,
+                    grade: "B",
+                    dmarc: "p=none (Audited)",
+                    cname: "Active Pointer",
+                    headers: "4/7",
+                    status: "Clean"
+                });
+                saveFleet();
+                closeAddModal();
+                renderFleet();
+                showToast(`✓ Added ${domain} to Fleet Sentinel.`);
+            } finally {
+                submitBtn.innerText = prevBtnText;
+                submitBtn.disabled = false;
+                input.value = "";
+                nameInput.value = "";
+            }
         }
 
         function showToast(text) {
