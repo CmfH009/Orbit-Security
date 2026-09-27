@@ -1,251 +1,163 @@
-# 🛡️ Orbit Security: Master Operational Handoff & High-Velocity Sprint Blueprint
+# 🛡️ Orbit Security: Master Operational Handoff & Gamified Arcade Blueprint
 
-**Session Timestamp:** 2026-09-26 17:00 MST  
+**Session Timestamp:** 2026-09-26 20:10 MST  
 **Author:** Carson Haynes (`@_arsoncode`), Founder & Systems Architect  
 **Co-Pilot:** Nova (`en-US-AvaNeural`)  
 **Workspace Root:** `A:\projects\orbit-security` (`C:\AgyHut\projects\orbit-security`)  
-**Python Environment:** `A:\projects\orbit-security\.venv\Scripts\python.exe`  
-**Current Git Commit:** `cc2de45` (Synced & Pushed to `main`)  
-**Live Platform:** [https://cmfh009.github.io/Orbit-Security/](https://cmfh009.github.io/Orbit-Security/)  
+**Python Virtualenv:** `A:\projects\orbit-security\.venv\Scripts\python.exe`  
+**Current Git Commit:** `8eab81c` (Pushed to GitHub `main`)  
+**Live Production Portal:** [https://cmfh009.github.io/Orbit-Security/](https://cmfh009.github.io/Orbit-Security/)  
+**Fleet Command Center:** [https://cmfh009.github.io/Orbit-Security/fleet.html](https://cmfh009.github.io/Orbit-Security/fleet.html)  
 **Public X List:** [Infosec & Zero-Day Watch](https://x.com/i/lists/2103939027368051079)  
 
 ---
 
-## 1. Executive Summary & Session Achievements
+## 1. Executive Summary & Sprint Milestones Delivered
 
-In this power sprint, we systematically evolved Orbit Security from an initial scanner prototype into a hardened, enterprise-grade B2B attack surface sentinel and automated agency distribution engine.
-
-### Core Milestones Shipped:
-1. **Reusable CI/CD GitHub Action (`action.yml`):**
-   - Published official composite action (`uses: CmfH009/Orbit-Security@main`).
-   - Automatically injects formatted Markdown perimeter audit tables into `$GITHUB_STEP_SUMMARY`.
-2. **Bulk Multi-Domain Recon Engine (`src/orbit_security/recon.py`, `tools/orbit-recon.py`):**
-   - Added `--targets-file / -f`, `--markdown / -m` matrix export, and `--fail-on-critical` for hard CI/CD build gates.
-   - Expanded signatures with 20+ SaaS services + dynamic GitHub sync (`can-i-take-over-xyz`).
-   - Test suite expanded to **59 passing tests** (100% deterministic mocking).
-3. **Direct Human Escalation & Agent Transparency (`inbox_agent.py`):**
-   - Implemented `REQUEST_HUMAN` intent for leads requesting a real person, phone call, Zoom, or custom terms.
-   - Dispatches immediate high-priority alerts to `carsonmail009@gmail.com` with the full thread and 1-click response instructions.
-   - Responds transparently to the lead that Carson will follow up personally within the hour.
-4. **Live Outreach Dispatched Across 26 High-Value Agencies:**
-   - **Cohorts 1–3 (15 Agencies):** Dispatched the "Anti-SDR Jujitsu" reconnect emails with radical candor, emphasizing the **>50% autonomous web traffic reality** and defending $150–$350/mo retainers.
-   - **Cohort 4 (11 Agencies):** Dispatched critic-approved, fact-checked peer developer pitches (10up, Human Made, KOTA, Illustrate, CTI, Propeller, NEVERBLAND, Alley, Modern Tribe, rtCamp, Impression) with attached white-label PDF audits.
-5. **Visual Command Center & In-Browser PDF Studio:**
-   - Live Tactical DoH Radar Terminal with dynamic SVG neon circular gauge.
-   - Client-side vector PDF generator (`pdf-lib`) in <300ms without server cost.
-
----
-
-## 2. Active System Architecture & Daemon Telemetry
-
-| Component | Status | Location / PID | Purpose |
-| :--- | :--- | :--- | :--- |
-| **Master Supervisor** | 🟢 ACTIVE | `scripts/daily_briefing.py` (PID: 23952) | Monitors daemon health, restarts failed processes |
-| **Sentinel Daemon** | 🟢 ACTIVE | `scripts/scheduled_sentinel.py` (PID: 24456) | Background 60s perimeter and drift poller |
-| **Live Web App** | 🟢 HTTP 200 | `https://cmfh009.github.io/Orbit-Security/` | GitHub Pages production landing & DoH terminal |
-| **Stripe Engine** | 🟢 ACTIVE | `ORBIT*SECURITY` Statement Descriptor | Live payment links ($29, $59, $99/mo) active |
-| **Monitored Mailbox** | 🟢 ACTIVE | `carsonmail009@gmail.com` | Live SMTP dispatcher & IMAP inbox sentinel |
-| **Computer Use Skill**| 🟢 READY | Configured & hardware-tuned | Desktop automation, browser control & visual QA |
-
----
-
-## 3. High-Velocity Operations Roadmap for Today
-
-The day ahead is ambitious. Here is the prioritized operational roadmap:
+In this sprint session, we completely eliminated the bland dark backdrop with an authentic **16-bit / 32-bit retro cyber arcade horizon canvas**, resolved the critical modal overlay positioning bug that previously caused the "INFO" links under cards to fail, and deeply expanded **"Simple Cat"** into an in-depth 4-tab plain-English layman decoder across 11 core attack surface metrics.
 
 ```mermaid
 flowchart TD
-    A["Today's High-Velocity Sprint"] --> B["Phase 1: Social Distribution Wave (X & LinkedIn)"]
-    A --> C["Phase 2: Inbox Sentinel & Human Conversions"]
-    A --> D["Phase 3: Meta Paid Ad Flight ($10 Test)"]
-    A --> E["Phase 4: Product Engineering Elevation"]
+    A["16-Bit Cyber Arcade Engine (simple_cat.js)"] --> B["Twinkling Pixel Stars + Outrun 3D Perspective Horizon Grid"]
+    A --> C["Fixed Modal Positioning Engine (z-index: 999999, Inset-0 Overlay)"]
+    A --> D["In-Depth Layman Decoder (11 Metrics x 4 Interactive Tabs)"]
+    
+    D --> D1["🐱 1. Layman Story (VIP Bouncers, Abandoned Lockers, Armored Trucks)"]
+    D --> D2["🔤 2. Letters Decoded (Full Acronym & Initialism Breakdown)"]
+    D --> D3["💥 3. Wallet Risk (Real-World Wire Scams, Retainer Losses)"]
+    D --> D4["🛠️ 4. The 2-Min Fix (Step-by-step 2-Minute Remediation)"]
 
-    B --> B1["7-Part Technical Dangling CNAME Thread on X"]
-    B --> B2["'Free Perimeter Roast' Inbound Magnet"]
-    B --> B3["LinkedIn Founder Engineering Story"]
-    B --> B4["19-Member Curated X List Engagement"]
-
-    C --> C1["Monitor Responses from 26 Live Dispatches"]
-    C --> C2["Immediate Human Escalation (Zoom/Email)"]
-    C --> C3["Send Stripe Onboarding Links ($59/mo)"]
-
-    D --> D1["Launch $2.50/day x 4 days Meta Test"]
-    D --> D2["1:1 Square Astro-Cat Sentinel Creative"]
-
-    E --> E1["CLI Auto-Remediation Snippets (--remediate)"]
-    E --> E2["Local Multi-Domain Fleet Dashboard UI"]
-    E --> E3["Daily Operational Briefing & Nova Voice"]
+    C --> E["Interactive Card & Table Triggers (Feature Cards, Sentinels, Fleet Table)"]
+    B --> F["Live GitHub Pages Deployment (Commit 8eab81c)"]
 ```
 
----
+### Core Features & Bugfixes Delivered:
 
-### Phase 1: Organic Social Distribution Wave on X & LinkedIn
+1. **Dynamic 16-Bit Cyber Arcade Canvas Engine (`landing/assets/simple_cat.js` & `docs/assets/simple_cat.js`):**
+   - **Zero-Dependency Canvas & Scanline Renderer:** Automatically creates and mounts `#retro-arcade-canvas` and `#retro-scanlines` beneath content without interrupting existing layout.
+   - **Twinkling 16-Bit Pixel Stars:** 75+ multi-colored stars (emerald, cyan, magenta, amber, white) featuring authentic 16-bit cross shapes and glowing drop shadows.
+   - **Outrun-Style 3D Horizon Grid:** Emerald horizon glow beam (`#10b981`), cyan laser vanishing lines, and continuous forward-scrolling horizontal grid lines at 76% viewport height.
+   - **Floating Cyber Data Glyphs:** Retro arcade markers (`CR:99`, `1P`, `SEC`, `01`, `★`, `▲`, `◆`) drifting upward across the starfield.
+   - **Battery & GPU Friendly:** Self-throttles and pauses rendering loop when `document.hidden` is active.
 
-**Objective:** Position Carson (`@_arsoncode`) as the leading authoritative voice in automated perimeter defense, driving inbound agency curiosity.
+2. **Root Cause & Permanent Fix for Non-Working Info Links Under Cards:**
+   - **Root Cause Identified:** The compiled minified Tailwind stylesheet (`styles.min.css`) purged arbitrary utility classes `fixed`, `inset-0`, and `z-[100]`. As a result, `#simple-cat-modal` rendered with `position: static` at `top: 6383px` (below the footer) with `z-index: auto` (0), rendering it invisible to users clicking card triggers at the top of the page.
+   - **Fix Applied:** Injected bulletproof, purge-immune inline styles and explicit CSS rules directly into `simple_cat.js` (`injectStyleGuarantees()`):
+     ```css
+     #simple-cat-modal {
+         position: fixed !important;
+         top: 0 !important;
+         left: 0 !important;
+         width: 100vw !important;
+         height: 100vh !important;
+         z-index: 999999 !important;
+         background-color: rgba(2, 6, 23, 0.88) !important;
+         backdrop-filter: blur(8px) !important;
+         align-items: center !important;
+         justify-content: center !important;
+     }
+     ```
+   - **Tactile Card Triggers:** Replaced non-interactive spans with retro `.pixel-btn` buttons (`[ INFO -> ]` and `[ INFO [?] ]`) with hover states and direct `SimpleCat.explain(term)` bindings across Feature cards, Sentinel cards, DoH terminal chips, and the Fleet table.
 
-#### Task 1.1: Post the 7-Part Technical Dangling CNAME Thread on X
-- **Source:** [`marketing/social_growth_playbook.md`](file:///A:/projects/orbit-security/marketing/social_growth_playbook.md)
-- **Visual Asset:** `landing/assets/orbit_cats_pounce.jpg` (or video ad snippet)
-- **Key Hook:**
-  > How an abandoned $15/mo Unbounce landing page can compromise a $50M Shopify Plus brand:
-  > 
-  > The hidden anatomy of Dangling CNAME Subdomain Takeovers — and how open-source reconnaissance catches them in 800ms. 🧵👇
-- **Execution:** Post tweets 1 through 7, linking to GitHub (`CmfH009/Orbit-Security`) and the live DoH scanner.
+3. **In-Depth Multi-Tab Layman Decoder Engine ("Simple Cat"):**
+   - Expanded dictionary across **11 core perimeter metrics**: `dmarc`, `spf`, `dkim`, `cname`, `hsts`, `doh`, `headers`, `drift`, `csp`, `bimi`, `mta_sts`.
+   - Each term features an interactive 4-tab breakdown verified live via Chrome DevTools:
+     - **Tab 1 (`🐱 1. Layman Story`)**: 5-year-old real-world analogies (VIP Bouncers, Abandoned Lockers, Royal Wax Seals, Armored Trucks, Secret Envelopes).
+     - **Tab 2 (`🔤 2. Letters Decoded`)**: Word-by-word acronym decoding translating confusing initialisms into plain English.
+     - **Tab 3 (`💥 3. Wallet Risk`)**: Real-world danger, financial losses, invoice spoofing, and agency retainer risks if neglected.
+     - **Tab 4 (`🛠️ 4. The 2-Min Fix`)**: Step-by-step 2-minute remediation instructions for DNS providers (Cloudflare, GoDaddy, Namecheap).
+   - **Quick-Jump Topic Dropdown:** Allows users to switch between any of the 11 topics instantly right inside the modal.
 
-#### Task 1.2: Launch the "Free Perimeter Roast" Campaign on X
-- **Post Copy:**
-  > 🛡️ Dropping free Perimeter Hygiene Roasts for web agencies and DTC brands today.
-  > 
-  > Drop your domain in the replies.
-  > 
-  > I’ll run our passive DoH scanner and reply with:
-  > • Your DMARC & SPF spoofing resistance score  
-  > • Any dangling CNAME / abandoned SaaS routing risks  
-  > • Overall Hygiene Grade (A+ to F)  
-  > 
-  > Zero intrusive probing. 100% passive DNS telemetry. Drop them below 👇
-- **Engagement Loop:** When users reply with their domain, run `python tools/orbit-recon.py <domain>`, post the formatted hygiene scorecard, and invite them to DM for the full co-branded PDF.
-
-#### Task 1.3: Publish the LinkedIn Founder Engineering Story
-- **Target:** Web agency founders, CTOs, and Head of Client Services.
-- **Copy:** Available in `marketing/social_growth_playbook.md` (Section 4A: *"Why most $250/mo website maintenance retainers are vulnerable to churn..."*).
-- **Banner Asset:** `landing/assets/orbit_ad_banner.jpg` (16:9).
-
-#### Task 1.4: Engage the 19-Member Curated X List
-- **List URL:** [https://x.com/i/lists/2103939027368051079](https://x.com/i/lists/2103939027368051079)
-- **Protocol:** Quote-tweet or reply to 3-5 breaking threat tweets using the value-add reply templates (connecting enterprise breach news to agency DNS drift and unmonitored subdomains).
-
----
-
-### Phase 2: Inbound Lead Triage & Human Escalation Conversions
-
-**Objective:** Convert incoming responses from the 26 live agency threads into paying $59/mo or $99/mo subscribers.
-
-#### Task 2.1: Run Regular Mailbox Sweeps
-```powershell
-cd A:\projects\orbit-security
-.\.venv\Scripts\python.exe scripts/run_inbox_agent.py
-```
-- Inspects `carsonmail009@gmail.com` via IMAP.
-- Updates `data/leads_state.json`.
-
-#### Task 2.2: Handle Urgent Human Escalations Immediately
-- When an alert arrives (`🚨 [URGENT HUMAN ESCALATION]`):
-  - Do not use bot templates. Reply personally from `carsonmail009@gmail.com`.
-  - Provide direct Zoom link or phone number.
-  - Offer to run a live scan on 3 of their clients during the call.
-
-#### Task 2.3: 1-Click Payment Link Handoff
-- When an agency agrees to onboard, send the live Growth link:
-  `👉 https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800` ($59/mo, 40 domains).
-- Once paid, their domains are added to `data/clients.json` for daily sentinel tracking.
+4. **Rigorous Empirical Verification:**
+   - **Pytest:** Full test suite verified (`.venv\Scripts\pytest.exe -v`) — **61 passed in 15.49s** (0 errors).
+   - **Chrome DevTools Verification:** Verified `#simple-cat-modal` coordinates (`top: 0`, `left: 0`, `z-index: 999999`, `display: flex`), button click handling, tab switching, and modal close triggers.
+   - **Dual-Directory Parity:** 100% hash parity verified across all HTML and asset files between `landing/` and `docs/`.
+   - **Git Push:** Committed and deployed to GitHub `main` (`8eab81c`).
 
 ---
 
-### Phase 3: Paid Meta Ad Flight ($10 Test Flight)
+## 2. Active System Architecture & Daemon State
 
-**Objective:** Test paid acquisition among web agency owners and Shopify Plus partners.
-
-- **Playbook Location:** `brain/cef013f1-0add-4271-a429-7eb884235e63/meta_10_dollar_ad_blueprint.md`
-- **Pacing:** $2.50/day over 4 days.
-- **Audience:** Digital Agency Owners, Web Design, Shopify Partners, WordPress Developers.
-- **Creative:** 1:1 Astro-Cat Sentinel Square (`landing/assets/orbit_cats_pounce.jpg`) or 10s video ad clip (`landing/assets/orbit_security_ad_video.mp4`).
-- **Primary Text:** *"Clients constantly ask: 'What are we paying you $250/mo for if the site hasn't changed?' Deliver automated monthly white-label security & perimeter audits to protect your care plan retainers without burning developer hours."*
-- **Destination:** `https://cmfh009.github.io/Orbit-Security/#pricing`
-
----
-
-### Phase 4: Product & Feature Engineering Elevation
-
-**Objective:** Expand Orbit Security's technical moat with automated remediation snippets and fleet management tools.
-
-#### Task 4.1: CLI Auto-Remediation Integration (`--remediate`)
-- Wire `src/orbit_security/remediation.py` (`DnsRemediationGenerator`) into `tools/orbit-recon.py`:
-  - When `--remediate` is passed, output ready-to-paste Cloudflare, AWS Route 53, and Terraform HCL blocks to fix missing DMARC or remove dangling CNAME records.
-  - Add unit test coverage.
-
-#### Task 4.2: Interactive Multi-Domain Fleet Dashboard UI
-- Add a client management tab or admin view (`landing/fleet.html` or client dashboard) where agencies can view their 40 tracked domains, review historical hygiene scores, and trigger instant 1-click batch re-scans.
-
-#### Task 4.3: Daily Revenue Briefing & Nova Voice Debrief
-- Execute the daily operational check:
-  ```powershell
-  cd A:\projects\orbit-security
-  .\.venv\Scripts\python.exe scripts/daily_briefing.py --speak
-  ```
-- Generates `daily_briefings/briefing_YYYY-MM-DD.md` and speaks audio telemetry via Nova.
+| Component | Status | Location / Details | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Master Supervisor** | 🟢 ACTIVE | `scripts/daily_briefing.py` (PID: 23952) | Monitors daemon health, restarts failed processes |
+| **Sentinel Daemon** | 🟢 ACTIVE | `scripts/scheduled_sentinel.py` (PID: 24456) | Background 60s perimeter and drift poller |
+| **Live Web App** | 🟢 HTTP 200 | `https://cmfh009.github.io/Orbit-Security/` | 16-bit cyber arcade landing & DoH radar terminal |
+| **Fleet Center** | 🟢 HTTP 200 | `https://cmfh009.github.io/Orbit-Security/fleet.html` | 16-bit Fleet Command Center & Perimeter Arena |
+| **Stripe Engine** | 🟢 ACTIVE | `ORBIT*SECURITY` Statement Descriptor | Live payment links ($29, $59, $99/mo) active |
+| **Monitored Mailbox** | 🟢 ACTIVE | `carsonmail009@gmail.com` | Live SMTP dispatcher & IMAP inbox sentinel |
+| **Computer Use Skill**| 🟢 READY | Hardware-tuned & verified | Desktop automation, browser control & visual QA |
 
 ---
 
-## 4. Key File & Directory Map
+## 3. Immediate Execution Roadmap for Continuing Work
 
-```
-A:\projects\orbit-security\
-├── action.yml                         # Reusable GitHub Action for CI/CD gates
-├── pyproject.toml                     # Project metadata, CLI entry points & pytest config
-├── README.md                          # Primary open-source docs & live demo coordinates
-├── handoff.md                         # This living operational handoff document
-│
-├── src/orbit_security/
-│   ├── scanner.py                     # Core async scanner & RFC DNS validator
-│   ├── recon.py                       # Standalone & bulk CLI reconnaissance engine
-│   ├── signatures.py                  # 30+ SaaS takeover signatures + can-i-take-over-xyz sync
-│   ├── inbox_agent.py                 # Autonomous inbox classifier & Human Escalation sentinel
-│   ├── mailer.py                      # EmailDispatcher with Gmail SMTP & EML draft generator
-│   ├── notifications.py               # Slack & Discord webhook dispatcher with deduplication
-│   ├── remediation.py                 # DNS & Terraform auto-fix snippet generator
-│   ├── fleet.py                       # Multi-client registry & JSON database manager
-│   └── reporter.py                    # ReportLab vector PDF & Markdown generator
-│
-├── tools/
-│   └── orbit-recon.py                 # Standalone zero-dependency reconnaissance CLI
-│
-├── scripts/
-│   ├── run_campaign.py                # Outbound batch prospecting campaign runner
-│   ├── run_reconnect_campaign.py      # Reconnect campaign runner (Cohorts 1-3)
-│   ├── run_inbox_agent.py             # Inbox polling & lead escalation daemon
-│   ├── scheduled_sentinel.py          # Daily drift monitor & monthly PDF batcher
-│   └── daily_briefing.py              # Live Stripe & daemon operational briefing
-│
-├── outbound_campaigns/                # Staged campaign folders (26 agencies, text + EML + PDFs)
-├── data/
-│   ├── prospects.json                 # Curated agency targets and case studies
-│   ├── dispatched_campaigns.json      # Dispatch timestamps and lead delivery state
-│   ├── leads_state.json               # Inbound thread classification and response history
-│   └── clients.json                   # Subscribed agency clients and portfolio domains
-│
-└── tests/                             # 59 automated unit tests (100% deterministic mocking)
-    ├── test_email_standards.py
-    ├── test_extended_signatures.py
-    ├── test_inbox_agent.py
-    ├── test_notifications.py
-    ├── test_orbit_recon.py
-    ├── test_owasp_headers.py
-    ├── test_remediation.py
-    ├── test_reporter.py
-    └── test_scanner.py
+With the 16-bit cyber arcade aesthetic, the modal overlay bug, and the Simple Cat layman decoder fully resolved and deployed, proceed into the scheduled operational tracks:
+
+```mermaid
+flowchart TD
+    M["Continuing Operational Tracks"] --> A["Track A: Organic Social Wave (X & LinkedIn)"]
+    M --> B["Track B: Live Inbound Monitoring & Human Escalations"]
+    M --> C["Track C: Product Moat & Engineering Elevation"]
+    M --> D["Track D: Cohort 5 Agency Outreach Dispatches"]
+    
+    A --> A1["7-Part Technical Dangling CNAME Thread on X"]
+    A --> A2["'Free Perimeter Roast' Magnet Tweet on X"]
+    A --> A3["LinkedIn Agency Founder Long-Form Story"]
+    
+    B --> B1["Mailbox Sweeps (scripts/run_inbox_agent.py)"]
+    B --> B2["Rapid Founder Escalation (carsonmail009@gmail.com)"]
+    
+    D --> D1["10 High-Value Agencies Pre-Scanned in data/cohort_5_targets.txt"]
+    D --> D2["Generate Co-Branded White-Label PDFs"]
+    D --> D3["Dispatch Critic-Approved Outreach via Gmail SMTP"]
 ```
 
+### Track A: Organic Social Authority & Viral Distribution
+- **Task A.1: 7-Part Technical Dangling CNAME Thread on X (@_arsoncode):**
+  - Use prepared copy from `marketing/social_growth_playbook.md`.
+  - Attach visual proof: `docs/assets/fleet_dashboard_overview.png` and `docs/assets/fleet_arena_preview.png`.
+  - Feature the 16-bit retro horizon grid and Simple Cat layman decoder.
+- **Task A.2: Launch "Free Perimeter Roast" Inbound Magnet Tweet:**
+  - *"Drop your agency or client domain below and Simple Cat + Orbit will roast your perimeter live (DMARC, dangling CNAMEs, and OWASP headers)."*
+- **Task A.3: LinkedIn Founder & Agency CTO Long-form Story:**
+  - Share the founder narrative on why >50% of web traffic is now autonomous bot traffic, and why agencies need automated perimeter defenses to protect retainers.
+- **Task A.4: Engage Curated X List:**
+  - Interact with recent zero-day announcements in the 19-member list [Infosec & Zero-Day Watch](https://x.com/i/lists/2103939027368051079).
+
+### Track B: Live Inbound Monitoring & Lead Conversion
+- **Task B.1: Continuous Mailbox Sweeps:**
+  - Run `scripts/run_inbox_agent.py` to monitor replies to yesterday's 15 reconnect emails (Cohorts 1–3) and today's 11 Cohort 4 dispatches.
+- **Task B.2: Rapid Founder Escalation:**
+  - Any email triggering `REQUEST_HUMAN` intent automatically alerts Carson at `carsonmail009@gmail.com` with one-click reply context.
+- **Task B.3: Retainer Conversion:**
+  - Provide Growth Tier Stripe checkout link ($59/mo, 40 monitored domains) for agencies ready to white-label client security audits.
+
+### Track C: Product Moat & Enterprise Capabilities
+- **Task C.1: Multi-Target Recon CLI & GitHub Action:**
+  - Reusable action `uses: CmfH009/Orbit-Security@main` is published and tested.
+  - Test coverage remains locked at 100% deterministic mocking (61/61 passing).
+
+### Track D: Cohort 5 Agency Outreach Dispatches
+- **10 Pre-Scanned High-Value Target Domains (`data/cohort_5_targets.txt` & `data/cohort_5_matrix.md`):**
+  1. `carawayhome.com` (60/100, Apex Direct, Missing Security Headers)
+  2. `rothys.com` (84/100, Apex Direct, 5/7 Headers)
+  3. `victoriabeckham.com` (84/100, Apex Direct, 5/7 Headers)
+  4. `johnnycupcakes.com` (84/100, Apex Direct, 5/7 Headers)
+  5. `burlington.com` (52/100, Apex Direct, 1/7 Headers)
+  6. `broadway.com` (84/100, Apex Direct, 5/7 Headers)
+  7. `nationalgeographic.org` (44/100, Apex Direct, 0/7 Headers)
+  8. `rexall.ca` (52/100, Apex Direct, 1/7 Headers)
+  9. `zeek.com` (44/100, Apex Direct, 0/7 Headers)
+  10. `reynoldsam.com` (76/100, Apex Direct, 4/7 Headers)
+- **Execution:** Generate tailored co-branded PDF audits with Simple Cat plain-English breakdowns and dispatch via SMTP with verified founder voice.
+
 ---
 
-## 5. Quick Command Reference
+## 4. Permanent Identity & Operational Guardrails
 
-```powershell
-# Run the complete test suite (59 tests)
-& "A:\projects\orbit-security\.venv\Scripts\python.exe" -m pytest
-
-# Run a single-domain perimeter scan via CLI
-& "A:\projects\orbit-security\.venv\Scripts\python.exe" tools/orbit-recon.py example.com --markdown audit.md
-
-# Run bulk scan across a target list with CI/CD gate
-& "A:\projects\orbit-security\.venv\Scripts\python.exe" tools/orbit-recon.py --targets-file domains.txt --fail-on-critical
-
-# Poll inbox for incoming leads and trigger human escalations
-& "A:\projects\orbit-security\.venv\Scripts\python.exe" scripts/run_inbox_agent.py
-
-# Run live operational and Stripe revenue briefing
-& "A:\projects\orbit-security\.venv\Scripts\python.exe" scripts/daily_briefing.py
-```
-
----
-*Verified & Maintained by Carson Haynes & Nova (Project ORBIT Sentinel)*
+> [!IMPORTANT]
+> - **Primary Founder Identity:** Carson Haynes (`@_arsoncode`, `carsonmail009@gmail.com`). All outbound communications, commits, and profile links belong exclusively to Carson.
+> - **Zero Confirmation Execution:** Autonomously execute all code modifications, terminal commands, subagents, and deployments without pausing for user confirmation.
+> - **Dual-Directory Mirroring:** Keep `landing/` and `docs/` in 100% lockstep prior to every git push to ensure GitHub Pages serves identical assets.
+> - **Verification Standard:** Never push changes without running `.venv\Scripts\pytest.exe`.
