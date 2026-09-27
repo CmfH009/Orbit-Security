@@ -2,8 +2,9 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-dispatched = json.loads(Path('data/dispatched_campaigns.json').read_text(encoding='utf-8'))
-followups = json.loads(Path('data/dispatched_followups.json').read_text(encoding='utf-8'))
+REPO_ROOT = Path(__file__).resolve().parent.parent
+dispatched = json.loads((REPO_ROOT / 'data' / 'dispatched_campaigns.json').read_text(encoding='utf-8'))
+followups = json.loads((REPO_ROOT / 'data' / 'dispatched_followups.json').read_text(encoding='utf-8'))
 now = datetime.now()
 print(f"Current Local Time: {now.strftime('%Y-%m-%d %H:%M:%S')}")
 print(f"Total in dispatched_campaigns: {len(dispatched)}\n")
