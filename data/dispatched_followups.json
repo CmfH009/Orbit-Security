@@ -1,0 +1,42 @@
+{
+  "charleagency.com": {
+    "agency_name": "Charle Agency",
+    "contact_email": "hello@charleagency.com",
+    "client_domain": "candykittens.co.uk",
+    "followup_dispatched_at": "2026-09-27 04:01:31",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "commandc.com": {
+    "agency_name": "Command C",
+    "contact_email": "info@commandc.com",
+    "client_domain": "edenbrothers.com",
+    "followup_dispatched_at": "2026-09-27 04:01:37",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "blubolt.com": {
+    "agency_name": "blubolt",
+    "contact_email": "hello@blubolt.com",
+    "client_domain": "snowdoniacheese.co.uk",
+    "followup_dispatched_at": "2026-09-27 04:01:40",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "underwaterpistol.com": {
+    "agency_name": "Underwaterpistol",
+    "contact_email": "info@underwaterpistol.com",
+    "client_domain": "brewteacompany.co.uk",
+    "followup_dispatched_at": "2026-09-27 04:01:44",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "matchboxdesigngroup.com": {
+    "agency_name": "Matchbox Design Group",
+    "contact_email": "info@matchboxdesigngroup.com",
+    "client_domain": "blueprintcoffee.com",
+    "followup_dispatched_at": "2026-09-27 04:01:48",
+    "bump_number": 1,
+    "status": "SENT"
+  }
+}

@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import time
 from typing import Any, Dict, List, Optional
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -213,6 +214,7 @@ def main():
                 }
                 save_json_data(FOLLOWUPS_LOG_PATH, followups_log)
                 print("    [🚀] Live Bump #1 dispatched successfully!")
+                time.sleep(2.0)
             except Exception as e:
                 print(f"    [❌] Error sending follow-up: {e}")
 
