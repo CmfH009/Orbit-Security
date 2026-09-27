@@ -66,7 +66,7 @@
         }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-emerald-500 selection:text-white min-h-screen flex flex-col">
+<body class="bg-transparent text-slate-100 font-sans antialiased selection:bg-emerald-500 selection:text-white min-h-screen flex flex-col" style="background-color: #060a16;">
 
     <!-- Top Navigation Header -->
     <header class="sticky top-0 z-50 backdrop-blur-md bg-slate-950/80 border-b border-slate-800">
@@ -475,24 +475,33 @@
                     </td>
                     <td class="py-4 px-4">
                         ${dmarcBadge}
-                        <div class="text-[10px] text-slate-400 font-sans mt-1 cursor-pointer hover:text-emerald-400 flex items-center gap-1" onclick="SimpleCat.explain('dmarc')">
-                            <span class="font-pixel text-emerald-400">🐱 Simple Cat:</span>
-                            <span class="text-slate-300">${item.dmarc.includes('reject') ? 'Bouncer active' : 'Bouncer asleep'}</span>
-                        </div>
+                        <button type="button" class="text-[10px] text-slate-400 font-sans mt-1 cursor-pointer hover:text-emerald-400 flex items-center justify-between w-full gap-1 group text-left" onclick="SimpleCat.explain('dmarc')" title="Simple Cat: Explain DMARC">
+                            <span class="flex items-center gap-1">
+                                <span class="font-pixel text-emerald-400">🐱</span>
+                                <span class="text-slate-300 group-hover:text-emerald-300 underline decoration-dotted">${item.dmarc.includes('reject') ? 'Bouncer active' : 'Bouncer asleep'}</span>
+                            </span>
+                            <span class="text-[8px] font-arcade text-slate-500 group-hover:text-emerald-400">[?]</span>
+                        </button>
                     </td>
                     <td class="py-4 px-4 font-mono text-xs text-slate-300">
                         <div>${item.cname}</div>
-                        <div class="text-[10px] text-slate-400 font-sans mt-1 cursor-pointer hover:text-emerald-400 flex items-center gap-1" onclick="SimpleCat.explain('cname')">
-                            <span class="font-pixel text-emerald-400">🐱 Simple Cat:</span>
-                            <span class="text-slate-300">${item.cname.includes('Apex') || item.cname.includes('Edge') || item.cname.includes('Fastly') || item.cname.includes('Shopify') || item.cname.includes('Engine') ? 'Locker safe' : 'Check route'}</span>
-                        </div>
+                        <button type="button" class="text-[10px] text-slate-400 font-sans mt-1 cursor-pointer hover:text-emerald-400 flex items-center justify-between w-full gap-1 group text-left" onclick="SimpleCat.explain('cname')" title="Simple Cat: Explain CNAME Takeovers">
+                            <span class="flex items-center gap-1">
+                                <span class="font-pixel text-emerald-400">🐱</span>
+                                <span class="text-slate-300 group-hover:text-emerald-300 underline decoration-dotted">${item.cname.includes('Apex') || item.cname.includes('Edge') || item.cname.includes('Fastly') || item.cname.includes('Shopify') || item.cname.includes('Engine') ? 'Locker safe' : 'Check route'}</span>
+                            </span>
+                            <span class="text-[8px] font-arcade text-slate-500 group-hover:text-emerald-400">[?]</span>
+                        </button>
                     </td>
                     <td class="py-4 px-4 font-mono text-xs text-slate-400">
                         <div>${item.headers} Active</div>
-                        <div class="text-[10px] text-slate-400 font-sans mt-1 cursor-pointer hover:text-emerald-400 flex items-center gap-1" onclick="SimpleCat.explain('headers')">
-                            <span class="font-pixel text-emerald-400">🐱 Simple Cat:</span>
-                            <span class="text-slate-300">Digital Deadbolts</span>
-                        </div>
+                        <button type="button" class="text-[10px] text-slate-400 font-sans mt-1 cursor-pointer hover:text-emerald-400 flex items-center justify-between w-full gap-1 group text-left" onclick="SimpleCat.explain('headers')" title="Simple Cat: Explain Security Headers">
+                            <span class="flex items-center gap-1">
+                                <span class="font-pixel text-emerald-400">🐱</span>
+                                <span class="text-slate-300 group-hover:text-emerald-300 underline decoration-dotted">Digital Deadbolts</span>
+                            </span>
+                            <span class="text-[8px] font-arcade text-slate-500 group-hover:text-emerald-400">[?]</span>
+                        </button>
                     </td>
                     <td class="py-4 px-6 text-right">
                         <div class="flex items-center justify-end gap-2">
