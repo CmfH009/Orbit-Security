@@ -25,15 +25,18 @@ class VoiceProfile:
     """Acoustic profile settings for voice synthesis and DSP shaping."""
 
     name: str = "carson_astronaut_cat"
+    engine_backend: str = "gemini"  # "gemini" or "edge"
+    gemini_voice: str = "Charon"  # Charon (grounded/dry wit), Achird, Puck, Zubenelgenubi
+    gemini_style_prompt: str = "Say in a calm, conversational, confident founder voice with subtle dry humor:"
     tts_voice: str = "en-US-ChristopherNeural"
     rate: str = "+5%"
     pitch: str = "-2Hz"
     volume: str = "+0%"
-    highpass_hz: int = 280
-    lowpass_hz: int = 3600
-    peak_hz: int = 1800
-    peak_gain_db: float = 3.5
-    compand_gain_db: float = 4.0
+    highpass_hz: int = 260
+    lowpass_hz: int = 3800
+    peak_hz: int = 1750
+    peak_gain_db: float = 2.8
+    compand_gain_db: float = 3.5
     intro_chirp: bool = True
     outro_chirp: bool = True
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -87,14 +90,59 @@ class CatVoiceEngine:
         await communicate.save(str(out))
         return out
 
-    def synthesize_speech(
+    def synthesize_gemini_speech(
         self,
         text: str,
         output_path: str | Path,
         profile: Optional[VoiceProfile] = None,
     ) -> Path:
-        """Generates raw neural speech audio via edge-tts."""
-        return asyncio.run(self._async_synthesize(text, output_path, profile))
+        """Generates natural, expressive speech audio via Gemini 3.1 Flash TTS."""
+        import base64
+        import wave
+        from google import genai
+
+        prof = profile or self.profile
+        out = Path(output_path).resolve()
+        out.parent.mkdir(parents=True, exist_ok=True)
+
+        client = genai.Client()
+        prompt_input = (
+            f"{prof.gemini_style_prompt}\n{text}"
+            if prof.gemini_style_prompt
+            else text
+        )
+        tts = client.interactions.create(
+            model="gemini-3.1-flash-tts-preview",
+            input=prompt_input,
+            response_format={"type": "audio"},
+            generation_config={"speech_config": [{"voice": prof.gemini_voice}]},
+        )
+        raw_pcm = base64.b64decode(tts.output_audio.data)
+        with wave.open(str(out), "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(24000)
+            wf.writeframes(raw_pcm)
+        return out
+
+    def synthesize_speech(
+        self,
+        text: str,
+        output_path: str | Path,
+        profile: Optional[VoiceProfile] = None,
+        engine_backend: Optional[str] = None,
+    ) -> Path:
+        """Generates speech audio using either Gemini Flash TTS (natural) or edge-tts."""
+        prof = profile or self.profile
+        backend = engine_backend or prof.engine_backend
+        if backend == "gemini" and os.environ.get("GEMINI_API_KEY"):
+            try:
+                return self.synthesize_gemini_speech(text, output_path, profile=prof)
+            except Exception as e:
+                # Fallback to edge_tts if Gemini API unavailable
+                pass
+        return asyncio.run(self._async_synthesize(text, output_path, prof))
+
 
     def apply_helmet_dsp(
         self,

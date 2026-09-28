@@ -42,6 +42,9 @@ def main():
     parser.add_argument("--profile", "-p", type=str, default=None, help="Path to custom VoiceProfile JSON")
     parser.add_argument("--save-profile", type=str, default=None, help="Path to save generated VoiceProfile")
     parser.add_argument("--analyze", "-a", type=str, default=None, help="Analyze audio sample with Gemini 3.8 Flash")
+    parser.add_argument("--backend", choices=["gemini", "edge"], default=None, help="Speech backend engine")
+    parser.add_argument("--gemini-voice", type=str, default=None, help="Gemini TTS voice (e.g. Charon, Achird, Puck, Zubenelgenubi)")
+    parser.add_argument("--style", type=str, default=None, help="Natural language voice prompt styling")
     parser.add_argument("--ad", action="store_true", help="Generate full promotional video ad with default script")
 
     args = parser.parse_args()
@@ -53,7 +56,15 @@ def main():
     else:
         profile = VoiceProfile()
 
+    if args.backend:
+        profile.engine_backend = args.backend
+    if args.gemini_voice:
+        profile.gemini_voice = args.gemini_voice
+    if args.style:
+        profile.gemini_style_prompt = args.style
+
     engine = CatVoiceEngine(default_profile=profile)
+
 
     # 1. Voice Analysis Mode
     if args.analyze:

@@ -40,11 +40,12 @@ def test_voice_profile_serialization():
 def test_cat_voice_engine_initialization():
     engine = CatVoiceEngine()
     assert engine.profile.tts_voice == "en-US-ChristopherNeural"
-    assert engine.profile.lowpass_hz == 3600
+    assert engine.profile.lowpass_hz == 3800
 
     custom = VoiceProfile(name="custom_drone", pitch="+5Hz")
     custom_engine = CatVoiceEngine(default_profile=custom)
     assert custom_engine.profile.pitch == "+5Hz"
+
 
 
 @pytest.mark.asyncio
@@ -80,3 +81,18 @@ def test_dsp_missing_file_raises():
     engine = CatVoiceEngine()
     with pytest.raises(FileNotFoundError):
         engine.apply_helmet_dsp("non_existent_file_xyz.wav", "output.wav")
+
+
+def test_gemini_backend_configuration():
+    prof = VoiceProfile(
+        engine_backend="gemini",
+        gemini_voice="Charon",
+        gemini_style_prompt="Say in a relaxed founder tone:"
+    )
+    assert prof.engine_backend == "gemini"
+    assert prof.gemini_voice == "Charon"
+    assert prof.gemini_style_prompt == "Say in a relaxed founder tone:"
+    data = prof.to_dict()
+    assert data["gemini_voice"] == "Charon"
+    assert data["engine_backend"] == "gemini"
+
