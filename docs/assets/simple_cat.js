@@ -660,21 +660,22 @@
 
         const widget = document.createElement("div");
         widget.id = "simple-cat-floating";
-        widget.className = "fixed bottom-5 left-5 z-40 flex items-center gap-2 group cursor-pointer";
+        widget.className = "fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 flex items-center gap-2 group cursor-pointer";
+        widget.style.cssText = "position: fixed !important; bottom: 20px !important; right: 20px !important; z-index: 99999 !important; display: flex !important; align-items: center !important;";
         widget.innerHTML = `
-            <div class="p-2.5 bg-slate-900 border-2 border-emerald-500 rounded-xl shadow-[0_0_25px_rgba(16,185,129,0.3)] hover:scale-110 hover:shadow-[0_0_35px_rgba(16,185,129,0.5)] transition-all flex items-center gap-2" style="box-shadow: 4px 4px 0px #064e3b;">
-                <div class="relative">
-                    ${getPixelCatSVG(34)}
+            <div class="px-3 py-2 bg-slate-900/95 border-2 border-emerald-500 rounded-xl shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:scale-105 hover:shadow-[0_0_35px_rgba(16,185,129,0.55)] transition-all flex items-center gap-2.5 backdrop-blur-md" style="box-shadow: 4px 4px 0px #064e3b;">
+                <div class="relative flex-shrink-0">
+                    ${getPixelCatSVG(32)}
                     <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping"></span>
                     <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border border-slate-900"></span>
                 </div>
-                <div class="hidden sm:block text-left pr-1">
-                    <div class="text-[9px] font-mono font-bold text-emerald-400 tracking-wider">GUIDE</div>
-                    <div class="text-xs font-bold text-white font-mono">Simple Cat</div>
+                <div class="flex flex-col text-left pr-0.5">
+                    <div class="text-[9px] font-arcade text-emerald-400 tracking-wider">SIMPLE CAT</div>
+                    <div class="text-[11px] font-mono text-slate-200 flex items-center gap-1">
+                        <span>Decode Jargon</span>
+                        <span class="text-emerald-400 font-bold">&rarr;</span>
+                    </div>
                 </div>
-            </div>
-            <div class="opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity bg-slate-900 border border-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg shadow-lg font-mono whitespace-nowrap">
-                Click me to explain confusing security words!
             </div>
         `;
 
@@ -761,6 +762,16 @@
             }
             #simple-cat-modal.hidden {
                 display: none !important;
+            }
+            #simple-cat-floating {
+                position: fixed !important;
+                bottom: 20px !important;
+                right: 20px !important;
+                left: auto !important;
+                top: auto !important;
+                z-index: 99999 !important;
+                display: flex !important;
+                align-items: center !important;
             }
         `;
         document.head.appendChild(style);

@@ -130,6 +130,30 @@ html_content = '''<!DOCTYPE html>
             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
             background-size: 100% 4px;
         }
+
+        /* Guaranteed 3-Column Pricing Grid & Pro Tier Elevation */
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        @media (min-width: 768px) {
+            .pricing-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            }
+        }
+
+        /* Guaranteed Floating Simple Cat Companion */
+        #simple-cat-floating {
+            position: fixed !important;
+            bottom: 20px !important;
+            right: 20px !important;
+            left: auto !important;
+            top: auto !important;
+            z-index: 99999 !important;
+            display: flex !important;
+            align-items: center !important;
+        }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-emerald-500 selection:text-white" style="background-color: #060a16;">
@@ -151,18 +175,24 @@ html_content = '''<!DOCTYPE html>
                 </a>
             </div>
             
-            <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
+            <nav class="hidden md:flex items-center gap-5 lg:gap-6 text-sm font-medium text-slate-300">
                 <a href="#audit-preview" class="hover:text-emerald-400 transition-colors">Audit Studio</a>
                 <a href="#sentinels" class="hover:text-emerald-400 transition-colors">Sentinels</a>
-                <a href="fleet.html" class="hover:text-emerald-400 transition-colors flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>Fleet Arena</a>
-                <a href="javascript:void(0)" onclick="SimpleCat.explain('dmarc')" class="hover:text-emerald-400 transition-colors flex items-center gap-1.5 text-emerald-300 font-pixel"><span class="text-base">🐱</span> Simple Cat</a>
+                <a href="#features" class="hover:text-emerald-400 transition-colors">Features</a>
+                <a href="#simple-cat" class="hover:text-emerald-400 transition-colors flex items-center gap-1.5 text-emerald-300 font-pixel"><span class="text-base">🐱</span> Simple Cat</a>
+                <a href="fleet.html" class="hover:text-emerald-400 transition-colors flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>Fleet</a>
+                <a href="#pricing" class="hover:text-emerald-400 transition-colors font-bold text-white">Pricing ($29–$99)</a>
                 <a href="#faq" class="hover:text-emerald-400 transition-colors">FAQ</a>
-                <a href="#pricing" class="hover:text-emerald-400 transition-colors">Pricing</a>
             </nav>
 
-            <div class="hidden sm:flex items-center gap-3">
+            <div class="hidden sm:flex items-center gap-2.5">
+                <!-- Interactive Simple Cat Quick Decoder Button -->
+                <button type="button" onclick="SimpleCat.explain('dmarc')" class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-900 border border-emerald-500/50 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400 font-pixel text-xs transition-all cursor-pointer shadow-sm group pixel-btn" title="Click to talk with Simple Cat">
+                    <span class="group-hover:scale-110 transition-transform">🐱</span>
+                    <span>Simple Cat</span>
+                </button>
                 <!-- Retro Arcade Token Counter -->
-                <div onclick="if(window.SimpleCat) SimpleCat.playBlip()" class="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded bg-slate-900 border border-emerald-500/40 font-arcade text-[9px] text-emerald-400 cursor-pointer pixel-btn" title="Click for retro sound">
+                <div onclick="if(window.SimpleCat) SimpleCat.playBlip()" class="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded bg-slate-900 border border-emerald-500/40 font-arcade text-[9px] text-emerald-400 cursor-pointer pixel-btn" title="Click for retro sound">
                     <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
                     <span>1P READY // CR: 99</span>
                 </div>
@@ -170,7 +200,7 @@ html_content = '''<!DOCTYPE html>
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
                 </a>
                 <a href="#pricing" class="px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide transition-all shadow-md shadow-emerald-500/20 pixel-btn">
-                    Start Free Audit
+                    Pricing Plans
                 </a>
             </div>
 
@@ -204,6 +234,14 @@ html_content = '''<!DOCTYPE html>
                 <span>Astro-Cat Sentinels</span>
                 <span class="text-xs text-slate-500 font-mono">02</span>
             </a>
+            <a href="#features" class="flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-slate-200 hover:text-emerald-400 hover:bg-slate-900/80 text-sm font-semibold transition-all">
+                <span>Agency Features</span>
+                <span class="text-xs text-slate-500 font-mono">03</span>
+            </a>
+            <a href="#simple-cat" class="flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-emerald-300 hover:bg-slate-900/80 text-sm font-pixel transition-all">
+                <span>🐱 Simple Cat Decoder</span>
+                <span class="text-[9px] font-arcade bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded">ONLINE</span>
+            </a>
             <a href="fleet.html" class="flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-emerald-400 hover:bg-slate-900/80 text-sm font-semibold transition-all">
                 <span class="flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
@@ -211,17 +249,13 @@ html_content = '''<!DOCTYPE html>
                 </span>
                 <span class="text-[9px] font-arcade bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">LIVE</span>
             </a>
-            <a href="javascript:void(0)" onclick="SimpleCat.explain('dmarc')" class="flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-emerald-300 hover:bg-slate-900/80 text-sm font-pixel transition-all">
-                <span>🐱 Simple Cat Decoder</span>
-                <span class="text-[9px] font-arcade bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded">HELP</span>
+            <a href="#pricing" class="flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-slate-200 hover:text-emerald-400 hover:bg-slate-900/80 text-sm font-semibold transition-all">
+                <span>Retainer Pricing ($29–$99)</span>
+                <span class="text-xs text-slate-500 font-mono">04</span>
             </a>
             <a href="#faq" class="flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-slate-200 hover:text-emerald-400 hover:bg-slate-900/80 text-sm font-semibold transition-all">
                 <span>Agency FAQ</span>
-                <span class="text-xs text-slate-500 font-mono">03</span>
-            </a>
-            <a href="#pricing" class="flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-slate-200 hover:text-emerald-400 hover:bg-slate-900/80 text-sm font-semibold transition-all">
-                <span>Retainer Pricing</span>
-                <span class="text-xs text-slate-500 font-mono">04</span>
+                <span class="text-xs text-slate-500 font-mono">05</span>
             </a>
             <div class="pt-3 mt-1 border-t border-slate-800 flex items-center gap-2.5">
                 <a href="https://github.com/CmfH009/Orbit-Security" target="_blank" rel="noopener noreferrer" class="min-w-[48px] min-h-[48px] p-3 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-300 flex items-center justify-center hover:text-white transition-colors" aria-label="GitHub Repository">
@@ -574,7 +608,6 @@ html_content = '''<!DOCTYPE html>
 
     <!-- Astro-Cat Sentinels Creative Showcase Section (Directly Adjacent to Audit Studio) -->
     <section id="sentinels" class="pt-10 pb-16 sm:pt-12 sm:pb-20 bg-slate-950/60 border-t border-slate-800/80 relative">
-        <div id="features" class="relative -top-24"></div>
         <div class="max-w-6xl mx-auto px-4 sm:px-6">
             <div class="text-center max-w-2xl mx-auto mb-12 sm:mb-14">
                 <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-slate-900 border border-emerald-500/40 text-emerald-400 text-[10px] font-arcade uppercase tracking-wider mb-3 pixel-btn cursor-pointer" onclick="if(window.SimpleCat) SimpleCat.playBlip()">
@@ -735,6 +768,341 @@ html_content = '''<!DOCTYPE html>
                         View on X
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                     </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Agency Features Grid (6-Card Modular Architecture) -->
+    <section id="features" class="py-20 max-w-6xl mx-auto px-4 sm:px-6 border-t border-slate-800/80">
+        <div class="text-center max-w-2xl mx-auto mb-16">
+            <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-900 border border-emerald-500/40 text-emerald-400 font-arcade text-[10px] uppercase mb-3 pixel-btn cursor-pointer" onclick="if(window.SimpleCat) SimpleCat.playBlip()">
+                <span>★ QUEST LOG: AGENCY REVENUE ENGINE ★</span>
+            </div>
+            <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-4">Engineered Specifically for Web &amp; Shopify Agencies</h2>
+            <p class="text-slate-400 text-sm sm:text-base">Everything you need to automate client perimeter security and protect recurring maintenance revenue.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+            <!-- Feature 1: Subdomain Takeover Defense -->
+            <div class="bg-slate-900/80 p-6 rounded-2xl border-2 border-emerald-500/40 hover:border-emerald-500 transition-all card-glass-emerald flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-5">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-arcade text-lg">
+                            ⚔️
+                        </div>
+                        <span class="text-[9px] font-arcade text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">SENTINEL-01</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-1.5" data-cat-term="cname">
+                        <span>Subdomain Takeover Defense</span>
+                    </h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">
+                        Continuously queries Certificate Transparency logs and DNS records to find dangling CNAMEs pointing to abandoned SaaS apps (Shopify, Unbounce, AWS S3, GitHub Pages).
+                    </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+                    <button type="button" class="text-[11px] font-mono text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 transition-colors cursor-pointer group text-left" onclick="SimpleCat.explain('cname')">
+                        <span>🐱 Simple Cat:</span>
+                        <span class="underline decoration-dotted decoration-emerald-500/60 group-hover:decoration-emerald-400">"Guards abandoned lockers"</span>
+                    </button>
+                    <button type="button" class="pixel-btn min-h-[36px] px-3 py-1.5 text-[9px] font-arcade rounded bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400 border border-emerald-500/40 transition-all flex items-center gap-1 cursor-pointer shadow-sm flex-shrink-0" onclick="SimpleCat.explain('cname')" title="Open in-depth layman explanation">
+                        <span>INFO</span>
+                        <span>&rarr;</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Feature 2: White-Label Co-Branded Reports -->
+            <div class="bg-slate-900/80 p-6 rounded-2xl border-2 border-cyan-500/40 hover:border-cyan-400 transition-all card-glass-cyan flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-5">
+                        <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center font-arcade text-lg">
+                            📜
+                        </div>
+                        <span class="text-[9px] font-arcade text-cyan-400 bg-cyan-500/10 px-2 py-1 rounded border border-cyan-500/20">DELIVERABLE</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-1.5" data-cat-term="audit">
+                        <span>White-Label Co-Branded Reports</span>
+                    </h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">
+                        No Orbit Security branding on your client deliverables. Every monthly executive PDF features your agency's logo, primary brand palette, and contact info.
+                    </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+                    <button type="button" class="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 transition-colors cursor-pointer group text-left" onclick="SimpleCat.explain('audit')">
+                        <span>🐱 Simple Cat:</span>
+                        <span class="underline decoration-dotted decoration-cyan-500/60 group-hover:decoration-cyan-400">"Your agency takes credit"</span>
+                    </button>
+                    <button type="button" class="pixel-btn min-h-[36px] px-3 py-1.5 text-[9px] font-arcade rounded bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 text-cyan-400 border border-cyan-500/40 transition-all flex items-center gap-1 cursor-pointer shadow-sm flex-shrink-0" onclick="SimpleCat.explain('audit')" title="Open in-depth layman explanation">
+                        <span>INFO</span>
+                        <span>&rarr;</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Feature 3: Instant Drift & Spoof Alerts -->
+            <div class="bg-slate-900/80 p-6 rounded-2xl border-2 border-purple-500/40 hover:border-purple-400 transition-all card-glass-purple flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-5">
+                        <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center font-arcade text-lg">
+                            🚨
+                        </div>
+                        <span class="text-[9px] font-arcade text-purple-400 bg-purple-500/10 px-2 py-1 rounded border border-purple-500/20">ALERT MESH</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-1.5" data-cat-term="dmarc">
+                        <span>Instant Drift &amp; Spoof Alerts</span>
+                    </h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">
+                        If a client developer accidentally exposes a <code class="text-emerald-400 font-mono text-xs">.env</code> file or their DMARC record decays to <code class="text-emerald-400 font-mono text-xs">p=none</code>, you receive instant Slack/Email alerts.
+                    </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+                    <button type="button" class="text-[11px] font-mono text-purple-400 hover:text-purple-300 flex items-center gap-1.5 transition-colors cursor-pointer group text-left" onclick="SimpleCat.explain('dmarc')">
+                        <span>🐱 Simple Cat:</span>
+                        <span class="underline decoration-dotted decoration-purple-500/60 group-hover:decoration-purple-400">"The VIP Bouncer"</span>
+                    </button>
+                    <button type="button" class="pixel-btn min-h-[36px] px-3 py-1.5 text-[9px] font-arcade rounded bg-slate-950 hover:bg-purple-500 hover:text-slate-950 text-purple-400 border border-purple-500/40 transition-all flex items-center gap-1 cursor-pointer shadow-sm flex-shrink-0" onclick="SimpleCat.explain('dmarc')" title="Open in-depth layman explanation">
+                        <span>INFO</span>
+                        <span>&rarr;</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Feature 4: Automated 1st-of-Month Client PDF Auto-Dispatch -->
+            <div class="bg-slate-900/80 p-6 rounded-2xl border-2 border-emerald-500/40 hover:border-emerald-400 transition-all card-glass-emerald flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-5">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-arcade text-lg">
+                            📅
+                        </div>
+                        <span class="text-[9px] font-arcade text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">AUTOPILOT</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-1.5" data-cat-term="audit">
+                        <span>1st-of-Month Auto-Dispatch</span>
+                    </h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">
+                        Never spend billable agency hours compiling manual security checklists. Executive PDF audits automatically generate on the 1st of every month ready to deliver to clients.
+                    </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+                    <button type="button" class="text-[11px] font-mono text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 transition-colors cursor-pointer group text-left" onclick="SimpleCat.explain('audit')">
+                        <span>🐱 Simple Cat:</span>
+                        <span class="underline decoration-dotted decoration-emerald-500/60 group-hover:decoration-emerald-400">"Automatic peace-of-mind"</span>
+                    </button>
+                    <button type="button" class="pixel-btn min-h-[36px] px-3 py-1.5 text-[9px] font-arcade rounded bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400 border border-emerald-500/40 transition-all flex items-center gap-1 cursor-pointer shadow-sm flex-shrink-0" onclick="SimpleCat.explain('audit')" title="Open in-depth layman explanation">
+                        <span>INFO</span>
+                        <span>&rarr;</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Feature 5: Passive Zero-Impact Reconnaissance (RFC 1035/8484) -->
+            <div class="bg-slate-900/80 p-6 rounded-2xl border-2 border-cyan-500/40 hover:border-cyan-400 transition-all card-glass-cyan flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-5">
+                        <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center font-arcade text-lg">
+                            🕊️
+                        </div>
+                        <span class="text-[9px] font-arcade text-cyan-400 bg-cyan-500/10 px-2 py-1 rounded border border-cyan-500/20">RFC-COMPLIANT</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-1.5" data-cat-term="doh">
+                        <span>100% Non-Intrusive &amp; Safe</span>
+                    </h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">
+                        Pure passive DNS-over-HTTPS queries and standard HTTP response inspection. Zero vulnerability exploits, zero port scans, and zero server strain on client infrastructure.
+                    </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+                    <button type="button" class="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 transition-colors cursor-pointer group text-left" onclick="SimpleCat.explain('doh')">
+                        <span>🐱 Simple Cat:</span>
+                        <span class="underline decoration-dotted decoration-cyan-500/60 group-hover:decoration-cyan-400">"Gentle public checks"</span>
+                    </button>
+                    <button type="button" class="pixel-btn min-h-[36px] px-3 py-1.5 text-[9px] font-arcade rounded bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 text-cyan-400 border border-cyan-500/40 transition-all flex items-center gap-1 cursor-pointer shadow-sm flex-shrink-0" onclick="SimpleCat.explain('doh')" title="Open in-depth layman explanation">
+                        <span>INFO</span>
+                        <span>&rarr;</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Feature 6: Agency-Client Safe Harbor Contract Rider -->
+            <div class="bg-slate-900/80 p-6 rounded-2xl border-2 border-purple-500/40 hover:border-purple-400 transition-all card-glass-purple flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-5">
+                        <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center font-arcade text-lg">
+                            ⚖️
+                        </div>
+                        <span class="text-[9px] font-arcade text-purple-400 bg-purple-500/10 px-2 py-1 rounded border border-purple-500/20">CFAA SAFE HARBOR</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-1.5" data-cat-term="hsts">
+                        <span>Agency Legal Armor Included</span>
+                    </h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">
+                        Pre-written, attorney-reviewed contract rider clauses for your agency's Master Services Agreements (MSAs) giving contractual consent for automated perimeter surveillance.
+                    </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+                    <button type="button" class="text-[11px] font-mono text-purple-400 hover:text-purple-300 flex items-center gap-1.5 transition-colors cursor-pointer group text-left" onclick="SimpleCat.explain('hsts')">
+                        <span>🐱 Simple Cat:</span>
+                        <span class="underline decoration-dotted decoration-purple-500/60 group-hover:decoration-purple-400">"Contractual protection"</span>
+                    </button>
+                    <button type="button" class="pixel-btn min-h-[36px] px-3 py-1.5 text-[9px] font-arcade rounded bg-slate-950 hover:bg-purple-500 hover:text-slate-950 text-purple-400 border border-purple-500/40 transition-all flex items-center gap-1 cursor-pointer shadow-sm flex-shrink-0" onclick="SimpleCat.explain('hsts')" title="Open in-depth layman explanation">
+                        <span>INFO</span>
+                        <span>&rarr;</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dedicated Simple Cat Layman Security Decoder Hub -->
+    <section id="simple-cat" class="py-20 bg-slate-950/80 border-t border-slate-800/80 relative overflow-hidden">
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,rgba(16,185,129,0.12),transparent_70%)] pointer-events-none"></div>
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
+            <!-- Header Block -->
+            <div class="text-center max-w-3xl mx-auto mb-14">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border-2 border-emerald-500/60 text-emerald-400 text-xs font-pixel mb-4 shadow-[0_0_20px_rgba(16,185,129,0.25)] pixel-btn cursor-pointer" onclick="if(window.SimpleCat) SimpleCat.playPowerup()">
+                    <span class="text-base">🐱</span>
+                    <span>SIMPLE CAT // INTERACTIVE LAYMAN DECODER</span>
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                </div>
+                <h2 class="text-3xl sm:text-5xl font-extrabold text-white mb-4 tracking-tight">
+                    Never Lose a Client to <br class="hidden sm:inline" />
+                    <span class="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
+                        Confusing Security Jargon
+                    </span>
+                </h2>
+                <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+                    Most clients glaze over when developers talk about <em>CNAME dangling pointers</em>, <em>DMARC alignment</em>, or <em>HSTS preload directives</em>. 
+                    Simple Cat translates complex vulnerability risks into unmistakable everyday analogies your clients immediately value and pay to protect.
+                </p>
+            </div>
+
+            <!-- Interactive Decoder Grid (Click to Trigger Simple Cat Live Explanations) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
+                <!-- Decoder Card 1: DMARC -->
+                <div onclick="SimpleCat.explain('dmarc')" class="bg-slate-900/90 border-2 border-emerald-500/40 hover:border-emerald-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(16,185,129,0.3)] group card-glass">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-2xl">🛡️</span>
+                        <span class="text-[9px] font-arcade text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">DECODE: DMARC</span>
+                    </div>
+                    <h3 class="text-base font-bold text-white mb-1 group-hover:text-emerald-300 transition-colors">"The VIP Bouncer for Email"</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-3">
+                        Stop spoofers from emailing clients pretending to be their CEO, accounting team, or invoice department.
+                    </p>
+                    <div class="text-[11px] font-mono text-emerald-400 flex items-center gap-1 font-semibold">
+                        <span>Click for Simple Cat breakdown &rarr;</span>
+                    </div>
+                </div>
+
+                <!-- Decoder Card 2: CNAME / Takeovers -->
+                <div onclick="SimpleCat.explain('cname')" class="bg-slate-900/90 border-2 border-cyan-500/40 hover:border-cyan-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(6,182,212,0.3)] group card-glass">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-2xl">🏷️</span>
+                        <span class="text-[9px] font-arcade text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30">DECODE: CNAME</span>
+                    </div>
+                    <h3 class="text-base font-bold text-white mb-1 group-hover:text-cyan-300 transition-colors">"The Abandoned Locker"</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-3">
+                        Prevent hackers from claiming old Shopify, Unbounce, or AWS subdomains and putting malware on your client's URL.
+                    </p>
+                    <div class="text-[11px] font-mono text-cyan-400 flex items-center gap-1 font-semibold">
+                        <span>Click for Simple Cat breakdown &rarr;</span>
+                    </div>
+                </div>
+
+                <!-- Decoder Card 3: DNS Drift -->
+                <div onclick="SimpleCat.explain('drift')" class="bg-slate-900/90 border-2 border-purple-500/40 hover:border-purple-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(168,85,247,0.3)] group card-glass">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-2xl">📡</span>
+                        <span class="text-[9px] font-arcade text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/30">DECODE: DRIFT</span>
+                    </div>
+                    <h3 class="text-base font-bold text-white mb-1 group-hover:text-purple-300 transition-colors">"The Forgotten Black Friday Site"</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-3">
+                        Surveys forgotten staging subdomains and old landing pages before search engines index them or attackers probe them.
+                    </p>
+                    <div class="text-[11px] font-mono text-purple-400 flex items-center gap-1 font-semibold">
+                        <span>Click for Simple Cat breakdown &rarr;</span>
+                    </div>
+                </div>
+
+                <!-- Decoder Card 4: HSTS -->
+                <div onclick="SimpleCat.explain('hsts')" class="bg-slate-900/90 border-2 border-emerald-500/40 hover:border-emerald-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(16,185,129,0.3)] group card-glass">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-2xl">🔒</span>
+                        <span class="text-[9px] font-arcade text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">DECODE: HSTS</span>
+                    </div>
+                    <h3 class="text-base font-bold text-white mb-1 group-hover:text-emerald-300 transition-colors">"The Armored Truck for Traffic"</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-3">
+                        Forces browsers to only communicate over encrypted HTTPS, stopping coffee-shop Wi-Fi snooping on client logins.
+                    </p>
+                    <div class="text-[11px] font-mono text-emerald-400 flex items-center gap-1 font-semibold">
+                        <span>Click for Simple Cat breakdown &rarr;</span>
+                    </div>
+                </div>
+
+                <!-- Decoder Card 5: DoH -->
+                <div onclick="SimpleCat.explain('doh')" class="bg-slate-900/90 border-2 border-cyan-500/40 hover:border-cyan-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(6,182,212,0.3)] group card-glass">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-2xl">🤫</span>
+                        <span class="text-[9px] font-arcade text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30">DECODE: RFC 8484</span>
+                    </div>
+                    <h3 class="text-base font-bold text-white mb-1 group-hover:text-cyan-300 transition-colors">"The Encrypted Whisper"</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-3">
+                        DNS over HTTPS protects queries from being sniffed or spoofed by ISPs, giving your agency 100% verified lookups.
+                    </p>
+                    <div class="text-[11px] font-mono text-cyan-400 flex items-center gap-1 font-semibold">
+                        <span>Click for Simple Cat breakdown &rarr;</span>
+                    </div>
+                </div>
+
+                <!-- Decoder Card 6: White-Label Retainers -->
+                <div onclick="SimpleCat.explain('audit')" class="bg-slate-900/90 border-2 border-purple-500/40 hover:border-purple-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(168,85,247,0.3)] group card-glass">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-2xl">💰</span>
+                        <span class="text-[9px] font-arcade text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/30">DECODE: $250 RETAINER</span>
+                    </div>
+                    <h3 class="text-base font-bold text-white mb-1 group-hover:text-purple-300 transition-colors">"The $250/mo Retainer Engine"</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-3">
+                        How 1 client paying for your monthly white-label security report completely pays off your Orbit subscription.
+                    </p>
+                    <div class="text-[11px] font-mono text-purple-400 flex items-center gap-1 font-semibold">
+                        <span>Click for Simple Cat breakdown &rarr;</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Terminal Prompt to Ask Simple Cat Anything -->
+            <div class="bg-slate-900/95 border-2 border-emerald-500/60 rounded-2xl p-6 sm:p-8 text-center max-w-3xl mx-auto shadow-2xl card-glass-emerald">
+                <div class="flex items-center justify-center gap-3 mb-4">
+                    <div class="p-2.5 bg-slate-950 border border-emerald-500/50 rounded-xl">
+                        <span class="text-2xl">🐱</span>
+                    </div>
+                    <div class="text-left">
+                        <div class="text-sm font-bold text-white font-mono">Talk with Simple Cat Right Now</div>
+                        <div class="text-xs text-emerald-400 font-arcade">STATUS: OPERATIONAL // 24/7 COPILOT</div>
+                    </div>
+                </div>
+                <p class="text-xs sm:text-sm text-slate-300 mb-6 max-w-xl mx-auto">
+                    Click any term below to hear Simple Cat explain it in plain English, complete with retro 8-bit sound effects.
+                </p>
+                <div class="flex flex-wrap items-center justify-center gap-2">
+                    <button type="button" onclick="SimpleCat.explain('dmarc')" class="px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/50 text-xs font-mono text-emerald-400 transition-all pixel-btn">
+                        Explain: DMARC
+                    </button>
+                    <button type="button" onclick="SimpleCat.explain('cname')" class="px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 border border-cyan-500/50 text-xs font-mono text-cyan-400 transition-all pixel-btn">
+                        Explain: CNAME Takeovers
+                    </button>
+                    <button type="button" onclick="SimpleCat.explain('drift')" class="px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-purple-500 hover:text-slate-950 border border-purple-500/50 text-xs font-mono text-purple-400 transition-all pixel-btn">
+                        Explain: Certificate Drift
+                    </button>
+                    <button type="button" onclick="SimpleCat.explain('hsts')" class="px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/50 text-xs font-mono text-emerald-400 transition-all pixel-btn">
+                        Explain: HSTS Preload
+                    </button>
+                    <button type="button" onclick="SimpleCat.explain('doh')" class="px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 border border-cyan-500/50 text-xs font-mono text-cyan-400 transition-all pixel-btn">
+                        Explain: DoH Security
+                    </button>
+                    <button type="button" onclick="SimpleCat.playPowerup(); SimpleCat.explain('audit')" class="px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs font-mono hover:bg-emerald-400 transition-all pixel-btn">
+                        ⭐ Explain: $250 Agency Retainer
+                    </button>
                 </div>
             </div>
         </div>
@@ -911,15 +1279,22 @@ html_content = '''<!DOCTYPE html>
     <!-- Pricing Section (B2B SaaS Clarity with Unit Economics - Bottom Conversion Centerpiece) -->
     <section id="pricing" class="py-20 bg-slate-900/40 border-t border-slate-800">
         <div class="max-w-5xl mx-auto px-4 sm:px-6">
-            <div class="text-center max-w-2xl mx-auto mb-14">
+            <div class="text-center max-w-2xl mx-auto mb-10">
                 <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-900 border border-emerald-500/40 text-emerald-400 font-arcade text-[10px] uppercase mb-3 pixel-btn cursor-pointer" onclick="if(window.SimpleCat) SimpleCat.playBlip()">
-                    <span>★ LEVEL SELECT // AGENCY PLANS ★</span>
+                    <span>★ LEVEL SELECT // ALL 3 AGENCY PLANS ($29, $59, $99) ★</span>
                 </div>
                 <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-3">Simple, Transparent Retainer Pricing</h2>
-                <p class="text-slate-400 text-sm sm:text-base">Justify an extra $200–$500/month per client on your care plans while Orbit Security does all the heavy lifting.</p>
+                <p class="text-slate-400 text-sm sm:text-base mb-6">Justify an extra $200–$500/month per client on your care plans while Orbit Security does all the heavy lifting.</p>
+                
+                <!-- Quick Overview Bar Highlighting All 3 Tiers Side-by-Side -->
+                <div class="inline-flex flex-wrap items-center justify-center gap-2 sm:gap-3 p-2 rounded-2xl bg-slate-950/90 border border-slate-800 text-xs font-mono">
+                    <span class="px-3 py-1 rounded-lg bg-slate-900 text-slate-300 border border-slate-800">Starter: <strong class="text-white">$29/mo</strong> (15 Sites)</span>
+                    <span class="px-3 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">★ Growth: <strong class="text-emerald-400">$59/mo</strong> (40 Sites)</span>
+                    <span class="px-3 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-400/60 font-bold">⚡ Pro: <strong class="text-cyan-400">$99/mo</strong> (100 Sites)</span>
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 items-stretch">
+            <div class="pricing-grid grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 items-stretch">
                 <!-- Starter Tier ($29/mo) -->
                 <div class="bg-slate-900/90 p-5 sm:p-8 rounded-2xl border-2 border-slate-800 hover:border-emerald-500/60 transition-all flex flex-col justify-between card-glass">
                     <div>
@@ -999,11 +1374,14 @@ html_content = '''<!DOCTYPE html>
                 </div>
 
                 <!-- Pro Tier ($99/mo - Enterprise Scale) -->
-                <div class="bg-slate-900/90 p-5 sm:p-8 rounded-2xl border-2 border-cyan-500/50 hover:border-cyan-400 transition-all flex flex-col justify-between card-glass-cyan">
+                <div class="bg-gradient-to-b from-slate-900 to-slate-950 p-5 sm:p-8 rounded-2xl border-2 border-cyan-400 shadow-xl shadow-cyan-500/20 hover:border-cyan-300 transition-all flex flex-col justify-between relative card-glass-cyan">
+                    <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 font-bold text-[9px] uppercase font-arcade tracking-wider whitespace-nowrap shadow-md">
+                        ★ PRO ENTERPRISE // $99/MO // 100 SITES ★
+                    </div>
                     <div>
                         <div class="text-[9px] font-arcade text-cyan-400 mb-1 flex items-center justify-between">
                             <span>MODE: ARCADE BOSS</span>
-                            <span class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-arcade text-[8px] border border-cyan-500/30">$99/MO</span>
+                            <span class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-arcade text-[8px] border border-cyan-500/30">$99 / MONTH</span>
                         </div>
                         <h3 class="text-xl font-bold text-white mb-1 font-sans">Pro Agency</h3>
                         <p class="text-xs text-slate-400 mb-5">For premier agencies with large client rosters</p>
@@ -1019,11 +1397,11 @@ html_content = '''<!DOCTYPE html>
                             <span>30-Day Money-Back Guarantee</span>
                         </div>
                         <ul class="space-y-2.5 text-xs text-slate-300 mb-6 font-sans">
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <strong class="text-white">Up to 100 client domains</strong> ($0.99/site)</li>
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Full White-Labeling (Logo &amp; Brand Palette)</li>
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Dedicated Slack / Webhook real-time alerts</li>
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Automated client PDF auto-dispatch</li>
-                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Custom SLA &amp; Security Reviews</li>
+                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-cyan-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <strong class="text-white">Up to 100 client domains</strong> ($0.99/site)</li>
+                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-cyan-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Full White-Labeling (Logo &amp; Brand Palette)</li>
+                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-cyan-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Dedicated Slack / Webhook real-time alerts</li>
+                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-cyan-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Automated client PDF auto-dispatch</li>
+                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-cyan-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Custom SLA &amp; Security Reviews</li>
                         </ul>
                     </div>
                     <div>
@@ -1096,8 +1474,8 @@ html_content = '''<!DOCTYPE html>
                     <a href="https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800" class="px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/50 hover:bg-emerald-500/30 text-xs text-emerald-300 transition-colors font-mono font-bold">
                         ★ Growth: $59/mo
                     </a>
-                    <a href="https://buy.stripe.com/5kQ14mbg0bnt716a4Qcs802" class="px-4 py-2 rounded-xl bg-cyan-500/20 border border-cyan-500/50 hover:bg-cyan-500/30 text-xs text-cyan-300 transition-colors font-mono font-bold">
-                        Pro: $99/mo
+                    <a href="https://buy.stripe.com/5kQ14mbg0bnt716a4Qcs802" class="px-4 py-2 rounded-xl bg-cyan-500/20 border-2 border-cyan-400 hover:bg-cyan-500/30 text-xs text-cyan-300 transition-colors font-mono font-bold shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+                        ⚡ Pro: $99/mo (100 Sites)
                     </a>
                 </div>
             </div>
