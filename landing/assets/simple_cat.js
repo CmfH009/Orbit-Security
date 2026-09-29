@@ -216,8 +216,172 @@
         playTone(880.00, 'triangle', 0.18, 0.21); // A5
     }
 
+    function playMeow() {
+        if (!soundEnabled) return;
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.exponentialRampToValueAtTime(880, now + 0.12);
+            osc.frequency.exponentialRampToValueAtTime(620, now + 0.32);
+
+            gain.gain.setValueAtTime(0.001, now);
+            gain.gain.linearRampToValueAtTime(0.12, now + 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.33);
+        } catch (e) {}
+    }
+
+    function playPurr() {
+        if (!soundEnabled) return;
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+            const carrier = ctx.createOscillator();
+            const modulator = ctx.createOscillator();
+            const modGain = ctx.createGain();
+            const masterGain = ctx.createGain();
+
+            modulator.frequency.value = 24;
+            modGain.gain.value = 25;
+
+            carrier.frequency.value = 75;
+            carrier.type = 'triangle';
+
+            modulator.connect(modGain);
+            modGain.connect(carrier.frequency);
+
+            masterGain.gain.setValueAtTime(0.001, now);
+            masterGain.gain.linearRampToValueAtTime(0.08, now + 0.1);
+            masterGain.gain.linearRampToValueAtTime(0.08, now + 0.5);
+            masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
+
+            carrier.connect(masterGain);
+            masterGain.connect(ctx.destination);
+
+            modulator.start(now);
+            carrier.start(now);
+            modulator.stop(now + 0.71);
+            carrier.stop(now + 0.71);
+        } catch (e) {}
+    }
+
+    function playLaser() {
+        if (!soundEnabled) return;
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(1200, now);
+            osc.frequency.exponentialRampToValueAtTime(140, now + 0.12);
+
+            gain.gain.setValueAtTime(0.09, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.13);
+        } catch (e) {}
+    }
+
+    function playBoing() {
+        if (!soundEnabled) return;
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(240, now);
+            osc.frequency.exponentialRampToValueAtTime(560, now + 0.08);
+            osc.frequency.exponentialRampToValueAtTime(320, now + 0.18);
+
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.19);
+        } catch (e) {}
+    }
+
+    function playCoin() {
+        if (!soundEnabled) return;
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            playTone(987.77, 'square', 0.08, 0.00); // B5
+            playTone(1318.51, 'square', 0.22, 0.08); // E6
+        } catch (e) {}
+    }
+
+    function playHoverTick() {
+        if (!soundEnabled) return;
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(2400, now);
+            gain.gain.setValueAtTime(0.015, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.012);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.015);
+        } catch (e) {}
+    }
+
+    function playThruster() {
+        if (!soundEnabled) return;
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+            const bufferSize = Math.floor(ctx.sampleRate * 0.15);
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+            const noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(340, now);
+            filter.frequency.linearRampToValueAtTime(180, now + 0.15);
+            filter.Q.value = 3.0;
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.035, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(ctx.destination);
+            noise.start(now);
+        } catch (e) {}
+    }
+
     // =========================================================================
-    // 3. PIXEL CAT SVG GENERATOR
+    // 3. PIXEL CAT & ASTRONAUT CAT SVG GENERATORS
     // =========================================================================
     function getPixelCatSVG(size = 40) {
         return `
@@ -244,6 +408,85 @@
             <!-- Collar / Scarf -->
             <rect x="6" y="17" width="12" height="2" fill="#10b981"/>
             <rect x="11" y="18" width="2" height="2" fill="#fbbf24"/>
+        </svg>`;
+    }
+
+    function getAstroCatSVG(size = 56) {
+        return `
+        <svg width="${size}" height="${size}" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" class="astro-cat-svg" style="filter: drop-shadow(0 0 12px rgba(16,185,129,0.5));">
+            <!-- Jetpack Thruster Flames -->
+            <g class="thruster-flames">
+                <path class="flame-left" d="M19 50 Q21 62 23 50" fill="url(#flameGrad)" />
+                <path class="flame-right" d="M41 50 Q43 62 45 50" fill="url(#flameGrad)" />
+            </g>
+
+            <!-- Jetpack Backpack -->
+            <rect x="15" y="32" width="10" height="20" rx="3" fill="#0f172a" stroke="#10b981" stroke-width="1.5" />
+            <rect x="39" y="32" width="10" height="20" rx="3" fill="#0f172a" stroke="#10b981" stroke-width="1.5" />
+            <rect x="23" y="36" width="18" height="12" rx="2" fill="#1e293b" stroke="#334155" stroke-width="1" />
+            <!-- Thruster Nozzles -->
+            <polygon points="17,50 25,50 24,54 18,54" fill="#64748b" />
+            <polygon points="39,50 47,50 46,54 40,54" fill="#64748b" />
+
+            <!-- Space Suit Body -->
+            <ellipse cx="32" cy="42" rx="13" ry="12" fill="#1e293b" stroke="#10b981" stroke-width="2" />
+            <!-- Chest Mission Patch -->
+            <rect x="28" y="37" width="8" height="5" rx="1" fill="#064e3b" stroke="#34d399" stroke-width="0.8" />
+            <circle cx="32" cy="39.5" r="1.5" fill="#38bdf8" />
+            <!-- Suit Paws -->
+            <circle cx="21" cy="45" r="3.5" fill="#334155" stroke="#10b981" stroke-width="1.5" />
+            <circle cx="43" cy="45" r="3.5" fill="#334155" stroke="#10b981" stroke-width="1.5" />
+
+            <!-- Helmet Base Collar -->
+            <ellipse cx="32" cy="31" rx="16" ry="5" fill="#0f172a" stroke="#10b981" stroke-width="2" />
+
+            <!-- Helmet Ear Pods -->
+            <path d="M17 18 L22 7 L27 15 Z" fill="#0f172a" stroke="#10b981" stroke-width="1.5" />
+            <path d="M19 16 L22 10 L25 15 Z" fill="#ec4899" opacity="0.8" />
+            <path d="M47 18 L42 7 L37 15 Z" fill="#0f172a" stroke="#10b981" stroke-width="1.5" />
+            <path d="M45 16 L42 10 L39 15 Z" fill="#ec4899" opacity="0.8" />
+
+            <!-- Glass Bubble Helmet -->
+            <circle cx="32" cy="22" r="17" fill="url(#helmetGlass)" stroke="#38bdf8" stroke-width="2" />
+
+            <!-- Cat Head Inside Helmet -->
+            <ellipse cx="32" cy="23" rx="12" ry="10" fill="#090d16" />
+
+            <!-- Cute Eyes -->
+            <g class="cat-eyes">
+                <ellipse cx="27" cy="22" rx="2.5" ry="3.5" fill="#10b981" />
+                <circle cx="28" cy="21" r="1" fill="#ffffff" />
+                <ellipse cx="37" cy="22" rx="2.5" ry="3.5" fill="#10b981" />
+                <circle cx="38" cy="21" r="1" fill="#ffffff" />
+            </g>
+
+            <!-- Nose and Mouth -->
+            <polygon points="31,25 33,25 32,26.5" fill="#f43f5e" />
+            <path d="M30 27 Q32 28.5 34 27" stroke="#cbd5e1" stroke-width="0.8" fill="none" />
+
+            <!-- Whiskers -->
+            <line x1="22" y1="24" x2="17" y2="23" stroke="#94a3b8" stroke-width="0.8" opacity="0.8" />
+            <line x1="22" y1="26" x2="17" y2="27" stroke="#94a3b8" stroke-width="0.8" opacity="0.8" />
+            <line x1="42" y1="24" x2="47" y2="23" stroke="#94a3b8" stroke-width="0.8" opacity="0.8" />
+            <line x1="42" y1="26" x2="47" y2="27" stroke="#94a3b8" stroke-width="0.8" opacity="0.8" />
+
+            <!-- Glass Specular Highlight Curve -->
+            <path d="M20 13 A15 15 0 0 1 41 12" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.65" />
+            <circle cx="21" cy="15" r="1" fill="#ffffff" opacity="0.8" />
+
+            <!-- Gradients -->
+            <defs>
+                <radialGradient id="helmetGlass" cx="30%" cy="30%" r="70%">
+                    <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.35"/>
+                    <stop offset="60%" stop-color="#0f172a" stop-opacity="0.6"/>
+                    <stop offset="100%" stop-color="#020617" stop-opacity="0.9"/>
+                </radialGradient>
+                <linearGradient id="flameGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#38bdf8"/>
+                    <stop offset="50%" stop-color="#f59e0b"/>
+                    <stop offset="100%" stop-color="#ef4444" stop-opacity="0"/>
+                </linearGradient>
+            </defs>
         </svg>`;
     }
 
@@ -667,52 +910,699 @@
     }
 
     // =========================================================================
-    // 6. FLOATING SIMPLE CAT COMPANION WIDGET
     // =========================================================================
-    function createFloatingWidget() {
-        if (document.getElementById("simple-cat-floating")) return;
+    // 6. ASTRO-CAT ZERO-G COPILOT & INTERACTIVE PLAYGROUND
+    // =========================================================================
+    const QUIPS = [
+        "Purr-fect! 0 dangling CNAMEs on my radar! 🐾",
+        "DMARC p=reject is my personal blast shield! 🛡️",
+        "Zero-G maneuver complete! Toss me again! 🚀",
+        "80% of leaks hide in old Black Friday subdomains! ⚠️",
+        "Click 🎯 LASER below to test my orbital thrusters!",
+        "Click 👾 PATROL to zap rogue DNS threats!",
+        "Monthly PDF audits make client retainers invincible! 💼",
+        "HSTS forces armored HTTPS trucks for all visitors! 🚚",
+        "DNS over HTTPS keeps your lookups 100% secret! 🔒"
+    ];
 
-        const widget = document.createElement("div");
-        widget.id = "simple-cat-floating";
-        widget.className = "fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 flex items-center gap-2 group cursor-pointer";
-        widget.style.cssText = "position: fixed !important; bottom: 20px !important; right: 20px !important; z-index: 99999 !important; display: flex !important; align-items: center !important;";
-        widget.innerHTML = `
-            <div class="px-3 py-2 bg-slate-900/95 border-2 border-emerald-500 rounded-xl shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:scale-105 hover:shadow-[0_0_35px_rgba(16,185,129,0.55)] transition-all flex items-center gap-2.5 backdrop-blur-md" style="box-shadow: 4px 4px 0px #064e3b;">
-                <div class="relative flex-shrink-0">
+    const copilot = {
+        state: 'docked', // 'docked' | 'floating' | 'laser' | 'patrol'
+        x: window.innerWidth - 180,
+        y: window.innerHeight - 140,
+        vx: 0,
+        vy: 0,
+        rot: 0,
+        bobAngle: 0,
+        isDragging: false,
+        dragStartX: 0,
+        dragStartY: 0,
+        lastX: 0,
+        lastY: 0,
+        dragVx: 0,
+        dragVy: 0,
+        mouseX: window.innerWidth / 2,
+        mouseY: window.innerHeight / 2,
+        laserActive: false,
+        patrolActive: false,
+        patrolThreats: [],
+        patrolScore: 0,
+        speechTimer: null,
+        sparks: []
+    };
+
+    let copilotEl = null;
+    let dockEl = null;
+    let laserDotEl = null;
+    let fxCanvas = null;
+    let fxCtx = null;
+
+    function createAstroCatCopilot() {
+        if (document.getElementById("astro-cat-copilot")) return;
+
+        // 1. Effects Canvas for thruster sparks, lasers, and score popups
+        fxCanvas = document.createElement("canvas");
+        fxCanvas.id = "astro-fx-canvas";
+        fxCanvas.style.cssText = "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 99980;";
+        document.body.appendChild(fxCanvas);
+        resizeFxCanvas();
+        window.addEventListener("resize", resizeFxCanvas);
+
+        // 2. Laser Target Reticle
+        laserDotEl = document.createElement("div");
+        laserDotEl.id = "astro-laser-dot";
+        laserDotEl.className = "hidden";
+        laserDotEl.innerHTML = `
+            <div class="laser-ring"></div>
+            <div class="laser-core"></div>
+        `;
+        document.body.appendChild(laserDotEl);
+
+        // 3. Independent Fixed Viewport Speech Bubble (Never tilts with cat, never clips off-screen)
+        const bubbleEl = document.createElement("div");
+        bubbleEl.id = "astro-speech-bubble";
+        bubbleEl.className = "astro-bubble hidden";
+        bubbleEl.innerHTML = `
+            <div id="astro-bubble-tail" class="astro-bubble-tail-down"></div>
+            <div class="astro-bubble-header">
+                <span class="astro-bubble-title">ASTRO-CAT // COMMS</span>
+                <button id="astro-bubble-close" class="astro-bubble-close" title="Dismiss">✕</button>
+            </div>
+            <div id="astro-bubble-text" class="astro-bubble-text">Mission ready! Toss me into zero-G! 🐾</div>
+        `;
+        document.body.appendChild(bubbleEl);
+
+        // 4. Floating Zero-G Astro-Cat Element
+        copilotEl = document.createElement("div");
+        copilotEl.id = "astro-cat-copilot";
+        copilotEl.className = "astro-cat-wrapper hidden";
+        copilotEl.innerHTML = `
+            <!-- Cat Figure Body (handles zero-G tilt & backflip) -->
+            <div id="astro-cat-body" class="astro-cat-body" title="Click to Pet • Drag to Toss!">
+                ${getAstroCatSVG(64)}
+            </div>
+
+            <!-- Floating Action HUD Menu (stays upright and readable) -->
+            <div id="astro-cat-hud" class="astro-hud">
+                <button type="button" id="hud-pet-btn" class="astro-hud-btn" title="Pet Astro-Cat">🐾 Pet</button>
+                <button type="button" id="hud-laser-btn" class="astro-hud-btn" title="Laser Chase Mode">🎯 Laser</button>
+                <button type="button" id="hud-patrol-btn" class="astro-hud-btn" title="Threat Patrol Mini-Game">👾 Patrol</button>
+                <button type="button" id="hud-decode-btn" class="astro-hud-btn" title="Security Dictionary">📖 Decode</button>
+                <button type="button" id="hud-dock-btn" class="astro-hud-btn" title="Park into Corner Dock">⚓ Dock</button>
+            </div>
+        `;
+        document.body.appendChild(copilotEl);
+
+        // 5. Corner Docking Station
+        dockEl = document.createElement("div");
+        dockEl.id = "simple-cat-dock";
+        dockEl.className = "fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 flex items-center gap-2";
+        dockEl.innerHTML = `
+            <div class="px-3 py-2 bg-slate-900/95 border-2 border-emerald-500 rounded-xl shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:border-emerald-400 transition-all flex items-center gap-2.5 backdrop-blur-md" style="box-shadow: 4px 4px 0px #064e3b;">
+                <div class="relative flex-shrink-0 cursor-pointer" id="dock-avatar-btn">
                     ${getPixelCatSVG(32)}
                     <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping"></span>
                     <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border border-slate-900"></span>
                 </div>
                 <div class="flex flex-col text-left pr-0.5">
-                    <div class="text-[9px] font-arcade text-emerald-400 tracking-wider">SIMPLE CAT</div>
-                    <div class="text-[11px] font-mono text-slate-200 flex items-center gap-1">
-                        <span>Decode Jargon</span>
-                        <span class="text-emerald-400 font-bold">&rarr;</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[9px] font-arcade text-emerald-400 tracking-wider">ASTRO-CAT</span>
+                        <span class="text-[8px] font-mono px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">ONLINE</span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <button type="button" id="dock-launch-btn" class="text-[10px] font-mono font-bold text-emerald-400 hover:text-emerald-300 hover:underline flex items-center gap-0.5 cursor-pointer">
+                            <span>🚀 Fly Zero-G</span>
+                        </button>
+                        <span class="text-slate-600 text-[10px]">•</span>
+                        <button type="button" id="dock-decode-btn" class="text-[10px] font-mono text-slate-300 hover:text-white hover:underline cursor-pointer">
+                            <span>📖 Jargon</span>
+                        </button>
                     </div>
                 </div>
             </div>
         `;
+        document.body.appendChild(dockEl);
 
-        widget.addEventListener("click", () => {
+        bindCopilotEvents();
+        requestAnimationFrame(updateCopilotLoop);
+    }
+
+    function resizeFxCanvas() {
+        if (!fxCanvas) return;
+        fxCanvas.width = window.innerWidth;
+        fxCanvas.height = window.innerHeight;
+        fxCtx = fxCanvas.getContext('2d');
+    }
+
+    function bindCopilotEvents() {
+        // Dock buttons
+        document.getElementById("dock-launch-btn").addEventListener("click", () => {
+            launchAstroCatIntoZeroG();
+        });
+        document.getElementById("dock-avatar-btn").addEventListener("click", () => {
+            launchAstroCatIntoZeroG();
+        });
+        document.getElementById("dock-decode-btn").addEventListener("click", () => {
             showSimpleCatDialog("dmarc");
         });
 
-        document.body.appendChild(widget);
+        // Copilot HUD buttons
+        document.getElementById("hud-pet-btn").addEventListener("click", (e) => {
+            e.stopPropagation();
+            petAstroCat();
+        });
+        document.getElementById("hud-laser-btn").addEventListener("click", (e) => {
+            e.stopPropagation();
+            toggleLaserChase();
+        });
+        document.getElementById("hud-patrol-btn").addEventListener("click", (e) => {
+            e.stopPropagation();
+            startSpacePatrol();
+        });
+        document.getElementById("hud-decode-btn").addEventListener("click", (e) => {
+            e.stopPropagation();
+            showSimpleCatDialog("dmarc");
+        });
+        document.getElementById("hud-dock-btn").addEventListener("click", (e) => {
+            e.stopPropagation();
+            dockAstroCat();
+        });
+        const bubbleClose = document.getElementById("astro-bubble-close");
+        if (bubbleClose) {
+            bubbleClose.addEventListener("click", (e) => {
+                e.stopPropagation();
+                hideSpeechBubble();
+            });
+        }
+
+        const bubbleEl = document.getElementById("astro-speech-bubble");
+        if (bubbleEl) {
+            bubbleEl.addEventListener("mouseenter", () => {
+                clearTimeout(copilot.speechTimer);
+            });
+            bubbleEl.addEventListener("mouseleave", () => {
+                clearTimeout(copilot.speechTimer);
+                copilot.speechTimer = setTimeout(() => {
+                    hideSpeechBubble();
+                }, 3500);
+            });
+        }
+
+        // Pointer Drag & Toss Controls
+        const catBody = document.getElementById("astro-cat-body");
+
+        catBody.addEventListener("pointerdown", (e) => {
+            if (copilot.state === 'docked') return;
+            copilot.isDragging = true;
+            catBody.setPointerCapture(e.pointerId);
+            copilot.dragStartX = e.clientX;
+            copilot.dragStartY = e.clientY;
+            copilot.lastX = e.clientX;
+            copilot.lastY = e.clientY;
+            copilot.dragVx = 0;
+            copilot.dragVy = 0;
+            copilot.vx = 0;
+            copilot.vy = 0;
+            copilotEl.classList.add("grabbing");
+            playThruster();
+        });
+
+        window.addEventListener("pointermove", (e) => {
+            copilot.mouseX = e.clientX;
+            copilot.mouseY = e.clientY;
+
+            // Move Laser Reticle if active
+            if (copilot.laserActive && laserDotEl) {
+                laserDotEl.style.transform = `translate(${e.clientX - 12}px, ${e.clientY - 12}px)`;
+            }
+
+            if (!copilot.isDragging) return;
+
+            const dx = e.clientX - copilot.lastX;
+            const dy = e.clientY - copilot.lastY;
+            copilot.dragVx = dx;
+            copilot.dragVy = dy;
+            copilot.x += dx;
+            copilot.y += dy;
+            copilot.lastX = e.clientX;
+            copilot.lastY = e.clientY;
+
+            // Emit dragging spark particles
+            spawnSparks(copilot.x + 32, copilot.y + 54, 1, '#38bdf8');
+        });
+
+        const endDrag = (e) => {
+            if (!copilot.isDragging) return;
+            copilot.isDragging = false;
+            copilotEl.classList.remove("grabbing");
+
+            const totalDragDist = Math.hypot(e.clientX - copilot.dragStartX, e.clientY - copilot.dragStartY);
+
+            if (totalDragDist < 5) {
+                // Treated as click / pet!
+                petAstroCat();
+            } else {
+                // Toss with momentum!
+                copilot.vx = Math.max(-18, Math.min(18, copilot.dragVx * 0.9));
+                copilot.vy = Math.max(-18, Math.min(18, copilot.dragVy * 0.9));
+                copilot.rot += (copilot.dragVx * 3);
+                playThruster();
+                spawnSparks(copilot.x + 32, copilot.y + 54, 8, '#f59e0b');
+            }
+        };
+
+        window.addEventListener("pointerup", endDrag);
+        window.addEventListener("pointercancel", endDrag);
+    }
+
+    function launchAstroCatIntoZeroG() {
+        copilot.state = 'floating';
+        dockEl.classList.add("opacity-50", "hover:opacity-100");
+        copilotEl.classList.remove("hidden");
+        
+        // Spawn smoothly above dock
+        copilot.x = window.innerWidth - 180;
+        copilot.y = window.innerHeight - 240;
+        copilot.vx = -4.5;
+        copilot.vy = -3.5;
+        copilot.rot = -10;
+
+        playPowerUp();
+        playThruster();
+        spawnSparks(copilot.x + 32, copilot.y + 54, 12, '#38bdf8');
+        showSpeechBubble("Thrusters engaged! Drag & toss me around the screen! 🐾");
+    }
+
+    function dockAstroCat() {
+        copilot.state = 'docked';
+        copilot.laserActive = false;
+        copilot.patrolActive = false;
+        if (laserDotEl) laserDotEl.classList.add("hidden");
+        clearPatrolThreats();
+        hideSpeechBubble();
+
+        playBoing();
+        copilotEl.classList.add("hidden");
+        dockEl.classList.remove("opacity-50");
+    }
+
+    function petAstroCat() {
+        const catBody = document.getElementById("astro-cat-body");
+        if (catBody) {
+            catBody.classList.remove("astro-flip");
+            void catBody.offsetWidth; // Trigger reflow
+            catBody.classList.add("astro-flip");
+        }
+
+        const isMeow = Math.random() > 0.4;
+        if (isMeow) {
+            playMeow();
+        } else {
+            playPurr();
+        }
+
+        spawnSparks(copilot.x + 32, copilot.y + 20, 6, '#34d399');
+        const randomQuip = QUIPS[Math.floor(Math.random() * QUIPS.length)];
+        showSpeechBubble(randomQuip);
+    }
+
+    function toggleLaserChase() {
+        copilot.laserActive = !copilot.laserActive;
+        const btn = document.getElementById("hud-laser-btn");
+
+        if (copilot.laserActive) {
+            copilot.state = 'laser';
+            if (btn) btn.classList.add("astro-hud-btn-active");
+            if (laserDotEl) {
+                laserDotEl.classList.remove("hidden");
+                laserDotEl.style.transform = `translate(${copilot.mouseX - 12}px, ${copilot.mouseY - 12}px)`;
+            }
+            playPowerUp();
+            showSpeechBubble("Laser tracker locked! Move your mouse, I'm on it! 🎯");
+        } else {
+            copilot.state = 'floating';
+            if (btn) btn.classList.remove("astro-hud-btn-active");
+            if (laserDotEl) laserDotEl.classList.add("hidden");
+            playBlip();
+        }
+    }
+
+    function startSpacePatrol() {
+        if (copilot.patrolActive) return;
+        copilot.patrolActive = true;
+        copilot.state = 'patrol';
+        copilot.patrolScore = 0;
+
+        const patrolBtn = document.getElementById("hud-patrol-btn");
+        if (patrolBtn) patrolBtn.classList.add("astro-hud-btn-active");
+
+        playPowerUp();
+        showSpeechBubble("🚨 Threat Alert! 3 rogue DNS anomalies detected! Intercepting...");
+
+        // Spawn 3 Threat Bugs across the viewport
+        const threats = [
+            { id: 1, name: "DANGLING CNAME", color: "#ef4444", x: window.innerWidth * 0.25, y: window.innerHeight * 0.3 },
+            { id: 2, name: "EXPIRED SSL", color: "#f59e0b", x: window.innerWidth * 0.70, y: window.innerHeight * 0.35 },
+            { id: 3, name: "SPOOF DRIFT", color: "#a855f7", x: window.innerWidth * 0.45, y: window.innerHeight * 0.65 }
+        ];
+
+        copilot.patrolThreats = threats.map(t => {
+            const el = document.createElement("div");
+            el.className = "astro-threat-chip";
+            el.style.cssText = `position: fixed; left: ${t.x}px; top: ${t.y}px; z-index: 99985; border-color: ${t.color}; box-shadow: 0 0 15px ${t.color};`;
+            el.innerHTML = `
+                <span class="threat-dot" style="background-color: ${t.color};"></span>
+                <span>👾 ${t.name}</span>
+            `;
+            document.body.appendChild(el);
+            return { ...t, el, alive: true };
+        });
+    }
+
+    function clearPatrolThreats() {
+        copilot.patrolThreats.forEach(t => {
+            if (t.el && t.el.parentElement) {
+                t.el.parentElement.removeChild(t.el);
+            }
+        });
+        copilot.patrolThreats = [];
+        copilot.patrolActive = false;
+        const patrolBtn = document.getElementById("hud-patrol-btn");
+        if (patrolBtn) patrolBtn.classList.remove("astro-hud-btn-active");
+    }
+
+    function showSpeechBubble(text, duration = 7500) {
+        const bubble = document.getElementById("astro-speech-bubble");
+        const bubbleText = document.getElementById("astro-bubble-text");
+        if (!bubble || !bubbleText) return;
+
+        bubbleText.innerText = text;
+        bubble.classList.remove("hidden");
+
+        clearTimeout(copilot.speechTimer);
+        if (duration > 0 && isFinite(duration)) {
+            copilot.speechTimer = setTimeout(() => {
+                hideSpeechBubble();
+            }, duration);
+        }
+    }
+
+    function hideSpeechBubble() {
+        const bubble = document.getElementById("astro-speech-bubble");
+        if (bubble) bubble.classList.add("hidden");
+    }
+
+    function spawnSparks(x, y, count = 4, color = '#38bdf8') {
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 3 + 1;
+            copilot.sparks.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                size: Math.random() * 3 + 1.5,
+                alpha: 1.0,
+                color: color
+            });
+        }
+    }
+
+    // Main 60fps Physics & Render Loop
+    function updateCopilotLoop() {
+        if (copilot.state !== 'docked') {
+            copilot.bobAngle += 0.05;
+
+            // Physics states
+            if (copilot.state === 'laser') {
+                const tx = copilot.mouseX - 32;
+                const ty = copilot.mouseY - 32;
+                const dx = tx - copilot.x;
+                const dy = ty - copilot.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist > 35) {
+                    copilot.vx += (dx / dist) * 0.7;
+                    copilot.vy += (dy / dist) * 0.7;
+                    copilot.vx *= 0.94;
+                    copilot.vy *= 0.94;
+                    copilot.rot = Math.atan2(copilot.vy, copilot.vx) * (180 / Math.PI) * 0.3;
+                    if (Math.random() > 0.4) spawnSparks(copilot.x + 32, copilot.y + 54, 1, '#38bdf8');
+                } else {
+                    copilot.vx *= 0.8;
+                    copilot.vy *= 0.8;
+                    if (Math.random() > 0.92) {
+                        playPurr();
+                        spawnSparks(copilot.x + 32, copilot.y + 20, 2, '#34d399');
+                    }
+                }
+                copilot.x += copilot.vx;
+                copilot.y += copilot.vy;
+
+            } else if (copilot.state === 'patrol') {
+                const target = copilot.patrolThreats.find(t => t.alive);
+                if (target) {
+                    const tx = target.x - 20;
+                    const ty = target.y - 20;
+                    const dx = tx - copilot.x;
+                    const dy = ty - copilot.y;
+                    const dist = Math.hypot(dx, dy);
+
+                    if (dist > 60) {
+                        copilot.vx += (dx / dist) * 0.85;
+                        copilot.vy += (dy / dist) * 0.85;
+                        copilot.vx *= 0.93;
+                        copilot.vy *= 0.93;
+                        copilot.rot = Math.atan2(copilot.vy, copilot.vx) * (180 / Math.PI) * 0.3;
+                        if (Math.random() > 0.5) spawnSparks(copilot.x + 32, copilot.y + 54, 1, '#f59e0b');
+                    } else {
+                        // In firing range! Zap the threat!
+                        target.alive = false;
+                        playLaser();
+                        playCoin();
+                        spawnSparks(target.x + 40, target.y + 12, 18, target.color);
+                        if (target.el && target.el.parentElement) {
+                            target.el.parentElement.removeChild(target.el);
+                        }
+                        copilot.patrolScore += 100;
+
+                        // Check if all cleared
+                        const remaining = copilot.patrolThreats.filter(t => t.alive).length;
+                        if (remaining === 0) {
+                            playPowerUp();
+                            showSpeechBubble(`🏆 ALL 3 THREATS PURGED! +300 PTS! Retainer secured!`);
+                            setTimeout(() => {
+                                copilot.state = 'floating';
+                                copilot.patrolActive = false;
+                                const pBtn = document.getElementById("hud-patrol-btn");
+                                if (pBtn) pBtn.classList.remove("astro-hud-btn-active");
+                            }, 2500);
+                        }
+                    }
+                }
+                copilot.x += copilot.vx;
+                copilot.y += copilot.vy;
+
+            } else if (!copilot.isDragging) {
+                // Free Float Mode
+                copilot.x += copilot.vx;
+                copilot.y += copilot.vy;
+                copilot.vx *= 0.985;
+                copilot.vy *= 0.985;
+
+                // Ambient cosmic drift
+                if (Math.hypot(copilot.vx, copilot.vy) < 0.25) {
+                    copilot.vx = Math.sin(copilot.bobAngle * 0.4) * 0.3;
+                    copilot.vy = Math.cos(copilot.bobAngle * 0.5) * 0.25;
+                }
+
+                copilot.rot += (copilot.vx * 1.5 - copilot.rot) * 0.08;
+
+                // Screen edge bounce
+                const minX = 15;
+                const maxX = window.innerWidth - 85;
+                const minY = 65;
+                const maxY = window.innerHeight - 95;
+
+                if (copilot.x < minX) {
+                    copilot.x = minX;
+                    copilot.vx = Math.abs(copilot.vx) * 0.85;
+                    playBoing();
+                    spawnSparks(copilot.x, copilot.y + 32, 4, '#38bdf8');
+                } else if (copilot.x > maxX) {
+                    copilot.x = maxX;
+                    copilot.vx = -Math.abs(copilot.vx) * 0.85;
+                    playBoing();
+                    spawnSparks(copilot.x + 64, copilot.y + 32, 4, '#38bdf8');
+                }
+
+                if (copilot.y < minY) {
+                    copilot.y = minY;
+                    copilot.vy = Math.abs(copilot.vy) * 0.85;
+                    playBoing();
+                    spawnSparks(copilot.x + 32, copilot.y, 4, '#38bdf8');
+                } else if (copilot.y > maxY) {
+                    copilot.y = maxY;
+                    copilot.vy = -Math.abs(copilot.vy) * 0.85;
+                    playBoing();
+                    spawnSparks(copilot.x + 32, copilot.y + 64, 4, '#38bdf8');
+                }
+            }
+
+            // Render DOM Position (Astro-Cat wrapper stays upright for HUD stability)
+            const visualY = copilot.y + Math.sin(copilot.bobAngle) * 4;
+            if (copilotEl) {
+                copilotEl.style.transform = `translate3d(${copilot.x}px, ${visualY}px, 0px)`;
+                const catBody = document.getElementById("astro-cat-body");
+                if (catBody && !catBody.classList.contains("astro-flip")) {
+                    catBody.style.transform = `rotate(${copilot.rot}deg)`;
+                }
+            }
+
+            // Render Independent Fixed Speech Bubble (Never tilts, clamped to screen)
+            const bubble = document.getElementById("astro-speech-bubble");
+            if (bubble && !bubble.classList.contains("hidden")) {
+                const bubbleW = bubble.offsetWidth || 230;
+                const bubbleH = bubble.offsetHeight || 75;
+                let bubbleX = (copilot.x + 32) - (bubbleW / 2);
+                bubbleX = Math.max(12, Math.min(window.innerWidth - bubbleW - 12, bubbleX));
+
+                let bubbleY;
+                const tail = document.getElementById("astro-bubble-tail");
+                if (visualY > 120) {
+                    // Position bubble above the cat
+                    bubbleY = visualY - bubbleH - 12;
+                    if (tail) {
+                        tail.className = "astro-bubble-tail-down";
+                        const tailLeft = Math.max(16, Math.min(bubbleW - 16, (copilot.x + 32) - bubbleX));
+                        tail.style.left = `${tailLeft}px`;
+                    }
+                } else {
+                    // Position bubble below the cat (if cat is near top edge)
+                    bubbleY = visualY + 74;
+                    if (tail) {
+                        tail.className = "astro-bubble-tail-up";
+                        const tailLeft = Math.max(16, Math.min(bubbleW - 16, (copilot.x + 32) - bubbleX));
+                        tail.style.left = `${tailLeft}px`;
+                    }
+                }
+                bubble.style.transform = `translate3d(${bubbleX}px, ${bubbleY}px, 0px)`;
+            }
+        }
+
+        // Render Particle Canvas & Active Lasers
+        if (fxCtx && fxCanvas) {
+            fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+
+            const visualY = copilot.y + Math.sin(copilot.bobAngle) * 4;
+            const catVisorX = copilot.x + 32;
+            const catVisorY = visualY + 22;
+
+            // 1. Laser Chase Mode - Active Laser Targeting Line
+            if (copilot.laserActive && copilot.state !== 'docked') {
+                fxCtx.save();
+                fxCtx.beginPath();
+                fxCtx.moveTo(catVisorX, catVisorY);
+                fxCtx.lineTo(copilot.mouseX, copilot.mouseY);
+                fxCtx.strokeStyle = 'rgba(6, 182, 212, 0.6)';
+                fxCtx.lineWidth = 2;
+                fxCtx.setLineDash([6, 4]);
+                fxCtx.shadowColor = '#06b6d4';
+                fxCtx.shadowBlur = 10;
+                fxCtx.stroke();
+                fxCtx.restore();
+            }
+
+            // 2. Threat Patrol Mini-Game - Dynamic Targeting Line & Firing Laser Beam
+            if (copilot.patrolActive && copilot.state !== 'docked') {
+                const target = copilot.patrolThreats.find(t => t.alive);
+                if (target) {
+                    const targetX = target.x + 40;
+                    const targetY = target.y + 14;
+                    const dist = Math.hypot(targetX - catVisorX, targetY - catVisorY);
+
+                    fxCtx.save();
+                    if (dist < 110) {
+                        // High-intensity firing laser blast
+                        fxCtx.beginPath();
+                        fxCtx.moveTo(catVisorX, catVisorY);
+                        fxCtx.lineTo(targetX, targetY);
+                        fxCtx.strokeStyle = '#ef4444';
+                        fxCtx.lineWidth = 3.5;
+                        fxCtx.shadowColor = '#f43f5e';
+                        fxCtx.shadowBlur = 16;
+                        fxCtx.stroke();
+
+                        // Core white laser beam
+                        fxCtx.beginPath();
+                        fxCtx.moveTo(catVisorX, catVisorY);
+                        fxCtx.lineTo(targetX, targetY);
+                        fxCtx.strokeStyle = '#ffffff';
+                        fxCtx.lineWidth = 1.2;
+                        fxCtx.stroke();
+                    } else {
+                        // Guidance lock-on line
+                        fxCtx.beginPath();
+                        fxCtx.moveTo(catVisorX, catVisorY);
+                        fxCtx.lineTo(targetX, targetY);
+                        fxCtx.strokeStyle = 'rgba(245, 158, 11, 0.45)';
+                        fxCtx.lineWidth = 1.5;
+                        fxCtx.setLineDash([5, 5]);
+                        fxCtx.shadowColor = '#f59e0b';
+                        fxCtx.shadowBlur = 8;
+                        fxCtx.stroke();
+                    }
+                    fxCtx.restore();
+                }
+            }
+
+            // 3. Render Sparks & Debris
+            for (let i = copilot.sparks.length - 1; i >= 0; i--) {
+                const p = copilot.sparks[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.025;
+                if (p.alpha <= 0) {
+                    copilot.sparks.splice(i, 1);
+                    continue;
+                }
+                fxCtx.save();
+                fxCtx.globalAlpha = p.alpha;
+                fxCtx.fillStyle = p.color;
+                fxCtx.shadowColor = p.color;
+                fxCtx.shadowBlur = 6;
+                fxCtx.fillRect(p.x, p.y, p.size, p.size);
+                fxCtx.restore();
+            }
+        }
+
+        requestAnimationFrame(updateCopilotLoop);
     }
 
     // =========================================================================
-    // 7. AUDIO TOGGLE BUTTON
+    // 7. AUDIO TOGGLE BUTTON (WITH PERSISTENCE)
     // =========================================================================
     function createSoundToggle() {
         if (document.getElementById("audio-toggle-btn")) return;
+        
+        // Load saved sound preference
+        const saved = localStorage.getItem("orbit_sound_enabled");
+        if (saved !== null) {
+            soundEnabled = (saved === "true");
+        }
+
         const btn = document.createElement("button");
         btn.id = "audio-toggle-btn";
         btn.className = "text-[11px] font-mono px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/40 transition-colors flex items-center gap-1.5 cursor-pointer";
-        btn.innerHTML = `<span>🔊</span> <span>AUDIO: ON</span>`;
+        btn.innerHTML = soundEnabled ? `<span>🔊</span> <span>AUDIO: ON</span>` : `<span>🔇</span> <span>AUDIO: OFF</span>`;
+        btn.title = "Toggle 8-Bit Retro Audio SFX";
+
         btn.addEventListener("click", () => {
             soundEnabled = !soundEnabled;
+            localStorage.setItem("orbit_sound_enabled", soundEnabled.toString());
             btn.innerHTML = soundEnabled ? `<span>🔊</span> <span>AUDIO: ON</span>` : `<span>🔇</span> <span>AUDIO: OFF</span>`;
-            if (soundEnabled) playBlip();
+            if (soundEnabled) {
+                playBlip();
+            }
         });
 
         const navRight = document.querySelector("header .max-w-6xl > div:last-child") || document.querySelector("header .max-w-7xl > div:last-child");
@@ -722,15 +1612,34 @@
     }
 
     // =========================================================================
-    // 8. AUTO-BIND ALL HELPER CHIPS AND LINKS
+    // 8. TACTILE AUDIO & SPECULAR CARD SPOTLIGHT
     // =========================================================================
-    function bindHelperChips() {
+    function bindTactileInteractions() {
+        // Subtle micro-click audio on hoverable cards & primary buttons
+        document.querySelectorAll("a, button, .pixel-btn, [data-cat-term]").forEach(el => {
+            el.addEventListener("mouseenter", () => {
+                playHoverTick();
+            });
+        });
+
+        // Specular mouse cursor spotlight on glass cards
+        const glassCards = document.querySelectorAll(".card-glass, .card-glass-emerald, .card-glass-cyan, .pricing-grid > div");
+        glassCards.forEach(card => {
+            card.addEventListener("mousemove", (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty("--mouse-x", `${x}px`);
+                card.style.setProperty("--mouse-y", `${y}px`);
+            });
+        });
+
+        // Helper Chips
         document.querySelectorAll("[data-cat-term]").forEach(el => {
             if (el.dataset.catBound) return;
             el.dataset.catBound = "true";
             el.style.cursor = "pointer";
 
-            // Add retro question badge if not already customized
             if (!el.querySelector(".cat-chip")) {
                 const chip = document.createElement("span");
                 chip.className = "cat-chip ml-1.5 inline-flex items-center text-[10px] font-mono text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 px-1.5 py-0.5 rounded transition-all";
@@ -746,7 +1655,9 @@
         });
     }
 
-    // Inject CSS helper guarantees (such as .hidden)
+    // =========================================================================
+    // 9. INJECT STYLE GUARANTEES
+    // =========================================================================
     function injectStyleGuarantees() {
         if (document.getElementById("simple-cat-injected-styles")) return;
         const style = document.createElement("style");
@@ -799,25 +1710,257 @@
             #simple-cat-modal.cat-modal-open {
                 display: flex !important;
             }
-            #simple-cat-modal.hidden {
-                display: none !important;
+
+            /* Specular Mouse-Tracking Spotlight on Cards */
+            .card-glass, .card-glass-emerald, .card-glass-cyan, .pricing-grid > div {
+                position: relative !important;
+                overflow: hidden !important;
             }
-            #simple-cat-floating {
+            .card-glass::after, .card-glass-emerald::after, .card-glass-cyan::after, .pricing-grid > div::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                border-radius: inherit;
+                background: radial-gradient(400px circle at var(--mouse-x, -500px) var(--mouse-y, -500px), rgba(16, 185, 129, 0.09), transparent 40%);
+                pointer-events: none;
+                z-index: 1;
+                transition: opacity 0.3s;
+            }
+
+            /* Astro-Cat Floating Copilot Wrapper */
+            .astro-cat-wrapper {
                 position: fixed !important;
-                bottom: 20px !important;
-                right: 20px !important;
-                left: auto !important;
-                top: auto !important;
-                z-index: 99999 !important;
-                display: flex !important;
-                align-items: center !important;
+                top: 0;
+                left: 0;
+                width: 64px;
+                height: 64px;
+                z-index: 99990 !important;
+                cursor: grab;
+                user-select: none;
+                -webkit-user-select: none;
+                touch-action: none;
+                transform-origin: center center;
+            }
+            .astro-cat-wrapper.grabbing {
+                cursor: grabbing !important;
+            }
+
+            .astro-cat-body {
+                position: relative;
+                width: 64px;
+                height: 64px;
+                transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            }
+            .astro-cat-body:hover {
+                transform: scale(1.1);
+            }
+            .astro-flip {
+                animation: astroBackflip 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+            }
+            @keyframes astroBackflip {
+                0% { transform: scale(1) rotate(0deg); }
+                50% { transform: scale(1.3) rotate(180deg); }
+                100% { transform: scale(1) rotate(360deg); }
+            }
+
+            /* Thruster Flame Flicker */
+            .flame-left, .flame-right {
+                animation: flameFlicker 0.12s infinite alternate ease-in-out;
+                transform-origin: 50% 50px;
+            }
+            @keyframes flameFlicker {
+                0% { transform: scaleY(0.85) scaleX(0.9); opacity: 0.8; }
+                100% { transform: scaleY(1.3) scaleX(1.1); opacity: 1; }
+            }
+
+            /* Speech Bubble (Fixed Viewport Coordinates - Never tilts or flips) */
+            .astro-bubble {
+                position: fixed !important;
+                top: 0;
+                left: 0;
+                width: 230px;
+                background-color: rgba(15, 23, 42, 0.96);
+                border: 2px solid #10b981;
+                border-radius: 12px;
+                padding: 10px 12px;
+                box-shadow: 0 0 25px rgba(16, 185, 129, 0.35), 4px 4px 0px #064e3b;
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                z-index: 99995 !important;
+                pointer-events: auto;
+                transition: opacity 0.2s;
+            }
+            .astro-bubble-tail-down {
+                position: absolute;
+                bottom: -8px;
+                width: 0;
+                height: 0;
+                border-left: 8px solid transparent;
+                border-right: 8px solid transparent;
+                border-top: 8px solid #10b981;
+                transform: translateX(-50%);
+            }
+            .astro-bubble-tail-up {
+                position: absolute;
+                top: -8px;
+                width: 0;
+                height: 0;
+                border-left: 8px solid transparent;
+                border-right: 8px solid transparent;
+                border-bottom: 8px solid #10b981;
+                transform: translateX(-50%);
+            }
+            .astro-bubble-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 4px;
+                border-bottom: 1px solid rgba(16, 185, 129, 0.25);
+                padding-bottom: 3px;
+            }
+            .astro-bubble-title {
+                font-family: monospace;
+                font-size: 8px;
+                font-weight: bold;
+                color: #34d399;
+                letter-spacing: 0.05em;
+            }
+            .astro-bubble-close {
+                background: none;
+                border: none;
+                color: #94a3b8;
+                font-size: 11px;
+                cursor: pointer;
+                padding: 0 3px;
+                line-height: 1;
+            }
+            .astro-bubble-close:hover {
+                color: #ffffff;
+            }
+            .astro-bubble-text {
+                font-family: sans-serif;
+                font-size: 11px;
+                color: #f1f5f9;
+                line-height: 1.4;
+            }
+
+            /* Floating HUD Action Toolbar (Arcade Pill) */
+            .astro-hud {
+                position: absolute;
+                top: 70px;
+                left: 50%;
+                transform: translateX(-50%);
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                background-color: rgba(15, 23, 42, 0.95);
+                border: 1.5px solid rgba(16, 185, 129, 0.5);
+                border-radius: 9999px;
+                padding: 4px 8px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 12px rgba(16, 185, 129, 0.25);
+                opacity: 0.85;
+                transition: opacity 0.2s, transform 0.2s;
+                white-space: nowrap;
+                z-index: 99995;
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+            }
+            .astro-cat-wrapper:hover .astro-hud {
+                opacity: 1;
+                transform: translateX(-50%) scale(1.04);
+            }
+            .astro-hud-btn {
+                background: rgba(30, 41, 59, 0.9);
+                border: 1px solid rgba(16, 185, 129, 0.25);
+                color: #cbd5e1;
+                font-family: monospace;
+                font-size: 9px;
+                padding: 3px 7px;
+                border-radius: 9999px;
+                cursor: pointer;
+                transition: all 0.15s;
+                user-select: none;
+            }
+            .astro-hud-btn:hover {
+                background: #10b981;
+                color: #020617;
+                font-weight: bold;
+                box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+            }
+            .astro-hud-btn-active {
+                background: #06b6d4 !important;
+                color: #020617 !important;
+                font-weight: bold;
+                border-color: #38bdf8 !important;
+                box-shadow: 0 0 12px rgba(6, 182, 212, 0.6) !important;
+            }
+
+            /* Laser Target Reticle */
+            #astro-laser-dot {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 24px;
+                height: 24px;
+                pointer-events: none;
+                z-index: 99999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .laser-ring {
+                position: absolute;
+                width: 22px;
+                height: 22px;
+                border: 2px dashed #06b6d4;
+                border-radius: 50%;
+                animation: spinLaser 3s linear infinite;
+                box-shadow: 0 0 12px #06b6d4;
+            }
+            .laser-core {
+                width: 6px;
+                height: 6px;
+                background-color: #ef4444;
+                border-radius: 50%;
+                box-shadow: 0 0 8px #ef4444, 0 0 16px #ef4444;
+            }
+            @keyframes spinLaser {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            /* Threat Bug Chips for Patrol Mini-Game */
+            .astro-threat-chip {
+                padding: 6px 10px;
+                border-radius: 8px;
+                background-color: rgba(15, 23, 42, 0.95);
+                border: 2px solid;
+                font-family: monospace;
+                font-size: 10px;
+                font-weight: bold;
+                color: #ffffff;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                animation: threatFloat 1.8s ease-in-out infinite alternate;
+                pointer-events: none;
+            }
+            .threat-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                animation: pulse 1s infinite;
+            }
+            @keyframes threatFloat {
+                0% { transform: translateY(-5px); }
+                100% { transform: translateY(5px); }
             }
         `;
         document.head.appendChild(style);
     }
 
     // =========================================================================
-    // 9. PUBLIC API & LIFECYCLE
+    // 10. PUBLIC API & LIFECYCLE
     // =========================================================================
     window.SimpleCat = {
         explain: showSimpleCatDialog,
@@ -827,17 +1970,32 @@
         playChirp: playChirp,
         playPowerUp: playPowerUp,
         playPowerup: playPowerUp,
+        playMeow: playMeow,
+        playPurr: playPurr,
+        playLaser: playLaser,
+        playBoing: playBoing,
+        playCoin: playCoin,
+        playHoverTick: playHoverTick,
+        playThruster: playThruster,
+        launchZeroG: launchAstroCatIntoZeroG,
+        dock: dockAstroCat,
+        laserChase: toggleLaserChase,
+        patrol: startSpacePatrol,
+        pet: petAstroCat,
+        say: showSpeechBubble,
+        hideBubble: hideSpeechBubble,
         getPixelCatSVG: getPixelCatSVG,
-        bindHelperChips: bindHelperChips,
+        getAstroCatSVG: getAstroCatSVG,
+        bindHelperChips: bindTactileInteractions,
         initBackground: initArcadeBackground
     };
 
     function initAll() {
         injectStyleGuarantees();
         initArcadeBackground();
-        createFloatingWidget();
+        createAstroCatCopilot();
         createSoundToggle();
-        bindHelperChips();
+        bindTactileInteractions();
     }
 
     if (document.readyState === "loading") {
@@ -846,3 +2004,4 @@
         initAll();
     }
 })();
+
