@@ -127,11 +127,66 @@
                 </p>
             </section>
 
-            <!-- Section 4: Domain Exclusion -->
+            
+            <!-- Section 4: Industry & Regulatory Compliance Alignment -->
+            <section class="space-y-4">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    4. Regulatory Standards & Compliance Alignment
+                </h2>
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    Orbit Security's automated heuristics are explicitly mapped to recognized web security and email deliverability frameworks:
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
+                    <div class="p-4 rounded-xl bg-slate-900/90 border border-slate-800">
+                        <span class="text-emerald-400 font-bold block mb-1 font-pixel">Google & Yahoo 2024 Sender Mandates</span>
+                        <p class="text-slate-400 font-sans text-xs leading-relaxed">
+                            Automates mandatory verification of SPF alignment, DKIM signatures, and strict DMARC (<code class="text-emerald-300">p=quarantine</code> or <code class="text-emerald-300">p=reject</code>) to prevent bulk email rejection.
+                        </p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-900/90 border border-slate-800">
+                        <span class="text-cyan-400 font-bold block mb-1 font-pixel">PCI-DSS v4.0 Requirement 6.4.3 & 11.6.1</span>
+                        <p class="text-slate-400 font-sans text-xs leading-relaxed">
+                            Assists ecommerce agencies in confirming Content-Security-Policy (CSP) script authorization and HTTP header tampering shields across checkout perimeters.
+                        </p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-900/90 border border-slate-800">
+                        <span class="text-purple-400 font-bold block mb-1 font-pixel">OWASP Top 10 A05: Security Misconfiguration</span>
+                        <p class="text-slate-400 font-sans text-xs leading-relaxed">
+                            Continuously tracks dangling DNS pointers to decommissioned cloud assets (AWS S3, Shopify, Unbounce) to eliminate hostile subdomain takeovers.
+                        </p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-900/90 border border-slate-800">
+                        <span class="text-amber-400 font-bold block mb-1 font-pixel">FTC Safeguards & Cyber Insurance Hygiene</span>
+                        <p class="text-slate-400 font-sans text-xs leading-relaxed">
+                            Provides objective third-party monthly PDF audit documentation required by cyber insurance underwriters to substantiate proactive perimeter care.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 5: Agency Client Safe Harbor Contract Rider -->
+            <section class="space-y-4 pt-4 border-t border-slate-800">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        5. Agency-Client Safe Harbor Contract Rider (Copy-Paste for Agency MSAs)
+                    </h2>
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">AGENCY SHIELD</span>
+                </div>
+                <p class="text-xs text-slate-400">
+                    Agencies subscribing to Orbit Security may incorporate the following standard provision into their client Master Services Agreements (MSAs), Web Care Plans, or Maintenance SOWs to establish clear contractual authority:
+                </p>
+                <div class="p-4 rounded-xl bg-slate-900/90 border border-emerald-500/30 font-mono text-xs text-slate-300 relative group">
+                    <pre class="whitespace-pre-wrap leading-relaxed select-all">"Client authorizes Agency and its automated security telemetry partners (including Orbit Security) to conduct continuous, non-intrusive external perimeter reconnaissance, DNS authentication analysis (SPF/DKIM/DMARC), subdomain routing checks, and public HTTP header verification across Client's digital domains and staging properties. Client acknowledges that all surveillance is conducted passively or via standard RFC-compliant HTTP queries without payload execution or access-control bypasses, and serves solely to maintain attack surface hygiene."</pre>
+                </div>
+            </section>
+
+            <!-- Section 6: Domain Exclusion -->
             <section class="space-y-3">
                 <h2 class="text-lg font-bold text-white flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                    4. Domain Exclusion & Opt-Out Request
+                    6. Domain Exclusion & Opt-Out Request
                 </h2>
                 <p>
                     If you are the verified administrative contact of a domain and wish to permanently block your domain from being queried by Orbit Security users or our automated sentinel fleet, you may request immediate inclusion in our global exclusion registry.

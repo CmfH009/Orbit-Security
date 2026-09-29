@@ -1,4 +1,9 @@
-<!DOCTYPE html>
+import os
+
+OUTPUT_DOCS = os.path.join(os.path.dirname(__file__), "..", "docs", "index.html")
+OUTPUT_LANDING = os.path.join(os.path.dirname(__file__), "..", "landing", "index.html")
+
+html_content = '''<!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
@@ -1143,7 +1148,7 @@
         // Utility: Strict RFC 1123 / RFC 952 Domain Validator
         function isValidDomain(domain) {
             if (!domain || typeof domain !== 'string' || domain.length > 253) return false;
-            const domainRegex = /^(?!:\/\/)([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$/;
+            const domainRegex = /^(?!:\/\/)([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,63}$/;
             return domainRegex.test(domain);
         }
 
@@ -1209,7 +1214,7 @@
 
         // Hardened DNS-over-HTTPS (DoH) API Resolver with Timeout & Fallback
         async function queryDoH(name, type, timeoutMs = 4000) {
-            const cleanName = name.replace(/\.+$/, '');
+            const cleanName = name.replace(/\\.+$/, '');
             const endpoints = [
                 `https://dns.google/resolve?name=${encodeURIComponent(cleanName)}&type=${type}`,
                 `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(cleanName)}&type=${type}`
@@ -1248,19 +1253,19 @@
                 .filter(ans => ans.type === 16)
                 .map(ans => {
                     const raw = ans.data || '';
-                    return raw.replace(/(^"|"$)/g, '').replace(/"\s+"/g, '').trim();
+                    return raw.replace(/(^"|"$)/g, '').replace(/"\\s+"/g, '').trim();
                 });
         }
 
         // RFC 7489 Compliant DMARC Parser (Eliminates sp=reject Substring Collision Bug)
         function parseDmarcRecord(txtRecords) {
-            const dmarcRecord = txtRecords.find(t => /^v\s*=\s*DMARC1/i.test(t));
+            const dmarcRecord = txtRecords.find(t => /^v\\s*=\\s*DMARC1/i.test(t));
             if (!dmarcRecord) return null;
 
             const tags = {};
             const pairs = dmarcRecord.split(';');
             for (const pair of pairs) {
-                const match = pair.match(/^\s*([a-zA-Z0-9]+)\s*=\s*(.*?)\s*$/);
+                const match = pair.match(/^\\s*([a-zA-Z0-9]+)\\s*=\\s*(.*?)\\s*$/);
                 if (match) {
                     tags[match[1].toLowerCase()] = match[2];
                 }
@@ -1285,7 +1290,7 @@
 
         // RFC 7208 Compliant SPF Parser (Multiple-Record PermError & Qualifier Detection)
         function parseSpfRecords(txtRecords) {
-            const spfRecords = txtRecords.filter(t => /^v\s*=\s*spf1(?:\s|$)/i.test(t));
+            const spfRecords = txtRecords.filter(t => /^v\\s*=\\s*spf1(?:\\s|$)/i.test(t));
             if (spfRecords.length > 1) {
                 return {
                     status: 'critical',
@@ -1306,7 +1311,7 @@
             }
 
             const raw = spfRecords[0];
-            const terms = raw.split(/\s+/).slice(1);
+            const terms = raw.split(/\\s+/).slice(1);
 
             let allMechanism = null;
             let hasRedirect = false;
@@ -1316,7 +1321,7 @@
                     hasRedirect = true;
                     continue;
                 }
-                const match = term.match(/^([\+\-\~\?])?all$/i);
+                const match = term.match(/^([\\+\\-\\~\\?])?all$/i);
                 if (match) {
                     allMechanism = (match[1] || '+').toLowerCase();
                 }
@@ -1657,11 +1662,11 @@
 
             let rawInput = input.value.trim().toLowerCase();
             let domain = rawInput
-                .replace(/^https?:\/\//, '')
-                .replace(/\/.*$/, '')
-                .replace(/\?.*$/, '')
+                .replace(/^https?:\\/\\//, '')
+                .replace(/\\/.*$/, '')
+                .replace(/\\?.*$/, '')
                 .replace(/:\d+$/, '')
-                .replace(/\.+$/, '');
+                .replace(/\\.+$/, '');
 
             if (!isValidDomain(domain)) {
                 hud.classList.remove('hidden');
@@ -1674,7 +1679,7 @@
 
             // SSRF / Private IP / Localhost restriction
             if (domain === 'localhost' || domain.endsWith('.local') || domain.endsWith('.internal') ||
-                /^127\.|^10\.|^192\.168\.|^172\.(1[6-9]|2[0-9]|3[0-1])\.|^0\.|^169\.254\./.test(domain)) {
+                /^127\\.|^10\\.|^192\\.168\\.|^172\\.(1[6-9]|2[0-9]|3[0-1])\\.|^0\\.|^169\\.254\\./.test(domain)) {
                 hud.classList.remove('hidden');
                 hud.innerHTML = `
                     <div class="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono">
@@ -1767,7 +1772,7 @@
                     if (probeRes && probeRes.answer && probeRes.answer.length > 0) {
                         for (const ans of probeRes.answer) {
                             if (ans.type === 5) { // CNAME
-                                const cname = (ans.data || '').replace(/\.+$/, '').toLowerCase();
+                                const cname = (ans.data || '').replace(/\\.+$/, '').toLowerCase();
                                 cnameTarget = `${subName} → ${cname}`;
                                 
                                 for (const s of SAAS_TAKEOVER_PATTERNS) {
@@ -2012,3 +2017,14 @@
     </script>
 </body>
 </html>
+'''
+
+print(f"[*] Writing enhanced index.html to {OUTPUT_DOCS}...")
+with open(OUTPUT_DOCS, "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+print(f"[*] Syncing enhanced index.html to {OUTPUT_LANDING}...")
+with open(OUTPUT_LANDING, "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+print("[✓] Landing page updated successfully!")

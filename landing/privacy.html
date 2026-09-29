@@ -69,17 +69,25 @@
                 </p>
             </section>
 
-            <!-- Section 2 -->
+            <!-- Section 2: Zero-Server Scanning Guarantee -->
             <section class="space-y-3">
                 <h2 class="text-lg font-bold text-white flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                    2. Information We Collect
+                    2. Information We Collect & Zero-Server Scanning Guarantee
                 </h2>
+                <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 mb-3 space-y-1">
+                    <div class="font-bold uppercase tracking-wider flex items-center gap-1.5">
+                        <span>🛡️ Zero-Server Logging Guarantee for Browser Scans:</span>
+                    </div>
+                    <p class="text-slate-200">
+                        When you enter a domain into the Orbit Radar Terminal on our landing page or Fleet Command Center, the lookup is performed <strong>100% within your client browser</strong> using RFC 8484 DNS-over-HTTPS. Orbit Security's web servers never receive, store, or log the target domains you analyze.
+                    </p>
+                </div>
                 <ul class="list-disc pl-6 space-y-2 text-slate-300 text-xs">
                     <li><strong>Account & Contact Information:</strong> Your agency name, contact email address, and agency website when you contact us, request a sample report, or subscribe.</li>
-                    <li><strong>Payment Information:</strong> All financial transactions are handled directly through Stripe (PCI-DSS Service Provider Level 1). Orbit Security never accesses, processes, or stores your raw credit card numbers or banking credentials.</li>
-                    <li><strong>Target Domain Data:</strong> Apex domains and subdomains submitted for hygiene audits. We query public internet records (DNS, Certificate Transparency, public HTTP headers) to compile reports.</li>
-                    <li><strong>Technical Telemetry:</strong> Standard web server logs (IP address, browser user-agent) generated when loading web assets from GitHub Pages.</li>
+                    <li><strong>Financial & Transaction Data:</strong> All payments are processed directly by Stripe (PCI-DSS Service Provider Level 1). Orbit Security never accesses, processes, or stores your credit card numbers, CVVs, or bank account credentials.</li>
+                    <li><strong>Third-Party DNS Resolvers:</strong> Browser-based DoH lookups query public resolvers provided by Google Public DNS and Cloudflare (Cloudflare 1.1.1.1 guarantees 24-hour log purges and zero IP-to-query correlation).</li>
+                    <li><strong>Static Hosting Telemetry:</strong> Standard web server connection logs (IP address, browser user-agent) generated transiently by GitHub Pages infrastructure.</li>
                 </ul>
             </section>
 
@@ -98,15 +106,20 @@
                 </ul>
             </section>
 
-            <!-- Section 4: Cookies & Tracking -->
+            <!-- Section 4: Cookies, LocalStorage & Tracking -->
             <section class="space-y-3">
                 <h2 class="text-lg font-bold text-white flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                    4. Cookies, Analytics & Third-Party Trackers
+                    4. Cookies, Browser LocalStorage & Third-Party Trackers
                 </h2>
                 <p>
-                    Orbit Security is deployed as a static, privacy-first web application on GitHub Pages. <strong>We do not use third-party advertising tracking cookies, retargeting pixels (such as Meta Pixel or Google Ads trackers), or invasive session replay tools.</strong>
+                    Orbit Security adheres to strict privacy-first standards:
                 </p>
+                <ul class="list-disc pl-6 space-y-2 text-slate-300 text-xs">
+                    <li><strong>Zero Advertising Tracking Cookies:</strong> We do not deploy third-party advertising cookies, conversion tracking pixels (e.g., Meta Pixel, Google Ads), or invasive behavioral session recording software (e.g., Hotjar, FullStory).</li>
+                    <li><strong>HTML5 LocalStorage Usage:</strong> Our multi-domain Fleet Command Center (<code class="text-emerald-400">fleet.html</code>) utilizes browser <code class="text-emerald-400">window.localStorage</code> under the key <code class="text-emerald-400">orbit_fleet_registry_v2</code> solely to persist your client domain registry locally on your device between browser sessions. This data is never synchronized to Orbit Security servers. You can permanently delete this local data at any time by clearing your browser cache or clicking "Clear Fleet" in the application.</li>
+                    <li><strong>Client-Side PDF Compilation:</strong> All executive PDF deliverables generated via the "Export Branded PDF" feature are compiled purely in client RAM using <code class="text-emerald-400">pdf-lib</code>. No client logos, audit scores, or corporate identities are uploaded to third-party rendering clouds.</li>
+                </ul>
             </section>
 
             <!-- Section 5: GDPR & CCPA -->

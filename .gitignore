@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 .appdeploy
+credentials/
 
 # Python & Dependencies
 .venv/
@@ -34,5 +35,6 @@ Thumbs.db
 node_modules/
 reports/
 scratch/
+marketing/assets/
 
 
