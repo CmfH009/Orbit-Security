@@ -885,15 +885,19 @@
                 ctx.stroke();
             }
 
-            // Stationary Depth Grid Lines (Zero downward motion = No optical barber-pole shift)
-            ctx.strokeStyle = 'rgba(16, 185, 129, 0.22)';
-            ctx.shadowColor = '#10b981';
-            ctx.shadowBlur = 4;
-            ctx.lineWidth = 1;
-            for (let d = 1; d <= 8; d++) {
-                const progress = d / 8;
-                const lineY = horizonY + Math.pow(progress, 2.0) * (height - horizonY);
+            // Moving Horizontal Depth Laser Lines (Forward Synthwave Motion)
+            gridOffset = (gridOffset + 0.0035) % 1.0;
+            const depthLines = 9;
+            for (let d = 0; d <= depthLines; d++) {
+                const progress = (d + gridOffset) / depthLines;
+                if (progress <= 0.02 || progress > 1.0) continue;
+                const lineY = horizonY + Math.pow(progress, 2.2) * (height - horizonY);
                 if (lineY <= height) {
+                    const lineAlpha = 0.06 + Math.pow(progress, 1.4) * 0.35;
+                    ctx.strokeStyle = `rgba(16, 185, 129, ${lineAlpha})`;
+                    ctx.shadowColor = '#10b981';
+                    ctx.shadowBlur = 3 + progress * 6;
+                    ctx.lineWidth = 1 + progress * 1.5;
                     ctx.beginPath();
                     ctx.moveTo(0, lineY);
                     ctx.lineTo(width, lineY);
@@ -974,8 +978,25 @@
         laserDotEl.innerHTML = `
             <div class="laser-ring"></div>
             <div class="laser-core"></div>
+            <div class="laser-hint-pill">CLICK / ESC TO STOP</div>
         `;
         document.body.appendChild(laserDotEl);
+
+        // 2b. 60fps Video Recorder Banner for X Clips
+        const recBannerEl = document.createElement("div");
+        recBannerEl.id = "orbit-rec-banner";
+        recBannerEl.className = "fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-rose-950/95 border-2 border-rose-500 text-rose-200 font-mono text-xs flex items-center gap-3 shadow-[0_0_30px_rgba(244,63,94,0.6)] backdrop-blur-md hidden";
+        recBannerEl.innerHTML = `
+            <span class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                <span class="font-bold text-rose-300">REC FOR X</span>
+                <span id="orbit-rec-timer" class="px-1.5 py-0.5 rounded bg-black/60 text-white font-bold text-[10px]">00:00</span>
+            </span>
+            <button type="button" id="orbit-rec-finish-btn" class="px-3 py-1 rounded-full bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold text-[10px] transition-all cursor-pointer shadow-sm">
+                ⏹️ Save Clip
+            </button>
+        `;
+        document.body.appendChild(recBannerEl);
 
         // 3. Independent Fixed Viewport Speech Bubble (Never tilts with cat, never clips off-screen)
         const bubbleEl = document.createElement("div");
@@ -1028,13 +1049,20 @@
                         <span class="text-[9px] font-arcade text-emerald-400 tracking-wider">ASTRO-CAT</span>
                         <span class="text-[8px] font-mono px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">ONLINE</span>
                     </div>
-                    <div class="flex items-center gap-2 mt-0.5">
+                    <div class="flex items-center gap-2 mt-0.5 flex-wrap">
                         <button type="button" id="dock-launch-btn" class="text-[10px] font-mono font-bold text-emerald-400 hover:text-emerald-300 hover:underline flex items-center gap-0.5 cursor-pointer">
                             <span>🚀 Fly Zero-G</span>
                         </button>
                         <span class="text-slate-600 text-[10px]">•</span>
                         <button type="button" id="dock-decode-btn" class="text-[10px] font-mono text-slate-300 hover:text-white hover:underline cursor-pointer">
                             <span>📖 Jargon</span>
+                        </button>
+                        <span class="text-slate-600 text-[10px]">•</span>
+                        <button type="button" id="dock-rec-btn" class="text-[10px] font-mono font-bold text-cyan-400 hover:text-cyan-300 hover:underline cursor-pointer flex items-center gap-1" title="Record 60fps gameplay clip directly for X (Twitter)">
+                            <span>📹 Clip for X</span>
+                        </button>
+                        <button type="button" id="dock-laser-stop-btn" class="hidden text-[10px] font-mono font-bold text-rose-400 hover:text-rose-300 hover:underline cursor-pointer animate-pulse ml-0.5">
+                            <span>🛑 Stop Laser</span>
                         </button>
                     </div>
                 </div>
@@ -1066,26 +1094,41 @@
         });
 
         // Copilot HUD buttons
-        document.getElementById("hud-pet-btn").addEventListener("click", (e) => {
-            e.stopPropagation();
-            petAstroCat();
-        });
-        document.getElementById("hud-laser-btn").addEventListener("click", (e) => {
-            e.stopPropagation();
-            toggleLaserChase();
-        });
-        document.getElementById("hud-patrol-btn").addEventListener("click", (e) => {
-            e.stopPropagation();
-            startSpacePatrol();
-        });
-        document.getElementById("hud-decode-btn").addEventListener("click", (e) => {
-            e.stopPropagation();
-            showSimpleCatDialog("dmarc");
-        });
-        document.getElementById("hud-dock-btn").addEventListener("click", (e) => {
-            e.stopPropagation();
-            dockAstroCat();
-        });
+        const hudPet = document.getElementById("hud-pet-btn");
+        if (hudPet) {
+            hudPet.addEventListener("click", (e) => {
+                e.stopPropagation();
+                petAstroCat();
+            });
+        }
+        const hudLaser = document.getElementById("hud-laser-btn");
+        if (hudLaser) {
+            hudLaser.addEventListener("click", (e) => {
+                e.stopPropagation();
+                toggleLaserChase();
+            });
+        }
+        const hudPatrol = document.getElementById("hud-patrol-btn");
+        if (hudPatrol) {
+            hudPatrol.addEventListener("click", (e) => {
+                e.stopPropagation();
+                startSpacePatrol();
+            });
+        }
+        const hudDecode = document.getElementById("hud-decode-btn");
+        if (hudDecode) {
+            hudDecode.addEventListener("click", (e) => {
+                e.stopPropagation();
+                showSimpleCatDialog("dmarc");
+            });
+        }
+        const hudDock = document.getElementById("hud-dock-btn");
+        if (hudDock) {
+            hudDock.addEventListener("click", (e) => {
+                e.stopPropagation();
+                dockAstroCat();
+            });
+        }
         const bubbleClose = document.getElementById("astro-bubble-close");
         if (bubbleClose) {
             bubbleClose.addEventListener("click", (e) => {
@@ -1106,6 +1149,50 @@
                 }, 3500);
             });
         }
+
+        // Rec Clip for X button
+        const dockRecBtn = document.getElementById("dock-rec-btn");
+        if (dockRecBtn) {
+            dockRecBtn.addEventListener("click", () => {
+                toggleScreenRecording();
+            });
+        }
+
+        // Dock Stop Laser button
+        const dockLaserStopBtn = document.getElementById("dock-laser-stop-btn");
+        if (dockLaserStopBtn) {
+            dockLaserStopBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                stopLaserChase();
+            });
+        }
+
+        // Finish recording button on banner
+        const recFinishBtn = document.getElementById("orbit-rec-finish-btn");
+        if (recFinishBtn) {
+            recFinishBtn.addEventListener("click", () => {
+                stopScreenRecording();
+            });
+        }
+
+        // Click ANYWHERE to disengage laser chase easily!
+        window.addEventListener("pointerdown", (e) => {
+            if (copilot.laserActive) {
+                // If user clicks anywhere on the screen (except clicking the start laser button itself)
+                if (!e.target.closest('#hud-laser-btn') && !e.target.closest('#dock-laser-stop-btn') && !e.target.closest('#simple-cat-modal')) {
+                    stopLaserChase();
+                }
+            }
+        }, true);
+
+        // Escape or L key stops laser
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" || e.key === "l" || e.key === "L") {
+                if (copilot.laserActive) {
+                    stopLaserChase();
+                }
+            }
+        });
 
         // Pointer Drag & Toss Controls
         const catBody = document.getElementById("astro-cat-body");
@@ -1196,6 +1283,11 @@
         copilot.state = 'docked';
         copilot.laserActive = false;
         copilot.patrolActive = false;
+        clearTimeout(copilot.laserAutoStopTimer);
+        const dockLaserStop = document.getElementById("dock-laser-stop-btn");
+        if (dockLaserStop) dockLaserStop.classList.add("hidden");
+        const laserHudBtn = document.getElementById("hud-laser-btn");
+        if (laserHudBtn) laserHudBtn.classList.remove("astro-hud-btn-active");
         if (laserDotEl) laserDotEl.classList.add("hidden");
         clearPatrolThreats();
         hideSpeechBubble();
@@ -1226,23 +1318,156 @@
     }
 
     function toggleLaserChase() {
-        copilot.laserActive = !copilot.laserActive;
-        const btn = document.getElementById("hud-laser-btn");
-
         if (copilot.laserActive) {
-            copilot.state = 'laser';
-            if (btn) btn.classList.add("astro-hud-btn-active");
-            if (laserDotEl) {
-                laserDotEl.classList.remove("hidden");
-                laserDotEl.style.transform = `translate(${copilot.mouseX - 12}px, ${copilot.mouseY - 12}px)`;
+            stopLaserChase();
+            return;
+        }
+
+        copilot.laserActive = true;
+        copilot.state = 'laser';
+        const btn = document.getElementById("hud-laser-btn");
+        if (btn) btn.classList.add("astro-hud-btn-active");
+        const dockLaserStop = document.getElementById("dock-laser-stop-btn");
+        if (dockLaserStop) dockLaserStop.classList.remove("hidden");
+
+        if (laserDotEl) {
+            laserDotEl.classList.remove("hidden");
+            laserDotEl.style.transform = `translate(${copilot.mouseX - 12}px, ${copilot.mouseY - 12}px)`;
+        }
+        playPowerUp();
+        showSpeechBubble("Laser locked! Click anywhere, press ESC, or I'll catch my breath in 15s! 🎯");
+
+        // Auto-stop after 15 seconds so cat doesn't exhaust itself or trap the user
+        clearTimeout(copilot.laserAutoStopTimer);
+        copilot.laserAutoStopTimer = setTimeout(() => {
+            if (copilot.laserActive) {
+                stopLaserChase("Whew! Astro-Cat caught his breath. Good chase! 🐾");
             }
+        }, 15000);
+    }
+
+    function stopLaserChase(customMsg) {
+        if (!copilot.laserActive) return;
+        copilot.laserActive = false;
+        clearTimeout(copilot.laserAutoStopTimer);
+        copilot.state = 'floating';
+
+        const btn = document.getElementById("hud-laser-btn");
+        if (btn) btn.classList.remove("astro-hud-btn-active");
+        const dockLaserStop = document.getElementById("dock-laser-stop-btn");
+        if (dockLaserStop) dockLaserStop.classList.add("hidden");
+
+        if (laserDotEl) laserDotEl.classList.add("hidden");
+        playPurr();
+        showSpeechBubble(customMsg || "Laser disengaged! Floating smooth in zero-g. 😸");
+    }
+
+    // =========================================================================
+    // 6b. IN-BROWSER 60FPS SCREEN RECORDER ("CLIP FOR X")
+    // =========================================================================
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let recTimerInterval = null;
+    let recSeconds = 0;
+
+    async function toggleScreenRecording() {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+            stopScreenRecording();
+            return;
+        }
+        startScreenRecording();
+    }
+
+    async function startScreenRecording() {
+        try {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+                alert("In-browser recording requires displayMedia support. On Windows, you can also press Win+G or Win+Shift+R!");
+                return;
+            }
+
+            const stream = await navigator.mediaDevices.getDisplayMedia({
+                video: {
+                    displaySurface: "browser",
+                    frameRate: { ideal: 60, max: 60 }
+                },
+                audio: true
+            });
+
+            recordedChunks = [];
+            const mimeType = (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus"))
+                ? "video/webm;codecs=vp9,opus"
+                : ((typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported("video/webm")) ? "video/webm" : "");
+
+            mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) {
+                    recordedChunks.push(e.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                clearInterval(recTimerInterval);
+                const banner = document.getElementById("orbit-rec-banner");
+                if (banner) banner.classList.add("hidden");
+                const dockRecBtn = document.getElementById("dock-rec-btn");
+                if (dockRecBtn) dockRecBtn.innerHTML = '<span>📹 Clip for X</span>';
+
+                stream.getTracks().forEach(track => track.stop());
+
+                if (recordedChunks.length === 0) return;
+
+                const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || "video/webm" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.style.display = "none";
+                a.href = url;
+                const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+                a.download = `orbit-security-astro-cat-${timestamp}.webm`;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                }, 100);
+
+                playCoin();
+                showSpeechBubble("🎬 Clip saved! Ready to post on X (Twitter)! 🚀");
+            };
+
+            stream.getVideoTracks()[0].onended = () => {
+                if (mediaRecorder && mediaRecorder.state === "recording") {
+                    mediaRecorder.stop();
+                }
+            };
+
+            mediaRecorder.start(250);
+            recSeconds = 0;
+            const banner = document.getElementById("orbit-rec-banner");
+            const timerEl = document.getElementById("orbit-rec-timer");
+            if (banner) banner.classList.remove("hidden");
+            if (timerEl) timerEl.textContent = "00:00";
+
+            recTimerInterval = setInterval(() => {
+                recSeconds++;
+                const mins = String(Math.floor(recSeconds / 60)).padStart(2, "0");
+                const secs = String(recSeconds % 60).padStart(2, "0");
+                if (timerEl) timerEl.textContent = `${mins}:${secs}`;
+            }, 1000);
+
+            const dockRecBtn = document.getElementById("dock-rec-btn");
+            if (dockRecBtn) dockRecBtn.innerHTML = '<span class="text-rose-400 animate-pulse">⏹️ Stop Rec</span>';
+
             playPowerUp();
-            showSpeechBubble("Laser tracker locked! Move your mouse, I'm on it! 🎯");
-        } else {
-            copilot.state = 'floating';
-            if (btn) btn.classList.remove("astro-hud-btn-active");
-            if (laserDotEl) laserDotEl.classList.add("hidden");
-            playBlip();
+            showSpeechBubble("🎥 Recording 60fps clip! Do some flips & stop when ready!");
+        } catch (err) {
+            console.warn("Screen recording cancelled or failed:", err);
+        }
+    }
+
+    function stopScreenRecording() {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+            mediaRecorder.stop();
         }
     }
 
@@ -1663,7 +1888,7 @@
         const style = document.createElement("style");
         style.id = "simple-cat-injected-styles";
         style.innerHTML = `
-            #simple-cat-modal.hidden, #astro-cat-copilot.hidden, #astro-speech-bubble.hidden, #astro-laser-dot.hidden {
+            #simple-cat-modal.hidden, #astro-cat-copilot.hidden, #astro-speech-bubble.hidden, #astro-laser-dot.hidden, #orbit-rec-banner.hidden, #dock-laser-stop-btn.hidden {
                 display: none !important;
             }
             #retro-arcade-canvas {
@@ -1924,6 +2149,25 @@
                 100% { transform: rotate(360deg); }
             }
 
+            .laser-hint-pill {
+                position: absolute;
+                top: 26px;
+                left: 50%;
+                transform: translateX(-50%);
+                background-color: rgba(15, 23, 42, 0.94);
+                border: 1px solid #06b6d4;
+                color: #67e8f9;
+                font-family: monospace;
+                font-size: 8px;
+                font-weight: bold;
+                padding: 2px 7px;
+                border-radius: 9999px;
+                white-space: nowrap;
+                pointer-events: none;
+                box-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
+                letter-spacing: 0.05em;
+            }
+
             /* Threat Bug Chips for Patrol Mini-Game */
             .astro-threat-chip {
                 padding: 6px 10px;
@@ -1975,6 +2219,9 @@
         launchZeroG: launchAstroCatIntoZeroG,
         dock: dockAstroCat,
         laserChase: toggleLaserChase,
+        stopLaser: stopLaserChase,
+        recordClip: toggleScreenRecording,
+        stopRecording: stopScreenRecording,
         patrol: startSpacePatrol,
         pet: petAstroCat,
         say: showSpeechBubble,
