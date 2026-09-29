@@ -34,6 +34,7 @@ Thumbs.db
 # Node dependencies & Generated reports
 node_modules/
 reports/
+daily_briefings/
 scratch/
 marketing/assets/
 
