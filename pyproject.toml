@@ -36,5 +36,7 @@ orbit-recon = "orbit_security.cli:main_recon"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
 
 
