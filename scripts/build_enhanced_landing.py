@@ -1296,25 +1296,139 @@ html_content = '''<!DOCTYPE html>
                 </p>
             </div>
 
-            <!-- Safe Harbor Contract Rider Copy Block -->
-            <div class="mb-8 p-6 rounded-2xl bg-slate-900/90 border-2 border-emerald-500/40 shadow-xl card-glass-emerald">
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 pb-4 border-b border-slate-800">
-                    <div>
-                        <div class="flex items-center gap-2 text-white font-bold text-base">
-                            <span class="text-emerald-400 text-lg">📜</span>
-                            <span>Agency-Client Safe Harbor Contract Rider</span>
-                        </div>
-                        <p class="text-xs text-slate-400 mt-0.5">
-                            Copy and paste this standard 1-paragraph clause directly into your Master Services Agreements (MSAs) or Web Care SOWs.
-                        </p>
-                    </div>
-                    <button type="button" id="copy-rider-btn" onclick="copyLegalRider()" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-900 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 text-xs font-arcade uppercase transition-all flex items-center gap-2 flex-shrink-0 pixel-btn shadow-sm">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                        <span>COPY CONTRACT RIDER</span>
+            <!-- Interactive Legal Tabs & Document Viewer -->
+            <div class="mb-8 p-5 sm:p-6 rounded-2xl bg-slate-900/90 border-2 border-emerald-500/40 shadow-xl card-glass-emerald">
+                <!-- Tab Selector Buttons -->
+                <div class="flex items-center gap-2 overflow-x-auto pb-3 mb-4 border-b border-slate-800 text-[11px] font-arcade scrollbar-thin">
+                    <button type="button" onclick="switchLegalTab('rider')" id="legal-tab-rider" class="legal-tab-btn px-3 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold transition-all whitespace-nowrap flex items-center gap-1.5 shadow-sm cursor-pointer">
+                        <span>📜</span> <span>Contract Rider</span>
+                    </button>
+                    <button type="button" onclick="switchLegalTab('terms')" id="legal-tab-terms" class="legal-tab-btn px-3 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-emerald-400 hover:bg-slate-700/60 transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer">
+                        <span>📄</span> <span>Terms of Service</span>
+                    </button>
+                    <button type="button" onclick="switchLegalTab('privacy')" id="legal-tab-privacy" class="legal-tab-btn px-3 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-emerald-400 hover:bg-slate-700/60 transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer">
+                        <span>🔒</span> <span>Privacy Policy</span>
+                    </button>
+                    <button type="button" onclick="switchLegalTab('disclaimer')" id="legal-tab-disclaimer" class="legal-tab-btn px-3 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-emerald-400 hover:bg-slate-700/60 transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer">
+                        <span>🛡️</span> <span>RFC Disclaimer</span>
+                    </button>
+                    <button type="button" onclick="switchLegalTab('refunds')" id="legal-tab-refunds" class="legal-tab-btn px-3 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-emerald-400 hover:bg-slate-700/60 transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer">
+                        <span>💰</span> <span>30-Day Guarantee</span>
                     </button>
                 </div>
-                <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 font-mono text-xs text-slate-300 leading-relaxed select-all">
-                    "Client authorizes Agency and its designated automated surveillance sentinels (Orbit Security) to perform continuous, non-invasive perimeter telemetry queries (including RFC 1035/8484 DNS-over-HTTPS records, SSL/TLS certificate transparency logs, and public HTTP security headers) on Client-owned web domains for the sole purpose of identifying security misconfigurations, email authentication posture (SPF/DKIM/DMARC), and subdomain exposure. All telemetry is passive, causes zero system degradation, and conforms to Computer Fraud and Abuse Act (CFAA §1030) authorized assessment guidelines."
+
+                <!-- Tab 1: Contract Rider (Default) -->
+                <div id="legal-content-rider" class="legal-content-pane">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-3">
+                        <div>
+                            <h3 class="text-white font-bold text-base flex items-center gap-2">
+                                <span class="text-emerald-400 text-lg">📜</span>
+                                <span>Agency-Client Safe Harbor Contract Rider</span>
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-0.5">
+                                Copy and paste this standard 1-paragraph clause directly into your Master Services Agreements (MSAs) or Web Care SOWs.
+                            </p>
+                        </div>
+                        <button type="button" id="copy-rider-btn" onclick="copyLegalRider()" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-900 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 text-xs font-arcade uppercase transition-all flex items-center gap-2 flex-shrink-0 pixel-btn shadow-sm cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            <span>COPY CONTRACT RIDER</span>
+                        </button>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 font-mono text-xs text-slate-300 leading-relaxed select-all">
+                        "Client authorizes Agency and its designated automated surveillance sentinels (Orbit Security) to perform continuous, non-invasive perimeter telemetry queries (including RFC 1035/8484 DNS-over-HTTPS records, SSL/TLS certificate transparency logs, and public HTTP security headers) on Client-owned web domains for the sole purpose of identifying security misconfigurations, email authentication posture (SPF/DKIM/DMARC), and subdomain exposure. All telemetry is passive, causes zero system degradation, and conforms to Computer Fraud and Abuse Act (CFAA §1030) authorized assessment guidelines."
+                    </div>
+                </div>
+
+                <!-- Tab 2: Terms of Service Summary -->
+                <div id="legal-content-terms" class="legal-content-pane hidden">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-3">
+                        <div>
+                            <h3 class="text-white font-bold text-base flex items-center gap-2">
+                                <span class="text-emerald-400 text-lg">📄</span>
+                                <span>Terms of Service Summary</span>
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-0.5">
+                                Commercial white-labeling rights, target authorization warranty, and liability caps.
+                            </p>
+                        </div>
+                        <a href="terms.html" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-emerald-500 text-emerald-400 text-xs font-arcade uppercase transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer">
+                            <span>READ FULL TERMS &rarr;</span>
+                        </a>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 space-y-3 leading-relaxed">
+                        <p><strong>1. White-Label Commercial License:</strong> Active subscribers receive a perpetual, worldwide license to rebrand, customize with agency logos/palettes, and deliver monthly executive audit PDFs to direct agency clients.</p>
+                        <p><strong>2. Target Authorization:</strong> Agency warrants that all submitted client domains are legally owned by agency or under authorized care/maintenance contract.</p>
+                        <p><strong>3. Liability Cap:</strong> Capped at total fees paid during preceding 12 months. All monitoring is passive non-invasive reconnaissance.</p>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Privacy Policy Summary -->
+                <div id="legal-content-privacy" class="legal-content-pane hidden">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-3">
+                        <div>
+                            <h3 class="text-white font-bold text-base flex items-center gap-2">
+                                <span class="text-cyan-400 text-lg">🔒</span>
+                                <span>Privacy Policy Summary</span>
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-0.5">
+                                Zero server retention of client audit logs. 100% in-browser RAM PDF generation.
+                            </p>
+                        </div>
+                        <a href="privacy.html" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-cyan-400 text-cyan-400 text-xs font-arcade uppercase transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer">
+                            <span>READ FULL PRIVACY &rarr;</span>
+                        </a>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 space-y-3 leading-relaxed">
+                        <p><strong>1. Zero Data Retention:</strong> Client domain audit results are processed in-memory in your local browser session. We do not store or sell client domain telemetry.</p>
+                        <p><strong>2. In-Browser PDF Compilation:</strong> Executive PDFs are compiled entirely in client RAM using <code class="text-cyan-400 font-mono">pdf-lib</code>. No documents are uploaded to third-party rendering clouds.</p>
+                        <p><strong>3. Stripe Security:</strong> Billing data is handled directly by Stripe (PCI-DSS Level 1 certified). No credit card details are ever stored on Orbit servers.</p>
+                    </div>
+                </div>
+
+                <!-- Tab 4: RFC Disclaimer Summary -->
+                <div id="legal-content-disclaimer" class="legal-content-pane hidden">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-3">
+                        <div>
+                            <h3 class="text-white font-bold text-base flex items-center gap-2">
+                                <span class="text-purple-400 text-lg">🛡️</span>
+                                <span>RFC Passive Scan Disclaimer Summary</span>
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-0.5">
+                                Strict adherence to open standards (RFC 1035 / RFC 8484) and CFAA §1030 safe harbor.
+                            </p>
+                        </div>
+                        <a href="disclaimer.html" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-purple-400 text-purple-400 text-xs font-arcade uppercase transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer">
+                            <span>READ FULL DISCLAIMER &rarr;</span>
+                        </a>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 space-y-3 leading-relaxed">
+                        <p><strong>1. Passive Reconnaissance Only:</strong> All queries use standard public DNS lookups and public HTTP security headers. No exploitation or fuzzing payloads.</p>
+                        <p><strong>2. Zero Impact on Target Servers:</strong> Inspection queries impose less load than a single human page visit.</p>
+                        <p><strong>3. DOJ CFAA Safe Harbor:</strong> Aligns with U.S. DOJ charging policy protecting good-faith defensive security research.</p>
+                    </div>
+                </div>
+
+                <!-- Tab 5: Refund & Guarantee Policy Summary -->
+                <div id="legal-content-refunds" class="legal-content-pane hidden">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-3">
+                        <div>
+                            <h3 class="text-white font-bold text-base flex items-center gap-2">
+                                <span class="text-amber-400 text-lg">💰</span>
+                                <span>30-Day Money-Back Guarantee &amp; Cancellation</span>
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-0.5">
+                                100% risk-free trial for agencies, 1-click Stripe cancellation, prompt refunds.
+                            </p>
+                        </div>
+                        <a href="refunds.html" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-400 text-amber-400 text-xs font-arcade uppercase transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer">
+                            <span>READ FULL REFUNDS &rarr;</span>
+                        </a>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 space-y-3 leading-relaxed">
+                        <p><strong>1. 30-Day Full Refund:</strong> If Orbit Security doesn't help your agency close a security retainer, email <code class="text-amber-400 font-mono">carsonmail009@gmail.com</code> within 30 days for an immediate 100% refund.</p>
+                        <p><strong>2. 1-Click Cancellation:</strong> Cancel anytime via the self-serve Stripe customer portal link in every receipt. No dark patterns.</p>
+                        <p><strong>3. Zero Long-Term Contracts:</strong> Monthly subscriptions can be paused or canceled at will.</p>
+                    </div>
                 </div>
             </div>
 
@@ -2619,6 +2733,25 @@ html_content = '''<!DOCTYPE html>
             } else {
                 prompt('Copy Agency Safe Harbor Contract Rider:', riderText);
             }
+        }
+
+        // Interactive Legal Section Tab Controller
+        function switchLegalTab(tabKey) {
+            if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
+            const tabs = ['rider', 'terms', 'privacy', 'disclaimer', 'refunds'];
+            tabs.forEach(t => {
+                const btn = document.getElementById('legal-tab-' + t);
+                const content = document.getElementById('legal-content-' + t);
+                if (btn && content) {
+                    if (t === tabKey) {
+                        btn.className = 'legal-tab-btn px-3 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold transition-all whitespace-nowrap flex items-center gap-1.5 shadow-sm cursor-pointer';
+                        content.classList.remove('hidden');
+                    } else {
+                        btn.className = 'legal-tab-btn px-3 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-emerald-400 hover:bg-slate-700/60 transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer';
+                        content.classList.add('hidden');
+                    }
+                }
+            });
         }
 
     </script>

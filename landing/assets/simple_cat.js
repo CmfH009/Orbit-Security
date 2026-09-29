@@ -739,6 +739,31 @@
         style.id = "simple-cat-injected-styles";
         style.innerHTML = `
             .hidden { display: none !important; }
+            main, footer, header, section, article {
+                position: relative !important;
+                z-index: 10 !important;
+            }
+            header {
+                z-index: 50 !important;
+            }
+            #retro-arcade-canvas {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                z-index: 0 !important;
+                pointer-events: none !important;
+            }
+            #retro-scanlines {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                z-index: 1 !important;
+                pointer-events: none !important;
+            }
             #simple-cat-modal {
                 display: none;
                 position: fixed !important;

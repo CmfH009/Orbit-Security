@@ -53,3 +53,9 @@
 .neon-border-pulse {
   animation: neonBorderPulse 3.5s ease-in-out infinite;
 }
+
+/* Stacking Order Guarantee: Ensure page content is always above background canvas */
+main, footer {
+  position: relative;
+  z-index: 10;
+}
