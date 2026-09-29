@@ -7,7 +7,7 @@ import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from scripts.daily_briefing import query_daemon_health, query_inbox_pipeline
+from scripts.daily_briefing import query_daemon_health, query_inbox_pipeline, dispatch_email_briefing, generate_briefing
 from scripts.setup_custom_domain import configure_domain
 
 
@@ -60,3 +60,20 @@ def test_configure_domain():
         with open(fake_cname, "r", encoding="utf-8") as f:
             content = f.read().strip()
             assert content == "testorbit.io"
+
+
+def test_dispatch_email_briefing_success():
+    with patch("orbit_security.mailer.EmailDispatcher.is_configured", return_value=True):
+        with patch("orbit_security.mailer.EmailDispatcher.send_email", return_value=True) as mock_send:
+            res = dispatch_email_briefing("# Test Report", recipient="test@example.com")
+            assert res is True
+            mock_send.assert_called_once()
+            args, kwargs = mock_send.call_args
+            assert kwargs.get("recipient_email") == "test@example.com"
+            assert kwargs.get("body_text") == "# Test Report"
+
+
+def test_dispatch_email_briefing_unconfigured():
+    with patch("orbit_security.mailer.EmailDispatcher.is_configured", return_value=False):
+        res = dispatch_email_briefing("# Test Report")
+        assert res is False

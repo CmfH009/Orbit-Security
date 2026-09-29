@@ -14,10 +14,38 @@ import os
 import subprocess
 import sys
 import urllib.request
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+
 load_dotenv()
+
+
+def dispatch_email_briefing(report_markdown: str, recipient: Optional[str] = None) -> bool:
+    """Dispatches the daily operational briefing to operator email via EmailDispatcher."""
+    try:
+        from orbit_security.mailer import EmailDispatcher
+        dispatcher = EmailDispatcher()
+        if not dispatcher.is_configured():
+            print("[!] Email dispatch skipped: SMTP not fully configured.")
+            return False
+
+        target_email = recipient or os.getenv("DEFAULT_AGENCY_EMAIL") or os.getenv("SMTP_USER") or "carsonmail009@gmail.com"
+        subject = f"Orbit Security Daily Operational Briefing - {datetime.date.today().strftime('%Y-%m-%d')}"
+
+        sent = dispatcher.send_email(
+            recipient_email=target_email,
+            subject=subject,
+            body_text=report_markdown,
+        )
+        if sent:
+            print(f"[✔] Daily briefing email dispatched to {target_email}")
+            return True
+        return False
+    except Exception as e:
+        print(f"[!] Email dispatch error: {e}")
+        return False
 
 
 def query_stripe_telemetry() -> Dict[str, Any]:
@@ -133,7 +161,7 @@ def query_campaign_outreach() -> Dict[str, Any]:
     }
 
 
-def generate_briefing(speak: bool = False):
+def generate_briefing(speak: bool = False, email: bool = False, recipient: Optional[str] = None):
     today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     stripe = query_stripe_telemetry()
     daemon = query_daemon_health()
@@ -193,12 +221,19 @@ def generate_briefing(speak: bool = False):
     print(report)
     print(f"\n[✔] Written to {report_path}")
 
+    # Email delivery
+    if email:
+        dispatch_email_briefing(report, recipient=recipient)
+
+    dispatched_total = campaigns.get("dispatched_count", 0)
+    staged_total = campaigns.get("staged_count", 0)
+
     # Spoken debrief text
     spoken_summary = (
         f"Good morning Carson! Nova here with your Orbit Security morning briefing. "
         f"All systems are green. Your Sentinel daemon is running smoothly under PID {daemon.get('sentinel_pid')}. "
-        f"Your cold outreach pipeline has dispatched 15 premier agencies with custom security audits, "
-        f"and 11 additional Cohort 4 audits are pre-staged and ready to fire. "
+        f"Your cold outreach pipeline has dispatched {dispatched_total} premier agencies with custom security audits, "
+        f"and {staged_total} agency portfolios are staged in your pipeline. "
         f"Your inbox listener is actively monitoring for incoming client replies. "
         f"And your 10 dollar Meta Ad blueprint is locked and loaded for when your NVIDIA funds clear. "
         f"We are all systems go!"
@@ -213,8 +248,11 @@ def generate_briefing(speak: bool = False):
 def main():
     parser = argparse.ArgumentParser(description="Orbit Security Daily Briefing")
     parser.add_argument("--speak", action="store_true", help="Speak the debrief aloud in Nova's voice")
+    parser.add_argument("--email", action="store_true", help="Dispatch briefing to operator email")
+    parser.add_argument("--recipient", type=str, default=None, help="Custom recipient email address")
     args = parser.parse_args()
-    generate_briefing(speak=args.speak)
+    generate_briefing(speak=args.speak, email=args.email, recipient=args.recipient)
+
 
 
 if __name__ == "__main__":

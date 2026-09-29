@@ -34,4 +34,7 @@ orbit-security = "orbit_security.cli:main"
 agency-sentry = "orbit_security.cli:main"
 orbit-recon = "orbit_security.cli:main_recon"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 
