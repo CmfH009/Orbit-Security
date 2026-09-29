@@ -326,7 +326,7 @@
             </div>
 
             <!-- Simple Cat Hero Telemetry Briefing Card (Stabilized) -->
-            <div onclick="SimpleCat.explain('dmarc')" class="max-w-xl mx-auto mb-8 bg-slate-900/90 border-2 border-emerald-500/60 rounded-xl p-4 flex items-center gap-4 text-left cursor-pointer hover:border-emerald-400 hover:shadow-[0_0_25px_rgba(16,185,129,0.3)] transition-all card-glass card-glass-emerald group" title="Click to talk with Simple Cat">
+            <div onclick="if(window.SimpleCat){ SimpleCat.playBlip(); SimpleCat.explain('audit'); }" class="max-w-xl mx-auto mb-8 bg-slate-900/90 border-2 border-emerald-500/60 rounded-xl p-4 flex items-center gap-4 text-left cursor-pointer hover:border-emerald-400 hover:shadow-[0_0_25px_rgba(16,185,129,0.3)] transition-all card-glass card-glass-emerald group" title="Click to view Simple Cat breakdown of $250/mo Retainers">
                 <div class="p-2 bg-slate-950 border border-emerald-500/40 group-hover:border-emerald-400 rounded-lg flex-shrink-0 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="image-rendering: pixelated;">
                         <path d="M4 3H7V6H4V3ZM17 3H20V6H17V3Z" fill="#10b981"/>
@@ -384,7 +384,7 @@
                             <input 
                                 type="text" 
                                 id="targetDomain" 
-                                placeholder="Enter client domain (e.g. clientbrand.com)" 
+                                placeholder="Enter client domain (e.g. clientbrand.com) — Press Enter ↵" 
                                 required
                                 autocomplete="off"
                                 autocapitalize="none"
@@ -423,6 +423,7 @@
                         <button type="button" onclick="if(window.SimpleCat) SimpleCat.playBlip(); setScanTarget('shopify.com')" class="min-h-[44px] px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 hover:text-emerald-400 transition-colors pixel-btn flex items-center justify-center">shopify.com</button>
                         <button type="button" onclick="if(window.SimpleCat) SimpleCat.playBlip(); setScanTarget('unbounce.com')" class="min-h-[44px] px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 hover:text-emerald-400 transition-colors pixel-btn flex items-center justify-center">unbounce.com</button>
                         <button type="button" onclick="if(window.SimpleCat) SimpleCat.playBlip(); setScanTarget('github.io')" class="min-h-[44px] px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 hover:text-emerald-400 transition-colors pixel-btn flex items-center justify-center">github.io</button>
+                        <button type="button" onclick="if(window.SimpleCat) SimpleCat.playBlip(); setScanTarget('10up.com')" class="min-h-[44px] px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 hover:text-emerald-400 transition-colors pixel-btn flex items-center justify-center">10up.com</button>
                     </div>
 
                     <!-- Live HUD Results Container -->
@@ -493,6 +494,9 @@
                             </button>
                             <button type="button" onclick="setBrandColor('indigo')" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-slate-950 border border-slate-700 hover:border-indigo-400 flex items-center justify-center transition-all cursor-pointer" title="Indigo Palette" aria-label="Select Indigo Palette">
                                 <span class="w-4 h-4 rounded-full bg-indigo-500"></span>
+                            </button>
+                            <button type="button" onclick="setBrandColor('violet')" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-slate-950 border border-slate-700 hover:border-purple-400 flex items-center justify-center transition-all cursor-pointer" title="Violet Palette" aria-label="Select Violet Palette">
+                                <span class="w-4 h-4 rounded-full bg-purple-500"></span>
                             </button>
                         </div>
                     </div>
@@ -960,7 +964,7 @@
         <div class="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
             <!-- Header Block -->
             <div class="text-center max-w-3xl mx-auto mb-8 sm:mb-10">
-                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border-2 border-emerald-500/60 text-emerald-400 text-xs font-pixel mb-4 shadow-[0_0_20px_rgba(16,185,129,0.25)] pixel-btn cursor-pointer" onclick="if(window.SimpleCat) SimpleCat.playPowerup()">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border-2 border-emerald-500/60 text-emerald-400 text-xs font-pixel mb-4 shadow-[0_0_20px_rgba(16,185,129,0.25)] pixel-btn cursor-pointer" onclick="if(window.SimpleCat) SimpleCat.playPowerUp()">
                     <span class="text-base">🐱</span>
                     <span>SIMPLE CAT // INTERACTIVE LAYMAN DECODER</span>
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
@@ -1100,7 +1104,7 @@
                     <button type="button" onclick="SimpleCat.explain('doh')" class="px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 border border-cyan-500/50 text-xs font-mono text-cyan-400 transition-all pixel-btn">
                         Explain: DoH Security
                     </button>
-                    <button type="button" onclick="SimpleCat.playPowerup(); SimpleCat.explain('audit')" class="px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs font-mono hover:bg-emerald-400 transition-all pixel-btn">
+                    <button type="button" onclick="SimpleCat.playPowerUp(); SimpleCat.explain('audit')" class="px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs font-mono hover:bg-emerald-400 transition-all pixel-btn">
                         ⭐ Explain: $250 Agency Retainer
                     </button>
                 </div>
@@ -1493,6 +1497,43 @@
                 </div>
                 <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-3">Simple, Transparent Retainer Pricing</h2>
                 <p class="text-slate-400 text-sm sm:text-base">Justify an extra $200–$500/month per client on your care plans while Orbit Security does all the heavy lifting.</p>
+            </div>
+
+            <!-- Agency Retainer ROI & Unit Economics Matrix -->
+            <div class="mb-10 p-5 sm:p-6 rounded-2xl bg-slate-900/90 border-2 border-emerald-500/50 shadow-2xl card-glass-emerald">
+                <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                    <div>
+                        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-[10px] font-bold uppercase tracking-wider mb-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span>THE AGENCY RETAINER MULTIPLIER // UNIT ECONOMICS</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white tracking-tight">How One Client Covers Your Entire Stack 4x Over</h3>
+                    </div>
+                    <div class="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-mono text-xs font-bold whitespace-nowrap">
+                        ★ Average Agency Retainer: $250/mo per client
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5 text-center sm:text-left">
+                    <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                        <div class="text-[10px] font-arcade text-slate-400 uppercase mb-1">1 Client Enrolled</div>
+                        <div class="text-2xl font-extrabold text-white font-sans">$3,000<span class="text-xs text-slate-400 font-normal">/yr</span></div>
+                        <div class="text-xs text-emerald-400 font-mono mt-1 font-semibold">+$2,292/yr Net Profit</div>
+                        <p class="text-[11px] text-slate-400 mt-1 leading-snug">Pays for your $59/mo Growth plan 4x over from a single website care plan.</p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-950/80 border border-emerald-500/40 relative shadow-lg shadow-emerald-500/10">
+                        <div class="absolute -top-2.5 right-3 px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-arcade text-[8px] font-bold uppercase">SWEET SPOT</div>
+                        <div class="text-[10px] font-arcade text-emerald-400 uppercase mb-1">5 Clients Enrolled</div>
+                        <div class="text-2xl font-extrabold text-emerald-400 font-sans">$15,000<span class="text-xs text-slate-300 font-normal">/yr</span></div>
+                        <div class="text-xs text-emerald-300 font-mono mt-1 font-semibold">+$14,292/yr Net Profit</div>
+                        <p class="text-[11px] text-slate-400 mt-1 leading-snug">2,018% ROI with zero extra engineer payroll or manual checklist drafting.</p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-950/80 border border-cyan-500/40 shadow-lg shadow-cyan-500/10">
+                        <div class="text-[10px] font-arcade text-cyan-400 uppercase mb-1">10 Clients Enrolled</div>
+                        <div class="text-2xl font-extrabold text-cyan-400 font-sans">$30,000<span class="text-xs text-slate-300 font-normal">/yr</span></div>
+                        <div class="text-xs text-cyan-300 font-mono mt-1 font-semibold">+$29,292/yr Net Profit</div>
+                        <p class="text-[11px] text-slate-400 mt-1 leading-snug">Predictable high-margin recurring retainer MRR deposited directly into Stripe.</p>
+                    </div>
+                </div>
             </div>
 
             <div class="pricing-grid grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 items-stretch">
@@ -1984,6 +2025,9 @@
             } else if (color === 'indigo') {
                 currentBrandColorHex = '#6366F1';
                 badge.className += 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-400';
+            } else if (color === 'violet') {
+                currentBrandColorHex = '#A855F7';
+                badge.className += 'bg-purple-500/10 border border-purple-500/30 text-purple-400';
             } else {
                 currentBrandColorHex = '#10B981';
                 badge.className += 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400';

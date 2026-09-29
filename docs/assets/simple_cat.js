@@ -145,6 +145,19 @@
             analogy: "When an email leaves your Google server to travel to your client's Microsoft Outlook server, it passes through internet routers. Without MTA-STS, a rogue actor could trick the servers into downgrading to unencrypted text (STARTTLS stripping) and eavesdrop on private contracts. MTA-STS guarantees that the entire tunnel between Google and Microsoft is shielded with unbreakable encryption.",
             walletRisk: "Protects sensitive client contracts, non-disclosure agreements, and wire instructions from intermediate wiretapping.",
             howToFix: "Host an mta-sts.txt policy file over HTTPS and add a TXT DNS record for '_mta-sts.yourdomain.com'. Orbit verifies your mail route security automatically."
+        },
+        audit: {
+            title: "Retainer Audit: The Monthly Passport",
+            tag: "EXECUTIVE CLIENT PROOF",
+            acronym: "White-Label Perimeter Security Stewardship",
+            acronymBreakdown: [
+                { term: "White-Label", meaning: "Branded with your agency's logo and color palette with zero mention of Orbit Security." },
+                { term: "Executive Audit", meaning: "A clean, jargon-free 1-page report translating technical DNS health into business security." },
+                { term: "Stewardship", meaning: "Proving your agency actively guards the client's perimeter 24/7 without pulling senior devs off billable sprints." }
+            ],
+            analogy: "When an architect builds a skyscraper, the building owner can't see the steel rebar deep inside the concrete. If the architect never sends an inspection report, the owner eventually asks: 'Why do we need building maintenance?' A monthly executive audit is like a certified structural safety certificate delivered to your client's desk on the 1st of every month. It proves their perimeter is locked tight, making your $250/mo retainer the easiest invoice they approve all year.",
+            walletRisk: "Without tangible monthly deliverables, non-technical clients forget about invisible backend maintenance. When renewal time comes, they cut maintenance contracts because they don't see what they're paying for.",
+            howToFix: "Activate Orbit Security, enter your agency name, and let automated executive PDF audits generate on the 1st of every month ready to deliver to your clients."
         }
     };
 
@@ -278,6 +291,7 @@
                             <option value="csp">CSP (The House Rules)</option>
                             <option value="bimi">BIMI (The Verified Badge)</option>
                             <option value="mta_sts">MTA-STS (The Tunnel Shield)</option>
+                            <option value="audit">Retainer Audit (Monthly Proof)</option>
                         </select>
                     </div>
                 </div>
@@ -812,6 +826,7 @@
         playBlip: playBlip,
         playChirp: playChirp,
         playPowerUp: playPowerUp,
+        playPowerup: playPowerUp,
         getPixelCatSVG: getPixelCatSVG,
         bindHelperChips: bindHelperChips,
         initBackground: initArcadeBackground
