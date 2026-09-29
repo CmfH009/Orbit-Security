@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self' https://dns.google https://cloudflare-dns.com https://buy.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self';">
     <title>Fleet Command Center | Orbit Security</title>
     
     <!-- Primary SEO Meta Tags -->
@@ -21,9 +22,9 @@
     <!-- Production Stylesheet -->
     <link rel="stylesheet" href="assets/styles.min.css">
     <!-- PDF-Lib for Client-Side White-Label PDF Generation -->
-    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.9/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" integrity="sha512-z8IYLHO8bTgFqj+yrPyIJnzBDf7DDhWwiEsk4sY+Oe6J2M+WQequeGS7qioI5vT6rXgVRb4K1UVQC5ER7MKzKQ==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
     <!-- Simple Cat 16-Bit Companion & Plain-English Decoder -->
-    <script src="assets/simple_cat.js"></script>
+    <script src="assets/simple_cat.js" defer></script>
 
     <style>
         .font-arcade { font-family: 'Press Start 2P', monospace, cursive; }
@@ -52,17 +53,27 @@
             box-shadow: 4px 4px 0px #581c87;
             border: 2px solid #a855f7;
         }
+        /* Stabilized Tactile Pixel Buttons (Zero Horizontal Movement) */
+        html {
+            overflow-x: hidden;
+            scrollbar-gutter: stable;
+            width: 100%;
+        }
+        body {
+            overflow-x: clip;
+            width: 100%;
+            max-width: 100%;
+        }
         .pixel-btn {
-            box-shadow: 3px 3px 0px #064e3b;
-            transition: all 0.1s ease;
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3), 0 2px 4px rgba(0, 0, 0, 0.4);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
         }
         .pixel-btn:hover {
-            box-shadow: 1px 1px 0px #064e3b;
-            transform: translate(2px, 2px);
+            box-shadow: 0 0 16px rgba(16, 185, 129, 0.35);
+            border-color: #34d399;
         }
         .pixel-btn:active {
-            box-shadow: 0px 0px 0px #064e3b;
-            transform: translate(3px, 3px);
+            transform: translateY(1px);
         }
     </style>
 </head>

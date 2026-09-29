@@ -463,26 +463,15 @@
         const canvas = document.createElement("canvas");
         canvas.id = "retro-arcade-canvas";
         canvas.className = "fixed inset-0 pointer-events-none";
-        canvas.style.cssText = "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;";
+        canvas.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none;";
         document.body.prepend(canvas);
 
         // Create scanlines overlay
         const scanlines = document.createElement("div");
         scanlines.id = "retro-scanlines";
         scanlines.className = "fixed inset-0 pointer-events-none";
-        scanlines.style.cssText = "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; opacity: 0.18; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.45) 50%); background-size: 100% 4px;";
+        scanlines.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; opacity: 0.12; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.45) 50%); background-size: 100% 4px;";
         document.body.prepend(scanlines);
-
-        // Ensure page content has z-index to sit on top
-        const allDirectChildren = Array.from(document.body.children);
-        allDirectChildren.forEach(child => {
-            if (child.id !== 'retro-arcade-canvas' && child.id !== 'retro-scanlines' && child.id !== 'simple-cat-modal') {
-                if (window.getComputedStyle(child).position === 'static') {
-                    child.style.position = 'relative';
-                }
-                child.style.zIndex = '2';
-            }
-        });
 
         const ctx = canvas.getContext("2d");
         let width = canvas.width = window.innerWidth;
@@ -609,44 +598,44 @@
                 ctx.fillText(gl.char, Math.floor(gl.x), Math.floor(gl.y));
             });
 
-            // 4. Render 3D Perspective Retro Cyber Grid Horizon
+            // 4. Render 3D Perspective Retro Cyber Grid Horizon (Stabilized - Zero Optical Illusion)
             ctx.globalAlpha = 1.0;
-            const horizonY = height * 0.76;
-            const vanishingX = width * 0.5;
+            const horizonY = height * 0.78;
+            const vanishingX = Math.floor((document.documentElement.clientWidth || width) * 0.5);
 
-            // Horizon Glow Beam
-            ctx.strokeStyle = '#10b981';
-            ctx.shadowBlur = 12;
+            // Horizon Glow Beam with gentle ambient pulse
+            const beamAlpha = 0.5 + Math.sin(Date.now() * 0.0015) * 0.2;
+            ctx.strokeStyle = `rgba(16, 185, 129, ${beamAlpha})`;
+            ctx.shadowBlur = 10;
             ctx.shadowColor = '#10b981';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(0, horizonY);
             ctx.lineTo(width, horizonY);
             ctx.stroke();
 
-            // Perspective Vanishing Lines (Cyan laser rays)
-            ctx.strokeStyle = 'rgba(6, 182, 212, 0.38)';
-            ctx.shadowBlur = 4;
+            // Perspective Vanishing Lines (Soft Cyan laser rays)
+            ctx.strokeStyle = 'rgba(6, 182, 212, 0.20)';
+            ctx.shadowBlur = 3;
             ctx.shadowColor = '#06b6d4';
-            ctx.lineWidth = 1.5;
-            const lineCount = 16;
+            ctx.lineWidth = 1;
+            const lineCount = 14;
             for (let i = -lineCount; i <= lineCount; i++) {
-                const targetX = vanishingX + (i * (width / (lineCount * 0.85)));
+                const targetX = vanishingX + (i * (width / (lineCount * 0.9)));
                 ctx.beginPath();
                 ctx.moveTo(vanishingX, horizonY);
                 ctx.lineTo(targetX, height);
                 ctx.stroke();
             }
 
-            // Moving Horizontal Grid Lines
-            gridOffset = (gridOffset + 0.6) % 36;
-            ctx.strokeStyle = 'rgba(16, 185, 129, 0.45)';
+            // Stationary Depth Grid Lines (Zero downward motion = No optical barber-pole shift)
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.22)';
             ctx.shadowColor = '#10b981';
-            ctx.shadowBlur = 6;
-            ctx.lineWidth = 1.5;
-            for (let d = 0; d < 10; d++) {
-                const progress = (d * 36 + gridOffset) / (10 * 36);
-                const lineY = horizonY + Math.pow(progress, 2.2) * (height - horizonY);
+            ctx.shadowBlur = 4;
+            ctx.lineWidth = 1;
+            for (let d = 1; d <= 8; d++) {
+                const progress = d / 8;
+                const lineY = horizonY + Math.pow(progress, 2.0) * (height - horizonY);
                 if (lineY <= height) {
                     ctx.beginPath();
                     ctx.moveTo(0, lineY);
