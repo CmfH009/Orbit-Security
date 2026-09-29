@@ -1,0 +1,23 @@
+[
+  {
+    "id": "post_1",
+    "title": "Astro-Cat Gameplay Showcase",
+    "video_path": "C:\\Users\\purav\\Downloads\\orbit_astro_cat_gameplay_x.mp4",
+    "cdn_url": "https://cmfh009.github.io/Orbit-Security/assets/orbit_astro_cat_gameplay_x.mp4",
+    "tweet_text": "Most cybersecurity landing pages are boring corporate templates with stock photos of padlocks.\n\nWe built an interactive zero-gravity astronaut cat with orbital thrusters and laser cannons instead. \ud83d\udee1\ufe0f\ud83d\udc3e\n\nPlay with him live & run a free client DNS audit:\nhttps://cmfh009.github.io/Orbit-Security/"
+  },
+  {
+    "id": "post_2",
+    "title": "Full Feature & Animation Montage",
+    "video_path": "C:\\Users\\purav\\Downloads\\orbit_montage_master.mp4",
+    "cdn_url": "https://cmfh009.github.io/Orbit-Security/assets/orbit_montage_master.mp4",
+    "tweet_text": "We ditched the corporate playbook for Orbit Security.\n\nHere's the full command deck:\n\u2022 Sub-second RFC 8484 DNS radar\n\u2022 Dangling CNAME takeover diagnostics\n\u2022 Passive fleet portfolio telemetry\n\u2022 Zero-G Astro-Cat with laser cannons \ud83d\ude80\ud83d\udc31\n\nAudit your edge:\nhttps://cmfh009.github.io/Orbit-Security/"
+  },
+  {
+    "id": "post_3",
+    "title": "The $250/mo Retainer Exploit",
+    "video_path": "C:\\Users\\purav\\Downloads\\orbit_teardown_master.mp4",
+    "cdn_url": "https://cmfh009.github.io/Orbit-Security/assets/orbit_teardown_master.mp4",
+    "tweet_text": "How web agencies justify $250/mo retainers without writing code:\n\n1. Scan client domain (10s passive DoH)\n2. Spot dangling CNAMEs & spoofable DNS\n3. Astro-Cat zaps the threat \ud83d\udc7e\ud83d\udca5\n4. Export white-label executive audit PDF\n\nRun a free scan:\nhttps://cmfh009.github.io/Orbit-Security/"
+  }
+]
