@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self' https://dns.google https://cloudflare-dns.com https://buy.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src 'self' https://dns.google https://cloudflare-dns.com https://buy.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self';">
     <title>Fleet Command Center | Orbit Security</title>
     
     <!-- Primary SEO Meta Tags -->
@@ -13,20 +13,20 @@
 
     <!-- Favicon & Preconnects -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'><path d='M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z'/></svg>">
+    <link rel="dns-prefetch" href="https://buy.stripe.com">
     
-    <!-- Retro Arcade & Pixel Art Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
-    
-    <!-- Production Stylesheet -->
+    <!-- Production Stylesheet (Zero-Render-Delay, Offline Fonts Vendored) -->
     <link rel="stylesheet" href="assets/styles.min.css">
-    <!-- PDF-Lib for Client-Side White-Label PDF Generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" integrity="sha512-z8IYLHO8bTgFqj+yrPyIJnzBDf7DDhWwiEsk4sY+Oe6J2M+WQequeGS7qioI5vT6rXgVRb4K1UVQC5ER7MKzKQ==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
+    <!-- PDF-Lib for Client-Side White-Label PDF Generation (Offline Vendored) -->
+    <script src="assets/pdf-lib.min.js" defer></script>
     <!-- Simple Cat 16-Bit Companion & Plain-English Decoder -->
     <script src="assets/simple_cat.js" defer></script>
 
     <style>
+        /* 0% CPU Idle Governor (Pillar 5 Resiliency) */
+        body.page-idle * {
+            animation-play-state: paused !important;
+        }
         .font-arcade { font-family: 'Press Start 2P', monospace, cursive; }
         .font-pixel { font-family: 'Silkscreen', monospace; }
         .hud-border {

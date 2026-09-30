@@ -38,4 +38,8 @@ daily_briefings/
 scratch/
 marketing/assets/
 
+# Test and Audit Screenshots
+landing_audit_*.png
+landing_hud_*.png
+
 
