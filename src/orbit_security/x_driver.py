@@ -158,6 +158,7 @@ class OrbitXDriver:
         self.playwright: Optional[Playwright] = None
         self.context: Optional[BrowserContext] = None
         self.page: Optional[Page] = None
+        self.is_authenticated: bool = False
         self._ensure_profile_dir()
 
     def _ensure_profile_dir(self):
@@ -223,6 +224,14 @@ class OrbitXDriver:
 
         # Apply stealth overrides
         self._apply_stealth_shims()
+
+        # Verify initial auth state
+        try:
+            auth_ok, auth_reason = self.verify_auth_state()
+            self.is_authenticated = auth_ok
+            logger.info(f"Driver auth verification: {auth_reason} (is_authenticated={self.is_authenticated})")
+        except Exception as e:
+            logger.warning(f"Could not verify initial auth state: {e}")
 
     def _apply_stealth_shims(self):
         """Injects deep stealth scripts into all frames to neutralize CDP/Webdriver fingerprints."""
@@ -299,10 +308,12 @@ class OrbitXDriver:
             # Check for redirect to login
             curr_url = self.page.url
             if "/i/flow/login" in curr_url or "/login" in curr_url:
+                self.is_authenticated = False
                 return False, "Redirected to login flow"
 
             # Check for Arkose challenge
             if self.page.locator(self.SELECTORS["arkose_frame"]).count() > 0:
+                self.is_authenticated = False
                 return False, "Arkose bot challenge detected"
 
             # Check for home feed presence
@@ -310,10 +321,13 @@ class OrbitXDriver:
             has_compose = self.page.locator(self.SELECTORS["compose_textarea"]).count() > 0
 
             if has_feed or has_compose or "/home" in curr_url:
+                self.is_authenticated = True
                 return True, "Authenticated"
             
+            self.is_authenticated = False
             return False, f"Unexpected page state (URL: {curr_url})"
         except Exception as e:
+            self.is_authenticated = False
             return False, f"Auth verification error: {e}"
 
     def check_for_rate_limits(self) -> Tuple[bool, Optional[str]]:
@@ -336,8 +350,16 @@ class OrbitXDriver:
             pass
         return False, None
 
-    def harvest_feed(self, limit: int = 15, scroll_rounds: int = 4) -> List[TweetData]:
-        """Scrapes tweets from currently open feed using virtual DOM tracking."""
+    def harvest_feed(self, feed_url: Optional[str] = None, limit: int = 15, scroll_rounds: int = 4) -> List[TweetData]:
+        """Scrapes tweets from feed (navigates to feed_url if provided)."""
+        if feed_url:
+            logger.info(f"Navigating to feed URL: {feed_url}")
+            try:
+                self.page.goto(feed_url, wait_until="domcontentloaded")
+                time.sleep(random.uniform(2.5, 4.0))
+            except Exception as e:
+                logger.error(f"Navigation failed for feed {feed_url}: {e}")
+                return []
         results: Dict[str, TweetData] = {}
 
         for round_idx in range(scroll_rounds):

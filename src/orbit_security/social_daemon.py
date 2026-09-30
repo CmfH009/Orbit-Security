@@ -20,6 +20,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 from orbit_security.circuit_breaker import BreakerState, SocialCircuitBreaker, TriggerType
+from orbit_security.content_queue import ContentQueue
 from orbit_security.feed_harvester import FeedHarvester
 from orbit_security.ground_truth_gate import GroundTruthGate
 from orbit_security.models import DomainAuditResult
@@ -79,6 +80,7 @@ class SocialDaemon:
         self.circuit_breaker = SocialCircuitBreaker(state_manager=self.state_manager)
         self.relevance_engine = RelevanceEngine(project_root=self.base_dir)
         self.ground_truth_gate = GroundTruthGate(max_audit_age_minutes=30)
+        self.content_queue = ContentQueue(project_root=self.base_dir)
         self.harvester = FeedHarvester(driver=self.driver, dry_run=self.dry_run)
 
     def _check_hardware_governor(self) -> bool:
@@ -176,13 +178,35 @@ class SocialDaemon:
         multiplier = self.quota_manager.get_time_of_day_multiplier()
         if multiplier == 0.0:
             logger.info("Current window is DORMANT (quiet night period). Sleeping without mutations.")
+            self._save_daemon_heartbeat("SLEEPING")
             return {"status": "DORMANT_WINDOW"}
 
-        # 4. Multi-Vector Post Harvesting
+        actions_performed = 0
+
+        # 4. Proactive Staged Content Publication (Hourly Original Post)
+        if self.quota_manager.can_perform("POST"):
+            queued_post = self.content_queue.get_next_queued_post(self.state_manager)
+            if queued_post:
+                logger.info(f"Dispatching queued staged post: [{queued_post['id']}] {queued_post['title']}")
+                res = self.publish_original_post(
+                    post_id=queued_post["id"],
+                    text=queued_post["text"],
+                    media_path=queued_post.get("media_path"),
+                )
+                if res.get("status") == "SUCCESS":
+                    actions_performed += 1
+                    # Organic delay after posting before harvesting
+                    micro_delay = random.uniform(30.0, 60.0) if not self.dry_run else 0.1
+                    logger.info(f"Pacing: sleeping {micro_delay:.1f}s after original post before harvesting...")
+                    time.sleep(micro_delay)
+            else:
+                logger.info("ContentQueue: All staged posts currently marked as published.")
+        else:
+            logger.info("Hourly POST quota currently exhausted. Skipping proactive publication.")
+
+        # 5. Multi-Vector Post Harvesting
         candidates = self.harvester.harvest_hourly_candidates(max_candidates=20)
         logger.info(f"Processing {len(candidates)} discovered candidates this cycle.")
-
-        actions_performed = 0
 
         # 5. Evaluate and Execute Candidates
         for post in candidates:
@@ -308,7 +332,7 @@ class SocialDaemon:
             f"=== Cycle Complete in {duration}s. Actions: {actions_performed} | "
             f"Daily Totals: {snapshot.get('today_metrics')} ==="
         )
-        self._save_daemon_heartbeat("IDLE")
+        self._save_daemon_heartbeat("SLEEPING")
 
         return {
             "status": "COMPLETED",
@@ -318,6 +342,7 @@ class SocialDaemon:
 
     def publish_original_post(
         self,
+        post_id: Optional[str] = None,
         text: Optional[str] = None,
         media_path: Optional[str] = None,
     ) -> Dict[str, Any]:
@@ -344,18 +369,18 @@ class SocialDaemon:
             return {"status": "QUOTA_EXCEEDED"}
 
         # 3. Execution
-        post_id = f"post_{int(time.time())}"
+        final_post_id = post_id or f"post_{int(time.time())}"
         success = False
         if self.dry_run or not self.driver:
-            logger.info(f"[DRY-RUN] Publishing original post: {text[:80]}...")
+            logger.info(f"[DRY-RUN] Publishing original post [{final_post_id}]: {text[:80]}...")
             success = True
         else:
-            logger.info(f"Publishing live post via OrbitXDriver: {text[:80]}...")
+            logger.info(f"Publishing live post [{final_post_id}] via OrbitXDriver: {text[:80]}...")
             success = self.driver.post_tweet(text, media_path=media_path)
 
         if success:
             self.state_manager.record_action(
-                tweet_id=post_id,
+                tweet_id=final_post_id,
                 action_type="POST",
                 author_handle="_arsoncode",
                 content_snippet=text[:120],
@@ -365,7 +390,7 @@ class SocialDaemon:
 
         return {
             "status": "SUCCESS" if success else "FAILED",
-            "post_id": post_id,
+            "post_id": final_post_id,
             "text": text,
             "media_path": media_path,
             "character_count": len(text),
