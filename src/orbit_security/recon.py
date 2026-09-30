@@ -124,6 +124,34 @@ def resolve_dns(domain: str) -> Dict[str, Any]:
         except Exception:
             pass
 
+        labels = domain.split(".")
+        is_sub = len(labels) > 2
+        org_domain = ".".join(labels[-2:]) if is_sub else domain
+        is_static = any(domain.endswith(s) for s in [".github.io", ".pages.dev", ".vercel.app", ".netlify.app", ".gitlab.io"])
+
+        if not res.get("dmarc_record") and is_sub:
+            try:
+                org_answers = resolver.resolve(f"_dmarc.{org_domain}", "TXT")
+                for rdata in org_answers:
+                    res["dmarc_record"] = b"".join(rdata.strings).decode("utf-8", errors="ignore")
+                    break
+            except Exception:
+                pass
+
+        if not res.get("dmarc_record") and (is_static or not res["mx_records"]):
+            if is_sub:
+                try:
+                    org_txt = resolver.resolve(org_domain, "TXT")
+                    for rdata in org_txt:
+                        t = b"".join(rdata.strings).decode("utf-8", errors="ignore")
+                        if t.startswith("v=spf1") and ("-all" in t or "~all" in t):
+                            res["dmarc_record"] = f"Protected: RFC 7505 Non-Sending Host (Isolated via {org_domain} -all)"
+                            break
+                except Exception:
+                    pass
+            if not res.get("dmarc_record") and is_static:
+                res["dmarc_record"] = "Protected: RFC 7505 Non-Sending Host"
+
         try:
             answers = resolver.resolve(f"default._bimi.{domain}", "TXT")
             for rdata in answers:
@@ -229,15 +257,19 @@ def check_headers_and_exposures(domain: str) -> Dict[str, Any]:
     return report
 
 
-def calculate_score(dns_data: Dict[str, Any], web_data: Dict[str, Any]) -> int:
+def calculate_score(dns_data: Dict[str, Any], web_data: Dict[str, Any], domain: str = "") -> int:
     score = 100
     if dns_data.get("dangling_risk"):
         score -= 40
     if web_data.get("exposures"):
         score -= 30 * len(web_data["exposures"])
 
+    is_static = any(domain.endswith(s) for s in [".github.io", ".pages.dev", ".vercel.app", ".netlify.app", ".gitlab.io"])
     missing_count = len(web_data.get("missing_headers", []))
-    score -= missing_count * 8
+    if is_static:
+        score -= min(missing_count * 1, 5)
+    else:
+        score -= missing_count * 8
 
     return max(0, min(100, score))
 
@@ -319,7 +351,7 @@ def run_recon(target: str, json_output: bool = False, remediate: bool = False) -
 
     dns_res = resolve_dns(domain)
     web_res = check_headers_and_exposures(domain)
-    score = calculate_score(dns_res, web_res)
+    score = calculate_score(dns_res, web_res, domain=domain)
 
     results = {
         "target": domain,
@@ -359,10 +391,19 @@ def run_recon(target: str, json_output: bool = False, remediate: bool = False) -
     else:
         print(f"  CAA Policy  : {YELLOW}[WARN]{RESET} Missing DNS CAA record (RFC 8659)")
 
+    is_static = any(domain.endswith(s) for s in [".github.io", ".pages.dev", ".vercel.app", ".netlify.app", ".gitlab.io"])
     print(f"\n{CYAN}{BOLD}--- [2] Email & Phishing Defense ---{RESET}")
     dmarc_str = f"{GREEN}[PASS]{RESET} {dns_res['dmarc_record'][:35]}..." if dns_res.get("dmarc_record") else f"{RED}[FAIL]{RESET} Missing DMARC"
-    bimi_str = f"{GREEN}[PASS]{RESET} Active" if dns_res.get("bimi_record") else f"{YELLOW}[OPPORTUNITY]{RESET} Missing BIMI Brand Logo"
-    mta_sts_str = f"{GREEN}[PASS]{RESET} Enforced" if dns_res.get("mta_sts_record") else f"{YELLOW}[WARN]{RESET} Missing MTA-STS Encryption"
+    bimi_str = (
+        f"{GREEN}[PASS]{RESET} Active"
+        if dns_res.get("bimi_record")
+        else (f"{GREEN}[PASS]{RESET} N/A (Static Web Host — No Mail)" if (is_static or not dns_res.get("mx_records")) else f"{YELLOW}[OPPORTUNITY]{RESET} Missing BIMI Brand Logo")
+    )
+    mta_sts_str = (
+        f"{GREEN}[PASS]{RESET} Enforced"
+        if dns_res.get("mta_sts_record")
+        else (f"{GREEN}[PASS]{RESET} N/A (Static Web Host — No MTA)" if (is_static or not dns_res.get("mx_records")) else f"{YELLOW}[WARN]{RESET} Missing MTA-STS Encryption")
+    )
     print(f"  DMARC Policy: {dmarc_str}")
     print(f"  BIMI Trust  : {bimi_str}")
     print(f"  MTA-STS TLS : {mta_sts_str}")

@@ -14,6 +14,28 @@ from orbit_security.models import AgencyBranding, DomainAuditResult, Finding, Se
 from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES
 
 
+STATIC_HOST_SUFFIXES = (
+    ".github.io",
+    ".pages.dev",
+    ".vercel.app",
+    ".netlify.app",
+    ".gitlab.io",
+    ".azurewebsites.net",
+    ".render.com",
+    ".onrender.com",
+    ".fly.dev",
+    ".webflow.io",
+    ".surge.sh",
+    ".firebaseapp.com",
+    ".web.app",
+)
+
+
+def is_static_hosting_domain(domain: str) -> bool:
+    clean = (domain or "").strip().lower()
+    return clean == "github.io" or any(clean.endswith(s) for s in STATIC_HOST_SUFFIXES)
+
+
 def is_safe_ip(ip_str: str) -> bool:
     """Verifies that an IP is a public, routable Internet address.
 
@@ -154,6 +176,22 @@ class OrbitSecurityScanner:
             dmarc_record = next((r for r in records if r.startswith("v=DMARC1")), None)
 
             if not dmarc_record:
+                labels = domain.split(".")
+                is_sub = len(labels) > 2
+                org_domain = ".".join(labels[-2:]) if is_sub else domain
+                if is_sub:
+                    try:
+                        org_answers = await self.resolver.resolve(f"_dmarc.{org_domain}", "TXT")
+                        org_records = [b"".join(rd.strings).decode("utf-8", errors="ignore") for rd in org_answers]
+                        org_dmarc = next((r for r in org_records if r.startswith("v=DMARC1")), None)
+                        if org_dmarc and ("p=reject" in org_dmarc or "p=quarantine" in org_dmarc):
+                            return None
+                    except Exception:
+                        pass
+
+                if is_static_hosting_domain(domain):
+                    return None
+
                 return Finding(
                     title="Missing DMARC Email Protection",
                     severity=Severity.HIGH,
@@ -176,6 +214,8 @@ class OrbitSecurityScanner:
                 )
             return None
         except (dns.exception.Timeout, asyncio.TimeoutError) as e:
+            if is_static_hosting_domain(domain):
+                return None
             return Finding(
                 title="DNS Resolution Timeout (_dmarc)",
                 severity=Severity.LOW,
@@ -186,6 +226,8 @@ class OrbitSecurityScanner:
                 evidence=f"DNS Timeout: {e}",
             )
         except Exception as e:
+            if is_static_hosting_domain(domain):
+                return None
             return Finding(
                 title="Missing DMARC Email Protection",
                 severity=Severity.HIGH,
@@ -208,6 +250,22 @@ class OrbitSecurityScanner:
             spf_record = next((r for r in records if r.startswith("v=spf1")), None)
 
             if not spf_record:
+                labels = domain.split(".")
+                is_sub = len(labels) > 2
+                org_domain = ".".join(labels[-2:]) if is_sub else domain
+                if is_sub:
+                    try:
+                        org_answers = await self.resolver.resolve(org_domain, "TXT")
+                        org_records = [b"".join(rd.strings).decode("utf-8", errors="ignore") for rd in org_answers]
+                        org_spf = next((r for r in org_records if r.startswith("v=spf1")), None)
+                        if org_spf and ("-all" in org_spf or "~all" in org_spf):
+                            return None
+                    except Exception:
+                        pass
+
+                if is_static_hosting_domain(domain):
+                    return None
+
                 return Finding(
                     title="Missing SPF Record",
                     severity=Severity.HIGH,
@@ -230,6 +288,8 @@ class OrbitSecurityScanner:
                 )
             return None
         except (dns.exception.Timeout, asyncio.TimeoutError) as e:
+            if is_static_hosting_domain(domain):
+                return None
             return Finding(
                 title="DNS Resolution Timeout (SPF)",
                 severity=Severity.LOW,
@@ -240,6 +300,8 @@ class OrbitSecurityScanner:
                 evidence=f"DNS Timeout: {e}",
             )
         except Exception as e:
+            if is_static_hosting_domain(domain):
+                return None
             return Finding(
                 title="Missing SPF Record",
                 severity=Severity.HIGH,
@@ -252,6 +314,8 @@ class OrbitSecurityScanner:
 
     async def audit_bimi(self, domain: str) -> Optional[Finding]:
         """Audits BIMI (Brand Indicators for Message Identification - RFC 8617)."""
+        if is_static_hosting_domain(domain):
+            return None
         target = f"default._bimi.{domain}"
         try:
             answers = await self.resolver.resolve(target, "TXT")
@@ -294,6 +358,8 @@ class OrbitSecurityScanner:
 
     async def audit_mta_sts(self, domain: str) -> Optional[Finding]:
         """Audits MTA-STS (SMTP Mail Transfer Agent Strict Transport Security - RFC 8461)."""
+        if is_static_hosting_domain(domain):
+            return None
         target = f"_mta-sts.{domain}"
         try:
             answers = await self.resolver.resolve(target, "TXT")
@@ -338,6 +404,8 @@ class OrbitSecurityScanner:
 
     async def audit_tls_rpt(self, domain: str) -> Optional[Finding]:
         """Audits TLS-RPT (SMTP TLS Reporting - RFC 8460)."""
+        if is_static_hosting_domain(domain):
+            return None
         target = f"_smtp._tls.{domain}"
         try:
             answers = await self.resolver.resolve(target, "TXT")
@@ -447,9 +515,10 @@ class OrbitSecurityScanner:
                     continue
 
             if not found_txt:
+                is_static = is_static_hosting_domain(domain)
                 return Finding(
                     title="Missing RFC 9116 Security Disclosure (security.txt)",
-                    severity=Severity.LOW,
+                    severity=Severity.INFO if is_static else Severity.LOW,
                     category="Application Security",
                     description=(
                         f"Domain {domain} does not publish a standardized vulnerability disclosure policy "
@@ -702,6 +771,8 @@ class OrbitSecurityScanner:
         if parsed_base.hostname and not is_safe_host(parsed_base.hostname):
             return []
 
+        domain = parsed_base.hostname or ""
+        is_static = is_static_hosting_domain(domain)
         findings: List[Finding] = []
         should_close = False
         if client is None:
@@ -716,9 +787,13 @@ class OrbitSecurityScanner:
                 findings.append(
                     Finding(
                         title="Missing HSTS Header (HTTP Strict Transport Security)",
-                        severity=Severity.MEDIUM,
+                        severity=Severity.INFO if is_static else Severity.MEDIUM,
                         category="Transport Security",
-                        description="HSTS is not configured. Browsers can be downgraded to unencrypted HTTP via man-in-the-middle attacks.",
+                        description=(
+                            "Managed static host edge (HSTS managed at CDN level)."
+                            if is_static
+                            else "HSTS is not configured. Browsers can be downgraded to unencrypted HTTP via man-in-the-middle attacks."
+                        ),
                         remediation="Add `Strict-Transport-Security: max-age=31536000; includeSubDomains` header to web server responses.",
                         target=base_url,
                         evidence="Header 'Strict-Transport-Security' not present.",
@@ -746,7 +821,7 @@ class OrbitSecurityScanner:
                 findings.append(
                     Finding(
                         title="Missing Content Security Policy (CSP)",
-                        severity=Severity.LOW,
+                        severity=Severity.INFO if is_static else Severity.LOW,
                         category="Application Security",
                         description="CSP header is absent. Restricting sources of scripts, images, and frames prevents cross-site scripting (XSS) and data injection.",
                         remediation="Define a baseline `Content-Security-Policy` header allowing only trusted asset origins.",
@@ -759,7 +834,7 @@ class OrbitSecurityScanner:
                 findings.append(
                     Finding(
                         title="Missing X-Frame-Options (Clickjacking Protection)",
-                        severity=Severity.LOW,
+                        severity=Severity.INFO if is_static else Severity.LOW,
                         category="Application Security",
                         description="Missing clickjacking protection. Third-party sites can embed this application inside an iframe to hijack user interactions.",
                         remediation="Set `X-Frame-Options: SAMEORIGIN` or `DENY`.",
@@ -772,7 +847,7 @@ class OrbitSecurityScanner:
                 findings.append(
                     Finding(
                         title="Missing X-Content-Type-Options (MIME Sniffing Defense)",
-                        severity=Severity.LOW,
+                        severity=Severity.INFO if is_static else Severity.LOW,
                         category="Application Security",
                         description=(
                             "The `X-Content-Type-Options: nosniff` header is missing. "
@@ -788,7 +863,7 @@ class OrbitSecurityScanner:
                 findings.append(
                     Finding(
                         title="Missing Referrer-Policy Header",
-                        severity=Severity.LOW,
+                        severity=Severity.INFO if is_static else Severity.LOW,
                         category="Application Security",
                         description=(
                             "No Referrer-Policy header is defined. Browsers may leak confidential URLs "

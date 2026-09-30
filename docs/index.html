@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://cmfh009.github.io; connect-src 'self' https://dns.google https://cloudflare-dns.com https://buy.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https://cmfh009.github.io; connect-src 'self' https://dns.google https://cloudflare-dns.com https://buy.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self';">
     <title>Orbit Security | Attack Surface & Subdomain Hygiene for Web Agencies</title>
     
     <!-- Primary SEO Meta Tags -->
@@ -31,18 +31,21 @@
     <!-- Favicon & Preconnects -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'><path d='M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z'/></svg>">
     <link rel="dns-prefetch" href="https://buy.stripe.com">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
     
-    <!-- Production Compiled Stylesheet (Zero-Render-Delay) -->
+    <!-- Production Compiled Stylesheet (Zero-Render-Delay, Offline Fonts Vendored) -->
     <link rel="stylesheet" href="assets/styles.min.css">
-    <!-- PDF-Lib with Subresource Integrity (Deferred to eliminate render-blocking) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" integrity="sha512-z8IYLHO8bTgFqj+yrPyIJnzBDf7DDhWwiEsk4sY+Oe6J2M+WQequeGS7qioI5vT6rXgVRb4K1UVQC5ER7MKzKQ==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
+    <!-- PDF-Lib Offline Vendored Engine (Zero-CDN Dependency) -->
+    <script src="assets/pdf-lib.min.js" defer></script>
     <!-- Simple Cat 16-Bit Companion & Plain-English Decoder -->
     <script src="assets/simple_cat.js" defer></script>
+    <!-- Orbit Radar Terminal & Ergonomics Engine -->
+    <script src="assets/orbit_radar.js" defer></script>
 
     <style>
+        /* 0% CPU Idle Governor (Pillar 5 Resiliency) */
+        body.page-idle * {
+            animation-play-state: paused !important;
+        }
         /* Precision Viewport Stabilization & Horizontal Lock (Zero Left-to-Right Sway) */
         html {
             overflow-x: hidden;
@@ -182,6 +185,11 @@
             </nav>
 
             <div class="hidden sm:flex items-center gap-2.5">
+                <!-- Tactile Keyboard Shortcuts HUD Button -->
+                <button type="button" onclick="showKeyboardHud()" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-900 border border-slate-700/80 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-400 font-pixel text-xs transition-all cursor-pointer shadow-sm group pixel-btn" title="View Keyboard Shortcuts (?)">
+                    <span class="text-sm">⌨️</span>
+                    <span class="font-mono text-[11px]">[?] KEYS</span>
+                </button>
                 <!-- Interactive Simple Cat Quick Decoder Button -->
                 <button type="button" onclick="SimpleCat.explain('dmarc')" class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-900 border border-emerald-500/50 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400 font-pixel text-xs transition-all cursor-pointer shadow-sm group pixel-btn" title="Click to talk with Simple Cat">
                     <span class="group-hover:scale-110 transition-transform">🐱</span>
@@ -420,10 +428,19 @@
                     <!-- Quick-Scan Preset Chips (Upgraded to 44px min touch height) -->
                     <div class="mt-3 flex items-center gap-2 text-xs text-slate-400 font-mono flex-wrap">
                         <span class="text-slate-500 text-[11px] font-pixel mr-1">Quick Tests:</span>
+                        <button type="button" onclick="if(window.SimpleCat) SimpleCat.playBlip(); setScanTarget('cmfh009.github.io')" class="min-h-[44px] px-3.5 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/40 text-xs text-emerald-400 font-bold transition-colors pixel-btn flex items-center justify-center">cmfh009.github.io</button>
                         <button type="button" onclick="if(window.SimpleCat) SimpleCat.playBlip(); setScanTarget('shopify.com')" class="min-h-[44px] px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 hover:text-emerald-400 transition-colors pixel-btn flex items-center justify-center">shopify.com</button>
                         <button type="button" onclick="if(window.SimpleCat) SimpleCat.playBlip(); setScanTarget('unbounce.com')" class="min-h-[44px] px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 hover:text-emerald-400 transition-colors pixel-btn flex items-center justify-center">unbounce.com</button>
                         <button type="button" onclick="if(window.SimpleCat) SimpleCat.playBlip(); setScanTarget('github.io')" class="min-h-[44px] px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 hover:text-emerald-400 transition-colors pixel-btn flex items-center justify-center">github.io</button>
                         <button type="button" onclick="if(window.SimpleCat) SimpleCat.playBlip(); setScanTarget('10up.com')" class="min-h-[44px] px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 hover:text-emerald-400 transition-colors pixel-btn flex items-center justify-center">10up.com</button>
+                    </div>
+
+                    <!-- LocalStorage Recent Scans History (Pillar 3 Pure Web Standard) -->
+                    <div class="mt-3.5 flex items-center gap-2 text-xs text-slate-400 font-mono flex-wrap">
+                        <span class="text-slate-500 text-[11px] font-pixel mr-1">Recent Scans:</span>
+                        <div id="recentAuditsList" class="flex items-center gap-1.5 flex-wrap">
+                            <span class="text-[10px] text-slate-500 font-mono italic">No recent scans saved. Type a domain above to scan!</span>
+                        </div>
                     </div>
 
                     <!-- Live HUD Results Container -->
@@ -1784,1016 +1801,61 @@
         </div>
     </footer>
 
-    <!-- Interactive Scripts & Hardened DoH / PDF Engine -->
-    <script>
-        // Utility: Strict HTML entity escaping to prevent DOM XSS
-        function escapeHtml(str) {
-            if (str === null || str === undefined) return '';
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
-
-        // Utility: Strict RFC 1123 / RFC 952 Domain Validator
-        function isValidDomain(domain) {
-            if (!domain || typeof domain !== 'string' || domain.length > 253) return false;
-            const domainRegex = /^(?!:\/\/)([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$/;
-            return domainRegex.test(domain);
-        }
-
-        // Enhanced Mobile Navigation Drawer & Backdrop Controller
-        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-        const mobileMenu = document.getElementById('mobileMenu');
-        const mobileBackdrop = document.getElementById('mobileBackdrop');
-        const hamburgerIcon = document.getElementById('hamburgerIcon');
-        const closeIcon = document.getElementById('closeIcon');
-
-        function openMobileDrawer() {
-            if (!mobileBackdrop || !mobileMenu) return;
-            mobileBackdrop.classList.remove('hidden');
-            requestAnimationFrame(() => {
-                mobileBackdrop.classList.remove('opacity-0', 'pointer-events-none');
-                mobileBackdrop.classList.add('opacity-100', 'pointer-events-auto');
-                mobileMenu.classList.remove('-translate-y-4', 'opacity-0', 'pointer-events-none');
-                mobileMenu.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
-            });
-            hamburgerIcon.classList.add('hidden');
-            closeIcon.classList.remove('hidden');
-            mobileMenuBtn.setAttribute('aria-expanded', 'true');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeMobileDrawer() {
-            if (!mobileBackdrop || !mobileMenu) return;
-            mobileBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
-            mobileBackdrop.classList.add('opacity-0', 'pointer-events-none');
-            mobileMenu.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
-            mobileMenu.classList.add('-translate-y-4', 'opacity-0', 'pointer-events-none');
-            setTimeout(() => {
-                mobileBackdrop.classList.add('hidden');
-            }, 300);
-            hamburgerIcon.classList.remove('hidden');
-            closeIcon.classList.add('hidden');
-            mobileMenuBtn.setAttribute('aria-expanded', 'false');
-            document.body.style.overflow = '';
-        }
-
-        if (mobileMenuBtn && mobileMenu && mobileBackdrop) {
-            mobileMenuBtn.addEventListener('click', () => {
-                const isOpen = mobileMenuBtn.getAttribute('aria-expanded') === 'true';
-                if (isOpen) {
-                    closeMobileDrawer();
-                } else {
-                    openMobileDrawer();
-                }
-            });
-
-            mobileBackdrop.addEventListener('click', closeMobileDrawer);
-
-            window.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && mobileMenuBtn.getAttribute('aria-expanded') === 'true') {
-                    closeMobileDrawer();
-                }
-            });
-
-            mobileMenu.querySelectorAll('a').forEach(link => {
-                link.addEventListener('click', closeMobileDrawer);
-            });
-        }
-
-        // Hardened DNS-over-HTTPS (DoH) API Resolver with Timeout & Fallback
-        async function queryDoH(name, type, timeoutMs = 4000) {
-            const cleanName = name.replace(/\.+$/, '');
-            const endpoints = [
-                `https://dns.google/resolve?name=${encodeURIComponent(cleanName)}&type=${type}`,
-                `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(cleanName)}&type=${type}`
-            ];
-
-            for (const url of endpoints) {
-                const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), timeoutMs);
-                try {
-                    const res = await fetch(url, {
-                        headers: { 'Accept': 'application/dns-json' },
-                        signal: controller.signal
-                    });
-                    clearTimeout(timer);
-                    if (res.ok) {
-                        const data = await res.json();
-                        return {
-                            success: true,
-                            status: data.Status,
-                            answer: data.Answer || [],
-                            authority: data.Authority || [],
-                            raw: data
-                        };
-                    }
-                } catch (err) {
-                    clearTimeout(timer);
-                }
-            }
-            return { success: false, status: -1, answer: [], raw: null };
-        }
-
-        // Extracts & normalizes DNS TXT strings
-        function extractTxtRecords(answers) {
-            if (!answers || !Array.isArray(answers)) return [];
-            return answers
-                .filter(ans => ans.type === 16)
-                .map(ans => {
-                    const raw = ans.data || '';
-                    return raw.replace(/(^"|"$)/g, '').replace(/"\s+"/g, '').trim();
-                });
-        }
-
-        // RFC 7489 Compliant DMARC Parser (Eliminates sp=reject Substring Collision Bug)
-        function parseDmarcRecord(txtRecords) {
-            const dmarcRecord = txtRecords.find(t => /^v\s*=\s*DMARC1/i.test(t));
-            if (!dmarcRecord) return null;
-
-            const tags = {};
-            const pairs = dmarcRecord.split(';');
-            for (const pair of pairs) {
-                const match = pair.match(/^\s*([a-zA-Z0-9]+)\s*=\s*(.*?)\s*$/);
-                if (match) {
-                    tags[match[1].toLowerCase()] = match[2];
-                }
-            }
-
-            if (!tags.v || tags.v.toUpperCase() !== 'DMARC1') return null;
-
-            const p = (tags.p || 'none').toLowerCase();
-            const sp = tags.sp ? tags.sp.toLowerCase() : p;
-            const pct = tags.pct !== undefined ? parseInt(tags.pct, 10) : 100;
-            const rua = tags.rua || null;
-
-            return {
-                raw: dmarcRecord,
-                p,
-                sp,
-                pct: isNaN(pct) ? 100 : pct,
-                rua,
-                hasReporting: Boolean(rua)
-            };
-        }
-
-        // RFC 7208 Compliant SPF Parser (Multiple-Record PermError & Qualifier Detection)
-        function parseSpfRecords(txtRecords) {
-            const spfRecords = txtRecords.filter(t => /^v\s*=\s*spf1(?:\s|$)/i.test(t));
-            if (spfRecords.length > 1) {
-                return {
-                    status: 'critical',
-                    policy: 'PermError: Multiple SPF records published (RFC 7208 §3.2)',
-                    score: 0,
-                    multiple: true,
-                    raw: spfRecords.join(' | ')
-                };
-            }
-            if (spfRecords.length === 0) {
-                return {
-                    status: 'missing',
-                    policy: 'None published (Vulnerable to spoofing)',
-                    score: 0,
-                    multiple: false,
-                    raw: ''
-                };
-            }
-
-            const raw = spfRecords[0];
-            const terms = raw.split(/\s+/).slice(1);
-
-            let allMechanism = null;
-            let hasRedirect = false;
-
-            for (const term of terms) {
-                if (/^redirect=/i.test(term)) {
-                    hasRedirect = true;
-                    continue;
-                }
-                const match = term.match(/^([\+\-\~\?])?all$/i);
-                if (match) {
-                    allMechanism = (match[1] || '+').toLowerCase();
-                }
-            }
-
-            if (allMechanism === '-') {
-                return { status: 'pass', policy: '-all (Hard Fail — Strict Authentication)', score: 35, raw };
-            } else if (allMechanism === '~') {
-                return { status: 'pass', policy: '~all (Soft Fail — Industry Standard)', score: 30, raw };
-            } else if (allMechanism === '?') {
-                return { status: 'warn', policy: '?all (Neutral — Permissive Policy)', score: 15, raw };
-            } else if (allMechanism === '+' || (!allMechanism && !hasRedirect)) {
-                return { status: 'critical', policy: '+all (Critical: All Internet IPs Authorized)', score: 0, raw };
-            } else if (hasRedirect) {
-                return { status: 'pass', policy: 'redirect= (Delegated SPF Policy)', score: 30, raw };
-            }
-
-            return { status: 'warn', policy: 'Valid syntax without terminal qualifier', score: 20, raw };
-        }
-
-        // Top High-Risk SaaS Subdomain Takeover Signatures
-        const SAAS_TAKEOVER_PATTERNS = [
-            { name: 'Unbounce', pattern: 'unbouncepages.com' },
-            { name: 'AWS S3', pattern: 's3.amazonaws.com' },
-            { name: 'GitHub Pages', pattern: 'github.io' },
-            { name: 'Heroku', pattern: 'herokudns.com' },
-            { name: 'Shopify', pattern: 'myshopify.com' },
-            { name: 'CloudFront', pattern: 'cloudfront.net' },
-            { name: 'Webflow', pattern: 'proxy.webflow.com' }
-        ];
-
-        // --- Agency Co-Branding Studio State & Actions ---
-        let currentBrandColorHex = '#10B981';
-
-        function updateCustomBranding() {
-            const input = document.getElementById('customAgencyName');
-            const display = document.getElementById('brandNameDisplay');
-            if (input && display) {
-                display.textContent = input.value.trim() || 'Your Agency';
-            }
-        }
-
-        function setBrandColor(color) {
-            const badge = document.getElementById('brandGradeBadge');
-            if (!badge) return;
-            badge.className = 'px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors ';
-            if (color === 'cyan') {
-                currentBrandColorHex = '#06B6D4';
-                badge.className += 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400';
-            } else if (color === 'indigo') {
-                currentBrandColorHex = '#6366F1';
-                badge.className += 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-400';
-            } else if (color === 'violet') {
-                currentBrandColorHex = '#A855F7';
-                badge.className += 'bg-purple-500/10 border border-purple-500/30 text-purple-400';
-            } else {
-                currentBrandColorHex = '#10B981';
-                badge.className += 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400';
-            }
-        }
-
-        function switchReportView(viewId) {
-            ['radar', 'dmarc', 'contrast'].forEach(id => {
-                const pane = document.getElementById(`reportView-${id}`);
-                const btn = document.getElementById(`viewBtn-${id}`);
-                if (pane) pane.classList.add('hidden');
-                if (btn) {
-                    btn.className = 'report-view-btn min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0';
-                }
-            });
-
-            const activePane = document.getElementById(`reportView-${viewId}`);
-            const activeBtn = document.getElementById(`viewBtn-${viewId}`);
-            if (activePane) activePane.classList.remove('hidden');
-            if (activeBtn) {
-                activeBtn.className = 'report-view-btn min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0';
-            }
-        }
-
-        // --- In-Browser Instant PDF Generation (pdf-lib) ---
-        async function generateInstantPdf() {
-            const agencyName = (document.getElementById('customAgencyName')?.value || 'Apex Digital Studio').trim();
-            await generateInstantPdfForDomain('clientbrand.com', 94, 'A', agencyName);
-        }
-
-        async function generateInstantPdfForDomain(targetDomain, score = 90, grade = 'A', agencyName = null) {
-            const cleanDomain = targetDomain.replace(/[^a-zA-Z0-9.-]/g, '');
-            const finalAgencyName = agencyName || (document.getElementById('customAgencyName')?.value || 'Apex Digital Studio').trim();
-            const brandColor = currentBrandColorHex || '#10B981';
-
-            if (typeof PDFLib === 'undefined') {
-                alert('PDF engine is initializing, opening sample audit...');
-                window.open('sample_audit.pdf', '_blank', 'noopener,noreferrer');
-                return;
-            }
-
-            try {
-                const { PDFDocument, rgb, StandardFonts } = PDFLib;
-                const pdfDoc = await PDFDocument.create();
-                const page = pdfDoc.addPage([595.28, 841.89]); // A4 dimensions
-                const { width, height } = page.getSize();
-
-                const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-                const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-                const parseHex = (hex) => {
-                    const h = hex.replace('#', '');
-                    return rgb(parseInt(h.substring(0, 2), 16) / 255, parseInt(h.substring(2, 4), 16) / 255, parseInt(h.substring(4, 6), 16) / 255);
-                };
-                const primaryColor = parseHex(brandColor);
-                const darkSlate = rgb(15/255, 23/255, 42/255);
-                const midSlate = rgb(71/255, 85/255, 105/255);
-                const lightSlate = rgb(241/255, 245/255, 249/255);
-
-                // Top decorative accent line
-                page.drawRectangle({
-                    x: 0,
-                    y: height - 8,
-                    width: width,
-                    height: 8,
-                    color: primaryColor,
-                });
-
-                // Header Card
-                page.drawRectangle({
-                    x: 40,
-                    y: height - 120,
-                    width: width - 80,
-                    height: 90,
-                    color: lightSlate,
-                });
-
-                page.drawText(finalAgencyName.toUpperCase(), {
-                    x: 55,
-                    y: height - 60,
-                    size: 16,
-                    font: helveticaBold,
-                    color: primaryColor,
-                });
-
-                page.drawText("EXECUTIVE CLIENT PERIMETER & ATTACK SURFACE AUDIT", {
-                    x: 55,
-                    y: height - 78,
-                    size: 9,
-                    font: helveticaBold,
-                    color: midSlate,
-                });
-
-                page.drawText(`Target Domain: ${cleanDomain}   |   Certified Monthly Security Stewardship`, {
-                    x: 55,
-                    y: height - 95,
-                    size: 8,
-                    font: helvetica,
-                    color: midSlate,
-                });
-
-                // Score Badge Box
-                page.drawRectangle({
-                    x: width - 150,
-                    y: height - 110,
-                    width: 80,
-                    height: 70,
-                    color: darkSlate,
-                });
-
-                page.drawText("HYGIENE SCORE", {
-                    x: width - 145,
-                    y: height - 55,
-                    size: 7,
-                    font: helveticaBold,
-                    color: rgb(148/255, 163/255, 184/255),
-                });
-
-                page.drawText(`${score} / 100`, {
-                    x: width - 145,
-                    y: height - 75,
-                    size: 14,
-                    font: helveticaBold,
-                    color: rgb(52/255, 211/255, 153/255),
-                });
-
-                page.drawText(`GRADE: ${grade}`, {
-                    x: width - 145,
-                    y: height - 92,
-                    size: 9,
-                    font: helveticaBold,
-                    color: rgb(255/255, 255/255),
-                });
-
-                // Findings Section Header
-                page.drawText("PERIMETER AUDIT FINDINGS & SURVEILLANCE TELEMETRY", {
-                    x: 40,
-                    y: height - 150,
-                    size: 10,
-                    font: helveticaBold,
-                    color: darkSlate,
-                });
-
-                const findings = [
-                    { category: "SUBDOMAIN TAKEOVER SENTINEL", desc: `17 SaaS provider signatures audited across ${cleanDomain}. Zero dangling CNAMEs.`, status: "PASS" },
-                    { category: "EMAIL SPOOFING PROTECTION (DMARC)", desc: "DMARC policy verified active with strict quarantine alignment. Unauthorized sender forging blocked.", status: "PASS" },
-                    { category: "SENDER POLICY FRAMEWORK (SPF)", desc: "SPF TXT record configured with valid mechanism qualifiers. Zero over-permissive (+all) rules.", status: "PASS" },
-                    { category: "SENSITIVE EXPOSURE SENTINEL", desc: "No public exposure of environment secrets (.env, .git, configuration backup files).", status: "PASS" },
-                    { category: "TLS / SSL CERTIFICATE EXPIRY", desc: "Edge certificate valid. Active TLS cipher suites enforced.", status: "PASS" },
-                ];
-
-                let startY = height - 175;
-                for (const item of findings) {
-                    page.drawRectangle({
-                        x: 40,
-                        y: startY - 45,
-                        width: width - 80,
-                        height: 40,
-                        color: lightSlate,
-                    });
-
-                    page.drawText(item.category, {
-                        x: 55,
-                        y: startY - 20,
-                        size: 8,
-                        font: helveticaBold,
-                        color: darkSlate,
-                    });
-
-                    page.drawText(item.desc, {
-                        x: 55,
-                        y: startY - 34,
-                        size: 7.5,
-                        font: helvetica,
-                        color: midSlate,
-                    });
-
-                    page.drawText(item.status, {
-                        x: width - 85,
-                        y: startY - 25,
-                        size: 9,
-                        font: helveticaBold,
-                        color: rgb(16/255, 185/255, 129/255),
-                    });
-
-                    startY -= 50;
-                }
-
-                // Care Plan Stewardship Box
-                page.drawRectangle({
-                    x: 40,
-                    y: 85,
-                    width: width - 80,
-                    height: 55,
-                    color: darkSlate,
-                });
-
-                page.drawText("CLIENT CARE PLAN STEWARDSHIP GUARANTEE", {
-                    x: 55,
-                    y: 125,
-                    size: 8,
-                    font: helveticaBold,
-                    color: primaryColor,
-                });
-
-                page.drawText(`This executive audit certifies that ${finalAgencyName} maintains continuous perimeter surveillance over ${cleanDomain}. Our automated sentinel engines patrol against external hijacking, domain decay, and spoofing vectors.`, {
-                    x: 55,
-                    y: 108,
-                    size: 7,
-                    font: helvetica,
-                    color: rgb(203/255, 213/255, 225/255),
-                    maxWidth: width - 110,
-                });
-
-                // Footer
-                page.drawText(`Compiled & Certified by ${finalAgencyName}  |  Powered by Orbit Security Sentinel Mesh  |  Confidential`, {
-                    x: 40,
-                    y: 45,
-                    size: 7,
-                    font: helvetica,
-                    color: midSlate,
-                });
-
-                const pdfBytes = await pdfDoc.save();
-                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                const cleanName = finalAgencyName.replace(/[^a-zA-Z0-9_-]/g, '_');
-                a.download = `${cleanName}_${cleanDomain}_Executive_Perimeter_Audit.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            } catch (err) {
-                console.error('Instant PDF generation error:', err);
-                window.open('sample_audit.pdf', '_blank', 'noopener,noreferrer');
-            }
-        }
-
-        // Preset Target Helper
-        function setScanTarget(domain) {
-            const input = document.getElementById('targetDomain');
-            if (input) {
-                input.value = domain;
-                input.focus();
-            }
-        }
-
-        // HUD Tab Switching
-        function switchHudTab(tabId) {
-            document.querySelectorAll('.hud-tab-btn').forEach(btn => {
-                btn.classList.remove('border-emerald-500', 'text-emerald-400', 'bg-emerald-500/10');
-                btn.classList.add('border-transparent', 'text-slate-400');
-            });
-            document.querySelectorAll('.hud-tab-pane').forEach(pane => pane.classList.add('hidden'));
-
-            const activeBtn = document.getElementById(`tabBtn-${tabId}`);
-            const activePane = document.getElementById(`tabPane-${tabId}`);
-            if (activeBtn && activePane) {
-                activeBtn.classList.add('border-emerald-500', 'text-emerald-400', 'bg-emerald-500/10');
-                activeBtn.classList.remove('border-transparent', 'text-slate-400');
-                activePane.classList.remove('hidden');
-            }
-        }
-
-        function copyRawTelemetry() {
-            const pre = document.getElementById('rawTelemetryJson');
-            if (!pre) return;
-            navigator.clipboard.writeText(pre.innerText).then(() => {
-                const btn = document.getElementById('copyRawBtn');
-                if (btn) {
-                    btn.textContent = 'Copied!';
-                    setTimeout(() => { btn.textContent = 'Copy JSON'; }, 2000);
-                }
-            });
-        }
-
-        // --- Hardened Live DoH Perimeter Scanner ---
-        async function handleAuditRequest(e) {
-            e.preventDefault();
-            const input = document.getElementById('targetDomain');
-            const hud = document.getElementById('auditHUD');
-            const scanBtn = document.getElementById('scanBtn');
-            const scanBtnText = document.getElementById('scanBtnText');
-
-            let rawInput = input.value.trim().toLowerCase();
-            let domain = rawInput
-                .replace(/^https?:\/\//, '')
-                .replace(/\/.*$/, '')
-                .replace(/\?.*$/, '')
-                .replace(/:\d+$/, '')
-                .replace(/\.+$/, '');
-
-            if (!isValidDomain(domain)) {
-                hud.classList.remove('hidden');
-                hud.innerHTML = `
-                    <div class="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono">
-                        [!] Error: Please provide a valid fully-qualified domain name (e.g. clientbrand.com).
-                    </div>`;
-                return;
-            }
-
-            // SSRF / Private IP / Localhost restriction
-            if (domain === 'localhost' || domain.endsWith('.local') || domain.endsWith('.internal') ||
-                /^127\.|^10\.|^192\.168\.|^172\.(1[6-9]|2[0-9]|3[0-1])\.|^0\.|^169\.254\./.test(domain)) {
-                hud.classList.remove('hidden');
-                hud.innerHTML = `
-                    <div class="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono">
-                        [!] Security Restriction: Internal and non-routable domains cannot be audited.
-                    </div>`;
-                return;
-            }
-
-            const safeDomain = escapeHtml(domain);
-
-            scanBtn.disabled = true;
-            scanBtnText.textContent = 'Auditing...';
-            hud.classList.remove('hidden');
-            hud.innerHTML = `
-                <div class="p-4 rounded-xl bg-slate-950/80 border border-emerald-500/30 font-mono text-xs text-slate-300 space-y-2">
-                    <div class="flex items-center gap-2 text-emerald-400 font-bold">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                        Initiating Zero-Server DoH Scan for [${safeDomain}]...
-                    </div>
-                    <div class="text-slate-400 text-[11px] space-y-1">
-                        <div>&gt; Querying Google DoH for _dmarc.${safeDomain} TXT & validating RFC 7489 tree-walk...</div>
-                        <div>&gt; Checking SPF mechanisms & multiple-record PermError status...</div>
-                        <div>&gt; Probing perimeter topology & SaaS CNAME routes (www, shop, promo, app, dev)...</div>
-                    </div>
-                </div>`;
-
-            try {
-                // Determine organizational domain for DMARC tree-walk
-                const labels = domain.split('.');
-                const isSubdomain = labels.length > 2;
-                const orgDomain = isSubdomain ? labels.slice(-2).join('.') : domain;
-
-                // High-risk subdomains to probe in parallel
-                const subdomainsToProbe = isSubdomain ? [domain] : ['www', 'shop', 'promo', 'app', 'dev'].map(s => `${s}.${domain}`);
-
-                // Phase 1: Parallel DNS queries (including MX mail routing)
-                const [dmarcDirect, dmarcOrg, spfRes, mxRes, apexA, ...subProbes] = await Promise.all([
-                    queryDoH(`_dmarc.${domain}`, 16),
-                    isSubdomain ? queryDoH(`_dmarc.${orgDomain}`, 16) : Promise.resolve(null),
-                    queryDoH(domain, 16),
-                    queryDoH(domain, 15),
-                    queryDoH(domain, 1),
-                    ...subdomainsToProbe.map(sub => queryDoH(sub, 5))
-                ]);
-
-                // 1. DMARC Evaluation
-                let dmarcParsed = parseDmarcRecord(extractTxtRecords(dmarcDirect.answer));
-                let inherited = false;
-
-                if (!dmarcParsed && isSubdomain && dmarcOrg && dmarcOrg.answer) {
-                    dmarcParsed = parseDmarcRecord(extractTxtRecords(dmarcOrg.answer));
-                    if (dmarcParsed) inherited = true;
-                }
-
-                let dmarcStatus = 'missing';
-                let dmarcPolicy = 'None detected (Vulnerable to Spoofing)';
-                let dmarcScore = 0;
-
-                if (dmarcParsed) {
-                    const effectiveP = (inherited ? dmarcParsed.sp : dmarcParsed.p);
-                    if (effectiveP === 'reject') {
-                        dmarcStatus = 'pass';
-                        dmarcPolicy = `p=reject (Strict Rejection${inherited ? ' via Apex' : ''})`;
-                        dmarcScore = dmarcParsed.pct === 100 ? 35 : 25;
-                    } else if (effectiveP === 'quarantine') {
-                        dmarcStatus = 'pass';
-                        dmarcPolicy = `p=quarantine (Spam Quarantine${inherited ? ' via Apex' : ''})`;
-                        dmarcScore = 28;
-                    } else {
-                        dmarcStatus = 'warn';
-                        dmarcPolicy = `p=none (Monitoring Only — Spoofs Delivered)`;
-                        dmarcScore = 10;
-                    }
-                }
-
-                // 2. SPF Evaluation
-                const spfResult = parseSpfRecords(extractTxtRecords(spfRes.answer));
-                const spfStatus = spfResult.status;
-                const spfPolicy = spfResult.policy;
-                const spfScore = spfResult.score;
-
-                // 2b. MX Mail Exchanger & DNSSEC Validation
-                const mxAnswers = (mxRes && mxRes.answer) ? mxRes.answer.filter(a => a.type === 15) : [];
-                let mxProvider = 'No MX Records Configured';
-                let mxProviderShort = 'No Mail';
-                if (mxAnswers.length > 0) {
-                    const mxRaw = mxAnswers.map(a => a.data || '').join(' ').toLowerCase();
-                    if (mxRaw.includes('google') || mxRaw.includes('aspmx')) {
-                        mxProvider = 'Google Workspace (Mandatory DMARC 2024)';
-                        mxProviderShort = 'Google Workspace';
-                    } else if (mxRaw.includes('outlook') || mxRaw.includes('microsoft')) {
-                        mxProvider = 'Microsoft 365 Exchange';
-                        mxProviderShort = 'Microsoft 365';
-                    } else if (mxRaw.includes('proofpoint')) {
-                        mxProvider = 'Proofpoint Secure Gateway';
-                        mxProviderShort = 'Proofpoint';
-                    } else if (mxRaw.includes('mimecast')) {
-                        mxProvider = 'Mimecast Gateway';
-                        mxProviderShort = 'Mimecast';
-                    } else {
-                        mxProvider = 'Standard Mail Exchanger';
-                        mxProviderShort = 'Configured MX';
-                    }
-                }
-
-                const isDnssecValidated = Boolean(
-                    (dmarcDirect.raw && dmarcDirect.raw.AD) ||
-                    (spfRes.raw && spfRes.raw.AD) ||
-                    (mxRes && mxRes.raw && mxRes.raw.AD)
-                );
-
-                // 3. CNAME & Perimeter Topology Evaluation
-                let cnameStatus = 'pass';
-                let cnameTarget = isSubdomain ? 'Subdomain Direct' : 'Apex Route (A/AAAA)';
-                let cnameScore = 30;
-                let takeoverWarning = null;
-                const detectedSaaS = [];
-
-                subdomainsToProbe.forEach((subName, idx) => {
-                    const probeRes = subProbes[idx];
-                    if (probeRes && probeRes.answer && probeRes.answer.length > 0) {
-                        for (const ans of probeRes.answer) {
-                            if (ans.type === 5) { // CNAME
-                                const cname = (ans.data || '').replace(/\.+$/, '').toLowerCase();
-                                cnameTarget = `${subName} → ${cname}`;
-                                
-                                for (const s of SAAS_TAKEOVER_PATTERNS) {
-                                    if (cname.includes(s.pattern)) {
-                                        detectedSaaS.push({ sub: subName, saas: s.name, target: cname });
-                                        if (probeRes.status === 3) {
-                                            cnameStatus = 'critical';
-                                            takeoverWarning = `Dangling pointer detected on ${subName} (${s.name})!`;
-                                            cnameScore = 0;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-
-                if (cnameStatus !== 'critical') {
-                    if (detectedSaaS.length > 0) {
-                        takeoverWarning = `Active SaaS routing: ${detectedSaaS.map(d => `${d.sub} (${d.saas})`).join(', ')}`;
-                        cnameScore = 30;
-                    } else {
-                        takeoverWarning = 'Perimeter clean: Zero orphaned SaaS CNAME pointers detected.';
-                        cnameScore = 30;
-                    }
-                }
-
-                // Total Score & Grade Computation
-                const totalScore = Math.max(0, Math.min(100, dmarcScore + spfScore + cnameScore));
-                let grade = 'F';
-                let gradeTextColor = 'text-red-400';
-                let gaugeStrokeColor = 'text-red-500';
-                let riskLabel = 'CRITICAL DRIFT';
-                let riskBadgeClass = 'bg-red-500/20 text-red-400 border border-red-500/40';
-
-                if (totalScore >= 90) {
-                    grade = 'A+';
-                    gradeTextColor = 'text-emerald-400';
-                    gaugeStrokeColor = 'text-emerald-400';
-                    riskLabel = 'HARDENED';
-                    riskBadgeClass = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
-                } else if (totalScore >= 75) {
-                    grade = 'B';
-                    gradeTextColor = 'text-cyan-400';
-                    gaugeStrokeColor = 'text-cyan-400';
-                    riskLabel = 'MONITORED';
-                    riskBadgeClass = 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40';
-                } else if (totalScore >= 50) {
-                    grade = 'C';
-                    gradeTextColor = 'text-yellow-400';
-                    gaugeStrokeColor = 'text-yellow-400';
-                    riskLabel = 'ELEVATED RISK';
-                    riskBadgeClass = 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40';
-                }
-
-                const badge = (status) => {
-                    if (status === 'pass') return '<span class="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold text-[10px]">PASS</span>';
-                    if (status === 'warn') return '<span class="px-2 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 font-bold text-[10px]">WARN</span>';
-                    return '<span class="px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 font-bold text-[10px]">CRITICAL</span>';
-                };
-
-                const rawTelemetry = {
-                    domain,
-                    org_domain: orgDomain,
-                    hygiene_score: totalScore,
-                    grade,
-                    dmarc: { status: dmarcStatus, policy: dmarcPolicy, parsed: dmarcParsed, inherited },
-                    spf: { status: spfStatus, policy: spfPolicy, result: spfResult },
-                    perimeter: { status: cnameStatus, target: cnameTarget, saas_detected: detectedSaaS },
-                    timestamp: new Date().toISOString()
-                };
-
-                const strokeDashoffset = Math.round(251 - (251 * totalScore / 100));
-
-                // Safe HTML string values
-                const safeDmarcPolicy = escapeHtml(dmarcPolicy);
-                const safeSpfPolicy = escapeHtml(spfPolicy);
-                const safeTakeoverWarning = escapeHtml(takeoverWarning);
-                const safeCnameTarget = escapeHtml(cnameTarget);
-
-                hud.innerHTML = `
-                    <div class="p-4 sm:p-5 rounded-xl bg-slate-950/95 border border-slate-800 shadow-2xl text-xs space-y-4 overflow-hidden">
-                        <!-- Top Circular Gauge & Summary Bar -->
-                        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
-                            <div class="flex items-center gap-3.5 sm:gap-4 w-full sm:w-auto">
-                                <div class="relative w-16 h-16 flex items-center justify-center flex-shrink-0">
-                                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                                        <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="7" class="text-slate-800" fill="transparent" />
-                                        <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="7" class="${gaugeStrokeColor}" 
-                                                stroke-dasharray="251" 
-                                                stroke-dashoffset="${strokeDashoffset}" 
-                                                stroke-linecap="round" fill="transparent" 
-                                                style="transition: stroke-dashoffset 1s ease-in-out; filter: drop-shadow(0 0 6px currentColor);" />
-                                    </svg>
-                                    <div class="absolute inset-0 flex flex-col items-center justify-center font-extrabold ${gradeTextColor}">
-                                        <span class="text-lg leading-none font-pixel">${escapeHtml(grade)}</span>
-                                    </div>
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <div class="flex items-center gap-2 flex-wrap">
-                                        <span class="text-sm sm:text-base font-bold text-white font-mono truncate max-w-[170px] xs:max-w-[220px] sm:max-w-none">${safeDomain}</span>
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${riskBadgeClass}">${escapeHtml(riskLabel)}</span>
-                                    </div>
-                                    <div class="text-[11px] text-slate-400 mt-1">Perimeter Hygiene: <span class="text-white font-bold">${totalScore}</span>/100</div>
-                                </div>
-                            </div>
-                            <div class="w-full sm:w-auto">
-                            <div class="w-full sm:w-auto flex flex-col sm:flex-row gap-2">
-                                <button type="button" 
-                                        onclick="generateInstantPdfForDomain('${safeDomain}', ${totalScore}, '${escapeHtml(grade)}')" 
-                                        class="w-full sm:w-auto min-h-[44px] px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer pixel-btn">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                    <span>Download Co-Branded PDF</span>
-                                </button>
-                                <button type="button" 
-                                        onclick="copyShareableBadge('${safeDomain}', ${totalScore}, '${escapeHtml(grade)}', '${dmarcStatus}', '${spfStatus}')" 
-                                        class="w-full sm:w-auto min-h-[44px] px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs uppercase font-sans tracking-wide transition-all flex items-center justify-center gap-2 cursor-pointer pixel-btn">
-                                    <span>📋 Copy Client Summary</span>
-                                </button>
-                            </div>
-                            </div>
-                        </div>
-
-                        <!-- HUD Navigation Tabs -->
-                        <div class="flex border-b border-slate-800/80 gap-1.5 overflow-x-auto pb-1.5 -mx-1 px-1 no-scrollbar" style="-webkit-overflow-scrolling: touch;">
-                            <button type="button" id="tabBtn-overview" onclick="switchHudTab('overview')" class="hud-tab-btn min-h-[44px] px-3.5 py-2 font-mono text-xs font-semibold rounded-lg border-b-2 border-emerald-500 text-emerald-400 bg-emerald-500/10 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Overview</button>
-                            <button type="button" id="tabBtn-email" onclick="switchHudTab('email')" class="hud-tab-btn min-h-[44px] px-3.5 py-2 font-mono text-xs font-semibold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Email Auth</button>
-                            <button type="button" id="tabBtn-dns" onclick="switchHudTab('dns')" class="hud-tab-btn min-h-[44px] px-3.5 py-2 font-mono text-xs font-semibold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">SaaS CNAMEs</button>
-                            <button type="button" id="tabBtn-raw" onclick="switchHudTab('raw')" class="hud-tab-btn min-h-[44px] px-3.5 py-2 font-mono text-xs font-semibold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Raw Telemetry</button>
-                        </div>
-
-                        <!-- Tab 1: Overview -->
-                        <div id="tabPane-overview" class="hud-tab-pane space-y-2.5 font-mono">
-                            <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80">
-                                <div class="flex items-start justify-between gap-2">
-                                    <div>
-                                        <div class="font-bold text-slate-200 text-xs flex items-center gap-2" data-cat-term="dmarc">
-                                            <span>Email Spoofing Defense (DMARC)</span>
-                                        </div>
-                                        <div class="text-[11px] text-slate-400 mt-0.5 break-all">${safeDmarcPolicy}</div>
-                                    </div>
-                                    ${badge(dmarcStatus)}
-                                </div>
-                                <div class="mt-2 text-[11px] text-emerald-400 font-sans flex flex-col xs:flex-row xs:items-center justify-between gap-2 bg-slate-950/80 p-2.5 rounded-lg border border-emerald-500/20 cursor-pointer hover:border-emerald-500/50 transition-all group" onclick="SimpleCat.explain('dmarc')">
-                                    <div class="flex items-start gap-1.5 flex-1 min-w-0">
-                                        <span class="font-bold font-pixel flex-shrink-0">🐱 Simple Cat:</span>
-                                        <span class="text-slate-200 leading-relaxed">${dmarcStatus === 'pass' ? '"VIP bouncer on duty! Fake emails get tackled at the door."' : '"Bouncer is off duty! Anyone can send fake emails wearing your name tag."'}</span>
-                                    </div>
-                                    <span class="pixel-btn min-h-[32px] px-2.5 py-1 text-[9px] font-arcade rounded bg-slate-900 border border-emerald-500/40 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all flex items-center justify-center self-end xs:self-auto flex-shrink-0">INFO &rarr;</span>
-                                </div>
-                            </div>
-
-                            <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80">
-                                <div class="flex items-start justify-between gap-2">
-                                    <div>
-                                        <div class="font-bold text-slate-200 text-xs flex items-center gap-2" data-cat-term="spf">
-                                            <span>Sender Policy Framework (SPF)</span>
-                                        </div>
-                                        <div class="text-[11px] text-slate-400 mt-0.5 break-all">${safeSpfPolicy}</div>
-                                    </div>
-                                    ${badge(spfStatus)}
-                                </div>
-                                <div class="mt-2 text-[11px] text-emerald-400 font-sans flex flex-col xs:flex-row xs:items-center justify-between gap-2 bg-slate-950/80 p-2.5 rounded-lg border border-emerald-500/20 cursor-pointer hover:border-emerald-500/50 transition-all group" onclick="SimpleCat.explain('spf')">
-                                    <div class="flex items-start gap-1.5 flex-1 min-w-0">
-                                        <span class="font-bold font-pixel flex-shrink-0">🐱 Simple Cat:</span>
-                                        <span class="text-slate-200 leading-relaxed">${spfStatus === 'pass' ? '"Mail guest list verified. Only authorized servers send mail."' : '"Guest list not configured. Shady servers can send mail."'}</span>
-                                    </div>
-                                    <span class="pixel-btn min-h-[32px] px-2.5 py-1 text-[9px] font-arcade rounded bg-slate-900 border border-emerald-500/40 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all flex items-center justify-center self-end xs:self-auto flex-shrink-0">INFO &rarr;</span>
-                                </div>
-                            </div>
-
-                            <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80">
-                                <div class="flex items-start justify-between gap-2">
-                                    <div>
-                                        <div class="font-bold text-slate-200 text-xs flex items-center gap-2" data-cat-term="cname">
-                                            <span>Perimeter Topology & SaaS Routing</span>
-                                        </div>
-                                        <div class="text-[11px] text-slate-400 mt-0.5 break-all">${safeTakeoverWarning}</div>
-                                    </div>
-                                    ${badge(cnameStatus)}
-                                </div>
-                                <div class="mt-2 text-[11px] text-emerald-400 font-sans flex flex-col xs:flex-row xs:items-center justify-between gap-2 bg-slate-950/80 p-2.5 rounded-lg border border-emerald-500/20 cursor-pointer hover:border-emerald-500/50 transition-all group" onclick="SimpleCat.explain('cname')">
-                                    <div class="flex items-start gap-1.5 flex-1 min-w-0">
-                                        <span class="font-bold font-pixel flex-shrink-0">🐱 Simple Cat:</span>
-                                        <span class="text-slate-200 leading-relaxed">${cnameStatus === 'pass' ? '"No abandoned lockers found. Pointers resolved cleanly."' : '"Danger! Abandoned locker detected—someone could claim your subdomain in 30 seconds!"'}</span>
-                                    </div>
-                                    <span class="pixel-btn min-h-[32px] px-2.5 py-1 text-[9px] font-arcade rounded bg-slate-900 border border-emerald-500/40 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all flex items-center justify-center self-end xs:self-auto flex-shrink-0">INFO &rarr;</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Tab 2: Email Auth -->
-                        <div id="tabPane-email" class="hud-tab-pane hidden space-y-2.5 font-mono">
-                            <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-xs">
-                                <span class="text-slate-400 block mb-1">DMARC Record (RFC 7489):</span>
-                                <code class="text-emerald-400 break-all">${dmarcParsed ? escapeHtml(dmarcParsed.raw) : 'No DMARC record found'}</code>
-                                <p class="text-slate-400 text-[11px] mt-1.5">DMARC controls email recipient action when messages fail SPF/DKIM checks.</p>
-                            </div>
-                            <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-xs">
-                                <span class="text-slate-400 block mb-1">SPF Mechanism Query:</span>
-                                <code class="text-emerald-400 break-all">${escapeHtml(spfResult.raw || spfPolicy)}</code>
-                                <p class="text-slate-400 text-[11px] mt-1.5">SPF lists internet hosts authorized to send emails on behalf of this domain.</p>
-                            </div>
-                        </div>
-
-                        <!-- Tab 3: SaaS CNAMEs -->
-                        <div id="tabPane-dns" class="hud-tab-pane hidden space-y-2.5 font-mono">
-                            <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-xs">
-                                <span class="text-slate-400 block mb-1">Subdomain Route Probes:</span>
-                                <code class="text-white break-all">${safeCnameTarget}</code>
-                                <p class="text-slate-400 text-[11px] mt-1.5">${safeTakeoverWarning}</p>
-                            </div>
-                        </div>
-
-                        <!-- Tab 4: Raw Telemetry JSON (XSS Safe textContent Assignment) -->
-                        <div id="tabPane-raw" class="hud-tab-pane hidden space-y-2">
-                            <div class="flex items-center justify-between pb-1">
-                                <span class="text-[11px] font-mono text-slate-400">DNS-over-HTTPS (RFC 8484) Raw Responses</span>
-                                <button type="button" id="copyRawBtn" onclick="copyRawTelemetry()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-mono cursor-pointer">Copy JSON</button>
-                            </div>
-                            <div class="relative bg-slate-900/90 rounded-lg p-3 font-mono text-[11px] text-emerald-300 overflow-x-auto max-h-48 border border-slate-800">
-                                <pre id="rawTelemetryJson"></pre>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                // Safe textContent assignment prevents <pre> tag breakout
-                const rawTelemetryEl = document.getElementById('rawTelemetryJson');
-                if (rawTelemetryEl) {
-                    rawTelemetryEl.textContent = JSON.stringify(rawTelemetry, null, 2);
-                }
-
-                if (window.SimpleCat) {
-                    SimpleCat.playPowerUp();
-                    SimpleCat.bindHelperChips();
-                }
-            } catch (err) {
-                console.error('DoH scan error:', err);
-                hud.innerHTML = `
-                    <div class="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs font-mono">
-                        [!] DNS resolution encountered network latency or invalid response. Please retry.
-                    </div>`;
-            } finally {
-                scanBtn.disabled = false;
-                scanBtnText.textContent = 'Scan Radar';
-            }
-        }
-
-        // Interactive Agency FAQ Accordion Controller
-        function toggleFaq(btn) {
-            const answer = btn.nextElementSibling;
-            const icon = btn.querySelector('.faq-icon');
-            if (!answer || !icon) return;
-            const isHidden = answer.classList.contains('hidden');
-            if (isHidden) {
-                answer.classList.remove('hidden');
-                icon.textContent = '−';
-                icon.classList.add('text-cyan-400');
-            } else {
-                answer.classList.add('hidden');
-                icon.textContent = '+';
-                icon.classList.remove('text-cyan-400');
-            }
-        }
-
-        // 1-Click Shareable Security Summary Badge for Agency Clients
-        function copyShareableBadge(domain, score, grade, dmarcStatus, spfStatus) {
-            const cleanDomain = String(domain).replace(/[^a-zA-Z0-9.-]/g, '');
-            const badgeText = [
-                `🛡️ Orbit Security Verified Perimeter Audit`,
-                `Domain: ${cleanDomain}`,
-                `Security Score: ${score}/100 (Grade ${grade})`,
-                `DMARC Spoofing Guard: ${String(dmarcStatus).toUpperCase()}`,
-                `SPF Deliverability Guard: ${String(spfStatus).toUpperCase()}`,
-                `Audit Source: RFC 8484 DNS-over-HTTPS (Zero-Server Architecture)`,
-                `https://cmfh009.github.io/Orbit-Security/`
-            ].join('\n');
-
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(badgeText).then(() => {
-                    alert(`✓ Executive security summary for ${cleanDomain} copied to clipboard! You can paste this directly into your client care report or proposal.`);
-                }).catch(() => {
-                    prompt('Copy Security Summary for Client:', badgeText);
-                });
-            } else {
-                prompt('Copy Security Summary for Client:', badgeText);
-            }
-        }
-
-        // Copy-Paste Agency-Client Safe Harbor Contract Rider
-        function copyLegalRider() {
-            const riderText = '"Client authorizes Agency and its designated automated surveillance sentinels (Orbit Security) to perform continuous, non-invasive perimeter telemetry queries (including RFC 1035/8484 DNS-over-HTTPS records, SSL/TLS certificate transparency logs, and public HTTP security headers) on Client-owned web domains for the sole purpose of identifying security misconfigurations, email authentication posture (SPF/DKIM/DMARC), and subdomain exposure. All telemetry is passive, causes zero system degradation, and conforms to Computer Fraud and Abuse Act (CFAA §1030) authorized assessment guidelines."';
-            const btn = document.getElementById('copy-rider-btn');
-            function showSuccess() {
-                if (btn) {
-                    const originalHtml = btn.innerHTML;
-                    btn.innerHTML = '<span class="text-slate-950 font-bold">✓ COPIED TO CLIPBOARD!</span>';
-                    btn.classList.add('bg-emerald-400', 'text-slate-950');
-                    btn.classList.remove('bg-slate-900', 'text-emerald-400');
-                    setTimeout(() => {
-                        btn.innerHTML = originalHtml;
-                        btn.classList.remove('bg-emerald-400', 'text-slate-950');
-                        btn.classList.add('bg-slate-900', 'text-emerald-400');
-                    }, 2500);
-                }
-            }
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(riderText).then(showSuccess).catch(() => {
-                    prompt('Copy Agency Safe Harbor Contract Rider:', riderText);
-                });
-            } else {
-                prompt('Copy Agency Safe Harbor Contract Rider:', riderText);
-            }
-        }
-
-        // Interactive Legal Section Tab Controller
-        function switchLegalTab(tabKey) {
-            if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
-            const tabs = ['rider', 'terms', 'privacy', 'disclaimer', 'refunds'];
-            tabs.forEach(t => {
-                const btn = document.getElementById('legal-tab-' + t);
-                const content = document.getElementById('legal-content-' + t);
-                if (btn && content) {
-                    if (t === tabKey) {
-                        btn.className = 'legal-tab-btn px-3 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold transition-all whitespace-nowrap flex items-center gap-1.5 shadow-sm cursor-pointer';
-                        content.classList.remove('hidden');
-                    } else {
-                        btn.className = 'legal-tab-btn px-3 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-emerald-400 hover:bg-slate-700/60 transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer';
-                        content.classList.add('hidden');
-                    }
-                }
-            });
-        }
-
-    </script>
+    <!-- Keyboard Command Center HUD Modal (Pillar 4 Visceral Ergonomics) -->
+    <div id="keyboardHudModal" 
+         class="fixed inset-0 hidden items-center justify-center p-4 transition-all" 
+         style="z-index: 999999 !important; background-color: rgba(4, 8, 18, 0.90); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);" 
+         aria-modal="true" 
+         role="dialog" 
+         aria-labelledby="hudTitle">
+        <div class="p-6 rounded-2xl max-w-lg w-full relative text-left" 
+             style="background: #0b1329; border: 2px solid rgba(16, 185, 129, 0.7); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95), 0 0 30px rgba(16, 185, 129, 0.25);">
+            <div class="flex items-center justify-between pb-3 border-b border-emerald-500/30">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">⌨️</span>
+                    <h3 id="hudTitle" class="font-pixel text-emerald-400 text-sm tracking-wide">KEYBOARD COMMAND CENTER</h3>
+                </div>
+                <button type="button" onclick="hideKeyboardHud()" class="text-slate-400 hover:text-white font-arcade text-xs px-2.5 py-1 rounded bg-slate-900 border border-slate-700 cursor-pointer pixel-btn" aria-label="Close modal">✕ ESC</button>
+            </div>
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs font-mono">
+                <div class="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800">
+                    <span class="text-slate-300">Section Down</span>
+                    <kbd class="px-2 py-0.5 rounded bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold">j</kbd>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800">
+                    <span class="text-slate-300">Section Up</span>
+                    <kbd class="px-2 py-0.5 rounded bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold">k</kbd>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800">
+                    <span class="text-slate-300">Focus Radar Scan</span>
+                    <kbd class="px-2 py-0.5 rounded bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold">s</kbd>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800">
+                    <span class="text-slate-300">Simple Cat Decoder</span>
+                    <kbd class="px-2 py-0.5 rounded bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold">c</kbd>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800">
+                    <span class="text-slate-300">Toggle Audio Mute</span>
+                    <kbd class="px-2 py-0.5 rounded bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold">m</kbd>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800">
+                    <span class="text-slate-300">Jump to Pricing</span>
+                    <kbd class="px-2 py-0.5 rounded bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold">p</kbd>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800">
+                    <span class="text-slate-300">Fleet Arena Live</span>
+                    <kbd class="px-2 py-0.5 rounded bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold">f</kbd>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800">
+                    <span class="text-slate-300">Close Overlay / Menu</span>
+                    <kbd class="px-2 py-0.5 rounded bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold">Esc</kbd>
+                </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-800 text-[10px] text-slate-400 flex items-center justify-between">
+                <span>DHH Majestic Ergonomics // Sub-millisecond dispatch</span>
+                <span class="text-emerald-400 font-arcade">CR: 99</span>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
