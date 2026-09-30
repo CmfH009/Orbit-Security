@@ -42,4 +42,11 @@ marketing/assets/
 landing_audit_*.png
 landing_hud_*.png
 
+# Runtime databases & Browser automation profiles
+data/*.db
+data/*.db-*
+data/social_daemon_state.json
+data/social_history.json
+data/x_browser_profile/
+
 
