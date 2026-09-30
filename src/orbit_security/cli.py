@@ -102,11 +102,64 @@ def main():
     scan_parser.add_argument("--agency-website", default="https://apexdigital.io", help="Agency website URL")
     scan_parser.add_argument("--output-pdf", help="Destination path for PDF report (e.g. audit.pdf)")
     scan_parser.add_argument("--output-md", help="Destination path for Markdown report (e.g. audit.md)")
+    # Social command
+    social_parser = subparsers.add_parser("social", help="Autonomous hourly engagement & outreach daemon on X")
+    social_parser.add_argument("--status", action="store_true", help="Display current daemon health, quotas, and database metrics")
+    social_parser.add_argument("--once", action="store_true", help="Execute single hourly cycle and exit immediately")
+    social_parser.add_argument("--post", action="store_true", help="Publish a thought leadership post or educational breakdown")
+    social_parser.add_argument("--text", help="Custom text content for original post")
+    social_parser.add_argument("--media", help="Optional path to image or video media attachment")
+    social_parser.add_argument("--daemon", action="store_true", help="Run continuous 24/7 background execution loop")
+    social_parser.add_argument("--dry-run", action="store_true", help="Simulate actions without mutating external X state")
+    social_parser.add_argument("--reset-circuit", action="store_true", help="Reset tripped circuit breaker to CLOSED")
+    social_parser.add_argument("--interval", type=int, default=3600, help="Base execution interval in seconds")
 
     args = parser.parse_args()
 
     if args.command == "scan":
         asyncio.run(run_scan(args))
+    elif args.command == "social":
+        from orbit_security.circuit_breaker import SocialCircuitBreaker
+        from orbit_security.quota_manager import SocialQuotaManager
+        from orbit_security.social_daemon import SocialDaemon
+        from orbit_security.social_state import SocialStateManager
+
+        if args.reset_circuit:
+            state_mgr = SocialStateManager()
+            breaker = SocialCircuitBreaker(state_manager=state_mgr)
+            breaker.reset()
+            console.print("[bold green]✔ Circuit breaker successfully reset to CLOSED.[/bold green]")
+            return
+
+        if args.status or (not args.daemon and not args.once and not args.post):
+            state_mgr = SocialStateManager()
+            quota_mgr = SocialQuotaManager(state_manager=state_mgr)
+            summary = quota_mgr.get_status_summary()
+
+            table = Table(title="Orbit Security Social Sentinel Status", border_style="cyan")
+            table.add_column("Dimension", style="bold cyan")
+            table.add_column("Value", style="bold white")
+            table.add_row("Time-of-Day Band", f"{summary['time_of_day_band']} ({summary['velocity_multiplier']}x)")
+            table.add_row("Cached Interactions", str(len(state_mgr._dedup_cache)))
+            table.add_row("Posts (Hour/Day)", f"{summary['hourly_executed'].get('POST', 0)}/{summary['hourly_limits']['posts']} | {summary['daily_executed'].get('posts_count', 0)}/{summary['daily_caps']['posts']}")
+            table.add_row("Replies (Hour/Day)", f"{summary['hourly_executed'].get('REPLY', 0)}/{summary['hourly_limits']['replies']} | {summary['daily_executed'].get('replies_count', 0)}/{summary['daily_caps']['replies']}")
+            table.add_row("Likes (Hour/Day)", f"{summary['hourly_executed'].get('LIKE', 0)}/{summary['hourly_limits']['likes']} | {summary['daily_executed'].get('likes_count', 0)}/{summary['daily_caps']['likes']}")
+            table.add_row("Reposts (Hour/Day)", f"{summary['hourly_executed'].get('REPOST', 0)}/{summary['hourly_limits']['reposts']} | {summary['daily_executed'].get('reposts_count', 0)}/{summary['daily_caps']['reposts']}")
+            console.print(table)
+            return
+
+        daemon = SocialDaemon(nominal_interval_seconds=args.interval, dry_run=args.dry_run)
+        if args.post:
+            console.print("[cyan]Publishing thought leadership post...[/cyan]")
+            post_res = daemon.publish_original_post(text=args.text, media_path=args.media)
+            console.print(f"[bold green]✔ Post published:[/bold green] {post_res}")
+        elif args.once:
+            console.print("[cyan]Executing single hourly cycle...[/cyan]")
+            res = daemon.execute_hourly_cycle()
+            console.print(f"[bold green]✔ Single cycle completed:[/bold green] {res}")
+        elif args.daemon:
+            console.print("[cyan]Launching continuous 24/7 background social sentinel...[/cyan]")
+            daemon.run_loop()
 
 
 def main_recon():
