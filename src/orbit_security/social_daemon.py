@@ -11,6 +11,7 @@ import asyncio
 import datetime
 import json
 import logging
+from logging.handlers import RotatingFileHandler
 import os
 from pathlib import Path
 import random
@@ -32,16 +33,42 @@ from orbit_security.relevance_engine import (
     RelevanceEngine,
 )
 from orbit_security.scanner import OrbitSecurityScanner
+from orbit_security.smart_follow import SmartFollowEngine
 from orbit_security.social_state import SocialStateManager
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("orbit_security.social_daemon")
 
-# Ensure logging outputs cleanly
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s] [%(levelname)s] [ORBIT-SOCIAL] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+def setup_daemon_logging():
+    """Sets up dual console and rotating file logging for social daemon."""
+    log_formatter = logging.Formatter(
+        "[%(asctime)s] [%(levelname)s] [ORBIT-SOCIAL] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    root_log = logging.getLogger()
+    root_log.setLevel(logging.INFO)
+
+    # Local data log file
+    data_log = Path(__file__).resolve().parent.parent.parent / "data" / "social_daemon.log"
+    data_log.parent.mkdir(parents=True, exist_ok=True)
+    if not any(getattr(h, "baseFilename", None) == str(data_log) for h in root_log.handlers):
+        try:
+            rfh = RotatingFileHandler(str(data_log), maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8")
+            rfh.setFormatter(log_formatter)
+            root_log.addHandler(rfh)
+        except Exception:
+            pass
+
+    # System log file
+    sys_log = Path("A:/system/logs/orbit_social.log")
+    if sys_log.parent.exists() and not any(getattr(h, "baseFilename", None) == str(sys_log) for h in root_log.handlers):
+        try:
+            srfh = RotatingFileHandler(str(sys_log), maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8")
+            srfh.setFormatter(log_formatter)
+            root_log.addHandler(srfh)
+        except Exception:
+            pass
+
+setup_daemon_logging()
 
 
 class SocialDaemon:
@@ -54,25 +81,20 @@ class SocialDaemon:
         nominal_interval_seconds: int = 3600,
         dry_run: bool = False,
         driver: Optional[Any] = None,
+        driver_mode: str = "auto",
     ):
         self.nominal_interval = nominal_interval_seconds
         self.dry_run = dry_run
         self.running = False
         self.driver = driver
+        self.driver_mode = driver_mode.lower()
 
         self.base_dir = Path(__file__).resolve().parent.parent.parent
         self.state_file = self.base_dir / "data" / "social_daemon_state.json"
 
-        # Initialize headless driver if none provided and not dry_run
+        # Initialize driver if none provided and not dry_run
         if self.driver is None and not self.dry_run:
-            try:
-                from orbit_security.x_driver import OrbitXDriver, DriverConfig
-                config = DriverConfig(headless=True)
-                self.driver = OrbitXDriver(config=config)
-                self.driver.start()
-                logger.info("Initialized Headless OrbitXDriver (zero-window background mode).")
-            except Exception as e:
-                logger.warning(f"Could not initialize headless OrbitXDriver: {e}")
+            self._ensure_driver()
 
         # Core subsystems
         self.state_manager = SocialStateManager()
@@ -82,20 +104,65 @@ class SocialDaemon:
         self.ground_truth_gate = GroundTruthGate(max_audit_age_minutes=30)
         self.content_queue = ContentQueue(project_root=self.base_dir)
         self.harvester = FeedHarvester(driver=self.driver, dry_run=self.dry_run)
+        self.smart_follow = SmartFollowEngine(project_root=self.base_dir)
+
+    def _ensure_driver(self) -> Optional[Any]:
+        """Ensures an active, healthy browser driver is connected."""
+        if self.dry_run:
+            return None
+        if self.driver is not None:
+            if hasattr(self.driver, "is_authenticated") and self.driver.is_authenticated:
+                return self.driver
+            if hasattr(self.driver, "page") and self.driver.page and not self.driver.page.is_closed():
+                return self.driver
+
+        # 1. Prefer authenticated desktop window if mode is 'auto' or 'desktop'
+        if self.driver_mode in ("auto", "desktop"):
+            try:
+                from orbit_security.desktop_x_bridge import DesktopAutomationDriver
+                desktop_drv = DesktopAutomationDriver()
+                if desktop_drv.is_available() or self.driver_mode == "desktop":
+                    self.driver = desktop_drv
+                    logger.info("Initialized DesktopAutomationDriver hooked to active Chrome window.")
+                    if hasattr(self, "harvester") and self.harvester:
+                        self.harvester.driver = self.driver
+                    return self.driver
+            except Exception as e:
+                logger.debug(f"DesktopAutomationDriver initialization skipped: {e}")
+
+        # 2. Headless OrbitXDriver (stealth Patchright)
+        try:
+            from orbit_security.x_driver import OrbitXDriver, DriverConfig
+            config = DriverConfig(headless=True)
+            drv = OrbitXDriver(config=config)
+            drv.start()
+            self.driver = drv
+            logger.info(f"Initialized Headless OrbitXDriver (is_authenticated={drv.is_authenticated}).")
+            if hasattr(self, "harvester") and self.harvester:
+                self.harvester.driver = self.driver
+            return self.driver
+        except Exception as e:
+            logger.warning(f"Could not initialize headless OrbitXDriver: {e}")
+            self.driver = None
+            return None
 
     def _check_hardware_governor(self) -> bool:
         """Verifies host CPU and RAM status before initiating heavy operations."""
         try:
             import psutil
-            cpu = psutil.cpu_percent(interval=0.1)
-            if cpu > 70.0:
-                logger.warning(f"Host CPU elevated ({cpu}% > 70.0%). Pacing social daemon.")
+            for _ in range(5):
+                cpu = psutil.cpu_percent(interval=0.5)
+                if cpu <= 88.0:
+                    break
+                time.sleep(2.0)
+            else:
+                logger.warning(f"Host CPU sustained elevated ({cpu}% > 88.0%). Pacing social daemon.")
                 return False
 
             vm = psutil.virtual_memory()
             free_mb = vm.available / (1024 * 1024)
-            if free_mb < 800.0:
-                logger.warning(f"Host RAM constrained ({free_mb:.0f}MB < 800MB). Yielding cycle.")
+            if free_mb < 600.0:
+                logger.warning(f"Host RAM constrained ({free_mb:.0f}MB < 600MB). Yielding cycle.")
                 return False
         except Exception:
             pass
@@ -181,11 +248,21 @@ class SocialDaemon:
             self._save_daemon_heartbeat("SLEEPING")
             return {"status": "DORMANT_WINDOW"}
 
+        # Ensure driver is ready if not dry_run
+        if not self.dry_run:
+            self._ensure_driver()
+            if not self.driver:
+                logger.warning("No active browser driver available for social cycle. Yielding.")
+                self._save_daemon_heartbeat("DRIVER_UNAVAILABLE")
+                return {"status": "DRIVER_UNAVAILABLE"}
+
         actions_performed = 0
 
         # 4. Proactive Staged Content Publication (Hourly Original Post)
         if self.quota_manager.can_perform("POST"):
-            queued_post = self.content_queue.get_next_queued_post(self.state_manager)
+            queued_post = self.content_queue.get_next_queued_post(
+                self.state_manager, allow_generative=True
+            )
             if queued_post:
                 logger.info(f"Dispatching queued staged post: [{queued_post['id']}] {queued_post['title']}")
                 res = self.publish_original_post(
@@ -240,17 +317,21 @@ class SocialDaemon:
 
             if decision.action == ActionType.LIKE:
                 logger.info(f"Action Dispatch: LIKE on @{post.author_handle} (Tweet: {post.tweet_id}) | Score: {score.total_score}")
-                if self.dry_run or not self.driver:
+                if self.dry_run:
                     success = True
-                else:
+                elif self.driver:
                     success = self.driver.like_tweet(f"https://x.com/{post.author_handle}/status/{post.tweet_id}")
+                else:
+                    success = False
 
             elif decision.action in (ActionType.REPOST, ActionType.QUOTE):
                 logger.info(f"Action Dispatch: {action_name} on @{post.author_handle} (Tweet: {post.tweet_id}) | Score: {score.total_score}")
-                if self.dry_run or not self.driver:
+                if self.dry_run:
                     success = True
-                else:
+                elif self.driver:
                     success = self.driver.repost_tweet(f"https://x.com/{post.author_handle}/status/{post.tweet_id}")
+                else:
+                    success = False
 
             elif decision.action == ActionType.REPLY:
                 logger.info(f"Action Dispatch: REPLY to @{post.author_handle} (Tweet: {post.tweet_id})")
@@ -280,13 +361,15 @@ class SocialDaemon:
                         continue
 
                     content_snippet = reply_text
-                    if self.dry_run or not self.driver:
+                    if self.dry_run:
                         success = True
-                    else:
+                    elif self.driver:
                         success = self.driver.reply_to_tweet(
                             f"https://x.com/{post.author_handle}/status/{post.tweet_id}",
                             reply_text,
                         )
+                    else:
+                        success = False
                 else:
                     # Educational reply without naming unverified third-party targets
                     edu_reply = (
@@ -295,13 +378,15 @@ class SocialDaemon:
                         f"remain unmonitored until hijacked. Continuous RFC 1035 & 8484 diffing is key."
                     )
                     content_snippet = edu_reply
-                    if self.dry_run or not self.driver:
+                    if self.dry_run:
                         success = True
-                    else:
+                    elif self.driver:
                         success = self.driver.reply_to_tweet(
                             f"https://x.com/{post.author_handle}/status/{post.tweet_id}",
                             edu_reply,
                         )
+                    else:
+                        success = False
 
             if success:
                 self.state_manager.record_action(
@@ -325,7 +410,42 @@ class SocialDaemon:
                 logger.info(f"Pacing: sleeping {micro_delay:.1f}s before next interaction...")
                 time.sleep(micro_delay)
 
-        # 6. Export JSON snapshot & commit telemetry
+        # 6. Autonomous Smart Following Step (Agent 1: @OrbitScout)
+        if self.quota_manager.can_perform("FOLLOW") and self.smart_follow.can_follow_today():
+            target = self.smart_follow.select_seed_target()
+            if target:
+                handle = target["handle"]
+                logger.info(
+                    f"Action Dispatch: FOLLOW on @{handle} ({target.get('category')}) via @OrbitScout"
+                )
+                follow_success = False
+                if self.dry_run:
+                    follow_success = True
+                elif self.driver and hasattr(self.driver, "follow_user"):
+                    try:
+                        follow_success = self.driver.follow_user(handle)
+                    except Exception as e:
+                        logger.warning(f"Driver follow failed for @{handle}: {e}")
+                else:
+                    follow_success = False
+
+                if follow_success:
+                    self.smart_follow.record_follow_success(
+                        handle=handle,
+                        category=target.get("category", "infosec"),
+                        notes=f"Followed via @OrbitScout (Authority: {target.get('authority_weight')})",
+                        discovered_via="seed",
+                    )
+                    self.quota_manager.record_hourly_action("FOLLOW")
+                    self.state_manager.record_action(
+                        tweet_id=f"follow_{handle}",
+                        action_type="FOLLOW",
+                        author_handle=handle,
+                        status="SIMULATED" if self.dry_run else "SUCCESS",
+                    )
+                    actions_performed += 1
+
+        # 7. Export JSON snapshot & commit telemetry
         snapshot = self.state_manager.export_json_snapshot()
         duration = round(time.time() - cycle_start, 2)
         logger.info(
@@ -371,12 +491,15 @@ class SocialDaemon:
         # 3. Execution
         final_post_id = post_id or f"post_{int(time.time())}"
         success = False
-        if self.dry_run or not self.driver:
+        if self.dry_run:
             logger.info(f"[DRY-RUN] Publishing original post [{final_post_id}]: {text[:80]}...")
             success = True
-        else:
+        elif self.driver:
             logger.info(f"Publishing live post [{final_post_id}] via OrbitXDriver: {text[:80]}...")
             success = self.driver.post_tweet(text, media_path=media_path)
+        else:
+            logger.error(f"Cannot publish original post [{final_post_id}]: No active driver connected.")
+            return {"status": "DRIVER_UNAVAILABLE"}
 
         if success:
             self.state_manager.record_action(
@@ -418,20 +541,27 @@ class SocialDaemon:
         signal.signal(signal.SIGTERM, sig_handler)
 
         while self.running:
+            cycle_result = {}
             try:
-                self.execute_hourly_cycle()
+                cycle_result = self.execute_hourly_cycle()
             except Exception as e:
                 logger.error(f"Error during hourly cycle execution: {e}", exc_info=True)
                 self.circuit_breaker.trip(TriggerType.NETWORK, str(e))
+                cycle_result = {"status": "ERROR"}
 
             if not self.running:
                 break
 
-            sleep_s = self.compute_sleep_duration()
-            next_run = datetime.datetime.now() + datetime.timedelta(seconds=sleep_s)
-            logger.info(
-                f"Next cycle scheduled in {sleep_s / 60:.1f} minutes (at {next_run.strftime('%H:%M:%S')}). Sleeping..."
-            )
+            status = cycle_result.get("status") if isinstance(cycle_result, dict) else ""
+            if status in ("PACED_BY_HARDWARE", "DRIVER_UNAVAILABLE"):
+                sleep_s = 120.0
+                logger.info(f"Cycle yielded ({status}). Retrying in 2.0 minutes...")
+            else:
+                sleep_s = self.compute_sleep_duration()
+                next_run = datetime.datetime.now() + datetime.timedelta(seconds=sleep_s)
+                logger.info(
+                    f"Next cycle scheduled in {sleep_s / 60:.1f} minutes (at {next_run.strftime('%H:%M:%S')}). Sleeping..."
+                )
 
             # Responsive sleep in small increments to catch exit signals
             slept = 0.0

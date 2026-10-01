@@ -26,8 +26,9 @@ class QuotaBudget:
     max_hourly_follows: int = 3
 
     # Hard Daily Caps
-    max_daily_posts: int = 4
+    max_daily_posts: int = 12
     max_daily_replies: int = 20
+
     max_daily_likes: int = 50
     max_daily_reposts: int = 10
     max_daily_follows: int = 15

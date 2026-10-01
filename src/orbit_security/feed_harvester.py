@@ -139,8 +139,36 @@ class FeedHarvester:
                     seen_ids.add(post.tweet_id)
                     candidates.append(post)
 
+        # 4. Fallback / supplement from authenticated home feed
+        if len(candidates) < 5:
+            home_posts = self.harvest_home_feed(limit=10)
+            for post in home_posts:
+                if post.tweet_id not in seen_ids:
+                    seen_ids.add(post.tweet_id)
+                    candidates.append(post)
+
         logger.info(f"Total hourly candidates harvested: {len(candidates)} (deduped)")
         return candidates[:max_candidates]
+
+    def harvest_home_feed(self, limit: int = 10) -> List[DiscoveredPost]:
+        """Harvests recent tweets from authenticated home feed."""
+        logger.info("Harvesting home feed timeline.")
+        if self.dry_run or not self.driver or not getattr(self.driver, "is_authenticated", False):
+            return []
+        try:
+            raw_tweets = self.driver.harvest_feed(feed_url="https://x.com/home", limit=limit)
+            return [
+                DiscoveredPost(
+                    tweet_id=t.tweet_id,
+                    author_handle=t.handle.replace("@", ""),
+                    text=t.text,
+                    discovery_vector=DiscoveryVector.CURATED_LIST,
+                )
+                for t in raw_tweets
+            ]
+        except Exception as e:
+            logger.error(f"Error harvesting home feed: {e}")
+            return []
 
     # -------------------------------------------------------------------------
     # Deterministic Mock Generators (For Dry-Run, Offline, and Unit Tests)

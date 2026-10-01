@@ -17,6 +17,11 @@ from orbit_security.relevance_engine import (
 
 from orbit_security.ground_truth_gate import GroundTruthGate, GateVerdict
 from orbit_security.feed_harvester import FeedHarvester
+from orbit_security.desktop_x_bridge import (
+    DesktopAutomationDriver,
+    DesktopDriverConfig,
+    DesktopXBridge,
+)
 
 __all__ = [
     "AgencyBranding",
@@ -40,6 +45,9 @@ __all__ = [
     "GroundTruthGate",
     "GateVerdict",
     "FeedHarvester",
+    "DesktopAutomationDriver",
+    "DesktopDriverConfig",
+    "DesktopXBridge",
     "hello",
 ]
 

@@ -39,6 +39,13 @@ try:
 except ImportError:
     HAS_ROOKIE = False
 
+try:
+    from orbit_security.desktop_x_bridge import DesktopAutomationDriver
+    HAS_DESKTOP_BRIDGE = True
+except ImportError:
+    DesktopAutomationDriver = None
+    HAS_DESKTOP_BRIDGE = False
+
 
 @dataclass
 class TweetData:
@@ -66,6 +73,8 @@ class DriverConfig:
     )
     timeout_ms: int = 25000
     cdp_endpoint: Optional[str] = None  # e.g., "http://127.0.0.1:9222" if attaching to running Chrome
+    use_desktop_driver: bool = False
+    desktop_fallback: bool = True
 
 
 class HumanKinematics:
@@ -151,6 +160,8 @@ class OrbitXDriver:
         "error_sheet": '[data-testid="error-detail"]',
         "login_prompt": 'a[href="/login"], a[data-testid="loginButton"]',
         "arkose_frame": 'iframe[src*="arkoselabs"], iframe[src*="arkose"]',
+        "follow_button": '[data-testid$="-follow"]',
+        "unfollow_button": '[data-testid$="-unfollow"]',
     }
 
     def __init__(self, config: Optional[DriverConfig] = None):
@@ -158,15 +169,31 @@ class OrbitXDriver:
         self.playwright: Optional[Playwright] = None
         self.context: Optional[BrowserContext] = None
         self.page: Optional[Page] = None
+        self.desktop_driver: Optional[Any] = None
         self.is_authenticated: bool = False
         self._ensure_profile_dir()
+        if self.config.use_desktop_driver and HAS_DESKTOP_BRIDGE and DesktopAutomationDriver:
+            self.desktop_driver = DesktopAutomationDriver()
 
     def _ensure_profile_dir(self):
         self.config.user_data_dir.mkdir(parents=True, exist_ok=True)
 
     def start(self):
-        """Initializes the browser context using Patchright persistent storage or CDP."""
+        """Initializes the browser context using Patchright persistent storage, CDP, or DesktopAutomationDriver."""
+        if self.config.use_desktop_driver:
+            if not self.desktop_driver and HAS_DESKTOP_BRIDGE and DesktopAutomationDriver:
+                self.desktop_driver = DesktopAutomationDriver()
+            if self.desktop_driver:
+                self.is_authenticated = self.desktop_driver.is_available()
+                logger.info(f"OrbitXDriver initialized in Desktop mode (is_authenticated={self.is_authenticated})")
+            return
+
         if DRIVER_FLAVOR == "none":
+            if self.config.desktop_fallback and HAS_DESKTOP_BRIDGE and DesktopAutomationDriver:
+                logger.info("Patchright/playwright unavailable. Activating DesktopAutomationDriver fallback.")
+                self.desktop_driver = DesktopAutomationDriver()
+                self.is_authenticated = self.desktop_driver.is_available()
+                return
             raise RuntimeError("Neither patchright nor playwright is installed.")
 
         logger.info(f"Initializing OrbitXDriver using engine: [{DRIVER_FLAVOR}]")
@@ -301,9 +328,28 @@ class OrbitXDriver:
 
     def verify_auth_state(self) -> Tuple[bool, str]:
         """Checks if browser is currently authenticated to X.com."""
+        if self.desktop_driver:
+            ok, reason = self.desktop_driver.verify_auth_state()
+            self.is_authenticated = ok
+            return ok, reason
+        if not self.page:
+            if self.config.desktop_fallback and HAS_DESKTOP_BRIDGE and DesktopAutomationDriver:
+                self.desktop_driver = DesktopAutomationDriver()
+                ok, reason = self.desktop_driver.verify_auth_state()
+                self.is_authenticated = ok
+                return ok, reason
+            self.is_authenticated = False
+            return False, "Browser page is not active"
         try:
             self.page.goto("https://x.com/home", wait_until="domcontentloaded")
-            time.sleep(2.5)
+            try:
+                self.page.wait_for_selector(
+                    f'{self.SELECTORS["tweet_article"]}, {self.SELECTORS["compose_textarea"]}, [data-testid="primaryColumn"], a[href="/login"]',
+                    timeout=10000,
+                )
+            except Exception:
+                pass
+            time.sleep(1.5)
 
             # Check for redirect to login
             curr_url = self.page.url
@@ -319,8 +365,9 @@ class OrbitXDriver:
             # Check for home feed presence
             has_feed = self.page.locator(self.SELECTORS["tweet_article"]).count() > 0
             has_compose = self.page.locator(self.SELECTORS["compose_textarea"]).count() > 0
+            has_primary = self.page.locator('[data-testid="primaryColumn"]').count() > 0
 
-            if has_feed or has_compose or "/home" in curr_url:
+            if has_feed or has_compose or (has_primary and "/home" in curr_url):
                 self.is_authenticated = True
                 return True, "Authenticated"
             
@@ -352,14 +399,25 @@ class OrbitXDriver:
 
     def harvest_feed(self, feed_url: Optional[str] = None, limit: int = 15, scroll_rounds: int = 4) -> List[TweetData]:
         """Scrapes tweets from feed (navigates to feed_url if provided)."""
+        if not self.page:
+            logger.warning("Cannot harvest feed: browser page is not active.")
+            return []
         if feed_url:
             logger.info(f"Navigating to feed URL: {feed_url}")
             try:
                 self.page.goto(feed_url, wait_until="domcontentloaded")
-                time.sleep(random.uniform(2.5, 4.0))
+                try:
+                    self.page.wait_for_selector(
+                        f'{self.SELECTORS["tweet_article"]}, [data-testid="primaryColumn"]',
+                        timeout=12000,
+                    )
+                except Exception:
+                    pass
+                time.sleep(random.uniform(2.0, 3.5))
             except Exception as e:
                 logger.error(f"Navigation failed for feed {feed_url}: {e}")
                 return []
+
         results: Dict[str, TweetData] = {}
 
         for round_idx in range(scroll_rounds):
@@ -426,6 +484,14 @@ class OrbitXDriver:
 
     def like_tweet(self, target_url: str) -> bool:
         """Likes a tweet by status URL. Prevents un-liking if already liked."""
+        if self.desktop_driver:
+            return self.desktop_driver.like_tweet(target_url)
+        if not self.page:
+            if self.config.desktop_fallback and HAS_DESKTOP_BRIDGE and DesktopAutomationDriver:
+                self.desktop_driver = DesktopAutomationDriver()
+                return self.desktop_driver.like_tweet(target_url)
+            logger.warning("Cannot like tweet: browser page is not active.")
+            return False
         logger.info(f"Targeting LIKE on: {target_url}")
         self.page.goto(target_url, wait_until="domcontentloaded")
         time.sleep(random.uniform(1.8, 3.2))
@@ -458,8 +524,17 @@ class OrbitXDriver:
 
     def repost_tweet(self, target_url: str) -> bool:
         """Reposts (retweets) a tweet. Handles confirmation modal and duplicate detection."""
+        if self.desktop_driver:
+            return self.desktop_driver.repost_tweet(target_url)
+        if not self.page:
+            if self.config.desktop_fallback and HAS_DESKTOP_BRIDGE and DesktopAutomationDriver:
+                self.desktop_driver = DesktopAutomationDriver()
+                return self.desktop_driver.repost_tweet(target_url)
+            logger.warning("Cannot repost tweet: browser page is not active.")
+            return False
         logger.info(f"Targeting REPOST on: {target_url}")
         self.page.goto(target_url, wait_until="domcontentloaded")
+
         time.sleep(random.uniform(1.8, 3.0))
 
         # Check if already retweeted
@@ -493,10 +568,86 @@ class OrbitXDriver:
             self.page.keyboard.press("Escape")
             return False
 
+    def follow_user(self, handle: str) -> bool:
+        """Follows a user by handle on X. Prevents duplicate follows if already following."""
+        if self.desktop_driver:
+            return self.desktop_driver.follow_user(handle)
+        if not self.page:
+            if self.config.desktop_fallback and HAS_DESKTOP_BRIDGE and DesktopAutomationDriver:
+                self.desktop_driver = DesktopAutomationDriver()
+                return self.desktop_driver.follow_user(handle)
+            logger.warning("Cannot follow user: browser page is not active.")
+            return False
+
+        clean_handle = handle.replace("@", "").strip()
+        target_url = f"https://x.com/{clean_handle}"
+        logger.info(f"Targeting FOLLOW on: @{clean_handle} ({target_url})")
+
+        try:
+            self.page.goto(target_url, wait_until="domcontentloaded")
+            try:
+                self.page.wait_for_selector(
+                    f'button[aria-label*="Follow @{clean_handle}" i], [data-testid$="-follow"], [data-testid$="-unfollow"]',
+                    timeout=12000,
+                )
+            except Exception:
+                pass
+            time.sleep(random.uniform(1.5, 2.5))
+
+            # Check if already following
+            unfollow_sel = (
+                f'button[aria-label*="Unfollow @{clean_handle}" i], '
+                f'button[aria-label*="Following @{clean_handle}" i], '
+                f'[data-testid$="-unfollow"]'
+            )
+            if self.page.locator(unfollow_sel).count() > 0:
+                logger.info(f"Already following @{clean_handle}. Skipping.")
+                return True
+
+            follow_sel = (
+                f'button[aria-label*="Follow @{clean_handle}" i], '
+                f'[data-testid$="-follow"]'
+            )
+            follow_btn = self.page.locator(follow_sel).first
+            if not follow_btn.is_visible():
+                follow_btn = self.page.locator('button:has-text("Follow")').first
+
+            if not follow_btn.is_visible():
+                logger.warning(f"Follow button not found on profile for @{clean_handle}.")
+                return False
+
+            box = follow_btn.bounding_box()
+            if box:
+                target_x = box["x"] + box["width"] * random.uniform(0.3, 0.7)
+                target_y = box["y"] + box["height"] * random.uniform(0.3, 0.7)
+                HumanKinematics.move_mouse_humanlike(self.page, target_x, target_y)
+                time.sleep(random.uniform(0.1, 0.3))
+                self.page.mouse.click(target_x, target_y)
+            else:
+                follow_btn.click()
+
+            time.sleep(random.uniform(1.8, 3.0))
+            success = self.page.locator(unfollow_sel).count() > 0
+            logger.info(f"Follow outcome for @{clean_handle}: {'SUCCESS' if success else 'FAILED'}")
+            return success
+        except Exception as e:
+            logger.error(f"Error following user @{clean_handle}: {e}")
+            return False
+
+
     def reply_to_tweet(self, target_url: str, text: str, media_path: Optional[Union[str, Path]] = None) -> bool:
         """Posts a comment/reply to a specific tweet with optional media attachment."""
+        if self.desktop_driver:
+            return self.desktop_driver.reply_to_tweet(target_url, text, media_path=media_path)
+        if not self.page:
+            if self.config.desktop_fallback and HAS_DESKTOP_BRIDGE and DesktopAutomationDriver:
+                self.desktop_driver = DesktopAutomationDriver()
+                return self.desktop_driver.reply_to_tweet(target_url, text, media_path=media_path)
+            logger.warning("Cannot reply to tweet: browser page is not active.")
+            return False
         logger.info(f"Submitting REPLY to {target_url} (Media: {bool(media_path)})")
         self.page.goto(target_url, wait_until="domcontentloaded")
+
         time.sleep(random.uniform(2.0, 3.5))
 
         # Find reply textarea (inline or modal)
@@ -558,13 +709,38 @@ class OrbitXDriver:
 
     def post_tweet(self, text: str, media_path: Optional[Union[str, Path]] = None) -> bool:
         """Publishes an original tweet with optional image or video attachment."""
+        if self.desktop_driver:
+            return self.desktop_driver.post_tweet(text, media_path=media_path)
+        if not self.page:
+            if self.config.desktop_fallback and HAS_DESKTOP_BRIDGE and DesktopAutomationDriver:
+                self.desktop_driver = DesktopAutomationDriver()
+                return self.desktop_driver.post_tweet(text, media_path=media_path)
+            logger.warning("Cannot post tweet: browser page is not active.")
+            return False
         logger.info(f"Publishing original tweet ({len(text)} chars, Media: {bool(media_path)})")
-        self.page.goto("https://x.com/compose/post", wait_until="domcontentloaded")
-        time.sleep(random.uniform(2.5, 4.0))
+        self.page.goto("https://x.com/home", wait_until="domcontentloaded")
+
+        try:
+            self.page.wait_for_selector(
+                '[data-testid="SideNav_NewTweet_Button"], [data-testid="tweetTextarea_0"]',
+                timeout=20000,
+            )
+        except Exception as e:
+            logger.warning(f"Timeout waiting for compose triggers: {e}")
+
+        side_btn = self.page.locator('[data-testid="SideNav_NewTweet_Button"]').first
+        if side_btn.is_visible():
+            side_btn.click()
+            time.sleep(random.uniform(1.2, 2.0))
 
         compose_box = self.page.locator(self.SELECTORS["compose_textarea"]).first
         if not compose_box.is_visible():
-            logger.error("Compose textarea not visible at /compose/post.")
+            self.page.goto("https://x.com/compose/post", wait_until="domcontentloaded")
+            time.sleep(3.0)
+            compose_box = self.page.locator(self.SELECTORS["compose_textarea"]).first
+
+        if not compose_box.is_visible():
+            logger.error("Compose textarea not visible.")
             return False
 
         compose_box.click()
@@ -639,6 +815,8 @@ class OrbitXDriver:
     def close(self):
         """Clean shutdown of browser context."""
         try:
+            if self.desktop_driver:
+                self.desktop_driver.close()
             if self.context:
                 self.context.close()
             if self.playwright:
