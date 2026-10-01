@@ -159,14 +159,20 @@ def main():
 
     if args.once:
         print("[*] Executing single hourly cycle...")
-        result = daemon.execute_hourly_cycle()
-        print(f"[✓] Single cycle complete: {result}")
+        try:
+            result = daemon.execute_hourly_cycle()
+            print(f"[✓] Single cycle complete: {result}")
+        finally:
+            daemon.close()
         return
 
     if args.daemon:
         print("[*] Launching Orbit Security Social Daemon in continuous loop...")
         print("[*] Supervised under Project ORBIT. Press Ctrl+C to terminate.")
-        daemon.run_loop()
+        try:
+            daemon.run_loop()
+        finally:
+            daemon.close()
 
 
 if __name__ == "__main__":

@@ -7,8 +7,12 @@ from orbit_security.social_daemon import SocialDaemon
 
 
 @pytest.fixture
-def dry_daemon():
-    return SocialDaemon(nominal_interval_seconds=3600, dry_run=True)
+def dry_daemon(tmp_path):
+    return SocialDaemon(
+        nominal_interval_seconds=3600,
+        dry_run=True,
+        state_file=tmp_path / "social_daemon_state.json",
+    )
 
 
 def test_daemon_hourly_cycle_dry_run(dry_daemon):
@@ -34,9 +38,15 @@ def test_daemon_status_and_snapshot(dry_daemon):
     assert "last_updated_utc" in snapshot
 
 
-def test_daemon_live_mode_driver_protection():
+def test_daemon_live_mode_driver_protection(tmp_path):
     """Verifies that live mode does not fabricate actions when driver is missing."""
-    daemon = SocialDaemon(nominal_interval_seconds=3600, dry_run=False, driver=None)
+    test_state = tmp_path / "social_daemon_state.json"
+    daemon = SocialDaemon(
+        nominal_interval_seconds=3600,
+        dry_run=False,
+        driver=None,
+        state_file=test_state,
+    )
     # Force driver to None (simulate unavailable driver environment)
     daemon.driver = None
     daemon._ensure_driver = lambda: None
@@ -48,11 +58,17 @@ def test_daemon_live_mode_driver_protection():
     assert cycle_res["status"] == "DRIVER_UNAVAILABLE"
 
 
-def test_daemon_follow_user_mock():
+def test_daemon_follow_user_mock(tmp_path):
     """Verifies that follow_user calls driver when available."""
     from orbit_security.desktop_x_bridge import DesktopAutomationDriver
+
     mock_drv = DesktopAutomationDriver(mock_mode=True)
-    daemon = SocialDaemon(nominal_interval_seconds=3600, dry_run=False, driver=mock_drv)
+    daemon = SocialDaemon(
+        nominal_interval_seconds=3600,
+        dry_run=False,
+        driver=mock_drv,
+        state_file=tmp_path / "social_daemon_state.json",
+    )
 
     # Test single follow execution
     assert hasattr(daemon.driver, "follow_user")

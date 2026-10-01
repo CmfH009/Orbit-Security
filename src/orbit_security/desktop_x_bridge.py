@@ -11,7 +11,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import io
 import logging
+import os
 from pathlib import Path
+import subprocess
 import sys
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -189,7 +191,42 @@ class DesktopAutomationDriver:
                     self._last_matched_window = w
                     return w
 
+        # Priority 4: ANY visible Chrome window (even if on different tab)
+        for w in windows:
+            proc = w.get("process", "").lower()
+            title = w.get("title", "").strip()
+            if proc in self.config.preferred_processes and title:
+                self._last_matched_window = w
+                return w
+
         return None
+
+    def ensure_browser_open(self, url: str = "https://x.com/home") -> bool:
+        """Launches the user's desktop Chrome browser if not already open."""
+        if self.config.mock_mode:
+            return True
+        if self.auto is not None and self.auto != desktop_automation:
+            return False
+        if os.name != "nt":
+            return False
+
+        win = self.find_x_window()
+        if win:
+            return True
+
+        logger.info(f"No active Chrome window found. Launching desktop Chrome to {url}...")
+        try:
+            import subprocess
+            subprocess.Popen(["cmd.exe", "/c", "start", "chrome", url], shell=True)
+            for _ in range(8):
+                time.sleep(0.5)
+                win = self.find_x_window()
+                if win:
+                    logger.info(f"Desktop Chrome window acquired: '{win['title']}'")
+                    return True
+        except Exception as e:
+            logger.warning(f"Could not auto-launch desktop Chrome: {e}")
+        return False
 
     def focus_x_window(self) -> bool:
         """Brings the authenticated Chrome window to the foreground."""
@@ -199,15 +236,11 @@ class DesktopAutomationDriver:
 
         win = self.find_x_window()
         if not win:
+            if self.ensure_browser_open():
+                win = self.find_x_window()
+        if not win:
             logger.warning("No authenticated X Chrome window found to focus.")
             return False
-
-        if hasattr(self.auto, "focus_window"):
-            ok, msg = self.auto.focus_window(win["title"])
-            if ok:
-                time.sleep(self.config.action_delay)
-                return True
-            logger.warning(f"desktop_automation.focus_window failed: {msg}")
 
         if HAS_WIN32:
             try:
@@ -216,11 +249,23 @@ class DesktopAutomationDriver:
                     win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
                 else:
                     win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+                try:
+                    import ctypes
+                    ctypes.windll.user32.AllowSetForegroundWindow(-1)
+                except Exception:
+                    pass
                 win32gui.SetForegroundWindow(hwnd)
                 time.sleep(self.config.action_delay)
                 return True
             except Exception as e:
                 logger.warning(f"Win32 focus fallback failed: {e}")
+
+        if hasattr(self.auto, "focus_window"):
+            ok, msg = self.auto.focus_window(win["title"])
+            if ok:
+                time.sleep(self.config.action_delay)
+                return True
+            logger.warning(f"desktop_automation.focus_window failed: {msg}")
 
         return False
 
@@ -365,19 +410,26 @@ class DesktopAutomationDriver:
             if not p.exists():
                 raise FileNotFoundError(f"Media file not found: {p}")
 
-            logger.info(f"Injecting media attachment via Windows clipboard: {p.name}")
-            if not self.set_clipboard_image(p):
-                logger.warning(f"Could not load image to clipboard: {p}")
-                return False
+            is_video = p.suffix.lower() in (".mp4", ".mov", ".webm", ".avi", ".m4v")
+            if is_video:
+                logger.info(f"Injecting video attachment via file dialog: {p.name}")
+                if not self._attach_video_file(p):
+                    logger.warning(f"Could not load video to composer: {p}")
+                    return False
+            else:
+                logger.info(f"Injecting media attachment via Windows clipboard: {p.name}")
+                if not self.set_clipboard_image(p):
+                    logger.warning(f"Could not load image to clipboard: {p}")
+                    return False
 
-            time.sleep(0.2)
-            # Paste image into active compose area
-            if hasattr(self.auto, "send_shortcut"):
-                self.auto.send_shortcut("ctrl+v")
-            elif hasattr(self.auto, "send_key"):
-                self.auto.send_key("v", ctrl=True)
+                time.sleep(0.2)
+                # Paste image into active compose area
+                if hasattr(self.auto, "send_shortcut"):
+                    self.auto.send_shortcut("ctrl+v")
+                elif hasattr(self.auto, "send_key"):
+                    self.auto.send_key("v", ctrl=True)
 
-            time.sleep(self.config.media_wait_sec)
+                time.sleep(self.config.media_wait_sec)
 
         # Inject tweet text via clipboard paste
         if hasattr(self.auto, "paste_text"):
@@ -406,6 +458,70 @@ class DesktopAutomationDriver:
         logger.info("DesktopAutomationDriver: Original tweet posted successfully.")
         return True
 
+    def _attach_video_file(self, video_path: Path) -> bool:
+        """Attaches a video file via the OS file upload dialog in X composer."""
+        if self.config.mock_mode:
+            self._record_action("attach_video_file", path=str(video_path))
+            return True
+
+        if not HAS_WIN32:
+            return False
+
+        win = self.find_x_window()
+        if not win:
+            return False
+
+        time.sleep(0.5)
+        dialog_hwnd = self._find_open_dialog()
+        if not dialog_hwnd:
+            left = win.get("left", 0)
+            top = win.get("top", 0)
+            target_x = left + 755
+            target_y = top + 260
+            if hasattr(self.auto, "click_at"):
+                self.auto.click_at(target_x, target_y)
+                time.sleep(1.5)
+                dialog_hwnd = self._find_open_dialog()
+
+        if dialog_hwnd:
+            try:
+                win32gui.SetForegroundWindow(dialog_hwnd)
+                time.sleep(0.3)
+                self.set_clipboard_text(str(video_path.resolve()))
+                if hasattr(self.auto, "send_shortcut"):
+                    self.auto.send_shortcut("ctrl+v")
+                elif hasattr(self.auto, "send_key"):
+                    self.auto.send_key("v", ctrl=True)
+                time.sleep(0.3)
+                if hasattr(self.auto, "send_key"):
+                    self.auto.send_key("enter")
+                time.sleep(self.config.media_wait_sec * 3.0)
+                return True
+            except Exception as e:
+                logger.warning(f"Error interacting with file dialog: {e}")
+
+        return False
+
+    def _find_open_dialog(self) -> Optional[int]:
+        """Locates Windows standard file open dialog (#32770)."""
+        dialog_hwnd = None
+        if not HAS_WIN32:
+            return None
+        def enum_cb(hwnd, _):
+            nonlocal dialog_hwnd
+            if win32gui.IsWindowVisible(hwnd):
+                cls = win32gui.GetClassName(hwnd)
+                text = win32gui.GetWindowText(hwnd).lower()
+                if cls == "#32770" and any(k in text for k in ("open", "choose", "upload", "select")):
+                    dialog_hwnd = hwnd
+                    return False
+            return True
+        try:
+            win32gui.EnumWindows(enum_cb, None)
+        except Exception:
+            pass
+        return dialog_hwnd
+
     def like_tweet(self, target_url: str) -> bool:
         """Likes a tweet by status URL using desktop automation."""
         logger.info(f"DesktopAutomationDriver: liking tweet at {target_url}")
@@ -422,11 +538,12 @@ class DesktopAutomationDriver:
 
         time.sleep(0.5)
 
-        # Ensure focus is on page body
+        # In X web, pressing 'j' selects the primary tweet on page, then 'l' toggles like
         if hasattr(self.auto, "send_key"):
             self.auto.send_key("esc")
             time.sleep(0.15)
-            # Send 'l' hotkey (X shortcut to like focused tweet)
+            self.auto.send_key("j")
+            time.sleep(0.25)
             self.auto.send_key("l")
 
         time.sleep(1.0)
@@ -459,8 +576,12 @@ class DesktopAutomationDriver:
 
         time.sleep(0.5)
 
-        # Trigger reply composer using 'r' hotkey
+        # Select tweet with 'j', then trigger reply composer using 'r' hotkey
         if hasattr(self.auto, "send_key"):
+            self.auto.send_key("esc")
+            time.sleep(0.15)
+            self.auto.send_key("j")
+            time.sleep(0.25)
             self.auto.send_key("r")
             time.sleep(0.8)
 
@@ -469,12 +590,15 @@ class DesktopAutomationDriver:
             p = Path(media_path).resolve()
             if not p.exists():
                 raise FileNotFoundError(f"Media file not found: {p}")
-            self.set_clipboard_image(p)
-            time.sleep(0.2)
-            if hasattr(self.auto, "send_shortcut"):
-                self.auto.send_shortcut("ctrl+v")
-            elif hasattr(self.auto, "send_key"):
-                self.auto.send_key("v", ctrl=True)
+            if p.suffix.lower() in (".mp4", ".mov", ".webm", ".avi", ".m4v"):
+                self._attach_video_file(p)
+            else:
+                self.set_clipboard_image(p)
+                time.sleep(0.2)
+                if hasattr(self.auto, "send_shortcut"):
+                    self.auto.send_shortcut("ctrl+v")
+                elif hasattr(self.auto, "send_key"):
+                    self.auto.send_key("v", ctrl=True)
             time.sleep(self.config.media_wait_sec)
 
         # Inject reply text
@@ -509,7 +633,7 @@ class DesktopAutomationDriver:
         return True
 
     def repost_tweet(self, target_url: str) -> bool:
-        """Reposts a tweet using 't' shortcut and Enter confirmation."""
+        """Reposts a tweet using 'j', 't' shortcut and Enter confirmation."""
         logger.info(f"DesktopAutomationDriver: reposting {target_url}")
 
         if self.config.mock_mode:
@@ -524,8 +648,12 @@ class DesktopAutomationDriver:
 
         time.sleep(0.5)
 
-        # Press 't' to open repost dropdown
+        # Focus tweet via 'j', then press 't' to open repost dropdown, then Enter
         if hasattr(self.auto, "send_key"):
+            self.auto.send_key("esc")
+            time.sleep(0.15)
+            self.auto.send_key("j")
+            time.sleep(0.25)
             self.auto.send_key("t")
             time.sleep(0.6)
             # Confirm repost
@@ -551,7 +679,19 @@ class DesktopAutomationDriver:
         if not self.navigate_to_url(target_url, wait_seconds=self.config.nav_wait_sec):
             return False
 
-        time.sleep(1.0)
+        time.sleep(1.5)
+
+        # On profile page, click Follow button in header
+        win = self.find_x_window()
+        if win and hasattr(self.auto, "click_at"):
+            left = win.get("left", 0)
+            top = win.get("top", 0)
+            width = win.get("width", 1920)
+            follow_x = left + int(width * 0.58)
+            follow_y = top + 265
+            self.auto.click_at(follow_x, follow_y)
+            time.sleep(0.8)
+
         self._record_action("follow_user", handle=clean_handle, success=True)
         return True
 
