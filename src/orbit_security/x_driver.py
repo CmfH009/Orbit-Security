@@ -144,13 +144,13 @@ class OrbitXDriver:
         "tweet_article": 'article[data-testid="tweet"]',
         "tweet_text": '[data-testid="tweetText"]',
         "user_name": '[data-testid="User-Name"]',
-        "like_button": 'button[data-testid="like"]',
-        "unlike_button": 'button[data-testid="unlike"]',
-        "retweet_button": 'button[data-testid="retweet"]',
-        "unretweet_button": 'button[data-testid="unretweet"]',
+        "like_button": '[data-testid="like"]',
+        "unlike_button": '[data-testid="unlike"]',
+        "retweet_button": '[data-testid="retweet"]',
+        "unretweet_button": '[data-testid="unretweet"]',
         "retweet_confirm": '[data-testid="retweetConfirm"]',
         "retweet_dropdown": '[data-testid="Dropdown"]',
-        "reply_button": 'button[data-testid="reply"]',
+        "reply_button": '[data-testid="reply"]',
         "compose_textarea": '[data-testid="tweetTextarea_0"]',
         "tweet_submit_inline": '[data-testid="tweetButtonInline"]',
         "tweet_submit_modal": '[data-testid="tweetButton"]',
@@ -494,7 +494,16 @@ class OrbitXDriver:
             return False
         logger.info(f"Targeting LIKE on: {target_url}")
         self.page.goto(target_url, wait_until="domcontentloaded")
-        time.sleep(random.uniform(1.8, 3.2))
+
+        # Explicitly wait up to 8s for status page action buttons or tweet container to hydrate
+        try:
+            self.page.wait_for_selector(
+                f'{self.SELECTORS["like_button"]}, {self.SELECTORS["unlike_button"]}, article[data-testid="tweet"]',
+                timeout=8000,
+            )
+        except Exception:
+            pass
+        time.sleep(random.uniform(0.8, 1.5))
 
         # Check if already liked
         if self.page.locator(self.SELECTORS["unlike_button"]).count() > 0:
@@ -502,6 +511,21 @@ class OrbitXDriver:
             return True
 
         like_btn = self.page.locator(self.SELECTORS["like_button"]).first
+        if not like_btn.is_visible():
+            # Keyboard shortcut fallback: Focus tweet via 'j' and trigger 'l'
+            try:
+                self.page.keyboard.press("Escape")
+                time.sleep(0.2)
+                self.page.keyboard.press("j")
+                time.sleep(0.3)
+                self.page.keyboard.press("l")
+                time.sleep(1.2)
+                if self.page.locator(self.SELECTORS["unlike_button"]).count() > 0:
+                    logger.info(f"Like outcome for {target_url} (via shortcut 'l'): SUCCESS")
+                    return True
+            except Exception:
+                pass
+
         if not like_btn.is_visible():
             logger.warning("Like button not visible on target status page.")
             return False
@@ -535,7 +559,14 @@ class OrbitXDriver:
         logger.info(f"Targeting REPOST on: {target_url}")
         self.page.goto(target_url, wait_until="domcontentloaded")
 
-        time.sleep(random.uniform(1.8, 3.0))
+        try:
+            self.page.wait_for_selector(
+                f'{self.SELECTORS["retweet_button"]}, {self.SELECTORS["unretweet_button"]}, article[data-testid="tweet"]',
+                timeout=8000,
+            )
+        except Exception:
+            pass
+        time.sleep(random.uniform(0.8, 1.5))
 
         # Check if already retweeted
         if self.page.locator(self.SELECTORS["unretweet_button"]).count() > 0:
@@ -544,17 +575,20 @@ class OrbitXDriver:
 
         rt_btn = self.page.locator(self.SELECTORS["retweet_button"]).first
         if not rt_btn.is_visible():
-            logger.warning("Repost button not visible on page.")
-            return False
+            # Keyboard shortcut fallback: Focus tweet via 'j' and press 't'
+            try:
+                self.page.keyboard.press("Escape")
+                time.sleep(0.2)
+                self.page.keyboard.press("j")
+                time.sleep(0.3)
+                self.page.keyboard.press("t")
+                time.sleep(0.8)
+            except Exception:
+                pass
 
-        # Click retweet button to open popover
-        rt_btn.click()
-        time.sleep(random.uniform(0.6, 1.1))
-
-        # Confirm repost in dropdown
+        # Check if confirm popover or menuitem appeared
         confirm_btn = self.page.locator(self.SELECTORS["retweet_confirm"]).first
         if not confirm_btn.is_visible():
-            # Fallback text selector
             confirm_btn = self.page.locator('div[role="menuitem"]:has-text("Repost")').first
 
         if confirm_btn.is_visible():
@@ -563,10 +597,26 @@ class OrbitXDriver:
             success = self.page.locator(self.SELECTORS["unretweet_button"]).count() > 0
             logger.info(f"Repost outcome: {'SUCCESS' if success else 'FAILED'}")
             return success
-        else:
-            logger.warning("Repost confirm button did not appear.")
-            self.page.keyboard.press("Escape")
-            return False
+
+        if rt_btn.is_visible():
+            # Click retweet button to open popover
+            rt_btn.click()
+            time.sleep(random.uniform(0.6, 1.1))
+
+            confirm_btn = self.page.locator(self.SELECTORS["retweet_confirm"]).first
+            if not confirm_btn.is_visible():
+                confirm_btn = self.page.locator('div[role="menuitem"]:has-text("Repost")').first
+
+            if confirm_btn.is_visible():
+                confirm_btn.click()
+                time.sleep(random.uniform(1.2, 2.0))
+                success = self.page.locator(self.SELECTORS["unretweet_button"]).count() > 0
+                logger.info(f"Repost outcome: {'SUCCESS' if success else 'FAILED'}")
+                return success
+
+        logger.warning("Repost confirm button did not appear.")
+        self.page.keyboard.press("Escape")
+        return False
 
     def follow_user(self, handle: str) -> bool:
         """Follows a user by handle on X. Prevents duplicate follows if already following."""
@@ -816,11 +866,22 @@ class OrbitXDriver:
         """Clean shutdown of browser context."""
         try:
             if self.desktop_driver:
-                self.desktop_driver.close()
+                try:
+                    self.desktop_driver.close()
+                except Exception:
+                    pass
             if self.context:
-                self.context.close()
+                try:
+                    self.context.close()
+                except Exception:
+                    pass
             if self.playwright:
-                self.playwright.stop()
+                try:
+                    self.playwright.stop()
+                except Exception:
+                    pass
             logger.info("OrbitXDriver stopped cleanly.")
         except Exception as e:
-            logger.error(f"Error during driver close: {e}")
+            logger.debug(f"Error during driver close: {e}")
+
+    stop = close

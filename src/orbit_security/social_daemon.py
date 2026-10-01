@@ -82,6 +82,7 @@ class SocialDaemon:
         dry_run: bool = False,
         driver: Optional[Any] = None,
         driver_mode: str = "auto",
+        state_file: Optional[Union[str, Path]] = None,
     ):
         self.nominal_interval = nominal_interval_seconds
         self.dry_run = dry_run
@@ -90,7 +91,7 @@ class SocialDaemon:
         self.driver_mode = driver_mode.lower()
 
         self.base_dir = Path(__file__).resolve().parent.parent.parent
-        self.state_file = self.base_dir / "data" / "social_daemon_state.json"
+        self.state_file = Path(state_file) if state_file else self.base_dir / "data" / "social_daemon_state.json"
 
         # Initialize driver if none provided and not dry_run
         if self.driver is None and not self.dry_run:
@@ -117,6 +118,7 @@ class SocialDaemon:
                 return self.driver
 
         # 1. Prefer authenticated desktop window if mode is 'auto' or 'desktop'
+        # 1. Prefer authenticated desktop window if mode is 'auto' or 'desktop'
         if self.driver_mode in ("auto", "desktop"):
             try:
                 from orbit_security.desktop_x_bridge import DesktopAutomationDriver
@@ -130,19 +132,20 @@ class SocialDaemon:
             except Exception as e:
                 logger.debug(f"DesktopAutomationDriver initialization skipped: {e}")
 
-        # 2. Headless OrbitXDriver (stealth Patchright)
+        # 2. OrbitXDriver (stealth Patchright)
         try:
             from orbit_security.x_driver import OrbitXDriver, DriverConfig
-            config = DriverConfig(headless=True)
+            # Use headful mode to avoid X Castle anti-bot detection (HTTP 403 on chrome-headless-shell)
+            config = DriverConfig(headless=False)
             drv = OrbitXDriver(config=config)
             drv.start()
             self.driver = drv
-            logger.info(f"Initialized Headless OrbitXDriver (is_authenticated={drv.is_authenticated}).")
+            logger.info(f"Initialized OrbitXDriver (is_authenticated={drv.is_authenticated}).")
             if hasattr(self, "harvester") and self.harvester:
                 self.harvester.driver = self.driver
             return self.driver
         except Exception as e:
-            logger.warning(f"Could not initialize headless OrbitXDriver: {e}")
+            logger.warning(f"Could not initialize OrbitXDriver: {e}")
             self.driver = None
             return None
 
@@ -569,10 +572,15 @@ class SocialDaemon:
                 time.sleep(min(2.0, sleep_s - slept))
                 slept += 2.0
 
+        self.close()
+
+    def close(self):
+        """Clean shutdown of browser context and daemon heartbeat."""
         self._save_daemon_heartbeat("STOPPED")
         if self.driver and hasattr(self.driver, "close"):
             try:
                 self.driver.close()
             except Exception:
                 pass
+        self.driver = None
         logger.info("Orbit Social Daemon stopped cleanly.")
