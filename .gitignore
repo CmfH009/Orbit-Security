@@ -47,6 +47,11 @@ data/*.db
 data/*.db-*
 data/social_daemon_state.json
 data/social_history.json
+data/smart_follow_state.json
 data/x_browser_profile/
+data/*.png
+data/*.mp3
+data/generated_media/
+data/generated_videos/
 
 

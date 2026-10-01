@@ -113,6 +113,7 @@ def main():
     social_parser.add_argument("--dry-run", action="store_true", help="Simulate actions without mutating external X state")
     social_parser.add_argument("--reset-circuit", action="store_true", help="Reset tripped circuit breaker to CLOSED")
     social_parser.add_argument("--interval", type=int, default=3600, help="Base execution interval in seconds")
+    social_parser.add_argument("--driver-mode", choices=["auto", "desktop", "browser"], default="auto", help="Driver mode: auto (prioritize active desktop window), desktop, or browser")
 
     args = parser.parse_args()
 
@@ -148,7 +149,11 @@ def main():
             console.print(table)
             return
 
-        daemon = SocialDaemon(nominal_interval_seconds=args.interval, dry_run=args.dry_run)
+        daemon = SocialDaemon(
+            nominal_interval_seconds=args.interval,
+            dry_run=args.dry_run,
+            driver_mode=args.driver_mode,
+        )
         if args.post:
             console.print("[cyan]Publishing thought leadership post...[/cyan]")
             post_res = daemon.publish_original_post(text=args.text, media_path=args.media)

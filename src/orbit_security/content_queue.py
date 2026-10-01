@@ -16,6 +16,8 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from orbit_security.creative_engine import CreativeEngine
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,6 +29,7 @@ class ContentQueue:
     def __init__(self, project_root: Optional[Path] = None):
         self.root = project_root or Path(__file__).resolve().parent.parent.parent
         self.items: List[Dict[str, Any]] = []
+        self.creative_engine = CreativeEngine(project_root=self.root)
         self._load_staged_content()
 
     def _load_staged_content(self):
@@ -207,12 +210,15 @@ class ContentQueue:
             ep["category"] = "evergreen"
             self.items.append(ep)
 
-    def get_next_queued_post(self, state_manager: Any) -> Optional[Dict[str, Any]]:
+    def get_next_queued_post(
+        self, state_manager: Any, allow_generative: bool = False
+    ) -> Optional[Dict[str, Any]]:
         """Returns the next unposted staged content item.
 
         Checks SQLite via state_manager.is_interacted(post_id, 'POST').
-        If all base items have been published, rotates through evergreen items
-        with an incrementing epoch suffix to maintain continuous hourly publishing.
+        If allow_generative is True and all base items are posted, synthesizes a fresh
+        multimodal post via CreativeEngine. Otherwise rotates through evergreen items
+        with an incrementing epoch suffix.
         """
         # First pass: find the first item that has never been posted
         for item in self.items:
@@ -220,7 +226,30 @@ class ContentQueue:
                 logger.info(f"ContentQueue: Next staged post selected: [{item['id']}] {item['title']}")
                 return item
 
-        # Second pass: all items posted once. Rotate evergreen posts with epoch suffix
+        # Second pass: dynamic creative generation with freshly rendered multimodal assets
+        if allow_generative and self.creative_engine:
+            try:
+                recent_ids = []
+                if hasattr(state_manager, "get_recent_actions"):
+                    recent_actions = state_manager.get_recent_actions(limit=50)
+                    recent_ids = [a.get("tweet_id") for a in recent_actions if a.get("tweet_id")]
+
+                dynamic_post = self.creative_engine.generate_next_post(recent_post_ids=recent_ids)
+                if not state_manager.is_interacted(dynamic_post.id, "POST"):
+                    logger.info(
+                        f"ContentQueue: Synthesized fresh multimodal post: [{dynamic_post.id}] {dynamic_post.title}"
+                    )
+                    return {
+                        "id": dynamic_post.id,
+                        "title": dynamic_post.title,
+                        "text": dynamic_post.text,
+                        "media_path": dynamic_post.media_path,
+                        "category": dynamic_post.pillar.value,
+                    }
+            except Exception as e:
+                logger.error(f"Error synthesizing dynamic post from CreativeEngine: {e}")
+
+        # Third pass: fallback rotation of evergreen posts with epoch suffix
         evergreen = [it for it in self.items if it.get("category") == "evergreen"]
         if not evergreen:
             evergreen = self.items
