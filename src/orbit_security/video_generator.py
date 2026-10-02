@@ -14,11 +14,13 @@ import logging
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 from typing import Any, Dict, List, Optional, Tuple
 
 from orbit_security.media_generator import MediaGenerator
 from orbit_security.voice_model import CatVoiceEngine, VoiceProfile
+from orbit_security.core_affinity import apply_worker_affinity
 
 logger = logging.getLogger(__name__)
 
@@ -95,11 +97,14 @@ class VideoGenerator:
             ]
 
             logger.info(f"Rendering MP4 video short via ffmpeg: {output_mp4}")
+            apply_worker_affinity()
+            creation_flags = 0x00004000 if sys.platform == "win32" else 0
             res = subprocess.run(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                creationflags=creation_flags,
             )
 
             if res.returncode != 0 or not output_mp4.exists():

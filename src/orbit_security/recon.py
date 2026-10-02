@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 
 try:
     import dns.resolver
+    from orbit_security.dns_cache import get_orbit_sync_resolver
 
     HAS_DNS = True
 except ImportError:
@@ -91,9 +92,7 @@ def resolve_dns(domain: str) -> Dict[str, Any]:
         return res
 
     if HAS_DNS:
-        resolver = dns.resolver.Resolver()
-        resolver.timeout = 4.0
-        resolver.lifetime = 4.0
+        resolver = get_orbit_sync_resolver(timeout=4.0)
 
         try:
             answers = resolver.resolve(domain, "CNAME")
