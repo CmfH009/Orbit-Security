@@ -1,0 +1,174 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-10-02T09:32:43.846091+00:00",
+  "agencies": [
+    {
+      "agency_id": "eastside-co",
+      "agency_name": "Eastside Co",
+      "tier": "Scale",
+      "monthly_price": 499,
+      "custom_domain": "security.eastsideco.com",
+      "agency_tagline": "Enterprise Shopify Plus Technical Solutions",
+      "primary_color": "#0B132B",
+      "accent_color": "#48CAE4",
+      "support_email": "ops@eastsideco.com",
+      "website": "https://eastsideco.com",
+      "logo_svg": null,
+      "client_domains": [
+        {
+          "domain": "candykittens.co.uk",
+          "client_name": "Candy Kittens",
+          "status": "active",
+          "last_score": 85,
+          "last_grade": "B",
+          "critical_findings": 0,
+          "high_findings": 0,
+          "medium_findings": 0,
+          "last_scanned": null
+        },
+        {
+          "domain": "wildfang.com",
+          "client_name": "Wildfang Apparel",
+          "status": "active",
+          "last_score": 95,
+          "last_grade": "A+",
+          "critical_findings": 0,
+          "high_findings": 0,
+          "medium_findings": 0,
+          "last_scanned": null
+        },
+        {
+          "domain": "trolli.com",
+          "client_name": "Trolli Candies",
+          "status": "active",
+          "last_score": 75,
+          "last_grade": "C",
+          "critical_findings": 1,
+          "high_findings": 0,
+          "medium_findings": 0,
+          "last_scanned": null
+        }
+      ],
+      "billing_status": "active",
+      "stripe_subscription_id": null,
+      "sla_guarantee": "99.9% Perimeter Uptime & <15-Min Takeover Alert Guarantee",
+      "created_at": "2026-10-02T09:32:43.845472+00:00",
+      "last_audit_at": null
+    },
+    {
+      "agency_id": "we-make-websites",
+      "agency_name": "We Make Websites",
+      "tier": "Scale",
+      "monthly_price": 499,
+      "custom_domain": "security.wemakewebsites.com",
+      "agency_tagline": "The International Shopify Plus Agency",
+      "primary_color": "#181824",
+      "accent_color": "#6366F1",
+      "support_email": "ops@wemakewebsites.com",
+      "website": "https://wemakewebsites.com",
+      "logo_svg": null,
+      "client_domains": [
+        {
+          "domain": "haslemerecellar.co.uk",
+          "client_name": "Haslemere Cellar",
+          "status": "active",
+          "last_score": 92,
+          "last_grade": "A",
+          "critical_findings": 0,
+          "high_findings": 0,
+          "medium_findings": 0,
+          "last_scanned": null
+        },
+        {
+          "domain": "skinnydip.com",
+          "client_name": "Skinnydip London",
+          "status": "active",
+          "last_score": 88,
+          "last_grade": "A",
+          "critical_findings": 0,
+          "high_findings": 0,
+          "medium_findings": 0,
+          "last_scanned": null
+        }
+      ],
+      "billing_status": "active",
+      "stripe_subscription_id": null,
+      "sla_guarantee": "99.9% Perimeter Uptime & <15-Min Takeover Alert Guarantee",
+      "created_at": "2026-10-02T09:32:43.845494+00:00",
+      "last_audit_at": null
+    },
+    {
+      "agency_id": "barrel",
+      "agency_name": "Barrel",
+      "tier": "Starter",
+      "monthly_price": 299,
+      "custom_domain": "security.barrelny.com",
+      "agency_tagline": "Digital Marketing & DTC Commerce Architecture",
+      "primary_color": "#111827",
+      "accent_color": "#10B981",
+      "support_email": "support@barrelny.com",
+      "website": "https://barrelny.com",
+      "logo_svg": null,
+      "client_domains": [
+        {
+          "domain": "edenbrothers.com",
+          "client_name": "Eden Brothers",
+          "status": "active",
+          "last_score": 90,
+          "last_grade": "A",
+          "critical_findings": 0,
+          "high_findings": 0,
+          "medium_findings": 0,
+          "last_scanned": null
+        }
+      ],
+      "billing_status": "active",
+      "stripe_subscription_id": null,
+      "sla_guarantee": "99.9% Perimeter Uptime & <15-Min Takeover Alert Guarantee",
+      "created_at": "2026-10-02T09:32:43.845501+00:00",
+      "last_audit_at": null
+    },
+    {
+      "agency_id": "swanky",
+      "agency_name": "Swanky Agency",
+      "tier": "Scale",
+      "monthly_price": 499,
+      "custom_domain": "security.swankyagency.com",
+      "agency_tagline": "Global Shopify Plus & Subscription Specialists",
+      "primary_color": "#0F172A",
+      "accent_color": "#F59E0B",
+      "support_email": "support@swankyagency.com",
+      "website": "https://swankyagency.com",
+      "logo_svg": null,
+      "client_domains": [
+        {
+          "domain": "loop-earplugs.com",
+          "client_name": "Loop Earplugs",
+          "status": "active",
+          "last_score": 96,
+          "last_grade": "A+",
+          "critical_findings": 0,
+          "high_findings": 0,
+          "medium_findings": 0,
+          "last_scanned": null
+        },
+        {
+          "domain": "chillysbottles.com",
+          "client_name": "Chilly's Bottles",
+          "status": "active",
+          "last_score": 84,
+          "last_grade": "B",
+          "critical_findings": 0,
+          "high_findings": 0,
+          "medium_findings": 0,
+          "last_scanned": null
+        }
+      ],
+      "billing_status": "active",
+      "stripe_subscription_id": null,
+      "sla_guarantee": "99.9% Perimeter Uptime & <15-Min Takeover Alert Guarantee",
+      "created_at": "2026-10-02T09:32:43.845508+00:00",
+      "last_audit_at": null
+    }
+  ]
+}

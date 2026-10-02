@@ -1,0 +1,89 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-10-02T09:34:57.753787+00:00",
+  "programs": [
+    {
+      "program_id": "shopify",
+      "name": "Shopify",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/shopify",
+      "in_scope": [
+        "*.shopify.com",
+        "*.myshopify.com",
+        "*.shopifyapps.com"
+      ],
+      "out_of_scope": [
+        "community.shopify.com"
+      ],
+      "bounty_tier": "cash",
+      "max_bounty": 50000,
+      "state": "active",
+      "last_scanned": "2026-10-02T09:34:57.746132+00:00",
+      "created_at": "2026-10-02T09:32:47.938770+00:00"
+    },
+    {
+      "program_id": "gitlab",
+      "name": "GitLab",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/gitlab",
+      "in_scope": [
+        "*.gitlab.com",
+        "*.about.gitlab.com"
+      ],
+      "out_of_scope": [],
+      "bounty_tier": "cash",
+      "max_bounty": 35000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-10-02T09:32:47.938782+00:00"
+    },
+    {
+      "program_id": "starbucks",
+      "name": "Starbucks",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/starbucks",
+      "in_scope": [
+        "*.starbucks.com",
+        "*.starbucksreserve.com"
+      ],
+      "out_of_scope": [],
+      "bounty_tier": "cash",
+      "max_bounty": 10000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-10-02T09:32:47.938786+00:00"
+    },
+    {
+      "program_id": "yahoo",
+      "name": "Yahoo / Oath",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/yahoo",
+      "in_scope": [
+        "*.yahoo.com",
+        "*.oath.com",
+        "*.engadget.com"
+      ],
+      "out_of_scope": [],
+      "bounty_tier": "cash",
+      "max_bounty": 25000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-10-02T09:32:47.938788+00:00"
+    },
+    {
+      "program_id": "hyatt",
+      "name": "Hyatt Hotels",
+      "platform": "bugcrowd",
+      "policy_url": "https://bugcrowd.com/hyatt",
+      "in_scope": [
+        "*.hyatt.com"
+      ],
+      "out_of_scope": [],
+      "bounty_tier": "cash",
+      "max_bounty": 15000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-10-02T09:32:47.938791+00:00"
+    }
+  ]
+}
