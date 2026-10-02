@@ -1,0 +1,20 @@
+[
+  {
+    "subscriber_id": "sub_149fcbfa",
+    "stripe_customer_id": "cus_simulated_001",
+    "stripe_session_id": "cs_simulated_session_local",
+    "customer_email": "security@velvetcraft.com",
+    "customer_name": "Velvet Craft Apparel",
+    "apex_domain": "velvetcraft.com",
+    "plan": "Scale Retainer ($299/mo)",
+    "amount_cents": 29900,
+    "currency": "usd",
+    "status": "active",
+    "subscribed_at": "2026-10-02T09:18:46.324516+00:00",
+    "sla_certificate_id": "ORBIT-SLA-321F0935",
+    "sla_certificate_path": "C:\\AgyHut\\projects\\orbit-security\\data\\certificates\\SLA_velvetcraft_com_ORBIT-SLA-321F0935.pdf",
+    "sla_crypto_hash": "aa159a17564fe3129203322573023390394e11dedc48f7ba31c2bf2d9faafc7c",
+    "monitoring_enabled": true,
+    "scan_interval_minutes": 60
+  }
+]
