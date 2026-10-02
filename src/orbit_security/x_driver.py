@@ -136,6 +136,16 @@ class HumanKinematics:
             time.sleep(delay)
 
 
+def compute_twitter_length(text: str) -> int:
+    """Calculates Twitter's weighted character length (URLs = 23, emojis/multibyte = 2, ASCII = 1)."""
+    urls = re.findall(r"https?://\S+", text)
+    no_urls = re.sub(r"https?://\S+", "", text)
+    length = len(urls) * 23
+    for char in no_urls:
+        length += 2 if ord(char) > 0x7FF else 1
+    return length
+
+
 class OrbitXDriver:
     """Master Browser Automation Driver for Orbit Security autonomous social agents."""
 
@@ -177,6 +187,46 @@ class OrbitXDriver:
 
     def _ensure_profile_dir(self):
         self.config.user_data_dir.mkdir(parents=True, exist_ok=True)
+
+    def is_alive(self) -> bool:
+        """Actively checks if browser context and page are open and responsive."""
+        if self.config.use_desktop_driver and self.desktop_driver:
+            return hasattr(self.desktop_driver, "is_available") and self.desktop_driver.is_available()
+        if not self.context or not self.page:
+            return False
+        try:
+            if hasattr(self.page, "is_closed") and self.page.is_closed():
+                return False
+            # Quick roundtrip evaluation to confirm DevTools / IPC connection is responsive
+            self.page.evaluate("() => true")
+            return True
+        except Exception:
+            return False
+
+    def restart(self) -> bool:
+        """Restarts the browser session cleanly if closed or disconnected."""
+        logger.info("Restarting OrbitXDriver browser session...")
+        try:
+            self.close()
+        except Exception:
+            pass
+        self.playwright = None
+        self.context = None
+        self.page = None
+        self.is_authenticated = False
+        try:
+            self.start()
+            return self.is_alive()
+        except Exception as e:
+            logger.error(f"Failed to restart OrbitXDriver: {e}")
+            return False
+
+    def ensure_connected(self) -> bool:
+        """Ensures the driver is alive and connected; restarts if connection dropped."""
+        if self.is_alive():
+            return True
+        logger.info("OrbitXDriver connection lost or not started. Restarting browser...")
+        return self.restart()
 
     def start(self):
         """Initializes the browser context using Patchright persistent storage, CDP, or DesktopAutomationDriver."""
@@ -399,8 +449,8 @@ class OrbitXDriver:
 
     def harvest_feed(self, feed_url: Optional[str] = None, limit: int = 15, scroll_rounds: int = 4) -> List[TweetData]:
         """Scrapes tweets from feed (navigates to feed_url if provided)."""
-        if not self.page:
-            logger.warning("Cannot harvest feed: browser page is not active.")
+        if not self.ensure_connected():
+            logger.warning("Cannot harvest feed: browser page is not active or could not be revived.")
             return []
         if feed_url:
             logger.info(f"Navigating to feed URL: {feed_url}")
@@ -486,14 +536,25 @@ class OrbitXDriver:
         """Likes a tweet by status URL. Prevents un-liking if already liked."""
         if self.desktop_driver:
             return self.desktop_driver.like_tweet(target_url)
-        if not self.page:
+        if not self.ensure_connected():
             if self.config.desktop_fallback and HAS_DESKTOP_BRIDGE and DesktopAutomationDriver:
                 self.desktop_driver = DesktopAutomationDriver()
                 return self.desktop_driver.like_tweet(target_url)
-            logger.warning("Cannot like tweet: browser page is not active.")
+            logger.warning("Cannot like tweet: browser page is not active or could not be revived.")
             return False
         logger.info(f"Targeting LIKE on: {target_url}")
-        self.page.goto(target_url, wait_until="domcontentloaded")
+        try:
+            self.page.goto(target_url, wait_until="domcontentloaded")
+        except Exception as e:
+            logger.warning(f"Navigation to {target_url} failed: {e}. Retrying after restart...")
+            if self.restart():
+                try:
+                    self.page.goto(target_url, wait_until="domcontentloaded")
+                except Exception as e2:
+                    logger.error(f"Retry navigation failed: {e2}")
+                    return False
+            else:
+                return False
 
         # Explicitly wait up to 8s for status page action buttons or tweet container to hydrate
         try:
@@ -550,14 +611,25 @@ class OrbitXDriver:
         """Reposts (retweets) a tweet. Handles confirmation modal and duplicate detection."""
         if self.desktop_driver:
             return self.desktop_driver.repost_tweet(target_url)
-        if not self.page:
+        if not self.ensure_connected():
             if self.config.desktop_fallback and HAS_DESKTOP_BRIDGE and DesktopAutomationDriver:
                 self.desktop_driver = DesktopAutomationDriver()
                 return self.desktop_driver.repost_tweet(target_url)
-            logger.warning("Cannot repost tweet: browser page is not active.")
+            logger.warning("Cannot repost tweet: browser page is not active or could not be revived.")
             return False
         logger.info(f"Targeting REPOST on: {target_url}")
-        self.page.goto(target_url, wait_until="domcontentloaded")
+        try:
+            self.page.goto(target_url, wait_until="domcontentloaded")
+        except Exception as e:
+            logger.warning(f"Navigation to {target_url} failed: {e}. Retrying after restart...")
+            if self.restart():
+                try:
+                    self.page.goto(target_url, wait_until="domcontentloaded")
+                except Exception as e2:
+                    logger.error(f"Retry navigation failed: {e2}")
+                    return False
+            else:
+                return False
 
         try:
             self.page.wait_for_selector(
@@ -622,11 +694,11 @@ class OrbitXDriver:
         """Follows a user by handle on X. Prevents duplicate follows if already following."""
         if self.desktop_driver:
             return self.desktop_driver.follow_user(handle)
-        if not self.page:
+        if not self.ensure_connected():
             if self.config.desktop_fallback and HAS_DESKTOP_BRIDGE and DesktopAutomationDriver:
                 self.desktop_driver = DesktopAutomationDriver()
                 return self.desktop_driver.follow_user(handle)
-            logger.warning("Cannot follow user: browser page is not active.")
+            logger.warning("Cannot follow user: browser page is not active or could not be revived.")
             return False
 
         clean_handle = handle.replace("@", "").strip()
@@ -687,16 +759,32 @@ class OrbitXDriver:
 
     def reply_to_tweet(self, target_url: str, text: str, media_path: Optional[Union[str, Path]] = None) -> bool:
         """Posts a comment/reply to a specific tweet with optional media attachment."""
+        tw_units = compute_twitter_length(text)
+        if tw_units > 280:
+            logger.error(f"Cannot reply to tweet: text exceeds Twitter 280-unit limit ({tw_units} > 280). Refusing.")
+            return False
+
         if self.desktop_driver:
             return self.desktop_driver.reply_to_tweet(target_url, text, media_path=media_path)
-        if not self.page:
+        if not self.ensure_connected():
             if self.config.desktop_fallback and HAS_DESKTOP_BRIDGE and DesktopAutomationDriver:
                 self.desktop_driver = DesktopAutomationDriver()
                 return self.desktop_driver.reply_to_tweet(target_url, text, media_path=media_path)
-            logger.warning("Cannot reply to tweet: browser page is not active.")
+            logger.warning("Cannot reply to tweet: browser page is not active or could not be revived.")
             return False
         logger.info(f"Submitting REPLY to {target_url} (Media: {bool(media_path)})")
-        self.page.goto(target_url, wait_until="domcontentloaded")
+        try:
+            self.page.goto(target_url, wait_until="domcontentloaded")
+        except Exception as e:
+            logger.warning(f"Navigation to {target_url} failed: {e}. Retrying after restart...")
+            if self.restart():
+                try:
+                    self.page.goto(target_url, wait_until="domcontentloaded")
+                except Exception as e2:
+                    logger.error(f"Retry navigation failed: {e2}")
+                    return False
+            else:
+                return False
 
         time.sleep(random.uniform(2.0, 3.5))
 
@@ -759,16 +847,32 @@ class OrbitXDriver:
 
     def post_tweet(self, text: str, media_path: Optional[Union[str, Path]] = None) -> bool:
         """Publishes an original tweet with optional image or video attachment."""
+        tw_units = compute_twitter_length(text)
+        if tw_units > 280:
+            logger.error(f"Cannot post tweet: text exceeds Twitter 280-unit limit ({tw_units} > 280). Refusing.")
+            return False
+
         if self.desktop_driver:
             return self.desktop_driver.post_tweet(text, media_path=media_path)
-        if not self.page:
+        if not self.ensure_connected():
             if self.config.desktop_fallback and HAS_DESKTOP_BRIDGE and DesktopAutomationDriver:
                 self.desktop_driver = DesktopAutomationDriver()
                 return self.desktop_driver.post_tweet(text, media_path=media_path)
-            logger.warning("Cannot post tweet: browser page is not active.")
+            logger.warning("Cannot post tweet: browser page is not active or could not be revived.")
             return False
-        logger.info(f"Publishing original tweet ({len(text)} chars, Media: {bool(media_path)})")
-        self.page.goto("https://x.com/home", wait_until="domcontentloaded")
+        logger.info(f"Publishing original tweet ({len(text)} chars / {tw_units} tw-units, Media: {bool(media_path)})")
+        try:
+            self.page.goto("https://x.com/home", wait_until="domcontentloaded")
+        except Exception as e:
+            logger.warning(f"Navigation to x.com/home failed: {e}. Attempting driver restart...")
+            if self.restart():
+                try:
+                    self.page.goto("https://x.com/home", wait_until="domcontentloaded")
+                except Exception as e2:
+                    logger.error(f"Retry navigation failed: {e2}")
+                    return False
+            else:
+                return False
 
         try:
             self.page.wait_for_selector(
@@ -820,21 +924,52 @@ class OrbitXDriver:
         if not submit_btn.is_visible():
             submit_btn = self.page.locator(self.SELECTORS["tweet_submit_inline"]).first
 
-        # Ensure button is active
-        for _ in range(20):
+        # Wait up to 12s for submit button to be visible AND enabled (aria-disabled != "true")
+        button_ready = False
+        for _ in range(12):
             if submit_btn.is_visible() and submit_btn.get_attribute("aria-disabled") != "true":
+                button_ready = True
                 break
             time.sleep(1.0)
 
-        if submit_btn.is_visible() and submit_btn.get_attribute("aria-disabled") != "true":
-            submit_btn.click()
-        else:
-            logger.info("Using keyboard Ctrl+Enter submission shortcut...")
-            self.page.keyboard.down("Control")
-            self.page.keyboard.press("Enter")
-            self.page.keyboard.up("Control")
+        if not button_ready:
+            logger.error("Submit button remains disabled or not visible. Draft cannot be sent (character limit or empty).")
+            try:
+                debug_path = self.config.user_data_dir / "failed_submit_draft.png"
+                self.page.screenshot(path=str(debug_path))
+                logger.info(f"Saved failed draft screenshot to: {debug_path}")
+            except Exception:
+                pass
+            return False
 
-        time.sleep(random.uniform(4.0, 6.0))
+        submit_btn.click()
+        logger.info("Clicked tweet submit button. Awaiting submission confirmation...")
+
+        # Receipt verification: wait up to 15s for compose box to detach/hide or toast confirmation
+        submitted = False
+        for _ in range(15):
+            toast = self.page.locator('[data-testid="toast"]').first
+            if toast.is_visible():
+                toast_text = toast.inner_text()
+                logger.info(f"Detected toast notification: {toast_text}")
+                if "sent" in toast_text.lower() or "posted" in toast_text.lower():
+                    submitted = True
+                    break
+            if not compose_box.is_visible():
+                submitted = True
+                break
+            time.sleep(1.0)
+
+        if not submitted:
+            error_banner = self.page.locator('[data-testid="toast"], [role="alert"]').first
+            error_text = error_banner.inner_text() if error_banner.is_visible() else "None"
+            logger.error(f"Compose box still visible after 15s. Post submission did not complete. Error: {error_text}")
+            try:
+                debug_path = self.config.user_data_dir / "failed_submit_timeout.png"
+                self.page.screenshot(path=str(debug_path))
+            except Exception:
+                pass
+            return False
 
         # Check for rate limits or errors
         is_limited, reason = self.check_for_rate_limits()
@@ -842,9 +977,7 @@ class OrbitXDriver:
             logger.error(f"Rate limit triggered on original post: {reason}")
             return False
 
-        # Dismiss post-submission modals
-        self.page.keyboard.press("Escape")
-        logger.info("Original tweet published successfully.")
+        logger.info("Original tweet published and empirically verified.")
         return True
 
     def _wait_for_media_processing(self, max_wait_sec: int = 45):

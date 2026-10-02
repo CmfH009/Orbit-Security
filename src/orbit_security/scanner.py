@@ -98,6 +98,43 @@ def is_safe_host(hostname: str) -> bool:
         return False
 
 
+async def async_is_safe_host(hostname: str) -> bool:
+    """Non-blocking async variant of is_safe_host resolving DNS on the running event loop."""
+    if not hostname:
+        return False
+
+    host = hostname.split(":")[0].strip("[]").strip().lower()
+    if not host:
+        return False
+
+    # Check if host is direct IP
+    try:
+        ipaddress.ip_address(host)
+        return is_safe_ip(host)
+    except ValueError:
+        pass
+
+    if host in ("localhost", "metadata.google.internal", "instance-data", "metadata"):
+        return False
+    if host.endswith(".local") or host.endswith(".internal") or host.endswith(".localhost"):
+        return False
+
+    try:
+        loop = asyncio.get_running_loop()
+        addr_info = await loop.getaddrinfo(host, None)
+        if not addr_info:
+            return False
+        for _, _, _, _, sockaddr in addr_info:
+            ip = sockaddr[0]
+            if not is_safe_ip(ip):
+                return False
+        return True
+    except socket.gaierror:
+        return True
+    except Exception:
+        return False
+
+
 class OrbitSecurityScanner:
     def __init__(self, timeout: float = 8.0):
         self.timeout = timeout
@@ -112,18 +149,23 @@ class OrbitSecurityScanner:
             if location:
                 target_url = str(response.url.join(location))
                 parsed = urlparse(target_url)
-                if parsed.hostname and not is_safe_host(parsed.hostname):
+                if parsed.hostname and not await async_is_safe_host(parsed.hostname):
                     raise httpx.RequestError(
                         f"SSRF blocked: Redirect to internal/private host '{parsed.hostname}' prohibited."
                     )
 
-    def create_http_client(self) -> httpx.AsyncClient:
-        """Creates a hardened, pooled AsyncClient with SSRF redirect guards."""
+    def create_http_client(self, verify_ssl: bool = True) -> httpx.AsyncClient:
+        """Creates a hardened, pooled AsyncClient with SSRF redirect guards.
+
+        Args:
+            verify_ssl: Whether to verify SSL/TLS certificates. Defaults to True for security
+                        hygiene. Callers conducting exploratory probes can set False if explicitly needed.
+        """
         limits = httpx.Limits(max_keepalive_connections=20, max_connections=50)
         return httpx.AsyncClient(
             timeout=self.timeout,
             follow_redirects=True,
-            verify=False,
+            verify=verify_ssl,
             limits=limits,
             event_hooks={"response": [self._check_redirect_ssrf]},
         )
@@ -132,7 +174,7 @@ class OrbitSecurityScanner:
         self, domain: str, client: Optional[httpx.AsyncClient] = None
     ) -> List[str]:
         """Discovers all subdomains registered via Certificate Transparency logs (crt.sh)."""
-        if not is_safe_host(domain):
+        if not await async_is_safe_host(domain):
             return []
 
         discovered: Set[str] = set()
@@ -488,7 +530,7 @@ class OrbitSecurityScanner:
         """Audits RFC 9116 Vulnerability Disclosure standard (security.txt)."""
         parsed = urlparse(base_url)
         domain = parsed.hostname or base_url
-        if not is_safe_host(domain):
+        if not await async_is_safe_host(domain):
             return None
 
         should_close = False
@@ -540,7 +582,7 @@ class OrbitSecurityScanner:
     async def check_subdomain_takeover(
         self, subdomain: str, client: Optional[httpx.AsyncClient] = None
     ) -> Optional[Finding]:
-        if not is_safe_host(subdomain):
+        if not await async_is_safe_host(subdomain):
             return None
 
         try:
@@ -609,7 +651,7 @@ class OrbitSecurityScanner:
         self, base_url: str, client: Optional[httpx.AsyncClient] = None
     ) -> List[Finding]:
         parsed_base = urlparse(base_url)
-        if parsed_base.hostname and not is_safe_host(parsed_base.hostname):
+        if parsed_base.hostname and not await async_is_safe_host(parsed_base.hostname):
             return []
 
         findings: List[Finding] = []
@@ -768,7 +810,7 @@ class OrbitSecurityScanner:
         self, base_url: str, client: Optional[httpx.AsyncClient] = None
     ) -> List[Finding]:
         parsed_base = urlparse(base_url)
-        if parsed_base.hostname and not is_safe_host(parsed_base.hostname):
+        if parsed_base.hostname and not await async_is_safe_host(parsed_base.hostname):
             return []
 
         domain = parsed_base.hostname or ""
@@ -934,6 +976,20 @@ class OrbitSecurityScanner:
                         evidence=" | ".join(disclosures),
                     )
                 )
+        except (ssl.SSLCertVerificationError, httpx.ConnectError) as e:
+            err_str = str(e).lower()
+            if "certificate" in err_str or "ssl" in err_str or "cert" in err_str:
+                findings.append(
+                    Finding(
+                        title="SSL/TLS Certificate Verification Failure",
+                        severity=Severity.HIGH,
+                        category="Transport Security",
+                        description=f"Automated HTTP TLS handshake failed certificate validation: {e}",
+                        remediation="Deploy a valid, unexpired CA-signed SSL/TLS certificate for this domain.",
+                        target=base_url,
+                        evidence=str(e),
+                    )
+                )
         except Exception:
             pass
         finally:
@@ -1007,7 +1063,7 @@ class OrbitSecurityScanner:
         result = DomainAuditResult(domain=domain, agency_branding=branding)
 
         # Pre-flight SSRF Validation
-        if not is_safe_host(domain):
+        if not await async_is_safe_host(domain):
             result.findings.append(
                 Finding(
                     title="Target Disallowed (SSRF / Internal IP)",

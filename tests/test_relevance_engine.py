@@ -204,3 +204,37 @@ def test_scoring_moderate_alignment_likes(engine):
 
     decision = engine.classify_action(post, score)
     assert decision.action == ActionType.LIKE
+
+
+def test_discovery_vector_weighting_and_home_feed(engine):
+    """Verifies that HOME_FEED vector member exists and vectors inject bonus score."""
+    assert DiscoveryVector.HOME_FEED == "HOME_FEED"
+
+    post_base = DiscoveredPost(
+        tweet_id="501",
+        author_handle="some_user",
+        text="Check out this security update",
+        discovery_vector=DiscoveryVector.KEYWORD_SEARCH,
+    )
+    score_base = engine.calculate_score(post_base)
+    assert score_base.vector_score == 0
+
+    post_home = DiscoveredPost(
+        tweet_id="502",
+        author_handle="some_user",
+        text="Check out this security update",
+        discovery_vector=DiscoveryVector.HOME_FEED,
+    )
+    score_home = engine.calculate_score(post_home)
+    assert score_home.vector_score == 3
+    assert score_home.total_score == score_base.total_score + 3
+
+    post_inbound = DiscoveredPost(
+        tweet_id="503",
+        author_handle="some_user",
+        text="Check out this security update",
+        discovery_vector=DiscoveryVector.INBOUND_MENTION,
+    )
+    score_inbound = engine.calculate_score(post_inbound)
+    assert score_inbound.vector_score == 10
+

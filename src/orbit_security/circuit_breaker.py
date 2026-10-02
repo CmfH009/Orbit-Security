@@ -11,6 +11,7 @@ import datetime
 from enum import Enum
 import json
 import logging
+import os
 import random
 import time
 from typing import Any, Dict, Optional, Tuple
@@ -179,18 +180,22 @@ class SocialCircuitBreaker:
         }
 
         # Dispatch using WebhookDispatcher
-        try:
-            self.webhook_dispatcher._post_webhook(
-                os.getenv("DISCORD_WEBHOOK_URL", ""),
-                discord_payload,
-            )
-        except Exception:
-            pass
+        discord_url = os.getenv("DISCORD_WEBHOOK_URL", "")
+        if discord_url:
+            try:
+                self.webhook_dispatcher.dispatch_webhook(
+                    discord_url,
+                    discord_payload,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to dispatch Discord alert: {e}")
 
-        try:
-            self.webhook_dispatcher._post_webhook(
-                os.getenv("SLACK_WEBHOOK_URL", ""),
-                slack_payload,
-            )
-        except Exception:
-            pass
+        slack_url = os.getenv("SLACK_WEBHOOK_URL", "")
+        if slack_url:
+            try:
+                self.webhook_dispatcher.dispatch_webhook(
+                    slack_url,
+                    slack_payload,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to dispatch Slack alert: {e}")

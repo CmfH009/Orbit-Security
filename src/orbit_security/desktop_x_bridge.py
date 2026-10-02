@@ -128,7 +128,7 @@ class DesktopAutomationDriver:
         return False
 
     def find_x_window(
-        self, patterns: Optional[List[str]] = None
+        self, patterns: Optional[List[str]] = None, allow_any_chrome: bool = False
     ) -> Optional[Dict[str, Any]]:
         """Finds the authenticated X (Twitter) Chrome window on the interactive desktop."""
         if self.config.mock_mode:
@@ -191,13 +191,14 @@ class DesktopAutomationDriver:
                     self._last_matched_window = w
                     return w
 
-        # Priority 4: ANY visible Chrome window (even if on different tab)
-        for w in windows:
-            proc = w.get("process", "").lower()
-            title = w.get("title", "").strip()
-            if proc in self.config.preferred_processes and title:
-                self._last_matched_window = w
-                return w
+        # Priority 4: ANY visible Chrome window (only if explicitly requested via allow_any_chrome)
+        if allow_any_chrome:
+            for w in windows:
+                proc = w.get("process", "").lower()
+                title = w.get("title", "").strip()
+                if proc in self.config.preferred_processes and title:
+                    self._last_matched_window = w
+                    return w
 
         return None
 

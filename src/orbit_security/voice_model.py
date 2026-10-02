@@ -141,6 +141,15 @@ class CatVoiceEngine:
             except Exception as e:
                 # Fallback to edge_tts if Gemini API unavailable
                 pass
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(asyncio.run, self._async_synthesize(text, output_path, prof)).result()
         return asyncio.run(self._async_synthesize(text, output_path, prof))
 
 

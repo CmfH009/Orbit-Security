@@ -78,7 +78,7 @@ class SocialDaemon:
 
     def __init__(
         self,
-        nominal_interval_seconds: int = 3600,
+        nominal_interval_seconds: int = 7200,
         dry_run: bool = False,
         driver: Optional[Any] = None,
         driver_mode: str = "auto",
@@ -107,17 +107,41 @@ class SocialDaemon:
         self.harvester = FeedHarvester(driver=self.driver, dry_run=self.dry_run)
         self.smart_follow = SmartFollowEngine(project_root=self.base_dir)
 
+    def close_driver(self):
+        """Closes and releases active driver cleanly."""
+        if self.driver is not None:
+            if hasattr(self.driver, "close"):
+                try:
+                    self.driver.close()
+                except Exception:
+                    pass
+            self.driver = None
+
     def _ensure_driver(self) -> Optional[Any]:
         """Ensures an active, healthy browser driver is connected."""
         if self.dry_run:
             return None
-        if self.driver is not None:
-            if hasattr(self.driver, "is_authenticated") and self.driver.is_authenticated:
-                return self.driver
-            if hasattr(self.driver, "page") and self.driver.page and not self.driver.page.is_closed():
-                return self.driver
 
-        # 1. Prefer authenticated desktop window if mode is 'auto' or 'desktop'
+        # Verify existing driver liveness
+        if self.driver is not None:
+            is_healthy = False
+            if hasattr(self.driver, "is_alive"):
+                is_healthy = self.driver.is_alive()
+            elif hasattr(self.driver, "is_available"):
+                is_healthy = self.driver.is_available()
+            elif hasattr(self.driver, "page") and self.driver.page and not self.driver.page.is_closed():
+                try:
+                    self.driver.page.evaluate("() => true")
+                    is_healthy = True
+                except Exception:
+                    is_healthy = False
+
+            if is_healthy:
+                return self.driver
+            else:
+                logger.warning("Existing driver disconnected or target closed. Recycling driver.")
+                self.close_driver()
+
         # 1. Prefer authenticated desktop window if mode is 'auto' or 'desktop'
         if self.driver_mode in ("auto", "desktop"):
             try:
@@ -233,25 +257,13 @@ class SocialDaemon:
         self.quota_manager.reset_hourly_cycle()
         self._save_daemon_heartbeat("EXECUTING_CYCLE")
 
-        # 1. Hardware Governor Check
-        if not self._check_hardware_governor():
-            logger.info("Hardware governor pacing: yielding cycle early.")
-            return {"status": "PACED_BY_HARDWARE"}
-
-        # 2. Circuit Breaker Check
+        # 1. Circuit Breaker Check
         available, reason = self.circuit_breaker.is_available()
         if not available:
             logger.warning(f"Skipping cycle: Circuit Breaker active ({reason})")
             return {"status": "CIRCUIT_OPEN", "reason": reason}
 
-        # 3. Time-of-Day Check
-        multiplier = self.quota_manager.get_time_of_day_multiplier()
-        if multiplier == 0.0:
-            logger.info("Current window is DORMANT (quiet night period). Sleeping without mutations.")
-            self._save_daemon_heartbeat("SLEEPING")
-            return {"status": "DORMANT_WINDOW"}
-
-        # Ensure driver is ready if not dry_run
+        # 2. Ensure driver is ready if not dry_run
         if not self.dry_run:
             self._ensure_driver()
             if not self.driver:
@@ -259,15 +271,28 @@ class SocialDaemon:
                 self._save_daemon_heartbeat("DRIVER_UNAVAILABLE")
                 return {"status": "DRIVER_UNAVAILABLE"}
 
+        # 3. Hardware Governor Check (skipped for dry-run or forced cycles)
+        if not self.dry_run and not getattr(self, "force_cycle", False):
+            if not self._check_hardware_governor():
+                logger.info("Hardware governor pacing: yielding cycle early.")
+                return {"status": "PACED_BY_HARDWARE"}
+
+        # 4. Multiplier Check (Uniform 24/7 round-the-clock cadence)
+        multiplier = self.quota_manager.get_time_of_day_multiplier()
         actions_performed = 0
 
-        # 4. Proactive Staged Content Publication (Hourly Original Post)
-        if self.quota_manager.can_perform("POST"):
+        # 5. Proactive Staged Content Publication (Original Post)
+        if self.quota_manager.can_perform("POST", allow_dormant=True):
             queued_post = self.content_queue.get_next_queued_post(
                 self.state_manager, allow_generative=True
             )
             if queued_post:
-                logger.info(f"Dispatching queued staged post: [{queued_post['id']}] {queued_post['title']}")
+                m_type = queued_post.get("media_type", "media")
+                m_name = Path(queued_post.get("media_path") or "").name
+                logger.info(
+                    f"Dispatching queued staged post: [{queued_post['id']}] {queued_post['title']} "
+                    f"({m_type.upper()}: {m_name})"
+                )
                 res = self.publish_original_post(
                     post_id=queued_post["id"],
                     text=queued_post["text"],
@@ -284,16 +309,12 @@ class SocialDaemon:
         else:
             logger.info("Hourly POST quota currently exhausted. Skipping proactive publication.")
 
-        # 5. Multi-Vector Post Harvesting
+        # 6. Multi-Vector Post Harvesting
         candidates = self.harvester.harvest_hourly_candidates(max_candidates=20)
         logger.info(f"Processing {len(candidates)} discovered candidates this cycle.")
 
-        # 5. Evaluate and Execute Candidates
+        # 7. Evaluate and Execute Candidates
         for post in candidates:
-            # Check remaining quota
-            if not self.quota_manager.get_status_summary():
-                break
-
             # Calculate Relevance Score
             score = self.relevance_engine.calculate_score(post)
             if score.is_hard_dropped or score.total_score < 50:
@@ -469,16 +490,54 @@ class SocialDaemon:
         text: Optional[str] = None,
         media_path: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Publishes an original thought leadership post or educational breakdown."""
+        """Publishes an original thought leadership post or educational breakdown with media."""
         # Default high-impact post if none provided
         if not text:
             text = (
                 "How an abandoned $15/mo Unbounce landing page can compromise a $50M Shopify Plus brand:\n\n"
-                "The hidden anatomy of Dangling CNAME Subdomain Takeovers — and how open-source reconnaissance catches them in 800ms. 🧵👇"
+                "The hidden anatomy of Dangling CNAME Subdomain Takeovers — and how open-source reconnaissance catches them in 800ms. 🧵👇\n"
+                "https://cmfh009.github.io/Orbit-Security/"
             )
-            default_media = self.base_dir / "landing" / "assets" / "orbit_cats_pounce.jpg"
-            if default_media.exists() and not media_path:
-                media_path = str(default_media)
+
+        final_post_id = post_id or f"post_{int(time.time())}"
+
+        # If media_path is None, autonomously synthesize or bind fresh alternating media
+        if not media_path:
+            last_info = (
+                self.state_manager.get_last_post_media_info()
+                if hasattr(self.state_manager, "get_last_post_media_info")
+                else None
+            )
+            last_type = last_info.get("media_type") if last_info else None
+            req_type = "video" if last_type == "image" else "image"
+            recent_media = (
+                self.state_manager.get_recent_media_paths(limit=15)
+                if hasattr(self.state_manager, "get_recent_media_paths")
+                else []
+            )
+            recent_media_names = {Path(p).name for p in recent_media}
+
+            if req_type == "video":
+                try:
+                    card = self.content_queue.creative_engine.media_gen.generate_telemetry_radar_card()
+                    vid = self.content_queue.creative_engine.video_gen.generate_video_short(
+                        script_text=text[:120] if text else "Orbit Security perimeter scan complete.",
+                        image_path=card,
+                        title=f"auto_{final_post_id}",
+                    )
+                    media_path = str(vid)
+                except Exception as e:
+                    logger.error(f"Error synthesizing video fallback: {e}")
+            else:
+                try:
+                    card = self.content_queue.creative_engine.media_gen.generate_dns_attack_diagram()
+                    media_path = str(card)
+                except Exception as e:
+                    logger.error(f"Error synthesizing image fallback: {e}")
+
+        # Detect media type from path
+        ext = Path(media_path).suffix.lower() if media_path else ""
+        media_type = "video" if ext in (".mp4", ".webm", ".mov", ".mkv") else "image"
 
         # 1. Ground-Truth & CVD Gate Validation
         verdict = self.ground_truth_gate.validate_proactive_post(text)
@@ -486,20 +545,42 @@ class SocialDaemon:
             logger.warning(f"Ground-Truth Gate Rejected Post: {verdict.rejection_reason}")
             return {"status": "REJECTED_BY_GATE", "reason": verdict.rejection_reason}
 
-        # 2. Check Quota
-        if not self.quota_manager.can_perform("POST"):
+        # 2. Driver Availability Guard
+        if not self.dry_run and not self.driver:
+            logger.error(f"Cannot publish original post [{final_post_id}]: No active driver connected.")
+            return {"status": "DRIVER_UNAVAILABLE"}
+
+        # 3. Check Quota
+        allow_dormant = self.dry_run or getattr(self, "force_cycle", False)
+        if not self.quota_manager.can_perform("POST", allow_dormant=allow_dormant):
             logger.warning("Daily or hourly post quota reached.")
             return {"status": "QUOTA_EXCEEDED"}
 
-        # 3. Execution
-        final_post_id = post_id or f"post_{int(time.time())}"
+        # 4. Execution
         success = False
         if self.dry_run:
-            logger.info(f"[DRY-RUN] Publishing original post [{final_post_id}]: {text[:80]}...")
+            logger.info(
+                f"[DRY-RUN] Publishing original post [{final_post_id}] ({media_type.upper()}: {Path(media_path or '').name}): {text[:80]}..."
+            )
             success = True
         elif self.driver:
-            logger.info(f"Publishing live post [{final_post_id}] via OrbitXDriver: {text[:80]}...")
-            success = self.driver.post_tweet(text, media_path=media_path)
+            logger.info(
+                f"Publishing live post [{final_post_id}] via OrbitXDriver ({media_type.upper()}: {Path(media_path or '').name}): {text[:80]}..."
+            )
+            try:
+                success = self.driver.post_tweet(text, media_path=media_path)
+            except Exception as e:
+                logger.error(f"Driver post_tweet raised exception: {e}")
+                self.close_driver()
+                self._ensure_driver()
+                if self.driver:
+                    try:
+                        success = self.driver.post_tweet(text, media_path=media_path)
+                    except Exception as e2:
+                        logger.error(f"Retry post_tweet also failed: {e2}")
+                        success = False
+                else:
+                    success = False
         else:
             logger.error(f"Cannot publish original post [{final_post_id}]: No active driver connected.")
             return {"status": "DRIVER_UNAVAILABLE"}
@@ -511,6 +592,11 @@ class SocialDaemon:
                 author_handle="_arsoncode",
                 content_snippet=text[:120],
                 status="SIMULATED" if self.dry_run else "SUCCESS",
+                metadata={
+                    "media_path": str(media_path) if media_path else None,
+                    "media_type": media_type,
+                    "media_name": Path(media_path).name if media_path else None,
+                },
             )
             self.quota_manager.record_hourly_action("POST")
 
@@ -519,13 +605,14 @@ class SocialDaemon:
             "post_id": final_post_id,
             "text": text,
             "media_path": media_path,
+            "media_type": media_type,
             "character_count": len(text),
             "dry_run": self.dry_run,
         }
 
     def compute_sleep_duration(self) -> float:
-        """Calculates sleep interval with uniform jitter (-8 to +12 minutes)."""
-        jitter = random.uniform(-480.0, 720.0)
+        """Calculates sleep interval with uniform jitter (-7 to +8 minutes around nominal cadence)."""
+        jitter = random.uniform(-420.0, 480.0)
         effective = max(1800.0, self.nominal_interval + jitter)
         return effective
 
@@ -550,13 +637,17 @@ class SocialDaemon:
             except Exception as e:
                 logger.error(f"Error during hourly cycle execution: {e}", exc_info=True)
                 self.circuit_breaker.trip(TriggerType.NETWORK, str(e))
+                self.close_driver()
                 cycle_result = {"status": "ERROR"}
 
             if not self.running:
                 break
 
             status = cycle_result.get("status") if isinstance(cycle_result, dict) else ""
-            if status in ("PACED_BY_HARDWARE", "DRIVER_UNAVAILABLE"):
+            if status == "ERROR":
+                sleep_s = 300.0
+                logger.info(f"Cycle resulted in error. Retrying in {sleep_s / 60:.1f} minutes after recycling driver...")
+            elif status in ("PACED_BY_HARDWARE", "DRIVER_UNAVAILABLE"):
                 sleep_s = 120.0
                 logger.info(f"Cycle yielded ({status}). Retrying in 2.0 minutes...")
             else:
