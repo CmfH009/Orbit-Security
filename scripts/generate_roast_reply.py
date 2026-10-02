@@ -173,6 +173,9 @@ def main():
     parser.add_argument(
         "--raw", action="store_true", help="Print only the ready-to-paste tweet text without framing"
     )
+    parser.add_argument(
+        "--video", action="store_true", help="Synthesize a 16-bit video roast MP4 with neural cat voiceover"
+    )
     args = parser.parse_args()
 
     clean_target = clean_domain(args.domain)
@@ -189,6 +192,27 @@ def main():
     char_count = len(tweet)
     is_valid = char_count <= 280
 
+    video_path = None
+    if args.video:
+        try:
+            from orbit_security.video_generator import VideoGenerator
+            dmarc_status, dmarc_finding = extract_dmarc_status(result)
+            key_finding = extract_key_finding(result, dmarc_finding)
+            vg = VideoGenerator(project_root=REPO_ROOT)
+            speech_script = (
+                f"Orbit Security perimeter scan for {clean_target}. "
+                f"Attack surface hygiene score is {result.score} out of 100, Grade {result.grade}. "
+                f"DMARC status: {dmarc_status}. Key finding: {key_finding}."
+            )
+            print("🎥 Synthesizing astronaut cat video roast with neural DSP...")
+            video_path = vg.generate_video_short(
+                script_text=speech_script,
+                title=f"roast_{clean_target.replace('.', '_')}",
+            )
+            print(f"🎬 Video Roast rendered: {video_path}")
+        except Exception as ve:
+            print(f"Video synthesis notice: {ve}", file=sys.stderr)
+
     if args.raw:
         print(tweet)
         return
@@ -198,6 +222,8 @@ def main():
     print(f"Target Domain: {clean_target}")
     print(f"Score: {result.score}/100 | Grade: {result.grade}")
     print(f"Character Count: {char_count}/280 [{'PASS' if is_valid else 'FAIL'}]")
+    if video_path:
+        print(f"Media Asset: {video_path.name} ({round(video_path.stat().st_size / 1024, 1)} KB)")
     print("=" * 60)
     print("\nREADY-TO-PASTE TWEET REPLY:\n")
     print(tweet)

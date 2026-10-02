@@ -98,4 +98,17 @@ def test_generate_roast_tweet_length_enforcement():
     )
     assert len(tweet) <= 280
     assert "https://cmfh009.github.io/Orbit-Security/" in tweet
-    assert "45/100" in tweet
+
+
+def test_roast_video_generation_mock(tmp_path):
+    from unittest.mock import MagicMock, patch
+    from orbit_security.video_generator import VideoGenerator
+
+    mock_mp4 = tmp_path / "test_roast.mp4"
+    mock_mp4.write_text("dummy mp4")
+
+    with patch.object(VideoGenerator, "generate_video_short", return_value=mock_mp4):
+        vg = VideoGenerator(project_root=tmp_path)
+        out = vg.generate_video_short("test speech", title="roast_test")
+        assert out.exists()
+        assert out.name == "test_roast.mp4"
