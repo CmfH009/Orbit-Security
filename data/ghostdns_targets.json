@@ -1,0 +1,43 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-10-02T09:39:51.819575+00:00",
+  "targets": [
+    {
+      "target_id": "store-candykittens",
+      "domain": "candykittens.co.uk",
+      "client_name": "Candy Kittens UK",
+      "plan": "Store",
+      "monitored_subdomains": [
+        "shop.candykittens.co.uk",
+        "cdn.candykittens.co.uk"
+      ],
+      "status": "active",
+      "baseline_id": null,
+      "last_audit_score": 95,
+      "last_audit_grade": "A",
+      "drift_anomalies_count": 0,
+      "dangling_cname_count": 0,
+      "last_scanned": null,
+      "created_at": "2026-10-02T09:39:51.818795+00:00"
+    },
+    {
+      "target_id": "agency-eastside",
+      "domain": "eastsideco.com",
+      "client_name": "Eastside Co Agency Fleet",
+      "plan": "Agency",
+      "monitored_subdomains": [
+        "wildfang.com",
+        "trolli.com",
+        "loop-earplugs.com"
+      ],
+      "status": "active",
+      "baseline_id": null,
+      "last_audit_score": 90,
+      "last_audit_grade": "A",
+      "drift_anomalies_count": 0,
+      "dangling_cname_count": 0,
+      "last_scanned": null,
+      "created_at": "2026-10-02T09:39:51.818807+00:00"
+    }
+  ]
+}
