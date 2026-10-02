@@ -38,5 +38,85 @@
     "followup_dispatched_at": "2026-09-27 04:01:48",
     "bump_number": 1,
     "status": "SENT"
+  },
+  "wemakewebsites.com": {
+    "agency_name": "We Make Websites",
+    "contact_email": "hello@wemakewebsites.com",
+    "client_domain": "pangaia.com",
+    "followup_dispatched_at": "2026-10-02 02:37:24",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "barrelny.com": {
+    "agency_name": "Barrel",
+    "contact_email": "info@barrelny.com",
+    "client_domain": "hukitchen.com",
+    "followup_dispatched_at": "2026-10-02 02:37:27",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "eastsideco.com": {
+    "agency_name": "Eastside Co",
+    "contact_email": "info@eastsideco.com",
+    "client_domain": "themillionroses.com",
+    "followup_dispatched_at": "2026-10-02 02:37:31",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "swankyagency.com": {
+    "agency_name": "Swanky",
+    "contact_email": "hello@swankyagency.com",
+    "client_domain": "wilkinson-sword.co.uk",
+    "followup_dispatched_at": "2026-10-02 02:37:34",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "domaineworldwide.com": {
+    "agency_name": "Domaine",
+    "contact_email": "hello@domaineworldwide.com",
+    "client_domain": "rembeauty.com",
+    "followup_dispatched_at": "2026-10-02 02:37:37",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "10up.com": {
+    "agency_name": "10up",
+    "contact_email": "sales@10up.com",
+    "client_domain": "politico.com",
+    "followup_dispatched_at": "2026-10-02 02:37:54",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "humanmade.com": {
+    "agency_name": "Human Made",
+    "contact_email": "hello@humanmade.com",
+    "client_domain": "recipetineats.com",
+    "followup_dispatched_at": "2026-10-02 02:37:59",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "kota.co.uk": {
+    "agency_name": "KOTA",
+    "contact_email": "hello@kota.co.uk",
+    "client_domain": "nutopia.com",
+    "followup_dispatched_at": "2026-10-02 02:38:02",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "illustrate.digital": {
+    "agency_name": "Illustrate Digital",
+    "contact_email": "hello@illustrate.digital",
+    "client_domain": "footanstey.com",
+    "followup_dispatched_at": "2026-10-02 02:38:06",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "ctidigital.com": {
+    "agency_name": "CTI Digital",
+    "contact_email": "hello@ctidigital.com",
+    "client_domain": "thedonkeysanctuary.org.uk",
+    "followup_dispatched_at": "2026-10-02 02:38:09",
+    "bump_number": 1,
+    "status": "SENT"
   }
 }
