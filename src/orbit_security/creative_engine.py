@@ -62,12 +62,10 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
         "domain": "promo.nordicwear.com",
         "target_cname": "unbouncepages.com",
         "text": (
-            "A $50M ecommerce brand cancelled their Unbounce subscription 6 months ago.\n\n"
-            "Nobody deleted the DNS CNAME record: `promo -> unbouncepages.com`.\n"
-            "When Unbounce deleted the tenant, that record didn't disappear—it became a dangling pointer.\n\n"
-            "An attacker claims the slug on Unbounce for $15, serves malicious checkout malware, "
-            "and steals customer cookies on your apex domain.\n\n"
-            "We catch dangling CNAMEs in 800ms via passive DoH (RFC 8484):\n"
+            "A $50M ecommerce brand cancelled Unbounce 6mo ago.\n"
+            "Nobody deleted the DNS CNAME: promo -> unbouncepages.com.\n\n"
+            "When the tenant vanished, it became dangling. An attacker claims the slug and steals customer cookies.\n\n"
+            "Catch dangling CNAMEs in 800ms:\n"
             "https://cmfh009.github.io/Orbit-Security/ 🛡️🐾"
         ),
     },
@@ -79,11 +77,10 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
         "generator_type": "spf_overflow",
         "domain": "enterprise-saas.io",
         "text": (
-            "RFC 7208 has a hard rule: SPF evaluation stops after 10 DNS lookups.\n\n"
-            "Your team added HubSpot, SendGrid, Zendesk, Stripe, and Google Workspace to one TXT record.\n"
-            "Result? `PermError`. Resolvers discard the entire policy.\n\n"
-            "Congratulations: Anyone on earth can now spoof your CEO's email address and pass DMARC.\n\n"
-            "Run a 10-second DoH audit before your next phishing simulation does it for you:\n"
+            "RFC 7208 hard rule: SPF evaluation aborts after 10 DNS lookups.\n\n"
+            "Adding HubSpot, SendGrid, Zendesk, Stripe & Google to one TXT record triggers PermError.\n"
+            "Resolvers discard the policy—anyone can spoof your domain.\n\n"
+            "Run a 10s DoH audit:\n"
             "https://cmfh009.github.io/Orbit-Security/ 🚀"
         ),
     },
@@ -97,8 +94,7 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
         "text": (
             "The silent killer of modern perimeters isn't zero-days.\n"
             "It's DNS drift.\n\n"
-            "Contractors build seasonal landing pages, campaigns end, SaaS accounts get cancelled.\n"
-            "Months later, the DNS pointer lives on until an attacker claims the slug.\n\n"
+            "Campaigns end, SaaS tools get cancelled, but DNS pointers live on until an adversary claims the slug.\n\n"
             "Audit your attack surface in 800ms with Orbit DoH Radar:\n"
             "https://cmfh009.github.io/Orbit-Security/ 🔍🛰️"
         ),
@@ -111,9 +107,10 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
         "generator_type": "doh_speed",
         "domain": "target-recon.io",
         "text": (
-            "Legacy DNS reconnaissance floods port 53 with unencrypted UDP packets that get rate-limited and logged.\n\n"
-            "Orbit Security runs encrypted RFC 8484 DNS-over-HTTPS across global Cloudflare and Google edges.\n\n"
-            "8.4ms resolution time with zero server overhead or port 53 leakage:\n"
+            "Legacy DNS recon floods port 53 with unencrypted UDP packets.\n\n"
+            "Orbit runs encrypted RFC 8484 DNS-over-HTTPS across Cloudflare and Google edges.\n"
+            "8.4ms resolution with zero port 53 leakage:\n\n"
+            "Audit your perimeter:\n"
             "https://cmfh009.github.io/Orbit-Security/ ⚡🐾"
         ),
     },
@@ -127,11 +124,9 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
         "title": "The $250k SOC2 vs One Abandoned Subdomain",
         "asset_image": "orbit_cname_blackhole.jpg",
         "text": (
-            "Companies will spend $250,000 on a SOC2 Type II audit to prove their laptops have screensavers,\n"
-            "while leaving `staging-2022.company.com` pointing to a deleted S3 bucket.\n\n"
-            "Your perimeter isn't secured by PDF compliance binders.\n"
-            "It's secured by cleaning up your DNS garbage before someone else claims your CNAMEs.\n\n"
-            "Astro-Cat does not accept SOC2 excuses. Only clean zone files.\n"
+            "Companies spend $250k on SOC2 audits while leaving staging-2022 pointing to a deleted S3 bucket.\n\n"
+            "Perimeters aren't secured by PDF compliance binders. They're secured by cleaning up your DNS garbage.\n\n"
+            "Astro-Cat demands clean zone files:\n"
             "https://cmfh009.github.io/Orbit-Security/ 🐾⚡"
         ),
     },
@@ -143,11 +138,11 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
         "asset_image": "orbit_astrocat_laser_sentinel.jpg",
         "text": (
             "Senior systems engineering rule #1:\n"
-            "If a DNS record exists and nobody remembers what it does, do not delete it.\n"
-            "Wait—no, that's how dangling CNAME takeovers happen.\n\n"
-            "Delete the abandoned subdomain. Knock it off the counter like a glass of water.\n\n"
-            "Sub-second DNS radar with zero bloat:\n"
-            "https://cmfh009.github.io/Orbit-Security/ 🛰️🐱💥"
+            "If a DNS record exists and nobody remembers what it does, don't ignore it.\n"
+            "That's how dangling CNAME takeovers happen.\n\n"
+            "Knock abandoned subdomains off the counter like a glass of water.\n\n"
+            "Sub-second DNS radar:\n"
+            "https://cmfh009.github.io/Orbit-Security/ 🛰️🐱"
         ),
     },
     {
@@ -158,9 +153,8 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
         "asset_image": "orbit_cyber_command_deck.jpg",
         "text": (
             "Most cybersecurity dashboards are sterile corporate spreadsheets.\n\n"
-            "Orbit provides an orbital command deck: 16-bit cyber arcade, real-time RFC 8484 DoH waterfall telemetry, "
-            "and Carson the astronaut cat guarding your apex records.\n\n"
-            "Experience real perimeter defense:\n"
+            "Orbit provides an orbital command deck: 16-bit cyber arcade, real-time RFC 8484 DoH telemetry, and Astro-Cat guarding your apex.\n\n"
+            "Real perimeter defense:\n"
             "https://cmfh009.github.io/Orbit-Security/ 🚀🐾"
         ),
     },
@@ -171,10 +165,9 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
         "title": "The Encrypted DoH Crystalline Shield",
         "asset_image": "orbit_doh_encrypted_shield.jpg",
         "text": (
-            "Cleartext DNS is 1983 technology operating in a 2026 threat landscape.\n\n"
-            "ISP snooping, spoofed responses, and unauthenticated NXDOMAIN hijacks disappear when you enforce "
-            "RFC 8484 DoH resolution with DNSSEC validation.\n\n"
-            "Shield your client fleet today:\n"
+            "Cleartext DNS is 1983 technology in a modern threat landscape.\n\n"
+            "Spoofed responses and unauthenticated NXDOMAIN hijacks disappear when you enforce RFC 8484 DoH resolution with DNSSEC validation.\n\n"
+            "Shield your client fleet:\n"
             "https://cmfh009.github.io/Orbit-Security/ 🛡️✨"
         ),
     },
@@ -191,14 +184,13 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
         "attack_vector": "Untrusted web content injects malicious JSON tool call parameters",
         "orbit_defense": "Deterministic AST parser isolates agent execution boundaries",
         "text": (
-            "Giving an autonomous AI agent shell access without tool-output sandboxing is just "
-            "remote code execution with polite English syntax.\n\n"
-            "Anatomy of an MCP tool injection:\n"
-            "1. Agent scrapes untrusted external page\n"
-            "2. Hidden markdown payload overrides system prompt\n"
-            "3. Agent executes arbitrary CLI commands\n\n"
-            "Here is how we architect zero-trust boundaries around AI agent loops:\n"
-            "https://cmfh009.github.io/Orbit-Security/ 🛡️🤖👇"
+            "Giving an AI agent shell access without tool-output sandboxing is remote code execution with polite syntax.\n\n"
+            "Anatomy of MCP injection:\n"
+            "1. Untrusted page scrape\n"
+            "2. Hidden markdown payload\n"
+            "3. Arbitrary CLI execution\n\n"
+            "Enforce zero-trust:\n"
+            "https://cmfh009.github.io/Orbit-Security/ 🛡️🤖"
         ),
     },
     {
@@ -208,10 +200,10 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
         "title": "Zero-Trust Agentic Sandboxing",
         "asset_image": "orbit_mcp_agent_sandbox.jpg",
         "text": (
-            "How do you stop an autonomous coding agent from executing `rm -rf /` when an attacker poisons its context?\n\n"
-            "You don't rely on model alignment prompts.\n"
-            "You enforce hard deterministic AST parsing and isolated container boundaries.\n\n"
-            "Explore our agentic DevSecOps architecture:\n"
+            "How do you stop an autonomous coding agent from executing rm -rf when an attacker poisons context?\n\n"
+            "Don't rely on model alignment prompts.\n"
+            "Enforce hard deterministic AST parsing & isolated containers.\n\n"
+            "Agentic DevSecOps architecture:\n"
             "https://cmfh009.github.io/Orbit-Security/ 🧪🐾"
         ),
     },
@@ -223,10 +215,9 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
         "generator_type": "shadow_ai",
         "domain": "internal-ai.dev",
         "text": (
-            "Every startup currently has 3 engineers who spun up private Ollama / vLLM endpoints on AWS,\n"
-            "mapped them to `ai-test.company.com`, and forgot to configure authentication.\n\n"
+            "Engineers spin up private Ollama / vLLM endpoints on AWS, map them to ai-test.company.com, and skip auth.\n\n"
             "One sub-second DNS scan catches them all before external attackers do.\n\n"
-            "Audit your perimeter before your proprietary embeddings end up on Pastebin:\n"
+            "Audit before your embeddings leak:\n"
             "https://cmfh009.github.io/Orbit-Security/ 🛡️⚡"
         ),
     },
@@ -240,12 +231,12 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
         "title": "How Agencies Turn a 10s Scan into a $250/mo Retainer",
         "generator_type": "agency_retainer",
         "text": (
-            "How web agencies pitch $250–$500/mo security retainers without writing code:\n\n"
-            "1. Run Orbit's 10-second DoH audit on prospect domain\n"
-            "2. Discover their abandoned CNAMEs & spoofable SPF\n"
-            "3. Export white-label executive audit PDF\n"
-            "4. \"We found 2 critical perimeter vulnerabilities in your DNS. Let's patch them this week.\"\n\n"
-            "Free client scanning radar:\n"
+            "How web agencies pitch $250-$500/mo security retainers without code:\n\n"
+            "1. Run Orbit's 10s DoH audit on prospect\n"
+            "2. Discover abandoned CNAMEs & spoofable SPF\n"
+            "3. Export white-label client PDF\n"
+            "4. Close retainer to patch perimeters\n\n"
+            "Free client radar:\n"
             "https://cmfh009.github.io/Orbit-Security/ 💼🐾"
         ),
     },
@@ -256,10 +247,9 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
         "title": "The High-Margin Agency Care Plan Vault",
         "asset_image": "orbit_agency_retainer_vault.jpg",
         "text": (
-            "Stop competing on hourly rates for WordPress and Shopify maintenance.\n\n"
-            "Package perimeter security and DNS drift protection into a $250/mo retainer. "
-            "Orbit gives you automated, white-label client PDF audit cards in 10 seconds.\n\n"
-            "Build your recurring revenue moat:\n"
+            "Stop competing on hourly rates for WordPress & Shopify maintenance.\n\n"
+            "Package perimeter security & DNS drift protection into a $250/mo retainer with Orbit's automated white-label client PDF cards.\n\n"
+            "Build recurring revenue:\n"
             "https://cmfh009.github.io/Orbit-Security/ 🏰📈"
         ),
     },
