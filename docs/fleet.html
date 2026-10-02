@@ -1020,6 +1020,62 @@
 
         // Initialize table on page load
         renderFleet();
+
+        // URL Parameter Auto-Focus & Pre-fill Handler (?domain=xyz.com&agency=AgencyName)
+        async function handleUrlParameters() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const targetDomain = params.get("domain");
+                const agencyName = params.get("agency");
+                
+                if (targetDomain) {
+                    const cleanedDomain = targetDomain.toLowerCase().trim().replace(/https?:\/\//, '').split('/')[0];
+                    if (!cleanedDomain) return;
+
+                    const rowId = `row-${cleanedDomain.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                    const existing = fleet.find(item => item.domain.toLowerCase() === cleanedDomain);
+
+                    if (existing) {
+                        setTimeout(() => {
+                            const el = document.getElementById(rowId);
+                            if (el) {
+                                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                el.classList.add('bg-cyan-500/20', 'ring-2', 'ring-cyan-400');
+                            }
+                        }, 400);
+                        showToast(`📍 Highlighted client domain: ${cleanedDomain}`);
+                    } else {
+                        showToast(`🎯 Auto-auditing inbound client: ${cleanedDomain}...`);
+                        const audited = await auditDomainDoH(cleanedDomain);
+                        const clientLabel = agencyName ? `${cleanedDomain} (${agencyName})` : `${cleanedDomain} (Inbound Lead)`;
+                        fleet.unshift({
+                            domain: cleanedDomain,
+                            client: clientLabel,
+                            score: audited.score,
+                            grade: audited.grade,
+                            dmarc: audited.dmarc,
+                            cname: audited.cname,
+                            headers: audited.headers,
+                            status: audited.status
+                        });
+                        saveFleet();
+                        renderFleet();
+                        setTimeout(() => {
+                            const newEl = document.getElementById(`row-${cleanedDomain.replace(/[^a-zA-Z0-9]/g, '_')}`);
+                            if (newEl) {
+                                newEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                newEl.classList.add('bg-emerald-500/20', 'ring-2', 'ring-emerald-400');
+                            }
+                        }, 300);
+                        showToast(`✓ Staged live audit for ${cleanedDomain} (Score: ${audited.score}/100)`);
+                    }
+                }
+            } catch (err) {
+                console.warn("handleUrlParameters error:", err);
+            }
+        }
+
+        handleUrlParameters();
     </script>
 </body>
 </html>
