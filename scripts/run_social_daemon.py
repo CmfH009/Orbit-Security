@@ -126,10 +126,15 @@ def main():
         help="Simulate actions without mutating external X state",
     )
     parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force execution even during dormant night window",
+    )
+    parser.add_argument(
         "--interval",
         type=int,
-        default=3600,
-        help="Base execution interval in seconds (default: 3600)",
+        default=7200,
+        help="Base execution interval in seconds (default: 7200)",
     )
 
     args = parser.parse_args()
@@ -156,6 +161,8 @@ def main():
         nominal_interval_seconds=args.interval,
         dry_run=args.dry_run,
     )
+    if args.force:
+        daemon.force_cycle = True
 
     if args.once:
         print("[*] Executing single hourly cycle...")

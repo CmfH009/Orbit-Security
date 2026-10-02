@@ -162,7 +162,7 @@ class FeedHarvester:
                     tweet_id=t.tweet_id,
                     author_handle=t.handle.replace("@", ""),
                     text=t.text,
-                    discovery_vector=DiscoveryVector.CURATED_LIST,
+                    discovery_vector=DiscoveryVector.HOME_FEED,
                 )
                 for t in raw_tweets
             ]

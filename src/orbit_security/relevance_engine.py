@@ -143,6 +143,7 @@ class DiscoveryVector(str, Enum):
     TARGET_AGENCY = "TARGET_AGENCY"
     KEYWORD_SEARCH = "KEYWORD_SEARCH"
     INBOUND_MENTION = "INBOUND_MENTION"
+    HOME_FEED = "HOME_FEED"
 
 
 class ActionType(str, Enum):
@@ -177,6 +178,7 @@ class RelevanceScore(BaseModel):
     author_score: int
     domain_score: int
     engagement_score: int
+    vector_score: int = 0
     noise_penalty: int
     is_hard_dropped: bool = False
     drop_reason: Optional[str] = None
@@ -470,8 +472,21 @@ class RelevanceEngine:
 
         w_engagement = min(15, w_engagement)
 
+        # 5b. Discovery Vector Weighting (W_vector: 0-10 pts)
+        w_vector = 0
+        if post.discovery_vector == DiscoveryVector.INBOUND_MENTION:
+            w_vector = 10
+        elif post.discovery_vector == DiscoveryVector.TARGET_AGENCY:
+            w_vector = 8
+        elif post.discovery_vector == DiscoveryVector.CURATED_LIST:
+            w_vector = 5
+        elif post.discovery_vector == DiscoveryVector.HOME_FEED:
+            w_vector = 3
+        elif post.discovery_vector == DiscoveryVector.KEYWORD_SEARCH:
+            w_vector = 0
+
         # 6. Composite Sum & Clamping
-        gross_score = w_keyword + w_author + w_domain + w_engagement
+        gross_score = w_keyword + w_author + w_domain + w_engagement + w_vector
         composite = max(0, min(100, gross_score - noise_penalty))
 
         return RelevanceScore(
@@ -480,6 +495,7 @@ class RelevanceEngine:
             author_score=w_author,
             domain_score=w_domain,
             engagement_score=w_engagement,
+            vector_score=w_vector,
             noise_penalty=noise_penalty,
             is_hard_dropped=False,
             matched_keywords=matched_keywords,

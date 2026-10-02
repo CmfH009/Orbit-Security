@@ -70,20 +70,10 @@ class SocialQuotaManager:
             self.last_rollover_date = today_utc
 
     def get_time_of_day_multiplier(self) -> float:
-        """Modulates activity based on agency business hours.
-        - Peak (13:00 - 21:00 UTC): 1.0 (US/UK working day)
-        - Shoulder (08:00 - 13:00 UTC / 21:00 - 01:00 UTC): 0.6
-        - Dormant (01:00 - 08:00 UTC): 0.0 (Night quiet period)
-        """
-        hour = datetime.datetime.now(datetime.timezone.utc).hour
-        if 13 <= hour < 21:
-            return 1.0
-        elif 8 <= hour < 13 or 21 <= hour < 24 or hour == 0:
-            return 0.6
-        else:
-            return 0.0
+        """Enforces uniform 24/7 active pacing without artificial quiet or dormant windows."""
+        return 1.0
 
-    def can_perform(self, action_type: str) -> bool:
+    def can_perform(self, action_type: str, allow_dormant: bool = False) -> bool:
         """Determines if a given action is permissible within both hourly and daily quotas."""
         act_upper = action_type.upper()
         if act_upper in ("ORIGINAL_POST", "POST"):
@@ -117,7 +107,9 @@ class SocialQuotaManager:
         # Apply time-of-day curve
         multiplier = self.get_time_of_day_multiplier()
         if multiplier == 0.0:
-            return False
+            if not allow_dormant:
+                return False
+            multiplier = 0.6  # Default fallback multiplier for allowed dormant operations
 
         effective_hourly = max(1, int(round(hourly_limit * multiplier))) if hourly_limit > 0 else 0
 

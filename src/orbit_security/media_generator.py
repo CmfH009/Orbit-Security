@@ -47,9 +47,19 @@ class MediaGenerator:
     def _get_font(self, size: int) -> ImageFont.ImageFont:
         """Attempts to load common system fonts or falls back to PIL default."""
         font_candidates = [
+            # Windows
             "C:\\Windows\\Fonts\\consola.ttf",
             "C:\\Windows\\Fonts\\segoeui.ttf",
             "C:\\Windows\\Fonts\\arial.ttf",
+            # Linux (Debian/Ubuntu/CentOS/Fedora)
+            "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
+            # macOS
+            "/System/Library/Fonts/SFNSMono.ttf",
+            "/System/Library/Fonts/Helvetica.ttc",
+            "/Library/Fonts/Arial.ttf",
+            # Generic / Local
             "consola.ttf",
             "arial.ttf",
         ]
@@ -252,4 +262,276 @@ class MediaGenerator:
         out_path = self.output_dir / out_name
         img.save(out_path, format="PNG")
         logger.info(f"Generated telemetry radar card: {out_path}")
+        return out_path
+
+    def generate_spf_overflow_diagram(
+        self,
+        domain: str = "enterprise-saas.io",
+        mechanisms: Optional[List[str]] = None,
+    ) -> Path:
+        """Generates an RFC 7208 10-lookup limit overflow teardown diagram."""
+        img = Image.new("RGB", (CANVAS_WIDTH, CANVAS_HEIGHT), BG_DARK)
+        draw = ImageDraw.Draw(img)
+        self._draw_background_grid(draw)
+
+        font_title = self._get_font(28)
+        font_sub = self._get_font(18)
+        font_body = self._get_font(16)
+        font_code = self._get_font(14)
+        font_big = self._get_font(36)
+
+        # Header Badge
+        draw.rectangle([(60, 40), (450, 85)], fill=CARD_BG, outline=RED_ALERT, width=2)
+        draw.text((80, 52), "ORBIT PROTOCOL LAB // RFC 7208 TEARDOWN", fill=RED_ALERT, font=font_sub)
+
+        # Title
+        draw.text((60, 110), f"THE 10-LOOKUP SPF OVERFLOW TRAP: {domain.upper()}", fill=TEXT_MAIN, font=font_title)
+
+        # Mechanism Grid Container
+        draw.rectangle([(60, 175), (780, 530)], fill=CARD_BG, outline=CARD_BORDER, width=2)
+        draw.text((80, 195), "ACCUMULATED INCLUDE LOOKUPS (11 / 10 MAX LIMIT)", fill=ORANGE_ACCENT, font=font_sub)
+        draw.line([(80, 230), (760, 230)], fill=CARD_BORDER, width=1)
+
+        default_mechs = mechanisms or [
+            "1. include:_spf.google.com (Workspace)",
+            "2. include:sendgrid.net (Transactional)",
+            "3. include:mailgun.org (Notifications)",
+            "4. include:servers.mcsv.net (Mailchimp)",
+            "5. include:spf.mandrillapp.com (Billing)",
+            "6. include:spf.protection.outlook.com (O365)",
+            "7. include:hubspot.com (CRM Email)",
+            "8. include:zendesk.com (Support Desk)",
+            "9. include:stripe.com (Invoicing)",
+            "10. include:helpscout.net (MAX REACHED)",
+            "11. include:freshdesk.com (OVERFLOW!)",
+        ]
+
+        y_pos = 245
+        for mech in default_mechs[:11]:
+            is_overflow = "OVERFLOW" in mech or "11." in mech
+            mech_color = RED_ALERT if is_overflow else CYAN_ACCENT
+            draw.text((80, y_pos), mech, fill=mech_color, font=font_code)
+            y_pos += 24
+
+        # Threat Verdict Box
+        draw.rectangle([(810, 175), (1140, 530)], fill=CARD_BG, outline=RED_ALERT, width=2)
+        draw.text((830, 195), "PROTOCOL VERDICT", fill=RED_ALERT, font=font_sub)
+        draw.line([(830, 230), (1120, 230)], fill=CARD_BORDER, width=1)
+
+        draw.text((830, 250), "STATUS: PermError", fill=RED_ALERT, font=font_big)
+        draw.text((830, 310), "Consequence:\nResolvers ABORT evaluation.\nEntire SPF policy ignored.", fill=TEXT_MAIN, font=font_body)
+        draw.text((830, 390), "Vulnerability:\nAnyone can forge\nCEO email without auth.", fill=ORANGE_ACCENT, font=font_body)
+        draw.text((830, 470), "Orbit Astro-Cat Fix:\nFlatten SPF or enforce DMARC", fill=GREEN_SUCCESS, font=font_code)
+
+        draw.text((60, 590), "Orbit Security Protocol Intelligence • Passive DoH Analysis • https://cmfh009.github.io/Orbit-Security/", fill=TEXT_MUTED, font=font_code)
+
+        out_name = f"spf_overflow_{hashlib.md5(domain.encode()).hexdigest()[:8]}.png"
+        out_path = self.output_dir / out_name
+        img.save(out_path, format="PNG")
+        logger.info(f"Generated SPF overflow diagram: {out_path}")
+        return out_path
+
+    def generate_dns_drift_timeline(
+        self,
+        domain: str = "brand.com",
+    ) -> Path:
+        """Generates a step-by-step timeline of DNS drift and subdomain hijack."""
+        img = Image.new("RGB", (CANVAS_WIDTH, CANVAS_HEIGHT), BG_DARK)
+        draw = ImageDraw.Draw(img)
+        self._draw_background_grid(draw)
+
+        font_title = self._get_font(28)
+        font_sub = self._get_font(18)
+        font_body = self._get_font(16)
+        font_code = self._get_font(14)
+
+        # Header Badge
+        draw.rectangle([(60, 40), (450, 85)], fill=CARD_BG, outline=ORANGE_ACCENT, width=2)
+        draw.text((80, 52), "ORBIT THREAT RADAR // DNS DRIFT TIMELINE", fill=ORANGE_ACCENT, font=font_sub)
+
+        # Title
+        draw.text((60, 110), f"HOW FORGOTTEN CNAMES BECOME ATTACK VECTORS: {domain.upper()}", fill=TEXT_MAIN, font=font_title)
+
+        container_rect = [(60, 175), (1140, 530)]
+        draw.rectangle(container_rect, fill=CARD_BG, outline=CARD_BORDER, width=2)
+
+        stages = [
+            ("Month 0: Launch", "Contractor creates\npromo.brand.com ->\nUnbounce/S3 landing.", CYAN_ACCENT),
+            ("Month 3: Campaign End", "Campaign completes.\nTeam cancels SaaS\nsubscription.", (150, 150, 150)),
+            ("Month 6: DNS Drift", "CNAME pointer remains\nlive in Route53/Cloudflare.\nReturns HTTP 404.", ORANGE_ACCENT),
+            ("Month 7: Takeover", "Attacker registers slug,\ngains SSL & parent cookie\ncredential harvest.", RED_ALERT),
+        ]
+
+        card_w = 230
+        card_h = 240
+        y_card = 220
+        for i, (stitle, sdesc, scolor) in enumerate(stages):
+            x_card = 90 + i * (card_w + 35)
+            draw.rectangle([(x_card, y_card), (x_card + card_w, y_card + card_h)], fill=(22, 30, 45), outline=scolor, width=2)
+            draw.text((x_card + 15, y_card + 20), stitle, fill=scolor, font=font_body)
+            draw.line([(x_card + 15, y_card + 55), (x_card + card_w - 15, y_card + 55)], fill=CARD_BORDER, width=1)
+            draw.text((x_card + 15, y_card + 75), sdesc, fill=TEXT_MAIN, font=font_code)
+
+            if i < len(stages) - 1:
+                arr_x = x_card + card_w + 8
+                arr_y = y_card + card_h // 2
+                draw.line([(arr_x, arr_y), (arr_x + 20, arr_y)], fill=CYAN_ACCENT, width=3)
+                draw.polygon([(arr_x + 20, arr_y - 6), (arr_x + 20, arr_y + 6), (arr_x + 27, arr_y)], fill=CYAN_ACCENT)
+
+        draw.text((90, 485), "Orbit Fix: Continuous sub-second RFC 8484 DoH audits detect dangling endpoints in 800ms.", fill=GREEN_SUCCESS, font=font_code)
+        draw.text((60, 590), "Orbit Security • Open-Source Autonomous Perimeter Sentinel • https://cmfh009.github.io/Orbit-Security/", fill=TEXT_MUTED, font=font_code)
+
+        out_name = f"dns_drift_{hashlib.md5(domain.encode()).hexdigest()[:8]}.png"
+        out_path = self.output_dir / out_name
+        img.save(out_path, format="PNG")
+        logger.info(f"Generated DNS drift timeline: {out_path}")
+        return out_path
+
+    def generate_doh_speed_benchmark(
+        self,
+        domain: str = "target.io",
+        doh_ms: float = 8.4,
+        legacy_ms: float = 380.0,
+    ) -> Path:
+        """Generates a performance benchmark card comparing encrypted RFC 8484 DoH vs legacy UDP."""
+        img = Image.new("RGB", (CANVAS_WIDTH, CANVAS_HEIGHT), BG_DARK)
+        draw = ImageDraw.Draw(img)
+        self._draw_background_grid(draw)
+
+        font_title = self._get_font(28)
+        font_sub = self._get_font(18)
+        font_body = self._get_font(16)
+        font_big = self._get_font(42)
+        font_code = self._get_font(14)
+
+        # Header Badge
+        draw.rectangle([(60, 40), (450, 85)], fill=CARD_BG, outline=GREEN_SUCCESS, width=2)
+        draw.text((80, 52), "ORBIT SPEED BENCHMARK // RFC 8484 DOH", fill=GREEN_SUCCESS, font=font_sub)
+
+        # Title
+        draw.text((60, 110), f"LATENCY BENCHMARK: ENCRYPTED DOH VS LEGACY PORT 53", fill=TEXT_MAIN, font=font_title)
+
+        # Left: Orbit DoH
+        draw.rectangle([(60, 175), (580, 530)], fill=CARD_BG, outline=CYAN_ACCENT, width=2)
+        draw.rectangle([(60, 175), (580, 225)], fill=(15, 35, 45))
+        draw.text((80, 190), "ORBIT ENCRYPTED DOH (RFC 8484)", fill=CYAN_ACCENT, font=font_sub)
+        draw.text((80, 250), f"{doh_ms} ms", fill=GREEN_SUCCESS, font=font_big)
+        draw.text((80, 320), "• Transport: HTTP/2 over TLS 1.3\n• Anycast Global Edges: Cloudflare & Google\n• Port 53 Eavesdropping: IMPOSSIBLE\n• Local Server Requirements: ZERO (Pure Browser/CLI)\n• Rate Limiting: None (Parallel DoH streams)", fill=TEXT_MAIN, font=font_code)
+
+        # Right: Legacy Port 53
+        draw.rectangle([(620, 175), (1140, 530)], fill=CARD_BG, outline=CARD_BORDER, width=2)
+        draw.rectangle([(620, 175), (1140, 225)], fill=(35, 25, 25))
+        draw.text((640, 190), "LEGACY RECON (UNENCRYPTED UDP 53)", fill=RED_ALERT, font=font_sub)
+        draw.text((640, 250), f"{legacy_ms} ms", fill=RED_ALERT, font=font_big)
+        draw.text((640, 320), "• Transport: Cleartext UDP packets\n• ISP / Network Snooping: Exposed to eavesdropping\n• Packet Drop Risk: High on congested Wi-Fi\n• Firewall Blocks: Frequently restricted in corporate lans\n• Relative Speed: 45x SLOWER than Orbit DoH", fill=TEXT_MUTED, font=font_code)
+
+        draw.text((60, 590), "Tested live across 90+ ecosystem targets • Free 10s audits: https://cmfh009.github.io/Orbit-Security/", fill=TEXT_MUTED, font=font_code)
+
+        out_name = f"doh_speed_{hashlib.md5(domain.encode()).hexdigest()[:8]}.png"
+        out_path = self.output_dir / out_name
+        img.save(out_path, format="PNG")
+        logger.info(f"Generated DoH benchmark card: {out_path}")
+        return out_path
+
+    def generate_agency_retainer_card(
+        self,
+        agency_name: str = "Modern Web Agency",
+        clients_managed: int = 25,
+        monthly_rate: int = 250,
+    ) -> Path:
+        """Generates an agency care plan retainer ROI breakdown card."""
+        img = Image.new("RGB", (CANVAS_WIDTH, CANVAS_HEIGHT), BG_DARK)
+        draw = ImageDraw.Draw(img)
+        self._draw_background_grid(draw)
+
+        font_title = self._get_font(28)
+        font_sub = self._get_font(18)
+        font_body = self._get_font(16)
+        font_big = self._get_font(44)
+        font_code = self._get_font(14)
+
+        # Header Badge
+        draw.rectangle([(60, 40), (450, 85)], fill=CARD_BG, outline=ORANGE_ACCENT, width=2)
+        draw.text((80, 52), "AGENCY GROWTH MOAT // CARE PLAN RETAINER", fill=ORANGE_ACCENT, font=font_sub)
+
+        # Title
+        draw.text((60, 110), f"HOW AGENCIES BUILD A ${clients_managed * monthly_rate:,}/MO PERIMETER MOAT", fill=TEXT_MAIN, font=font_title)
+
+        # Left: Financials
+        annual_rev = clients_managed * monthly_rate * 12
+        draw.rectangle([(60, 175), (500, 530)], fill=CARD_BG, outline=GREEN_SUCCESS, width=2)
+        draw.text((80, 200), "RECURRING RETAINER REVENUE", fill=GREEN_SUCCESS, font=font_sub)
+        draw.text((80, 250), f"${clients_managed * monthly_rate:,}/mo", fill=GREEN_SUCCESS, font=font_big)
+        draw.text((80, 315), f"${annual_rev:,} Annual Recurring Revenue", fill=TEXT_MAIN, font=font_body)
+        draw.text((80, 360), f"• {clients_managed} Active Care Plan Clients\n• ${monthly_rate}/mo Average Security Retainer\n• Tooling Cost: $0 (Orbit Open Source)\n• Time per Audit: 10 seconds via DoH\n• Net Profit Margin: ~98%", fill=TEXT_MUTED, font=font_code)
+
+        # Right: The 4-Step Agency Flywheel
+        draw.rectangle([(530, 175), (1140, 530)], fill=CARD_BG, outline=CYAN_ACCENT, width=2)
+        draw.text((550, 200), "THE 4-STEP CLIENT CONVERSION FLYWHEEL", fill=CYAN_ACCENT, font=font_sub)
+        draw.line([(550, 235), (1110, 235)], fill=CARD_BORDER, width=1)
+
+        steps = [
+            ("1. 10-Second Audit", "Run Orbit DoH scan on prospect domain before client pitch."),
+            ("2. Surface Hidden Drift", "Identify dangling CNAMEs, expired SaaS endpoints & DMARC p=none."),
+            ("3. Export Executive PDF", "Generate white-label branded PDF showing perimeter health grade."),
+            ("4. Lock In Retainer", "\"We monitor & patch your perimeter 24/7 for $250/month.\""),
+        ]
+        y_s = 255
+        for s_title, s_desc in steps:
+            draw.text((550, y_s), s_title, fill=ORANGE_ACCENT, font=font_body)
+            draw.text((550, y_s + 24), s_desc, fill=TEXT_MAIN, font=font_code)
+            y_s += 65
+
+        draw.text((60, 590), "Orbit Security Agency Partner Suite • Free Scans at https://cmfh009.github.io/Orbit-Security/", fill=TEXT_MUTED, font=font_code)
+
+        out_name = f"agency_retainer_{clients_managed}_{monthly_rate}.png"
+        out_path = self.output_dir / out_name
+        img.save(out_path, format="PNG")
+        logger.info(f"Generated agency retainer card: {out_path}")
+        return out_path
+
+    def generate_shadow_ai_card(
+        self,
+        domain: str = "fintech-core.io",
+        exposed_model: str = "Ollama / vLLM (Llama-3-70b)",
+    ) -> Path:
+        """Generates an AI security radar card showing detection of unauthenticated LLM endpoints."""
+        img = Image.new("RGB", (CANVAS_WIDTH, CANVAS_HEIGHT), BG_DARK)
+        draw = ImageDraw.Draw(img)
+        self._draw_background_grid(draw)
+
+        font_title = self._get_font(28)
+        font_sub = self._get_font(18)
+        font_body = self._get_font(16)
+        font_code = self._get_font(14)
+        font_big = self._get_font(32)
+
+        # Header Badge
+        draw.rectangle([(60, 40), (450, 85)], fill=CARD_BG, outline=PURPLE_AI, width=2)
+        draw.text((80, 52), "ORBIT AI SECURITY // SHADOW AI RADAR", fill=PURPLE_AI, font=font_sub)
+
+        # Title
+        draw.text((60, 110), f"SHADOW AI ENDPOINT DISCOVERY: {domain.upper()}", fill=TEXT_MAIN, font=font_title)
+
+        container_rect = [(60, 175), (1140, 530)]
+        draw.rectangle(container_rect, fill=CARD_BG, outline=PURPLE_AI, width=2)
+
+        # Box 1: Finding
+        draw.rectangle([(90, 205), (600, 500)], fill=(25, 20, 35), outline=RED_ALERT, width=2)
+        draw.text((110, 225), "EXPOSED INTERNAL LLM SERVICE", fill=RED_ALERT, font=font_sub)
+        draw.text((110, 270), f"Endpoint: ai-internal.{domain}:11434\nModel: {exposed_model}\nAuth Header: NONE (Open Internet)", fill=TEXT_MAIN, font=font_code)
+        draw.text((110, 360), "Risk Vector:\n• Unauthenticated inference execution\n• Proprietary system prompt extraction\n• GPU cluster compute theft & DDoS", fill=ORANGE_ACCENT, font=font_code)
+
+        # Box 2: Orbit AST Shield
+        draw.rectangle([(630, 205), (1110, 500)], fill=(18, 30, 35), outline=GREEN_SUCCESS, width=2)
+        draw.text((650, 225), "ORBIT AI PERIMETER DEFENSE", fill=GREEN_SUCCESS, font=font_sub)
+        draw.text((650, 270), "• DoH Subdomain Enumeration: Caught in 800ms\n• Port & Header AST Inspection: Zero-trust scan\n• Astro-Cat Alert: Instant webhook notification\n• Remediation: Auto-generate Cloudflare Zero-Trust Tunnel", fill=TEXT_MAIN, font=font_code)
+        draw.text((650, 400), "STATUS: EXPOSURE BLOCKED & CONTAINED 🛡️🐾", fill=GREEN_SUCCESS, font=font_body)
+
+        draw.text((60, 590), "Orbit AI Security Division • Continuous AI Fleet Protection • https://cmfh009.github.io/Orbit-Security/", fill=TEXT_MUTED, font=font_code)
+
+        out_name = f"shadow_ai_{hashlib.md5(domain.encode()).hexdigest()[:8]}.png"
+        out_path = self.output_dir / out_name
+        img.save(out_path, format="PNG")
+        logger.info(f"Generated Shadow AI card: {out_path}")
         return out_path

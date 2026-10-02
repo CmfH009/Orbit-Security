@@ -473,7 +473,7 @@ def run_bulk_recon(
 
         dns_res = resolve_dns(domain)
         web_res = check_headers_and_exposures(domain)
-        score = calculate_score(dns_res, web_res)
+        score = calculate_score(dns_res, web_res, domain=domain)
 
         has_takeover = bool(dns_res.get("dangling_risk"))
         has_exposure = bool(web_res.get("exposures"))

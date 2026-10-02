@@ -6,6 +6,7 @@ midnight UTC rollover tracking, and atomic JSON telemetry mirroring.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 import datetime
 import json
 import logging
@@ -40,12 +41,16 @@ class SocialStateManager:
         self._init_db()
         self._load_dedup_cache()
 
-    def _get_connection(self) -> sqlite3.Connection:
+    @contextmanager
+    def _get_connection(self):
         conn = sqlite3.connect(str(self.db_path), timeout=15.0)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode = WAL;")
         conn.execute("PRAGMA synchronous = NORMAL;")
-        return conn
+        try:
+            yield conn
+        finally:
+            conn.close()
 
     def _init_db(self):
         """Initializes database schema with WAL mode and compound indexes."""
@@ -165,11 +170,27 @@ class SocialStateManager:
             try:
                 with self._get_connection() as conn:
                     cursor = conn.cursor()
+                    # Check existing status to guard against quota history inflation on retry/probes
+                    cursor.execute(
+                        "SELECT status FROM social_actions WHERE tweet_id = ? AND action_type = ?",
+                        (str(tweet_id), act_upper),
+                    )
+                    existing_row = cursor.fetchone()
+                    prev_status = existing_row["status"] if existing_row else None
+
                     cursor.execute(
                         """
-                        INSERT OR REPLACE INTO social_actions 
+                        INSERT INTO social_actions 
                         (tweet_id, action_type, author_handle, target_domain, audit_score, content_snippet, status, error_message, created_at_utc, metadata_json)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(tweet_id, action_type) DO UPDATE SET
+                            author_handle = excluded.author_handle,
+                            target_domain = excluded.target_domain,
+                            audit_score = excluded.audit_score,
+                            content_snippet = excluded.content_snippet,
+                            status = excluded.status,
+                            error_message = excluded.error_message,
+                            metadata_json = excluded.metadata_json
                         """,
                         (
                             str(tweet_id),
@@ -185,8 +206,8 @@ class SocialStateManager:
                         ),
                     )
 
-                    # Update daily counts if successful
-                    if status == "SUCCESS":
+                    # Update daily counts if status newly transitioned to SUCCESS or FAILED
+                    if status == "SUCCESS" and prev_status != "SUCCESS":
                         col_map = {
                             "ORIGINAL_POST": "posts_count",
                             "POST": "posts_count",
@@ -208,7 +229,7 @@ class SocialStateManager:
                                 """,
                                 (date_utc, now_utc),
                             )
-                    elif status == "FAILED":
+                    elif status == "FAILED" and prev_status != "FAILED":
                         cursor.execute(
                             """
                             INSERT INTO daily_quota_history (date_utc, errors_count, updated_at_utc)
@@ -296,3 +317,59 @@ class SocialStateManager:
                     pass
 
         return snapshot
+
+    def get_last_post_media_info(self) -> Optional[Dict[str, Any]]:
+        """Retrieves media info (media_path, media_type) from the most recent successful or simulated post."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT tweet_id, metadata_json, created_at_utc 
+                FROM social_actions 
+                WHERE action_type IN ('POST', 'ORIGINAL_POST') 
+                ORDER BY id DESC LIMIT 1
+                """
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None
+            try:
+                meta = json.loads(row["metadata_json"] or "{}")
+                p = meta.get("media_path")
+                t = meta.get("media_type")
+                if p and not t:
+                    ext = Path(p).suffix.lower()
+                    t = "video" if ext in (".mp4", ".webm", ".mov", ".mkv") else "image"
+                return {
+                    "tweet_id": row["tweet_id"],
+                    "media_path": p,
+                    "media_type": t,
+                    "created_at_utc": row["created_at_utc"],
+                }
+            except Exception:
+                return None
+
+    def get_recent_media_paths(self, limit: int = 20) -> List[str]:
+        """Returns a list of recent media paths and basenames used in posts to prevent repetition."""
+        recent: List[str] = []
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT metadata_json 
+                FROM social_actions 
+                WHERE action_type IN ('POST', 'ORIGINAL_POST') 
+                ORDER BY id DESC LIMIT ?
+                """,
+                (limit,),
+            )
+            for row in cursor.fetchall():
+                try:
+                    meta = json.loads(row["metadata_json"] or "{}")
+                    p = meta.get("media_path")
+                    if p:
+                        recent.append(p)
+                        recent.append(Path(p).name)
+                except Exception:
+                    continue
+        return recent

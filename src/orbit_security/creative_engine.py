@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from orbit_security.marketing_strategy import ContentPillar, MarketingStrategyEngine
 from orbit_security.media_generator import MediaGenerator
+from orbit_security.video_generator import VideoGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ class GeneratedPost:
     id: str
     text: str
     media_path: Optional[str]
+    media_type: str  # "image" or "video"
     pillar: ContentPillar
     title: str
     hook_score: float
@@ -49,11 +51,12 @@ class GeneratedPost:
 # Dynamic theme catalogs curated by the 9-Agent Persona Council
 POST_BLUEPRINTS: List[Dict[str, Any]] = [
     # -------------------------------------------------------------
-    # Pillar: BREAK_AND_FIX (DNS & Protocol Teardowns)
+    # Pillar: BREAK_AND_FIX (DNS & Protocol Teardowns - IMAGES)
     # -------------------------------------------------------------
     {
         "id": "cname_unbounce_takeover",
         "pillar": ContentPillar.BREAK_AND_FIX,
+        "media_type": "image",
         "title": "The $50M Shopify Brand Dangling CNAME",
         "generator_type": "dns_attack",
         "domain": "promo.nordicwear.com",
@@ -71,13 +74,10 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
     {
         "id": "spf_10_lookup_limit",
         "pillar": ContentPillar.BREAK_AND_FIX,
+        "media_type": "image",
         "title": "The 10-DNS-Lookup SPF Trap",
-        "generator_type": "telemetry_card",
+        "generator_type": "spf_overflow",
         "domain": "enterprise-saas.io",
-        "score": 52,
-        "spf_status": "PERMERROR (>10 lookups)",
-        "dmarc_status": "NONE (Spoofable)",
-        "dangling_count": 1,
         "text": (
             "RFC 7208 has a hard rule: SPF evaluation stops after 10 DNS lookups.\n\n"
             "Your team added HubSpot, SendGrid, Zendesk, Stripe, and Google Workspace to one TXT record.\n"
@@ -87,16 +87,45 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
             "https://cmfh009.github.io/Orbit-Security/ 🚀"
         ),
     },
+    {
+        "id": "dns_drift_timeline_breakdown",
+        "pillar": ContentPillar.BREAK_AND_FIX,
+        "media_type": "image",
+        "title": "How Forgotten CNAMEs Become Attack Vectors",
+        "generator_type": "dns_drift",
+        "domain": "launch-promo.brand.com",
+        "text": (
+            "The silent killer of modern perimeters isn't zero-days.\n"
+            "It's DNS drift.\n\n"
+            "Contractors build seasonal landing pages, campaigns end, SaaS accounts get cancelled.\n"
+            "Months later, the DNS pointer lives on until an attacker claims the slug.\n\n"
+            "Audit your attack surface in 800ms with Orbit DoH Radar:\n"
+            "https://cmfh009.github.io/Orbit-Security/ 🔍🛰️"
+        ),
+    },
+    {
+        "id": "doh_speed_vs_legacy",
+        "pillar": ContentPillar.BREAK_AND_FIX,
+        "media_type": "image",
+        "title": "RFC 8484 Encrypted DoH vs Cleartext UDP 53",
+        "generator_type": "doh_speed",
+        "domain": "target-recon.io",
+        "text": (
+            "Legacy DNS reconnaissance floods port 53 with unencrypted UDP packets that get rate-limited and logged.\n\n"
+            "Orbit Security runs encrypted RFC 8484 DNS-over-HTTPS across global Cloudflare and Google edges.\n\n"
+            "8.4ms resolution time with zero server overhead or port 53 leakage:\n"
+            "https://cmfh009.github.io/Orbit-Security/ ⚡🐾"
+        ),
+    },
     # -------------------------------------------------------------
-    # Pillar: HIGH_IQ_WIT (Sysadmin & Astro-Cat Satire)
+    # Pillar: HIGH_IQ_WIT (Sysadmin & Astro-Cat Satire - IMAGES)
     # -------------------------------------------------------------
     {
         "id": "soc2_vs_dangling_subdomain",
         "pillar": ContentPillar.HIGH_IQ_WIT,
+        "media_type": "image",
         "title": "The $250k SOC2 vs One Abandoned Subdomain",
-        "generator_type": "dns_attack",
-        "domain": "dev-staging-legacy.fintech.com",
-        "target_cname": "s3-website-us-east-1.amazonaws.com",
+        "asset_image": "orbit_cname_blackhole.jpg",
         "text": (
             "Companies will spend $250,000 on a SOC2 Type II audit to prove their laptops have screensavers,\n"
             "while leaving `staging-2022.company.com` pointing to a deleted S3 bucket.\n\n"
@@ -107,30 +136,55 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
         ),
     },
     {
-        "id": "cat_dns_philosophy",
+        "id": "cat_dns_laser_defense",
         "pillar": ContentPillar.HIGH_IQ_WIT,
-        "title": "Astro-Cat DNS Engineering Principles",
-        "generator_type": "telemetry_card",
-        "domain": "acmecloud.dev",
-        "score": 88,
-        "spf_status": "PASS (Strict -all)",
-        "dmarc_status": "REJECT (Enforced)",
-        "dangling_count": 0,
+        "media_type": "image",
+        "title": "Astro-Cat Orbital Laser Sentinel",
+        "asset_image": "orbit_astrocat_laser_sentinel.jpg",
         "text": (
             "Senior systems engineering rule #1:\n"
             "If a DNS record exists and nobody remembers what it does, do not delete it.\n"
             "Wait—no, that's how dangling CNAME takeovers happen.\n\n"
             "Delete the abandoned subdomain. Knock it off the counter like a glass of water.\n\n"
             "Sub-second DNS radar with zero bloat:\n"
-            "https://cmfh009.github.io/Orbit-Security/ 🛰️🐱"
+            "https://cmfh009.github.io/Orbit-Security/ 🛰️🐱💥"
+        ),
+    },
+    {
+        "id": "cyber_command_deck_view",
+        "pillar": ContentPillar.HIGH_IQ_WIT,
+        "media_type": "image",
+        "title": "Orbit Cyber Command Deck",
+        "asset_image": "orbit_cyber_command_deck.jpg",
+        "text": (
+            "Most cybersecurity dashboards are sterile corporate spreadsheets.\n\n"
+            "Orbit provides an orbital command deck: 16-bit cyber arcade, real-time RFC 8484 DoH waterfall telemetry, "
+            "and Carson the astronaut cat guarding your apex records.\n\n"
+            "Experience real perimeter defense:\n"
+            "https://cmfh009.github.io/Orbit-Security/ 🚀🐾"
+        ),
+    },
+    {
+        "id": "doh_shield_protection",
+        "pillar": ContentPillar.HIGH_IQ_WIT,
+        "media_type": "image",
+        "title": "The Encrypted DoH Crystalline Shield",
+        "asset_image": "orbit_doh_encrypted_shield.jpg",
+        "text": (
+            "Cleartext DNS is 1983 technology operating in a 2026 threat landscape.\n\n"
+            "ISP snooping, spoofed responses, and unauthenticated NXDOMAIN hijacks disappear when you enforce "
+            "RFC 8484 DoH resolution with DNSSEC validation.\n\n"
+            "Shield your client fleet today:\n"
+            "https://cmfh009.github.io/Orbit-Security/ 🛡️✨"
         ),
     },
     # -------------------------------------------------------------
-    # Pillar: MULTIMODAL_VISUAL & AI SECURITY
+    # Pillar: MULTIMODAL_VISUAL & AI SECURITY - IMAGES
     # -------------------------------------------------------------
     {
         "id": "mcp_tool_injection_teardown",
         "pillar": ContentPillar.MULTIMODAL_VISUAL,
+        "media_type": "image",
         "title": "Model Context Protocol (MCP) Prompt Injection Anatomy",
         "generator_type": "ai_sec_flow",
         "topic": "MCP Tool Output Poisoning & Sandbox Escape",
@@ -148,13 +202,26 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
         ),
     },
     {
+        "id": "mcp_agent_sandbox_chamber",
+        "pillar": ContentPillar.MULTIMODAL_VISUAL,
+        "media_type": "image",
+        "title": "Zero-Trust Agentic Sandboxing",
+        "asset_image": "orbit_mcp_agent_sandbox.jpg",
+        "text": (
+            "How do you stop an autonomous coding agent from executing `rm -rf /` when an attacker poisons its context?\n\n"
+            "You don't rely on model alignment prompts.\n"
+            "You enforce hard deterministic AST parsing and isolated container boundaries.\n\n"
+            "Explore our agentic DevSecOps architecture:\n"
+            "https://cmfh009.github.io/Orbit-Security/ 🧪🐾"
+        ),
+    },
+    {
         "id": "shadow_ai_dns_exfiltration",
         "pillar": ContentPillar.MULTIMODAL_VISUAL,
+        "media_type": "image",
         "title": "Shadow AI & Rogue DNS Endpoints",
-        "generator_type": "ai_sec_flow",
-        "topic": "Shadow AI API Exposure & DNS Tunneling",
-        "attack_vector": "Unsanctioned internal LLM test servers exposed on public CNAMEs",
-        "orbit_defense": "Continuous DoH fleet radar catches unauthenticated endpoints",
+        "generator_type": "shadow_ai",
+        "domain": "internal-ai.dev",
         "text": (
             "Every startup currently has 3 engineers who spun up private Ollama / vLLM endpoints on AWS,\n"
             "mapped them to `ai-test.company.com`, and forgot to configure authentication.\n\n"
@@ -164,18 +231,14 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
         ),
     },
     # -------------------------------------------------------------
-    # Pillar: AGENCY_GROWTH (Retainer Conversion Playbook)
+    # Pillar: AGENCY_GROWTH - IMAGES
     # -------------------------------------------------------------
     {
         "id": "agency_retainer_conversion_formula",
         "pillar": ContentPillar.AGENCY_GROWTH,
+        "media_type": "image",
         "title": "How Agencies Turn a 10s Scan into a $250/mo Retainer",
-        "generator_type": "telemetry_card",
-        "domain": "clientbrand.com",
-        "score": 64,
-        "spf_status": "SOFTFAIL (~all)",
-        "dmarc_status": "NONE (High Risk)",
-        "dangling_count": 2,
+        "generator_type": "agency_retainer",
         "text": (
             "How web agencies pitch $250–$500/mo security retainers without writing code:\n\n"
             "1. Run Orbit's 10-second DoH audit on prospect domain\n"
@@ -184,6 +247,109 @@ POST_BLUEPRINTS: List[Dict[str, Any]] = [
             "4. \"We found 2 critical perimeter vulnerabilities in your DNS. Let's patch them this week.\"\n\n"
             "Free client scanning radar:\n"
             "https://cmfh009.github.io/Orbit-Security/ 💼🐾"
+        ),
+    },
+    {
+        "id": "agency_careplan_vault_roi",
+        "pillar": ContentPillar.AGENCY_GROWTH,
+        "media_type": "image",
+        "title": "The High-Margin Agency Care Plan Vault",
+        "asset_image": "orbit_agency_retainer_vault.jpg",
+        "text": (
+            "Stop competing on hourly rates for WordPress and Shopify maintenance.\n\n"
+            "Package perimeter security and DNS drift protection into a $250/mo retainer. "
+            "Orbit gives you automated, white-label client PDF audit cards in 10 seconds.\n\n"
+            "Build your recurring revenue moat:\n"
+            "https://cmfh009.github.io/Orbit-Security/ 🏰📈"
+        ),
+    },
+    # -------------------------------------------------------------
+    # Pillar: VIDEO_BROADCAST (Cinematic Shorts & Montages - VIDEOS)
+    # -------------------------------------------------------------
+    {
+        "id": "video_astro_cat_gameplay",
+        "pillar": ContentPillar.HIGH_IQ_WIT,
+        "media_type": "video",
+        "title": "Astro-Cat Zero-G Gameplay Showcase",
+        "asset_video": "orbit_astro_cat_gameplay_x.mp4",
+        "text": (
+            "Most cybersecurity landing pages are boring corporate templates with stock photos of padlocks.\n\n"
+            "We built an interactive zero-gravity astronaut cat with orbital thrusters and laser cannons instead. 🛡️🐾\n\n"
+            "Play with him live & run a free client DNS audit:\n"
+            "https://cmfh009.github.io/Orbit-Security/"
+        ),
+    },
+    {
+        "id": "video_full_montage",
+        "pillar": ContentPillar.MULTIMODAL_VISUAL,
+        "media_type": "video",
+        "title": "Full Feature & Animation Showcase Montage",
+        "asset_video": "orbit_montage_master.mp4",
+        "text": (
+            "We ditched the corporate playbook for Orbit Security.\n\n"
+            "Here's the full command deck:\n"
+            "• Sub-second RFC 8484 DNS radar\n"
+            "• Dangling CNAME takeover diagnostics\n"
+            "• Passive fleet portfolio telemetry\n"
+            "• Zero-G Astro-Cat with laser cannons 🚀🐱\n\n"
+            "Audit your edge:\n"
+            "https://cmfh009.github.io/Orbit-Security/"
+        ),
+    },
+    {
+        "id": "video_retainer_exploit_teardown",
+        "pillar": ContentPillar.AGENCY_GROWTH,
+        "media_type": "video",
+        "title": "The $250/mo Agency Retainer Exploit",
+        "asset_video": "orbit_teardown_master.mp4",
+        "text": (
+            "How web agencies justify $250/mo retainers without writing code:\n\n"
+            "1. Scan client domain (10s passive DoH)\n"
+            "2. Spot dangling CNAMEs & spoofable DNS\n"
+            "3. Astro-Cat zaps the threat 👾💥\n"
+            "4. Export white-label executive audit PDF\n\n"
+            "Run a free scan:\n"
+            "https://cmfh009.github.io/Orbit-Security/"
+        ),
+    },
+    {
+        "id": "video_cat_humor_short",
+        "pillar": ContentPillar.HIGH_IQ_WIT,
+        "media_type": "video",
+        "title": "Astro-Cat Humor Ad Short",
+        "asset_video": "orbit_cat_humor_ad.mp4",
+        "text": (
+            "Why do cats make the best cybersecurity engineers?\n\n"
+            "Because they knock abandoned DNS records off the table before attackers can pounce on them. 🐾🚀\n\n"
+            "Zero-fluff perimeter defense:\n"
+            "https://cmfh009.github.io/Orbit-Security/"
+        ),
+    },
+    {
+        "id": "video_security_tour_web",
+        "pillar": ContentPillar.BREAK_AND_FIX,
+        "media_type": "video",
+        "title": "Orbit Security Full Architecture Tour",
+        "asset_video": "orbit_security_ad_video_web.mp4",
+        "text": (
+            "A fast walkthrough of Orbit Security's zero-server architecture:\n\n"
+            "Encrypted RFC 8484 DNS-over-HTTPS, 30+ SaaS takeover heuristics, and client PDF generation all in the browser.\n\n"
+            "Try it live:\n"
+            "https://cmfh009.github.io/Orbit-Security/ 🛡️"
+        ),
+    },
+    {
+        "id": "video_dynamic_doh_brief",
+        "pillar": ContentPillar.BREAK_AND_FIX,
+        "media_type": "video",
+        "title": "Dynamic Audio-Visual DoH Intel Brief",
+        "is_dynamic_video": True,
+        "script": "Orbit Security telemetry radar confirmed. DNS over HTTPS query resolved in eight milliseconds. Zero dangling CNAME records found.",
+        "text": (
+            "Encrypted RFC 8484 DNS-over-HTTPS intelligence brief:\n\n"
+            "Sub-10ms resolution across Cloudflare and Google edges prevents port 53 eavesdropping and DNS spoofing.\n\n"
+            "Check your score:\n"
+            "https://cmfh009.github.io/Orbit-Security/ 🛰️🎧"
         ),
     },
 ]
@@ -196,20 +362,48 @@ class CreativeEngine:
         self.root = project_root or Path(__file__).resolve().parent.parent.parent
         self.marketing = MarketingStrategyEngine(project_root=self.root)
         self.media_gen = MediaGenerator(project_root=self.root)
+        self.video_gen = VideoGenerator(project_root=self.root)
+
+    def _resolve_asset_path(self, filename: str) -> Optional[Path]:
+        """Looks for an asset file in landing/assets or data/generated_*."""
+        candidates = [
+            self.root / "landing" / "assets" / filename,
+            self.root / "data" / "generated_media" / filename,
+            self.root / "data" / "generated_videos" / filename,
+            Path.home() / "Downloads" / filename,
+        ]
+        for c in candidates:
+            if c.exists():
+                return c
+        return None
 
     def generate_next_post(
         self,
         recent_post_ids: Optional[List[str]] = None,
         target_pillar: Optional[ContentPillar] = None,
+        target_media_type: Optional[str] = None,
+        recent_media_paths: Optional[List[str]] = None,
     ) -> GeneratedPost:
-        """Selects or synthesizes the next high-impact post and generates its multimodal asset."""
-        recent_ids = recent_post_ids or []
+        """Selects or synthesizes the next high-impact post and generates or binds its fresh multimodal asset.
 
-        # Find eligible blueprints not recently posted
+        Args:
+            recent_post_ids: IDs of recent posts to prevent blueprint reuse.
+            target_pillar: Optional pillar filter.
+            target_media_type: Strict media type filter ("image" or "video").
+            recent_media_paths: List of recent media paths or basenames to guarantee no media reuse.
+        """
+        recent_ids = recent_post_ids or []
+        recent_media = [Path(p).name for p in (recent_media_paths or [])]
+
         eligible = [bp for bp in POST_BLUEPRINTS if bp["id"] not in recent_ids]
         if not eligible:
-            # All posted; reset pool
             eligible = POST_BLUEPRINTS
+
+        # Filter by media type if requested
+        if target_media_type:
+            media_filtered = [bp for bp in eligible if bp.get("media_type") == target_media_type]
+            if media_filtered:
+                eligible = media_filtered
 
         # Filter by pillar if specified
         if target_pillar:
@@ -217,40 +411,122 @@ class CreativeEngine:
             if pillar_eligible:
                 eligible = pillar_eligible
 
-        chosen = random.choice(eligible)
+        # Filter out blueprints whose static asset is in recent_media
+        fresh_eligible = []
+        for bp in eligible:
+            asset_name = bp.get("asset_image") or bp.get("asset_video")
+            if asset_name and asset_name in recent_media:
+                continue
+            fresh_eligible.append(bp)
 
-        # Generate fresh multimodal asset tailored to the blueprint
-        gen_type = chosen.get("generator_type")
-        media_path = None
-        try:
-            if gen_type == "dns_attack":
-                media_path = str(
-                    self.media_gen.generate_dns_attack_diagram(
-                        domain=chosen.get("domain", "promo.brand.com"),
-                        target_cname=chosen.get("target_cname", "unbouncepages.com"),
+        chosen = random.choice(fresh_eligible) if fresh_eligible else random.choice(eligible)
+        media_type = chosen.get("media_type", "image")
+        media_path: Optional[str] = None
+
+        # 1. Video Resolution & Synthesis
+        if media_type == "video":
+            if chosen.get("is_dynamic_video"):
+                try:
+                    dyn_card = self.media_gen.generate_doh_speed_benchmark()
+                    vid = self.video_gen.generate_video_short(
+                        script_text=chosen.get("script", chosen["text"][:100]),
+                        image_path=dyn_card,
+                        title=chosen["id"],
                     )
-                )
-            elif gen_type == "ai_sec_flow":
-                media_path = str(
-                    self.media_gen.generate_ai_security_flowchart(
-                        topic=chosen.get("topic", "MCP Tool Injection"),
-                        attack_vector=chosen.get("attack_vector", "Untrusted tool payload"),
-                        orbit_defense=chosen.get("orbit_defense", "Deterministic AST containment"),
-                    )
-                )
-            elif gen_type == "telemetry_card":
-                media_path = str(
-                    self.media_gen.generate_telemetry_radar_card(
-                        domain=chosen.get("domain", "clientdomain.com"),
-                        score=chosen.get("score", 75),
-                        spf_status=chosen.get("spf_status", "PASS"),
-                        dmarc_status=chosen.get("dmarc_status", "ENFORCED"),
-                        dangling_count=chosen.get("dangling_count", 0),
-                    )
-                )
-        except Exception as e:
-            logger.error(f"Error generating multimodal visual for {chosen['id']}: {e}")
-            media_path = None
+                    media_path = str(vid)
+                except Exception as e:
+                    logger.error(f"Error synthesizing dynamic video for {chosen['id']}: {e}")
+            elif chosen.get("asset_video"):
+                resolved = self._resolve_asset_path(chosen["asset_video"])
+                if resolved and resolved.name not in recent_media:
+                    media_path = str(resolved)
+                else:
+                    # Synthesize on the fly if video missing or repeated
+                    try:
+                        dyn_card = self.media_gen.generate_telemetry_radar_card()
+                        vid = self.video_gen.generate_video_short(
+                            script_text="Orbit Security automated radar. Threat perimeter verified secure.",
+                            image_path=dyn_card,
+                            title=f"auto_{chosen['id']}",
+                        )
+                        media_path = str(vid)
+                    except Exception as e:
+                        logger.error(f"Error generating fallback video: {e}")
+
+        # 2. Image Resolution & Synthesis
+        else:
+            gen_type = chosen.get("generator_type")
+            asset_img = chosen.get("asset_image")
+
+            if asset_img:
+                resolved = self._resolve_asset_path(asset_img)
+                if resolved and resolved.name not in recent_media:
+                    media_path = str(resolved)
+
+            if not media_path and gen_type:
+                try:
+                    if gen_type == "dns_attack":
+                        media_path = str(
+                            self.media_gen.generate_dns_attack_diagram(
+                                domain=chosen.get("domain", f"promo-{random.randint(10,99)}.brand.com"),
+                                target_cname=chosen.get("target_cname", "unbouncepages.com"),
+                            )
+                        )
+                    elif gen_type == "spf_overflow":
+                        media_path = str(
+                            self.media_gen.generate_spf_overflow_diagram(
+                                domain=chosen.get("domain", f"saas-{random.randint(10,99)}.io")
+                            )
+                        )
+                    elif gen_type == "dns_drift":
+                        media_path = str(
+                            self.media_gen.generate_dns_drift_timeline(
+                                domain=chosen.get("domain", f"brand-{random.randint(10,99)}.com")
+                            )
+                        )
+                    elif gen_type == "doh_speed":
+                        media_path = str(
+                            self.media_gen.generate_doh_speed_benchmark(
+                                domain=chosen.get("domain", "target-edge.org")
+                            )
+                        )
+                    elif gen_type == "agency_retainer":
+                        media_path = str(
+                            self.media_gen.generate_agency_retainer_card(
+                                clients_managed=random.randint(20, 40),
+                                monthly_rate=250,
+                            )
+                        )
+                    elif gen_type == "shadow_ai":
+                        media_path = str(
+                            self.media_gen.generate_shadow_ai_card(
+                                domain=chosen.get("domain", f"core-ai-{random.randint(10,99)}.io")
+                            )
+                        )
+                    elif gen_type == "ai_sec_flow":
+                        media_path = str(
+                            self.media_gen.generate_ai_security_flowchart(
+                                topic=chosen.get("topic", "MCP Tool Injection"),
+                                attack_vector=chosen.get("attack_vector", "Untrusted tool payload"),
+                                orbit_defense=chosen.get("orbit_defense", "Deterministic AST containment"),
+                            )
+                        )
+                    elif gen_type == "telemetry_card":
+                        media_path = str(
+                            self.media_gen.generate_telemetry_radar_card(
+                                domain=chosen.get("domain", f"client-{random.randint(10,99)}.com"),
+                                score=chosen.get("score", random.randint(70, 95)),
+                            )
+                        )
+                except Exception as e:
+                    logger.error(f"Error generating procedural image for {chosen['id']}: {e}")
+
+            # Fallback if image still not assigned or duplicate: generate fresh telemetry card
+            if not media_path:
+                try:
+                    media_path = str(self.media_gen.generate_telemetry_radar_card(domain=f"orbit-radar-{random.randint(100,999)}.io"))
+                except Exception:
+                    media_path = None
 
         # Evaluate opening hook
         hook_eval = self.marketing.evaluate_hook(chosen["text"])
@@ -259,7 +535,9 @@ class CreativeEngine:
             id=chosen["id"],
             text=chosen["text"],
             media_path=media_path,
+            media_type=media_type,
             pillar=chosen["pillar"],
             title=chosen["title"],
             hook_score=hook_eval.score,
         )
+
