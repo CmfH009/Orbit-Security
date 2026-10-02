@@ -106,6 +106,8 @@ class SocialDaemon:
         self.content_queue = ContentQueue(project_root=self.base_dir)
         self.harvester = FeedHarvester(driver=self.driver, dry_run=self.dry_run)
         self.smart_follow = SmartFollowEngine(project_root=self.base_dir)
+        from orbit_security.social_lead_enricher import SocialLeadEnricher
+        self.lead_enricher = SocialLeadEnricher(leads_file=self.base_dir / "data" / "social_leads.json")
 
     def close_driver(self):
         """Closes and releases active driver cleanly."""
@@ -309,11 +311,21 @@ class SocialDaemon:
         else:
             logger.info("Hourly POST quota currently exhausted. Skipping proactive publication.")
 
-        # 6. Multi-Vector Post Harvesting
+        # 6. Harvest Inbound Interactions & Lead Enrichment (Act II)
+        if self.driver and hasattr(self.driver, "harvest_inbound_interactions"):
+            try:
+                inbound_interactions = self.driver.harvest_inbound_interactions(limit=10)
+                if inbound_interactions:
+                    logger.info(f"Discovered {len(inbound_interactions)} inbound interactions for lead qualification.")
+                    asyncio.run(self.lead_enricher.scan_interactions(inbound_interactions))
+            except Exception as e:
+                logger.warning(f"Inbound lead enrichment sweep error: {e}")
+
+        # 7. Multi-Vector Post Harvesting
         candidates = self.harvester.harvest_hourly_candidates(max_candidates=20)
         logger.info(f"Processing {len(candidates)} discovered candidates this cycle.")
 
-        # 7. Evaluate and Execute Candidates
+        # 8. Evaluate and Execute Candidates
         for post in candidates:
             # Calculate Relevance Score
             score = self.relevance_engine.calculate_score(post)

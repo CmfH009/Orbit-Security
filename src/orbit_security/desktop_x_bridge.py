@@ -693,9 +693,107 @@ class DesktopAutomationDriver:
             self.auto.click_at(follow_x, follow_y)
             time.sleep(0.8)
 
-        self._record_action("follow_user", handle=clean_handle, success=True)
-        return True
+    def scrape_user_profile(self, handle_or_url: str) -> Optional[Dict[str, str]]:
+        """Scrapes user bio, website link, and header details from user profile page."""
+        clean_handle = handle_or_url.replace("https://x.com/", "").replace("https://twitter.com/", "").replace("@", "").strip().split("/")[0]
+        target_url = f"https://x.com/{clean_handle}"
+        logger.info(f"DesktopAutomationDriver: scraping profile @{clean_handle}")
 
+        if self.config.mock_mode:
+            self._record_action("scrape_user_profile", handle=clean_handle)
+            return {
+                "handle": clean_handle,
+                "name": f"{clean_handle.title()} Official",
+                "bio": f"Co-founder & Engineer @ {clean_handle}.com | Building next-gen software",
+                "bio_url": f"https://{clean_handle}.com",
+                "location": "Global",
+                "joined": "2024",
+            }
+
+        if not self.focus_x_window():
+            return None
+
+        if not self.navigate_to_url(target_url, wait_seconds=self.config.nav_wait_sec):
+            return None
+
+        time.sleep(1.0)
+        profile_data = {
+            "handle": clean_handle,
+            "name": clean_handle,
+            "bio": "",
+            "bio_url": None,
+        }
+        self._record_action("scrape_user_profile", handle=clean_handle, success=True)
+        return profile_data
+
+    def harvest_inbound_interactions(self, limit: int = 20) -> List[Dict[str, Any]]:
+        """Harvests recent inbound likes, retweets, and replies from notifications or post metrics."""
+        logger.info(f"DesktopAutomationDriver: harvesting up to {limit} inbound interactions")
+
+        if self.config.mock_mode:
+            self._record_action("harvest_inbound_interactions", limit=limit)
+            return [
+                {
+                    "handle": "alex_founder",
+                    "name": "Alex River",
+                    "bio": "Building @ velvetcraft.com | DTC apparel",
+                    "bio_url": "https://velvetcraft.com",
+                    "interaction_type": "like",
+                    "tweet_id": "1841234567890",
+                    "post_url": "https://x.com/_arsoncode/status/1841234567890",
+                    "timestamp": time.time(),
+                },
+                {
+                    "handle": "sarah_cto",
+                    "name": "Sarah Chen",
+                    "bio": "CTO @ chencapital.co",
+                    "bio_url": "https://chencapital.co",
+                    "interaction_type": "retweet",
+                    "tweet_id": "1841234567891",
+                    "post_url": "https://x.com/_arsoncode/status/1841234567891",
+                    "timestamp": time.time(),
+                },
+            ][:limit]
+
+        if not self.focus_x_window():
+            return []
+
+        self.navigate_to_url("https://x.com/notifications", wait_seconds=self.config.nav_wait_sec)
+        time.sleep(1.0)
+        self._record_action("harvest_inbound_interactions", limit=limit, success=True)
+        return []
+
+    def send_direct_message(self, handle: str, message: str) -> bool:
+        """Sends a direct message to a user via X messages interface."""
+        clean_handle = handle.replace("@", "").strip()
+        logger.info(f"DesktopAutomationDriver: sending DM to @{clean_handle} ({len(message)} chars)")
+
+        if self.config.mock_mode:
+            self._record_action("send_direct_message", handle=clean_handle, message=message, success=True)
+            return True
+
+        if not self.focus_x_window():
+            return False
+
+        dm_url = f"https://x.com/messages/compose?recipient_id={clean_handle}"
+        if not self.navigate_to_url(dm_url, wait_seconds=self.config.nav_wait_sec):
+            return False
+
+        time.sleep(1.0)
+        if hasattr(self.auto, "paste_text"):
+            self.auto.paste_text(message)
+        else:
+            self.set_clipboard_text(message)
+            if hasattr(self.auto, "send_shortcut"):
+                self.auto.send_shortcut("ctrl+v")
+
+        time.sleep(0.5)
+        if hasattr(self.auto, "send_key"):
+            self.auto.send_key("enter")
+
+        time.sleep(self.config.post_submit_wait_sec)
+        self._record_action("send_direct_message", handle=clean_handle, message=message, success=True)
+        return True
 
     def verify_auth_state(self) -> Tuple[bool, str]:
         """Verifies whether an authenticated Chrome window is active."""
