@@ -2,6 +2,7 @@
 """End-to-end integration tests for SocialDaemon."""
 
 import pytest
+from unittest.mock import patch
 from orbit_security.circuit_breaker import BreakerState
 from orbit_security.social_daemon import SocialDaemon
 
@@ -41,21 +42,18 @@ def test_daemon_status_and_snapshot(dry_daemon):
 def test_daemon_live_mode_driver_protection(tmp_path):
     """Verifies that live mode does not fabricate actions when driver is missing."""
     test_state = tmp_path / "social_daemon_state.json"
-    daemon = SocialDaemon(
-        nominal_interval_seconds=3600,
-        dry_run=False,
-        driver=None,
-        state_file=test_state,
-    )
-    # Force driver to None (simulate unavailable driver environment)
-    daemon.driver = None
-    daemon._ensure_driver = lambda: None
+    with patch.object(SocialDaemon, "_ensure_driver", return_value=None):
+        daemon = SocialDaemon(
+            nominal_interval_seconds=3600,
+            dry_run=False,
+            driver=None,
+            state_file=test_state,
+        )
+        res = daemon.publish_original_post(text="Test post without driver")
+        assert res["status"] == "DRIVER_UNAVAILABLE"
 
-    res = daemon.publish_original_post(text="Test post without driver")
-    assert res["status"] == "DRIVER_UNAVAILABLE"
-
-    cycle_res = daemon.execute_hourly_cycle()
-    assert cycle_res["status"] == "DRIVER_UNAVAILABLE"
+        cycle_res = daemon.execute_hourly_cycle()
+        assert cycle_res["status"] == "DRIVER_UNAVAILABLE"
 
 
 def test_daemon_follow_user_mock(tmp_path):
