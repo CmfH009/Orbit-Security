@@ -12,6 +12,8 @@ import httpx
 
 from orbit_security.models import AgencyBranding, DomainAuditResult, Finding, Severity
 from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES
+from orbit_security.dns_cache import get_orbit_async_resolver
+from orbit_security.network_bonding import create_bonded_http_client
 
 
 STATIC_HOST_SUFFIXES = (
@@ -138,8 +140,7 @@ async def async_is_safe_host(hostname: str) -> bool:
 class OrbitSecurityScanner:
     def __init__(self, timeout: float = 8.0):
         self.timeout = timeout
-        self.resolver = dns.asyncresolver.Resolver()
-        self.resolver.lifetime = timeout
+        self.resolver = get_orbit_async_resolver(timeout=timeout)
 
     @staticmethod
     async def _check_redirect_ssrf(response: httpx.Response):
@@ -154,19 +155,21 @@ class OrbitSecurityScanner:
                         f"SSRF blocked: Redirect to internal/private host '{parsed.hostname}' prohibited."
                     )
 
-    def create_http_client(self, verify_ssl: bool = True) -> httpx.AsyncClient:
-        """Creates a hardened, pooled AsyncClient with SSRF redirect guards.
+    def create_http_client(
+        self, verify_ssl: bool = True, use_proxy: Optional[bool] = None
+    ) -> httpx.AsyncClient:
+        """Creates a hardened, pooled AsyncClient with SSRF redirect guards and multi-adapter bonding.
 
         Args:
             verify_ssl: Whether to verify SSL/TLS certificates. Defaults to True for security
                         hygiene. Callers conducting exploratory probes can set False if explicitly needed.
+            use_proxy: Explicitly enable or disable Multi-Adapter proxy routing (:8989). If None,
+                       auto-detects if proxy is active.
         """
-        limits = httpx.Limits(max_keepalive_connections=20, max_connections=50)
-        return httpx.AsyncClient(
+        return create_bonded_http_client(
             timeout=self.timeout,
-            follow_redirects=True,
-            verify=verify_ssl,
-            limits=limits,
+            verify_ssl=verify_ssl,
+            use_proxy=use_proxy,
             event_hooks={"response": [self._check_redirect_ssrf]},
         )
 
