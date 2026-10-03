@@ -533,7 +533,7 @@ class BountyTakeoverSweeper:
                         name_val = entry.get("name_value", "")
                         for line in name_val.split("\n"):
                             line = line.strip().lower().lstrip("*.")
-                            if line and line.endswith(clean_apex) and line != clean_apex:
+                            if line and line.endswith("." + clean_apex):
                                 subdomains.add(line)
                                 if len(subdomains) >= max_results:
                                     break
@@ -550,6 +550,7 @@ class BountyTakeoverSweeper:
         out_of_scope: Optional[List[str]] = None,
         max_per_wildcard: int = 25,
         use_passive_ct: bool = False,
+        use_archive_harvest: bool = False,
     ) -> List[str]:
         """Expands wildcard patterns (*.target.com) into candidate FQDNs."""
         out_set: Set[str] = set(s.strip().lower() for s in (out_of_scope or []))
@@ -585,6 +586,18 @@ class BountyTakeoverSweeper:
                         if not is_excluded(sub) and sub not in seen:
                             expanded.append(sub)
                             seen.add(sub)
+
+                # Historical Archive Harvesting (Wayback CDX & AlienVault OTX) if requested
+                if use_archive_harvest:
+                    try:
+                        from orbit_security.recon_harvester import ArchiveHarvester
+                        archive_res = ArchiveHarvester.harvest_historical_assets(apex, max_results=max_per_wildcard)
+                        for sub in archive_res.get("subdomains", []):
+                            if not is_excluded(sub) and sub not in seen:
+                                expanded.append(sub)
+                                seen.add(sub)
+                    except Exception as e:
+                        logger.debug("Archive harvesting skipped for %s: %s", apex, e)
 
                 for prefix in self.prefixes[:max_per_wildcard]:
                     candidate = f"{prefix}.{apex}"
@@ -911,6 +924,7 @@ class BountyTakeoverSweeper:
         program: BountyProgram,
         max_domains: int = 15,
         use_passive_ct: bool = False,
+        use_archive_harvest: bool = False,
         mock_cnames: Optional[Dict[str, str]] = None,
         mock_bodies: Optional[Dict[str, str]] = None,
         mock_spfs: Optional[Dict[str, str]] = None,
@@ -923,6 +937,7 @@ class BountyTakeoverSweeper:
             program.out_of_scope,
             max_per_wildcard=max_domains,
             use_passive_ct=use_passive_ct,
+            use_archive_harvest=use_archive_harvest,
         )
         vulns: List[BountyVulnerability] = []
         mock_cnames = mock_cnames or {}
@@ -1005,6 +1020,11 @@ class BountyTakeoverSweeper:
 
         program.last_scanned = datetime.datetime.now(datetime.timezone.utc).isoformat()
         return vulns
+
+    def harvest_javascript_routes(self, target_url: str) -> Dict[str, Any]:
+        """Passively audits frontend JavaScript bundles for internal API routes, cloud buckets, and subdomains."""
+        from orbit_security.recon_harvester import JsRouteExtractor
+        return JsRouteExtractor.analyze_target_scripts(target_url)
 
 
 class CVSSv31Calculator:
@@ -1476,6 +1496,7 @@ class BountyRadarSupervisor:
         force_now: bool = False,
         max_domains_per_program: int = 15,
         use_passive_ct: bool = False,
+        use_archive_harvest: bool = False,
         save_disclosures: bool = True,
         output_dir: Optional[Path] = None,
         max_programs: int = 25,
@@ -1506,6 +1527,7 @@ class BountyRadarSupervisor:
                 prog,
                 max_domains=max_domains_per_program,
                 use_passive_ct=use_passive_ct,
+                use_archive_harvest=use_archive_harvest,
             )
             total_findings.extend(vulns)
 

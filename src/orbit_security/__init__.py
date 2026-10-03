@@ -22,6 +22,11 @@ from orbit_security.desktop_x_bridge import (
     DesktopDriverConfig,
     DesktopXBridge,
 )
+from orbit_security.recon_harvester import (
+    CertificateTransparencyStreamer,
+    ArchiveHarvester,
+    JsRouteExtractor,
+)
 
 __all__ = [
     "AgencyBranding",
@@ -48,6 +53,9 @@ __all__ = [
     "DesktopAutomationDriver",
     "DesktopDriverConfig",
     "DesktopXBridge",
+    "CertificateTransparencyStreamer",
+    "ArchiveHarvester",
+    "JsRouteExtractor",
     "hello",
 ]
 
