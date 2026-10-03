@@ -277,6 +277,75 @@ class BountyScopeIngester:
             self.save()
         return ingested
 
+    @staticmethod
+    def _normalize_web_asset(identifier: str) -> Optional[str]:
+        """Reduces a scope identifier to a bare host or wildcard; None if not a sweepable web host."""
+        ident = (identifier or "").strip().lower()
+        ident = re.sub(r"^https?://", "", ident).split("/")[0].split(":")[0]
+        if not ident or " " in ident or "." not in ident:
+            return None
+        if re.fullmatch(r"[\d.]+", ident):  # bare IPv4
+            return None
+        if not re.fullmatch(r"(\*\.)?[a-z0-9-]+(\.[a-z0-9-]+)+", ident):
+            return None
+        return ident
+
+    def ingest_hackerone_feed(
+        self,
+        feed: List[Dict[str, Any]] | str,
+        max_programs: int = 25,
+    ) -> List[BountyProgram]:
+        """Ingests the public bounty-targets-data HackerOne export with strict safety filtering.
+
+        Only open programs that pay cash are kept, and only WILDCARD/URL/DOMAIN assets that are
+        eligible for bounty. Out-of-scope web assets are carried over for exclusion.
+        """
+        if isinstance(feed, str):
+            feed = json.loads(feed)
+        ingested: List[BountyProgram] = []
+        web_types = {"WILDCARD", "URL", "DOMAIN"}
+
+        for item in feed:
+            if len(ingested) >= max_programs:
+                break
+            if not isinstance(item, dict) or not item.get("offers_bounties"):
+                continue
+            if item.get("submission_state", "open") != "open":
+                continue
+            targets = item.get("targets") or {}
+            in_scope: List[str] = []
+            for t in targets.get("in_scope", []):
+                if t.get("asset_type") not in web_types or not t.get("eligible_for_bounty"):
+                    continue
+                host = self._normalize_web_asset(t.get("asset_identifier", ""))
+                if host and host not in in_scope:
+                    in_scope.append(host)
+            if not in_scope:
+                continue
+            out_scope: List[str] = []
+            for t in targets.get("out_of_scope", []):
+                host = self._normalize_web_asset(t.get("asset_identifier", ""))
+                if host and host not in out_scope:
+                    out_scope.append(host)
+
+            handle = str(item.get("handle", "")).lower()
+            prog = BountyProgram(
+                program_id=handle,
+                name=item.get("name") or handle,
+                platform="hackerone",
+                policy_url=item.get("url") or f"https://hackerone.com/{handle}",
+                in_scope=in_scope,
+                out_of_scope=out_scope,
+                bounty_tier="cash",
+                max_bounty=int(item.get("max_bounty", 10000)),
+            )
+            self.programs[prog.program_id] = prog
+            ingested.append(prog)
+
+        if ingested:
+            self.save()
+        return ingested
+
     def ingest_bugcrowd_scope(self, data: Dict[str, Any] | List[Any] | str) -> List[BountyProgram]:
         """Ingests structured Bugcrowd scope export JSON."""
         if isinstance(data, str):
@@ -486,6 +555,16 @@ class BountyTakeoverSweeper:
         expanded: List[str] = []
         seen: Set[str] = set()
 
+        def is_excluded(host: str) -> bool:
+            if host in out_set:
+                return True
+            for pat in out_set:
+                if pat.startswith("*."):
+                    suffix = pat[2:]
+                    if host == suffix or host.endswith("." + suffix):
+                        return True
+            return False
+
         for pattern in in_scope:
             clean = pattern.strip().lower()
             if not clean:
@@ -494,7 +573,7 @@ class BountyTakeoverSweeper:
             if clean.startswith("*."):
                 apex = clean[2:]
                 # Also include apex domain
-                if apex not in out_set and apex not in seen:
+                if not is_excluded(apex) and apex not in seen:
                     expanded.append(apex)
                     seen.add(apex)
 
@@ -502,18 +581,18 @@ class BountyTakeoverSweeper:
                 if use_passive_ct:
                     ct_subs = self.fetch_crtsh_subdomains(apex, max_results=max_per_wildcard)
                     for sub in ct_subs:
-                        if sub not in out_set and sub not in seen:
+                        if not is_excluded(sub) and sub not in seen:
                             expanded.append(sub)
                             seen.add(sub)
 
                 for prefix in self.prefixes[:max_per_wildcard]:
                     candidate = f"{prefix}.{apex}"
-                    if candidate not in out_set and candidate not in seen:
+                    if not is_excluded(candidate) and candidate not in seen:
                         expanded.append(candidate)
                         seen.add(candidate)
             else:
                 # Direct domain
-                if clean not in out_set and clean not in seen:
+                if not is_excluded(clean) and clean not in seen:
                     expanded.append(clean)
                     seen.add(clean)
 
@@ -1167,6 +1246,7 @@ class BountyRadarSupervisor:
         use_passive_ct: bool = False,
         save_disclosures: bool = True,
         output_dir: Optional[Path] = None,
+        max_programs: int = 25,
     ) -> Dict[str, Any]:
         """Runs radar sweep across target programs if off-peak or force_now is set."""
         now_utc = datetime.datetime.now(datetime.timezone.utc)
@@ -1183,7 +1263,7 @@ class BountyRadarSupervisor:
             if program_id
             else self.ingester.list_programs()
         )
-        programs = [p for p in programs if p and p.state == "active"]
+        programs = [p for p in programs if p and p.state == "active"][:max_programs]
 
         total_findings: List[BountyVulnerability] = []
         disclosed_files: List[str] = []
@@ -1220,8 +1300,12 @@ class BountyRadarSupervisor:
 
         return {
             "status": "COMPLETED",
+            "last_sweep_utc": self.state.get("last_sweep_utc", now_utc.isoformat()),
+            "total_sweeps": self.state.get("total_sweeps", 0),
+            "total_vulnerabilities_found": self.state.get("total_vulnerabilities_found", 0),
             "programs_scanned": len(programs),
             "vulnerabilities_found": len(total_findings),
             "vulnerabilities": [asdict(v) for v in total_findings],
             "disclosed_files": disclosed_files,
         }
+

@@ -116,6 +116,19 @@ class TestBountyTakeoverSweeper:
         assert "portal.acme-partners.com" in candidates
         assert "blog.acme.com" not in candidates  # Filtered out_of_scope
 
+    def test_expand_wildcards_wildcard_out_of_scope(self):
+        sweeper = BountyTakeoverSweeper(custom_prefixes=["dev", "staging", "api", "vpn"])
+        in_scope = ["*.corp.com", "admin.internal.corp.com"]
+        out_of_scope = ["*.internal.corp.com", "staging.corp.com"]
+
+        candidates = sweeper.expand_wildcards(in_scope, out_of_scope, max_per_wildcard=10)
+        assert "corp.com" in candidates
+        assert "dev.corp.com" in candidates
+        assert "api.corp.com" in candidates
+        assert "staging.corp.com" not in candidates  # Direct match excluded
+        assert "admin.internal.corp.com" not in candidates  # Wildcard *.internal.corp.com excluded
+
+
     def test_fetch_crtsh_subdomains_success(self):
         sweeper = BountyTakeoverSweeper()
         mock_response = MagicMock()
@@ -580,3 +593,62 @@ class TestChaosScopeIngester:
         assert synced[0].program_id == "fleet_corp"
         assert synced[0].max_bounty == 15000
 
+
+
+class TestHackerOneFeedIngestion:
+    FEED = [
+        {
+            "handle": "good_corp", "name": "Good Corp", "offers_bounties": True,
+            "submission_state": "open", "url": "https://hackerone.com/good_corp",
+            "targets": {
+                "in_scope": [
+                    {"asset_identifier": "*.goodcorp.com", "asset_type": "WILDCARD", "eligible_for_bounty": True},
+                    {"asset_identifier": "https://app.goodcorp.io/login", "asset_type": "URL", "eligible_for_bounty": True},
+                    {"asset_identifier": "https://github.com/goodcorp/repo", "asset_type": "SOURCE_CODE", "eligible_for_bounty": True},
+                    {"asset_identifier": "com.goodcorp.app", "asset_type": "GOOGLE_PLAY_APP_ID", "eligible_for_bounty": True},
+                    {"asset_identifier": "10.0.0.1", "asset_type": "OTHER", "eligible_for_bounty": True},
+                    {"asset_identifier": "*.noscore.com", "asset_type": "WILDCARD", "eligible_for_bounty": False},
+                ],
+                "out_of_scope": [{"asset_identifier": "blog.goodcorp.com", "asset_type": "URL"}],
+            },
+        },
+        {"handle": "swag_only", "name": "Swag", "offers_bounties": False, "submission_state": "open",
+         "targets": {"in_scope": [{"asset_identifier": "*.swag.com", "asset_type": "WILDCARD", "eligible_for_bounty": True}], "out_of_scope": []}},
+        {"handle": "closed_corp", "name": "Closed", "offers_bounties": True, "submission_state": "paused",
+         "targets": {"in_scope": [{"asset_identifier": "*.closed.com", "asset_type": "WILDCARD", "eligible_for_bounty": True}], "out_of_scope": []}},
+        {"handle": "no_web", "name": "NoWeb", "offers_bounties": True, "submission_state": "open",
+         "targets": {"in_scope": [{"asset_identifier": "https://github.com/x/y", "asset_type": "SOURCE_CODE", "eligible_for_bounty": True}], "out_of_scope": []}},
+    ]
+
+    def test_filters_to_open_cash_web_assets(self, tmp_path):
+        ing = BountyScopeIngester(data_path=tmp_path / "p.json")
+        ing.programs = {}
+        out = ing.ingest_hackerone_feed(self.FEED)
+        assert [p.program_id for p in out] == ["good_corp"]
+        prog = out[0]
+        assert sorted(prog.in_scope) == ["*.goodcorp.com", "app.goodcorp.io"]
+        assert prog.out_of_scope == ["blog.goodcorp.com"]
+        assert prog.bounty_tier == "cash"
+
+    def test_max_programs_cap_and_no_clobber_of_seed(self, tmp_path):
+        ing = BountyScopeIngester(data_path=tmp_path / "p.json")
+        before = set(ing.programs)
+        feed = [dict(self.FEED[0], handle=f"c{i}") for i in range(5)]
+        out = ing.ingest_hackerone_feed(feed, max_programs=3)
+        assert len(out) == 3
+        assert before.issubset(set(ing.programs))
+
+
+class TestSweepFleetCap:
+    def test_run_sweep_caps_programs_per_cycle(self, tmp_path):
+        ing = BountyScopeIngester(data_path=tmp_path / "p.json")
+        ing.programs = {
+            f"p{i}": BountyProgram(program_id=f"p{i}", name=f"P{i}", in_scope=[f"*.p{i}.com"])
+            for i in range(30)
+        }
+        sweeper = BountyTakeoverSweeper()
+        sup = BountyRadarSupervisor(ingester=ing, sweeper=sweeper, state_file=tmp_path / "s.json", dispatcher=MagicMock())
+        with patch.object(sweeper, "sweep_program", return_value=[]) as sp:
+            res = sup.run_sweep(force_now=True, save_disclosures=False, max_programs=25)
+        assert sp.call_count == 25
+        assert res["programs_scanned"] == 25

@@ -1,7 +1,7 @@
 {
-  "last_sweep_utc": "2026-10-03T11:04:35.241814+00:00",
-  "total_sweeps": 13,
-  "total_vulnerabilities_found": 9,
+  "last_sweep_utc": "2026-10-03T14:07:55.825467+00:00",
+  "total_sweeps": 20,
+  "total_vulnerabilities_found": 28,
   "programs_scanned": [
     "shopify"
   ],
