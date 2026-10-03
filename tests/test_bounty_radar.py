@@ -431,3 +431,152 @@ class TestBountyRadarSupervisor:
             # State check
             assert supervisor.state["total_sweeps"] == 1
             assert supervisor.state["total_vulnerabilities_found"] == 1
+
+    def test_dispatch_bounty_alert_high_confidence(self):
+        mock_dispatcher = MagicMock()
+        mock_dispatcher.send_bounty_alert.return_value = {"slack": True, "discord": True}
+        mock_dispatcher.send_windows_toast.return_value = True
+
+        supervisor = BountyRadarSupervisor(dispatcher=mock_dispatcher)
+        prog = BountyProgram(program_id="shopify", name="Shopify", max_bounty=50000)
+        vuln = BountyVulnerability(
+            program_id="shopify",
+            program_name="Shopify",
+            platform="hackerone",
+            target_domain="promo.shopify.com",
+            cname_target="target.s3.amazonaws.com",
+            flaw_type="subdomain_takeover",
+            provider="AWS S3",
+            evidence="NoSuchBucket",
+            bounty_viability="HIGH_CONFIDENCE",
+        )
+
+        res = supervisor.dispatch_bounty_alert(vuln, prog, send_toast=True)
+        assert res["dispatched"] is True
+        mock_dispatcher.send_bounty_alert.assert_called_once()
+
+    def test_dispatch_bounty_alert_suppressed_for_informational(self):
+        mock_dispatcher = MagicMock()
+        supervisor = BountyRadarSupervisor(dispatcher=mock_dispatcher)
+        prog = BountyProgram(program_id="shopify", name="Shopify")
+        vuln = BountyVulnerability(
+            program_id="shopify",
+            program_name="Shopify",
+            platform="hackerone",
+            target_domain="mail.shopify.com",
+            flaw_type="mail_spoofing",
+            bounty_viability="INFORMATIONAL_LOW",
+        )
+
+        res = supervisor.dispatch_bounty_alert(vuln, prog)
+        assert res["dispatched"] is False
+        assert res["reason"] == "VIABILITY_NOT_HIGH_CONFIDENCE"
+        mock_dispatcher.send_bounty_alert.assert_not_called()
+
+    def test_run_sweep_alerts_only_high_confidence(self, tmp_path):
+        data_file = tmp_path / "bounty_programs.json"
+        state_file = tmp_path / "bounty_state.json"
+        ingester = BountyScopeIngester(data_path=data_file)
+        test_prog = BountyProgram(
+            program_id="shopify",
+            name="Shopify",
+            in_scope=["*.shopify.com"],
+            max_bounty=50000,
+        )
+        ingester.programs = {"shopify": test_prog}
+        ingester.save()
+
+        sweeper = BountyTakeoverSweeper()
+        mock_dispatcher = MagicMock()
+        mock_dispatcher.send_bounty_alert.return_value = {"slack": True, "discord": False}
+        mock_dispatcher.send_windows_toast.return_value = False
+
+        supervisor = BountyRadarSupervisor(
+            ingester=ingester,
+            sweeper=sweeper,
+            state_file=state_file,
+            dispatcher=mock_dispatcher,
+        )
+
+        high_vuln = BountyVulnerability(
+            program_id="shopify",
+            program_name="Shopify",
+            platform="hackerone",
+            target_domain="assets.shopify.com",
+            flaw_type="subdomain_takeover",
+            provider="AWS S3",
+            bounty_viability="HIGH_CONFIDENCE",
+        )
+        info_vuln = BountyVulnerability(
+            program_id="shopify",
+            program_name="Shopify",
+            platform="hackerone",
+            target_domain="mail.shopify.com",
+            flaw_type="mail_spoofing",
+            bounty_viability="INFORMATIONAL_LOW",
+        )
+
+        with patch.object(sweeper, "sweep_program", return_value=[high_vuln, info_vuln]):
+            res = supervisor.run_sweep(force_now=True, save_disclosures=False)
+            assert res["status"] == "COMPLETED"
+            assert mock_dispatcher.send_bounty_alert.call_count == 1
+            call_payload = mock_dispatcher.send_bounty_alert.call_args[1]["payload"]
+            assert call_payload.target_domain == "assets.shopify.com"
+            assert call_payload.bounty_viability == "HIGH_CONFIDENCE"
+
+
+class TestChaosScopeIngester:
+    def test_ingest_chaos_scope_cash_only_filter(self, tmp_path):
+        data_file = tmp_path / "bounty_programs.json"
+        ingester = BountyScopeIngester(data_path=data_file)
+
+        chaos_data = {
+            "programs": [
+                {
+                    "name": "Acme Corp",
+                    "url": "https://acme.org/security",
+                    "bounty": True,
+                    "bounty_tier": "cash",
+                    "max_bounty": 25000,
+                    "domains": ["acme.org", "api.acme.org"],
+                    "out_of_scope": ["dev.acme.org"],
+                },
+                {
+                    "name": "Points Only Inc",
+                    "url": "https://pointsonly.org",
+                    "bounty": False,
+                    "bounty_tier": "points",
+                    "domains": ["pointsonly.org"],
+                },
+            ]
+        }
+
+        programs = ingester.ingest_chaos_scope(chaos_data, cash_only=True)
+        assert len(programs) == 1
+        prog = programs[0]
+        assert prog.program_id == "acme_corp"
+        assert prog.bounty_tier == "cash"
+        assert "*.acme.org" in prog.in_scope
+        assert "dev.acme.org" in prog.out_of_scope
+
+    def test_sync_from_feed_local_file(self, tmp_path):
+        data_file = tmp_path / "bounty_programs.json"
+        feed_file = tmp_path / "chaos_feed.json"
+        ingester = BountyScopeIngester(data_path=data_file)
+
+        feed_file.write_text(json.dumps([
+            {
+                "name": "Fleet Corp",
+                "url": "https://fleet.io",
+                "bounty": True,
+                "bounty_tier": "cash",
+                "max_bounty": 15000,
+                "domains": ["fleet.io"],
+            }
+        ]), encoding="utf-8")
+
+        synced = ingester.sync_from_feed(str(feed_file), feed_type="chaos")
+        assert len(synced) == 1
+        assert synced[0].program_id == "fleet_corp"
+        assert synced[0].max_bounty == 15000
+

@@ -13,14 +13,19 @@ from dataclasses import asdict, dataclass, field
 import datetime
 import json
 import logging
+import os
 from pathlib import Path
 import re
+import sys
 from typing import Any, Dict, List, Optional, Set, Tuple
+import urllib.request
+import urllib.error
 
 import dns.resolver
 
 from orbit_security.dns_cache import get_orbit_sync_resolver
 from orbit_security.models import Severity
+from orbit_security.notifications import BountyAlertPayload, WebhookDispatcher
 from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES, SaasSignature
 
 logger = logging.getLogger("orbit_security.bounty_radar")
@@ -316,6 +321,102 @@ class BountyScopeIngester:
         if ingested:
             self.save()
         return ingested
+
+    def ingest_chaos_scope(
+        self,
+        data: Dict[str, Any] | List[Any] | str,
+        cash_only: bool = True,
+        max_programs: int = 25,
+    ) -> List[BountyProgram]:
+        """Ingests ProjectDiscovery Chaos bug bounty scope data.
+
+        Handles:
+        1. {"programs": [{"name": "...", "url": "...", "bounty": true, "domains": [...]}]}
+        2. [{"name": "...", "url": "...", "bounty": true, "domains": [...]}]
+        """
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except Exception as e:
+                raise ValueError(f"Invalid JSON string passed to ingest_chaos_scope: {e}")
+
+        ingested: List[BountyProgram] = []
+        raw_items = data.get("programs", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+
+        for item in raw_items:
+            if not isinstance(item, dict):
+                continue
+            if len(ingested) >= max_programs:
+                break
+
+            name = item.get("name") or "chaos_program"
+            program_id = re.sub(r"[^a-zA-Z0-9_]", "_", name.lower()).strip("_")
+            policy_url = item.get("url") or item.get("policy_url") or ""
+            is_bounty = item.get("bounty", True)
+            bounty_tier = item.get("bounty_tier", "cash" if is_bounty else "points")
+
+            if cash_only and (not is_bounty or bounty_tier != "cash"):
+                continue
+
+            raw_domains = item.get("domains") or item.get("in_scope") or []
+            in_scope: List[str] = []
+            for d in raw_domains:
+                d_clean = str(d).strip().lower()
+                if d_clean:
+                    if not d_clean.startswith("*.") and not d_clean.startswith("."):
+                        d_clean = f"*.{d_clean}"
+                    in_scope.append(d_clean)
+
+            out_of_scope = [str(x).strip().lower() for x in item.get("out_of_scope", []) if str(x).strip()]
+
+            if in_scope:
+                prog = BountyProgram(
+                    program_id=program_id,
+                    name=name,
+                    platform="chaos",
+                    policy_url=policy_url,
+                    in_scope=in_scope,
+                    out_of_scope=out_of_scope,
+                    bounty_tier=bounty_tier,
+                    max_bounty=int(item.get("max_bounty", 10000)),
+                )
+                self.programs[prog.program_id] = prog
+                ingested.append(prog)
+
+        if ingested:
+            self.save()
+        return ingested
+
+    def sync_from_feed(
+        self,
+        source_url_or_path: str,
+        feed_type: str = "chaos",
+        cash_only: bool = True,
+        max_programs: int = 25,
+        timeout_seconds: float = 10.0,
+    ) -> List[BountyProgram]:
+        """Synchronizes bug bounty program scopes from an external HTTP feed or local JSON file."""
+        if source_url_or_path.startswith("http://") or source_url_or_path.startswith("https://"):
+            req = urllib.request.Request(
+                source_url_or_path,
+                headers={"User-Agent": "OrbitSecurity-BountyRadar/1.0", "Accept": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=timeout_seconds) as resp:
+                content = resp.read().decode("utf-8")
+        else:
+            with open(source_url_or_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+        feed_lower = feed_type.lower()
+        if feed_lower == "chaos":
+            return self.ingest_chaos_scope(content, cash_only=cash_only, max_programs=max_programs)
+        elif feed_lower == "hackerone":
+            return self.ingest_hackerone_scope(content)
+        elif feed_lower == "bugcrowd":
+            return self.ingest_bugcrowd_scope(content)
+        else:
+            raise ValueError(f"Unsupported feed type '{feed_type}'. Choose from 'chaos', 'hackerone', 'bugcrowd'.")
+
 
     def get_program(self, program_id: str) -> Optional[BountyProgram]:
         return self.programs.get(program_id)
@@ -979,10 +1080,12 @@ class BountyRadarSupervisor:
         ingester: Optional[BountyScopeIngester] = None,
         sweeper: Optional[BountyTakeoverSweeper] = None,
         state_file: Optional[Path] = None,
+        dispatcher: Optional[WebhookDispatcher] = None,
     ):
         self.ingester = ingester or BountyScopeIngester()
         self.sweeper = sweeper or BountyTakeoverSweeper()
         self.state_file = Path(state_file or DEFAULT_RADAR_STATE_PATH)
+        self.dispatcher = dispatcher or WebhookDispatcher()
         self.state: Dict[str, Any] = self._load_state()
 
     def _load_state(self) -> Dict[str, Any]:
@@ -1004,6 +1107,57 @@ class BountyRadarSupervisor:
         self.state_file.parent.mkdir(parents=True, exist_ok=True)
         with open(self.state_file, "w", encoding="utf-8") as f:
             json.dump(self.state, f, indent=2)
+
+    def dispatch_bounty_alert(
+        self,
+        vuln: BountyVulnerability,
+        program: BountyProgram,
+        discord_webhook_url: Optional[str] = None,
+        slack_webhook_url: Optional[str] = None,
+        send_toast: bool = True,
+        force: bool = False,
+    ) -> Dict[str, Any]:
+        """Dispatches real-time cash bounty alert via webhooks and desktop notifications for HIGH_CONFIDENCE vulns."""
+        if vuln.bounty_viability != "HIGH_CONFIDENCE":
+            logger.debug(f"Suppressed alert for {vuln.target_domain} (viability: {vuln.bounty_viability})")
+            return {"dispatched": False, "reason": "VIABILITY_NOT_HIGH_CONFIDENCE"}
+
+        discord_url = discord_webhook_url or os.getenv("BOUNTY_DISCORD_WEBHOOK_URL") or os.getenv("DISCORD_WEBHOOK_URL")
+        slack_url = slack_webhook_url or os.getenv("BOUNTY_SLACK_WEBHOOK_URL") or os.getenv("SLACK_WEBHOOK_URL")
+
+        copy_cmd = f"python scripts/triage_bounties.py --copy {vuln.target_domain}"
+        payload = BountyAlertPayload(
+            program_id=program.program_id,
+            program_name=program.name,
+            target_domain=vuln.target_domain,
+            max_bounty=program.max_bounty,
+            provider=vuln.provider,
+            flaw_type=vuln.flaw_type,
+            severity=str(vuln.severity),
+            evidence=vuln.evidence,
+            cname_target=vuln.cname_target,
+            bounty_viability=vuln.bounty_viability,
+            copy_command=copy_cmd,
+        )
+
+        webhook_res = self.dispatcher.send_bounty_alert(
+            payload=payload,
+            slack_webhook_url=slack_url,
+            discord_webhook_url=discord_url,
+            force=force,
+        )
+
+        toast_sent = False
+        if send_toast and sys.platform == "win32":
+            toast_title = f"🚨 Cash Bounty Alert: {vuln.target_domain}"
+            toast_msg = f"{program.name} (Max: ${program.max_bounty:,}) - {vuln.provider or 'Takeover'}"
+            toast_sent = self.dispatcher.send_windows_toast(toast_title, toast_msg)
+
+        return {
+            "dispatched": bool(webhook_res.get("slack") or webhook_res.get("discord") or toast_sent),
+            "webhooks": webhook_res,
+            "toast": toast_sent,
+        }
 
     def run_sweep(
         self,
@@ -1043,10 +1197,17 @@ class BountyRadarSupervisor:
             )
             total_findings.extend(vulns)
 
-            if save_disclosures:
-                for v in vulns:
+            for v in vulns:
+                if save_disclosures:
                     p = HackerOneDisclosureGenerator.save_disclosure(v, prog, output_dir=output_dir)
                     disclosed_files.append(str(p))
+
+                # Real-Time Cash Bounty Alerting for HIGH_CONFIDENCE findings
+                if v.bounty_viability == "HIGH_CONFIDENCE":
+                    try:
+                        self.dispatch_bounty_alert(v, prog)
+                    except Exception as alert_err:
+                        logger.warning(f"Failed to dispatch bounty alert for {v.target_domain}: {alert_err}")
 
         # Update state
         self.state["last_sweep_utc"] = now_utc.isoformat()
