@@ -26,8 +26,10 @@ from orbit_security.bounty_radar import (
     BountyScopeIngester,
     BountyTakeoverSweeper,
     BountyVulnerability,
+    CVSSv31Calculator,
     HackerOneDisclosureGenerator,
     OffPeakWindow,
+    ResponsibleDisclosureDrafter,
 )
 from orbit_security.models import Severity
 
@@ -652,3 +654,58 @@ class TestSweepFleetCap:
             res = sup.run_sweep(force_now=True, save_disclosures=False, max_programs=25)
         assert sp.call_count == 25
         assert res["programs_scanned"] == 25
+
+
+class TestCVSSv31CalculatorAndDisclosureDrafter:
+    def test_cvss_subdomain_takeover(self):
+        score, vector = CVSSv31Calculator.calculate_score("N", "L", "N", "N", "U", "N", "H", "N")
+        assert score == 7.5
+        assert vector == "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N"
+
+    def test_cvss_scope_changed(self):
+        score, vector = CVSSv31Calculator.calculate_score("N", "L", "N", "R", "C", "L", "L", "N")
+        assert score == 6.1
+        assert vector == "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N"
+
+    def test_cvss_zero_impact(self):
+        score, vector = CVSSv31Calculator.calculate_score("N", "L", "N", "N", "U", "N", "N", "N")
+        assert score == 0.0
+
+    def test_responsible_disclosure_drafter_multi_platform(self, tmp_path):
+        vuln = BountyVulnerability(
+            program_id="acme",
+            program_name="Acme Corp",
+            platform="hackerone",
+            target_domain="blog.acme.com",
+            cname_target="acme.github.io",
+            flaw_type="subdomain_takeover",
+            provider="GitHub Pages",
+            severity=Severity.HIGH,
+            cvss_score=7.5,
+            cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N",
+            evidence="CNAME acme.github.io -> HTTP 404 There isn't a GitHub Pages site here",
+            cwe_id="CWE-284: Improper Access Control",
+            remediation="Remove dangling CNAME or claim tenant",
+            bounty_viability="HIGH_CONFIDENCE",
+        )
+
+        h1_md = ResponsibleDisclosureDrafter.generate_h1_report(vuln)
+        assert "# [Subdomain Takeover]" in h1_md
+        assert "blog.acme.com" in h1_md
+        assert "CVSS 3.1: **7.5**" in h1_md
+
+        bc_md = ResponsibleDisclosureDrafter.generate_bugcrowd_report(vuln)
+        assert "# Bugcrowd Vulnerability Report:" in bc_md
+        assert "Target Asset:** `blog.acme.com`" in bc_md
+        assert "Subdomain Takeover" in bc_md
+
+        email_txt = ResponsibleDisclosureDrafter.generate_security_txt_email(vuln)
+        assert "Subject: [SECURITY ADVISORY] Responsible Disclosure:" in email_txt
+        assert "To: security@acme.com" in email_txt
+        assert "X-CVSS-Score: 7.5" in email_txt
+
+        bundle = ResponsibleDisclosureDrafter.save_bundle(vuln, output_dir=tmp_path)
+        assert "hackerone" in bundle and bundle["hackerone"].exists()
+        assert "bugcrowd" in bundle and bundle["bugcrowd"].exists()
+        assert "email" in bundle and bundle["email"].exists()
+
