@@ -319,34 +319,11 @@ def test_like_tweet_flow():
     assert "l" in keys  # 'l' hotkey for like
 
 
-def test_reply_to_tweet_flow(temp_test_image: Path):
-    mock_engine = MockAutomationEngine()
-    driver = DesktopAutomationDriver(
-        config=DesktopDriverConfig(
-            nav_wait_sec=0.01,
-            post_submit_wait_sec=0.01,
-            media_wait_sec=0.01,
-            action_delay=0.0,
-        ),
-        automation_module=mock_engine,
-    )
-
-    target_url = "https://x.com/_arsoncode/status/1880000000000000000"
-    reply_text = "@_arsoncode Verified: RFC 7489 p=reject enforced."
-    ok = driver.reply_to_tweet(target_url=target_url, text=reply_text, media_path=temp_test_image)
-    assert ok is True
-
-    # Must send 'r' hotkey to open reply composer
-    keys = [call.get("key") for call in mock_engine.call_log if call["action"] == "send_key"]
-    assert "r" in keys
-
-    # Must paste reply text
-    pasted = [call.get("text") for call in mock_engine.call_log if call["action"] == "paste_text"]
-    assert reply_text in pasted
-
-    # Must submit with Ctrl+Enter
-    keys_sent = [(call.get("key"), call.get("ctrl")) for call in mock_engine.call_log if call["action"] == "send_key"]
-    assert ("enter", True) in keys_sent
+def test_reply_to_tweet_disabled():
+    """Verifies that reply_to_tweet returns False as commenting is disabled by policy."""
+    driver = DesktopAutomationDriver()
+    ok = driver.reply_to_tweet("https://x.com/test/status/1", "Test reply")
+    assert ok is False
 
 
 def test_repost_tweet_flow():
@@ -381,10 +358,10 @@ def test_pure_mock_mode():
 
     assert driver.post_tweet("Mock post text") is True
     assert driver.like_tweet("https://x.com/test/status/1") is True
-    assert driver.reply_to_tweet("https://x.com/test/status/1", "Mock reply") is True
+    assert driver.reply_to_tweet("https://x.com/test/status/1", "Mock reply") is False
     assert driver.repost_tweet("https://x.com/test/status/1") is True
 
-    assert len(driver.action_history) >= 4
+    assert len(driver.action_history) >= 3
 
 
 def test_headless_no_window_behavior():
@@ -414,11 +391,11 @@ def test_orbit_x_driver_desktop_mode():
     assert driver.is_authenticated is True
     assert driver.post_tweet("Integration tweet") is True
     assert driver.like_tweet("https://x.com/test/status/1") is True
-    assert driver.reply_to_tweet("https://x.com/test/status/1", "Integration reply") is True
+    assert driver.reply_to_tweet("https://x.com/test/status/1", "Integration reply") is False
     assert driver.repost_tweet("https://x.com/test/status/1") is True
 
     driver.close()
-    assert len(mock_desktop.action_history) >= 4
+    assert len(mock_desktop.action_history) >= 3
 
 
 def test_orbit_x_driver_desktop_fallback():
@@ -431,7 +408,7 @@ def test_orbit_x_driver_desktop_fallback():
 
     assert driver.post_tweet("Fallback tweet") is True
     assert driver.like_tweet("https://x.com/test/status/2") is True
-    assert driver.reply_to_tweet("https://x.com/test/status/2", "Fallback reply") is True
+    assert driver.reply_to_tweet("https://x.com/test/status/2", "Fallback reply") is False
     assert driver.repost_tweet("https://x.com/test/status/2") is True
 
 
@@ -439,9 +416,15 @@ def test_orbit_x_driver_desktop_fallback():
 # 8. SocialDaemon Integration Tests
 # =========================================================================
 
-def test_social_daemon_with_desktop_driver():
+def test_social_daemon_with_desktop_driver(tmp_path):
+    from orbit_security.social_state import SocialStateManager
+
+    sm = SocialStateManager(
+        db_path=tmp_path / "test_social.db",
+        json_export_path=tmp_path / "test_social.json",
+    )
     mock_desktop = DesktopAutomationDriver(mock_mode=True)
-    daemon = SocialDaemon(dry_run=True, driver=mock_desktop)
+    daemon = SocialDaemon(dry_run=True, driver=mock_desktop, state_manager=sm)
     assert daemon.driver is mock_desktop
 
     res = daemon.publish_original_post(text="Social daemon test tweet")
@@ -459,10 +442,10 @@ def test_social_daemon_auto_desktop_mode(monkeypatch):
     assert isinstance(daemon.driver, DesktopAutomationDriver)
 
 
-def test_desktop_driver_follow_user():
-    """Verifies that follow_user delegates and records in DesktopAutomationDriver."""
+def test_desktop_driver_follow_user_disabled():
+    """Verifies that follow_user returns False as following is disabled by policy."""
     mock_desktop = DesktopAutomationDriver(mock_mode=True)
     res = mock_desktop.follow_user("@troyhunt")
-    assert res is True
-    assert any(a["action"] == "follow_user" and a.get("handle") == "troyhunt" for a in mock_desktop.action_history)
+    assert res is False
+
 

@@ -33,7 +33,6 @@ from orbit_security.relevance_engine import (
     RelevanceEngine,
 )
 from orbit_security.scanner import OrbitSecurityScanner
-from orbit_security.smart_follow import SmartFollowEngine
 from orbit_security.social_state import SocialStateManager
 
 logger = logging.getLogger("orbit_security.social_daemon")
@@ -81,8 +80,9 @@ class SocialDaemon:
         nominal_interval_seconds: int = 7200,
         dry_run: bool = False,
         driver: Optional[Any] = None,
-        driver_mode: str = "auto",
+        driver_mode: str = "headless",
         state_file: Optional[Union[str, Path]] = None,
+        state_manager: Optional[SocialStateManager] = None,
     ):
         self.nominal_interval = nominal_interval_seconds
         self.dry_run = dry_run
@@ -91,6 +91,7 @@ class SocialDaemon:
         self.driver_mode = driver_mode.lower()
 
         self.base_dir = Path(__file__).resolve().parent.parent.parent
+        self.is_custom_state = state_file is not None
         self.state_file = Path(state_file) if state_file else self.base_dir / "data" / "social_daemon_state.json"
 
         # Initialize driver if none provided and not dry_run
@@ -98,14 +99,13 @@ class SocialDaemon:
             self._ensure_driver()
 
         # Core subsystems
-        self.state_manager = SocialStateManager()
+        self.state_manager = state_manager or SocialStateManager()
         self.quota_manager = SocialQuotaManager(state_manager=self.state_manager)
         self.circuit_breaker = SocialCircuitBreaker(state_manager=self.state_manager)
         self.relevance_engine = RelevanceEngine(project_root=self.base_dir)
         self.ground_truth_gate = GroundTruthGate(max_audit_age_minutes=30)
         self.content_queue = ContentQueue(project_root=self.base_dir)
         self.harvester = FeedHarvester(driver=self.driver, dry_run=self.dry_run)
-        self.smart_follow = SmartFollowEngine(project_root=self.base_dir)
         from orbit_security.social_lead_enricher import SocialLeadEnricher
         self.lead_enricher = SocialLeadEnricher(leads_file=self.base_dir / "data" / "social_leads.json")
 
@@ -144,12 +144,35 @@ class SocialDaemon:
                 logger.warning("Existing driver disconnected or target closed. Recycling driver.")
                 self.close_driver()
 
-        # 1. Prefer authenticated desktop window if mode is 'auto' or 'desktop'
-        if self.driver_mode in ("auto", "desktop"):
+        # 1. Default: Pure Headless Stealth Patchright via Multi-Adapter Proxy
+        if self.driver_mode in ("headless", "auto"):
+            try:
+                from orbit_security.x_driver import OrbitXDriver, DriverConfig
+                config = DriverConfig(
+                    headless=True,
+                    proxy={"server": "http://127.0.0.1:8989"},
+                    use_desktop_driver=False,
+                    desktop_fallback=False,
+                )
+                drv = OrbitXDriver(config=config)
+                drv.start()
+                if drv.is_authenticated:
+                    self.driver = drv
+                    logger.info("Initialized headless OrbitXDriver (stealth Patchright via proxy).")
+                    if hasattr(self, "harvester") and self.harvester:
+                        self.harvester.driver = self.driver
+                    return self.driver
+                else:
+                    logger.warning("Headless OrbitXDriver started but authentication check was false.")
+            except Exception as e:
+                logger.warning(f"Could not initialize headless OrbitXDriver: {e}")
+
+        # 2. Desktop driver only if explicitly requested via driver_mode='desktop'
+        if self.driver_mode == "desktop":
             try:
                 from orbit_security.desktop_x_bridge import DesktopAutomationDriver
                 desktop_drv = DesktopAutomationDriver()
-                if desktop_drv.is_available() or self.driver_mode == "desktop":
+                if desktop_drv.is_available():
                     self.driver = desktop_drv
                     logger.info("Initialized DesktopAutomationDriver hooked to active Chrome window.")
                     if hasattr(self, "harvester") and self.harvester:
@@ -158,22 +181,7 @@ class SocialDaemon:
             except Exception as e:
                 logger.debug(f"DesktopAutomationDriver initialization skipped: {e}")
 
-        # 2. OrbitXDriver (stealth Patchright)
-        try:
-            from orbit_security.x_driver import OrbitXDriver, DriverConfig
-            # Use headful mode to avoid X Castle anti-bot detection (HTTP 403 on chrome-headless-shell)
-            config = DriverConfig(headless=False)
-            drv = OrbitXDriver(config=config)
-            drv.start()
-            self.driver = drv
-            logger.info(f"Initialized OrbitXDriver (is_authenticated={drv.is_authenticated}).")
-            if hasattr(self, "harvester") and self.harvester:
-                self.harvester.driver = self.driver
-            return self.driver
-        except Exception as e:
-            logger.warning(f"Could not initialize OrbitXDriver: {e}")
-            self.driver = None
-            return None
+        return None
 
     def _check_hardware_governor(self) -> bool:
         """Verifies host CPU and RAM status before initiating heavy operations."""
@@ -214,48 +222,19 @@ class SocialDaemon:
         except Exception:
             if tmp.exists():
                 tmp.unlink()
-
-    def _format_roast_reply(self, result: DomainAuditResult) -> str:
-        """Builds an RFC-compliant roast reply <= 280 chars."""
-        dmarc_line = "✉️ DMARC: Monitoring mode (RFC 7489 p=none)"
-        for f in result.findings:
-            if "p=reject" in f.title.lower() or "quarantine" in f.title.lower():
-                dmarc_line = "✉️ DMARC: Enforced policy (Pass)"
-                break
-            elif "missing" in f.title.lower() and "dmarc" in f.title.lower():
-                dmarc_line = "✉️ DMARC: Missing record (Spoofable)"
-                break
-
-        key_finding = "Zero dangling CNAME takeovers detected"
-        for f in result.findings:
-            if "takeover" in f.title.lower() or "expired" in f.title.lower():
-                key_finding = f.title
-                break
-
-        reply = (
-            f"🛡️ Orbit Roast: {result.domain}\n\n"
-            f"📊 Score: {result.score}/100 (Grade: {result.grade})\n"
-            f"{dmarc_line}\n"
-            f"⚠️ Key: {key_finding[:40]}\n\n"
-            f"Decode in our 16-bit arcade:\n"
-            f"{self.ARCADE_URL}"
-        )
-        return reply[:280]
-
-    def _execute_passive_scan(self, domain: str) -> Optional[DomainAuditResult]:
-        """Runs a 5-second asynchronous passive scan for inbound roast requests."""
-        try:
-            scanner = OrbitSecurityScanner(timeout=5.0)
-            result = asyncio.run(scanner.scan_domain(domain, use_crtsh=False))
-            return result
-        except Exception as e:
-            logger.error(f"Error executing passive scan for {domain}: {e}")
-            return None
-
     def execute_hourly_cycle(self) -> Dict[str, Any]:
         """Executes a single hourly cycle conforming to all anti-bot quotas."""
         cycle_start = time.time()
         logger.info("=== Starting Orbit Social Hourly Execution Cycle ===")
+
+        # 0. Emergency Quarantine Check
+        stop_file = self.state_file.parent / "EMERGENCY_STOP" if self.is_custom_state else self.base_dir / "data" / "EMERGENCY_STOP"
+        if not self.dry_run and stop_file.exists() and not getattr(self, "force_cycle", False):
+            logger.warning("EMERGENCY STOP ACTIVE: Account flagged on X. Aborting cycle immediately to protect account.")
+            self.circuit_breaker.trip(TriggerType.AUTH, "Account flagged on X - manual review in progress")
+            self._save_daemon_heartbeat("QUARANTINED_ACCOUNT_REVIEW")
+            return {"status": "EMERGENCY_STOP", "reason": "Account flagged on X - manual review in progress"}
+
         self.quota_manager.reset_hourly_cycle()
         self._save_daemon_heartbeat("EXECUTING_CYCLE")
 
@@ -284,7 +263,8 @@ class SocialDaemon:
         actions_performed = 0
 
         # 5. Proactive Staged Content Publication (Original Post)
-        if self.quota_manager.can_perform("POST", allow_dormant=True):
+        # Scaled back to twice a day with minimum inter-post spacing (e.g. morning/evening)
+        if self.quota_manager.can_perform("POST", allow_dormant=True, ignore_spacing=getattr(self, "force_cycle", False)):
             queued_post = self.content_queue.get_next_queued_post(
                 self.state_manager, allow_generative=True
             )
@@ -299,6 +279,7 @@ class SocialDaemon:
                     post_id=queued_post["id"],
                     text=queued_post["text"],
                     media_path=queued_post.get("media_path"),
+                    ignore_spacing=getattr(self, "force_cycle", False),
                 )
                 if res.get("status") == "SUCCESS":
                     actions_performed += 1
@@ -309,7 +290,7 @@ class SocialDaemon:
             else:
                 logger.info("ContentQueue: All staged posts currently marked as published.")
         else:
-            logger.info("Hourly POST quota currently exhausted. Skipping proactive publication.")
+            logger.info("POST quota reached or spacing active (scaled to twice a day). Proceeding with continuous following & engagement.")
 
         # 6. Harvest Inbound Interactions & Lead Enrichment (Act II)
         if self.driver and hasattr(self.driver, "harvest_inbound_interactions"):
@@ -370,59 +351,8 @@ class SocialDaemon:
                     success = False
 
             elif decision.action == ActionType.REPLY:
-                logger.info(f"Action Dispatch: REPLY to @{post.author_handle} (Tweet: {post.tweet_id})")
-
-                # If inbound roast requested and domain found, execute passive scan
-                if decision.scan_recommended and decision.target_domain:
-                    # Validate against CVD: only roast if explicit inbound request
-                    is_inbound = "roast my" in post.text.lower() or "check my" in post.text.lower() or "_arsoncode" in post.text.lower()
-                    if not is_inbound:
-                        logger.info(f"CVD Gate: Suppressing unsolicited public roast for domain {decision.target_domain}.")
-                        continue
-
-                    audit = self._execute_passive_scan(decision.target_domain)
-                    if not audit:
-                        continue
-
-                    reply_text = self._format_roast_reply(audit)
-                    verdict = self.ground_truth_gate.validate_inbound_roast(
-                        domain=decision.target_domain,
-                        reply_text=reply_text,
-                        audit_result=audit,
-                        is_explicit_request=is_inbound,
-                    )
-
-                    if not verdict.is_approved:
-                        logger.warning(f"Ground-Truth Gate Rejected Reply: {verdict.rejection_reason}")
-                        continue
-
-                    content_snippet = reply_text
-                    if self.dry_run:
-                        success = True
-                    elif self.driver:
-                        success = self.driver.reply_to_tweet(
-                            f"https://x.com/{post.author_handle}/status/{post.tweet_id}",
-                            reply_text,
-                        )
-                    else:
-                        success = False
-                else:
-                    # Educational reply without naming unverified third-party targets
-                    edu_reply = (
-                        f"@{post.author_handle} DNS drift post-launch is often the blind spot. "
-                        f"Stale records pointing to canceled SaaS endpoints (Unbounce, S3, Webflow) "
-                        f"remain unmonitored until hijacked. Continuous RFC 1035 & 8484 diffing is key."
-                    )
-                    content_snippet = edu_reply
-                    if self.dry_run:
-                        success = True
-                    elif self.driver:
-                        success = self.driver.reply_to_tweet(
-                            f"https://x.com/{post.author_handle}/status/{post.tweet_id}",
-                            edu_reply,
-                        )
-                    else:
-                        success = False
+                logger.debug(f"Automated commenting/replying disabled by policy. Skipping post {post.tweet_id}.")
+                continue
 
             if success:
                 self.state_manager.record_action(
@@ -446,48 +376,15 @@ class SocialDaemon:
                 logger.info(f"Pacing: sleeping {micro_delay:.1f}s before next interaction...")
                 time.sleep(micro_delay)
 
-        # 6. Autonomous Smart Following Step (Agent 1: @OrbitScout)
-        if self.quota_manager.can_perform("FOLLOW") and self.smart_follow.can_follow_today():
-            target = self.smart_follow.select_seed_target()
-            if target:
-                handle = target["handle"]
-                logger.info(
-                    f"Action Dispatch: FOLLOW on @{handle} ({target.get('category')}) via @OrbitScout"
-                )
-                follow_success = False
-                if self.dry_run:
-                    follow_success = True
-                elif self.driver and hasattr(self.driver, "follow_user"):
-                    try:
-                        follow_success = self.driver.follow_user(handle)
-                    except Exception as e:
-                        logger.warning(f"Driver follow failed for @{handle}: {e}")
-                else:
-                    follow_success = False
-
-                if follow_success:
-                    self.smart_follow.record_follow_success(
-                        handle=handle,
-                        category=target.get("category", "infosec"),
-                        notes=f"Followed via @OrbitScout (Authority: {target.get('authority_weight')})",
-                        discovered_via="seed",
-                    )
-                    self.quota_manager.record_hourly_action("FOLLOW")
-                    self.state_manager.record_action(
-                        tweet_id=f"follow_{handle}",
-                        action_type="FOLLOW",
-                        author_handle=handle,
-                        status="SIMULATED" if self.dry_run else "SUCCESS",
-                    )
-                    actions_performed += 1
-
-        # 7. Export JSON snapshot & commit telemetry
+        # 6. Export JSON snapshot & commit telemetry
         snapshot = self.state_manager.export_json_snapshot()
         duration = round(time.time() - cycle_start, 2)
         logger.info(
             f"=== Cycle Complete in {duration}s. Actions: {actions_performed} | "
             f"Daily Totals: {snapshot.get('today_metrics')} ==="
         )
+        # Ensure browser/driver resources are released cleanly before entering long sleep
+        self.close_driver()
         self._save_daemon_heartbeat("SLEEPING")
 
         return {
@@ -501,6 +398,7 @@ class SocialDaemon:
         post_id: Optional[str] = None,
         text: Optional[str] = None,
         media_path: Optional[str] = None,
+        ignore_spacing: bool = False,
     ) -> Dict[str, Any]:
         """Publishes an original thought leadership post or educational breakdown with media."""
         # Default high-impact post if none provided
@@ -562,10 +460,11 @@ class SocialDaemon:
             logger.error(f"Cannot publish original post [{final_post_id}]: No active driver connected.")
             return {"status": "DRIVER_UNAVAILABLE"}
 
-        # 3. Check Quota
+        # 3. Check Quota (scaled to twice a day with inter-post spacing)
         allow_dormant = self.dry_run or getattr(self, "force_cycle", False)
-        if not self.quota_manager.can_perform("POST", allow_dormant=allow_dormant):
-            logger.warning("Daily or hourly post quota reached.")
+        eff_ignore_spacing = ignore_spacing or self.dry_run or getattr(self, "force_cycle", False)
+        if not self.quota_manager.can_perform("POST", allow_dormant=allow_dormant, ignore_spacing=eff_ignore_spacing):
+            logger.warning("Daily post quota (2/day) or minimum inter-post spacing active.")
             return {"status": "QUOTA_EXCEEDED"}
 
         # 4. Execution
