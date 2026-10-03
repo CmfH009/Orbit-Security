@@ -509,8 +509,9 @@ class BountyTakeoverSweeper:
 
             for fp in sig.fingerprints:
                 if fp.lower() in (body or "").lower():
-                    # For AWS CloudFront, verify the distribution is not active with a valid custom SSL cert
-                    if sig.name == "AWS CloudFront" and mock_body is None and self.is_ssl_cert_bound_to_domain(domain):
+                    # If host presents a valid custom SSL cert matching the target domain,
+                    # the domain is actively bound to an authorized tenant in the cloud provider.
+                    if mock_body is None and self.is_ssl_cert_bound_to_domain(domain):
                         continue
 
                     evidence = f"Dangling CNAME '{cname_target}' matched {sig.name} takeover signature fingerprint: '{fp}'."
@@ -664,6 +665,9 @@ class BountyTakeoverSweeper:
                     headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) OrbitSecurity/1.0"},
                 )
                 with urllib.request.urlopen(req, timeout=3.0) as resp:
+                    # An active application serving HTTP 200 OK is claimed and not dangling
+                    if getattr(resp, "status", getattr(resp, "code", None)) == 200:
+                        return ""
                     return resp.read(4096).decode("utf-8", errors="ignore")
             except urllib.error.HTTPError as e:
                 try:
@@ -878,8 +882,7 @@ This vulnerability report is submitted in good faith adherence to the **{prog_na
         out_path.mkdir(parents=True, exist_ok=True)
 
         clean_domain = re.sub(r"[^a-zA-Z0-9_-]", "_", vuln.target_domain)
-        ts_slug = vuln.timestamp.replace(":", "-").replace(".", "-")[:19]
-        filename = f"{vuln.program_id}_{vuln.flaw_type}_{clean_domain}_{ts_slug}.md"
+        filename = f"{vuln.program_id}_{vuln.flaw_type}_{clean_domain}.md"
         file_path = out_path / filename
 
         content = HackerOneDisclosureGenerator.generate_h1_report(vuln, program)

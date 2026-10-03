@@ -264,6 +264,29 @@ class TestBountyTakeoverSweeper:
                     res = sweeper.check_subdomain_takeover("static.acme.com")
                     assert res is None, "CloudFront distribution with active custom cert must not be flagged"
 
+    def test_check_subdomain_takeover_fastly_with_valid_ssl_not_vulnerable(self):
+        sweeper = BountyTakeoverSweeper()
+        with patch.object(sweeper.resolver, "resolve") as mock_resolve:
+            mock_cname_rdata = MagicMock()
+            mock_cname_rdata.target = "example.fastly.net."
+            mock_resolve.return_value = [mock_cname_rdata]
+
+            with patch.object(sweeper, "_probe_http_body", return_value="Fastly error: unknown domain"):
+                with patch.object(sweeper, "is_ssl_cert_bound_to_domain", return_value=True):
+                    res = sweeper.check_subdomain_takeover("cdn.acme.com")
+                    assert res is None, "Fastly host with active custom cert must not be flagged"
+
+    def test_probe_http_body_200_ok_suppressed(self):
+        sweeper = BountyTakeoverSweeper()
+        mock_response = MagicMock()
+        mock_context = mock_response.__enter__.return_value
+        mock_context.status = 200
+        mock_context.read.return_value = b"<html>Normal documentation mentioning NoSuchBucket error</html>"
+
+        with patch("urllib.request.urlopen", return_value=mock_response):
+            body = sweeper._probe_http_body("docs.acme.com")
+            assert body == "", "Active 200 OK response body must be suppressed to avoid false positives"
+
 
 class TestHackerOneDisclosureGenerator:
     def test_generate_h1_takeover_report(self):
