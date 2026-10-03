@@ -31,34 +31,26 @@ DEFAULT_RADAR_STATE_PATH = Path(__file__).resolve().parent.parent.parent / "data
 
 # High-frequency cloud and SaaS subdomain prefixes for wildcard expansion
 HIGH_FREQUENCY_PREFIXES: List[str] = [
-    "assets",
-    "blog",
-    "cdn",
-    "shop",
-    "help",
-    "status",
-    "docs",
-    "dev",
-    "staging",
-    "support",
-    "promo",
-    "mail",
-    "store",
-    "static",
-    "app",
-    "api",
-    "portal",
-    "marketing",
-    "careers",
-    "beta",
-    "cloud",
-    "test",
-    "events",
-    "forms",
-    "lp",
-    "landing",
-    "media",
-    "press",
+    # Static, Media, CDN & Assets
+    "assets", "cdn", "cdn1", "cdn2", "static", "static1", "media", "images", "img",
+    "files", "downloads", "download", "uploads", "s3", "storage", "bucket",
+    # Core Web, Portals & Apps
+    "app", "apps", "portal", "admin", "dashboard", "console", "api", "api-docs",
+    "dev", "devel", "developer", "developers", "stage", "staging", "test", "test1",
+    "demo", "beta", "preview", "sandbox", "qa", "uat",
+    # Identity, Auth & Infrastructure
+    "auth", "sso", "login", "accounts", "corp", "internal", "vpn", "mail",
+    "webmail", "email", "status", "health", "monitor", "grafana", "kibana", "prometheus",
+    # Marketing, Content & Support
+    "blog", "news", "press", "help", "support", "desk", "docs", "guide",
+    "shop", "store", "market", "promo", "lp", "landing", "events", "forms",
+    "survey", "feedback", "careers", "jobs", "community", "forum", "webinar", "summit",
+    # SaaS Integrations & Cloud Services
+    "zendesk", "hubspot", "salesforce", "notion", "jira", "confluence",
+    "jenkins", "gitlab", "github", "slack", "unbounce", "webflow", "shopify", "ghost",
+    "wordpress", "wp",
+    # Commerce, Billing & Partnerships
+    "pay", "payment", "billing", "checkout", "cart", "partner", "partners", "affiliate", "connect",
 ]
 
 
@@ -94,6 +86,7 @@ class BountyVulnerability:
     evidence: str = ""
     cwe_id: str = "CWE-284: Improper Access Control"
     remediation: str = ""
+    bounty_viability: str = "HIGH_CONFIDENCE"  # HIGH_CONFIDENCE, CONDITIONAL, INFORMATIONAL_LOW
     timestamp: str = field(
         default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat()
     )
@@ -378,6 +371,79 @@ class BountyTakeoverSweeper:
 
         return expanded
 
+    @staticmethod
+    def get_organizational_domain(domain: str) -> str:
+        """Extracts the registered/organizational apex domain for RFC 7489 DMARC traversal.
+        
+        Handles standard ccTLDs (e.g. .co.uk, .com.au, .co.jp) and generic TLDs.
+        """
+        clean = domain.strip().lower().rstrip(".")
+        parts = clean.split(".")
+        if len(parts) <= 2:
+            return clean
+
+        two_part_tlds = {
+            "co.uk", "org.uk", "gov.uk", "ac.uk",
+            "com.au", "net.au", "org.au", "edu.au",
+            "co.jp", "ne.jp", "co.nz", "org.nz",
+            "co.za", "com.br", "com.mx", "com.sg",
+            "co.in", "net.in", "org.in", "gen.in",
+        }
+        suffix_candidate = f"{parts[-2]}.{parts[-1]}"
+        if suffix_candidate in two_part_tlds and len(parts) >= 3:
+            return ".".join(parts[-3:])
+        return ".".join(parts[-2:])
+
+    @staticmethod
+    def parse_dmarc_policy(dmarc_record: str) -> Tuple[str, str]:
+        """Parses (p, sp) policy tags from a DMARC TXT record string."""
+        p_val = ""
+        sp_val = ""
+        tags = [t.strip() for t in dmarc_record.split(";")]
+        for tag in tags:
+            if tag.startswith("p="):
+                p_val = tag.split("=", 1)[1].strip().lower()
+            elif tag.startswith("sp="):
+                sp_val = tag.split("=", 1)[1].strip().lower()
+        if not sp_val:
+            sp_val = p_val
+        return p_val, sp_val
+
+    def has_mx_records(self, domain: str) -> bool:
+        """Checks if the domain publishes active Mail Exchange (MX) records."""
+        try:
+            answers = self.resolver.resolve(domain, "MX")
+            for rdata in answers:
+                exchange = str(rdata.exchange).strip().rstrip(".")
+                if exchange and exchange != ".":
+                    return True
+        except Exception:
+            pass
+        return False
+
+    def is_ssl_cert_bound_to_domain(self, domain: str) -> bool:
+        """Checks if target domain presents a valid SSL certificate covering the domain name.
+
+        Valid ACM/custom certs prove active ownership in cloud provider (e.g. AWS CloudFront),
+        preventing false-positive reports on 403 WAF / Access Denied responses.
+        """
+        import socket
+        import ssl
+        try:
+            ctx = ssl.create_default_context()
+            with socket.create_connection((domain, 443), timeout=3.0) as sock:
+                with ctx.wrap_socket(sock, server_hostname=domain) as ssock:
+                    cert = ssock.getpeercert()
+                    sans = [name for typ, name in cert.get("subjectAltName", []) if typ == "DNS"]
+                    for san in sans:
+                        if san.lower() == domain.lower():
+                            return True
+                        if san.startswith("*.") and domain.lower().endswith(san[2:].lower()):
+                            return True
+        except Exception:
+            pass
+        return False
+
     def check_subdomain_takeover(
         self,
         domain: str,
@@ -417,9 +483,24 @@ class BountyTakeoverSweeper:
 
             # If matched, verify fingerprint or NXDOMAIN condition
             if sig.nxdomain or mock_nxdomain:
-                # Provider requires NXDOMAIN on target
-                evidence = f"Dangling CNAME '{cname_target}' points to unallocated {sig.name} resource (NXDOMAIN response)."
-                return (sig, cname_target or "nxdomain.target", evidence)
+                if mock_nxdomain:
+                    is_nx = True
+                elif cname_target:
+                    try:
+                        self.resolver.resolve(cname_target, "A")
+                        is_nx = False  # Target resolves to active host, not dangling!
+                    except dns.resolver.NXDOMAIN:
+                        is_nx = True
+                    except Exception:
+                        is_nx = False
+                else:
+                    is_nx = False
+
+                if is_nx:
+                    evidence = f"Dangling CNAME '{cname_target}' points to unallocated {sig.name} resource (NXDOMAIN response)."
+                    return (sig, cname_target or "nxdomain.target", evidence)
+                else:
+                    continue
 
             # Check HTTP fingerprint
             body = mock_body
@@ -428,6 +509,10 @@ class BountyTakeoverSweeper:
 
             for fp in sig.fingerprints:
                 if fp.lower() in (body or "").lower():
+                    # For AWS CloudFront, verify the distribution is not active with a valid custom SSL cert
+                    if sig.name == "AWS CloudFront" and mock_body is None and self.is_ssl_cert_bound_to_domain(domain):
+                        continue
+
                     evidence = f"Dangling CNAME '{cname_target}' matched {sig.name} takeover signature fingerprint: '{fp}'."
                     return (sig, cname_target or "unknown", evidence)
 
@@ -438,13 +523,18 @@ class BountyTakeoverSweeper:
         domain: str,
         mock_spf: Optional[str] = None,
         mock_dmarc: Optional[str] = None,
+        mock_mx: Optional[List[str]] = None,
     ) -> Optional[Tuple[str, str, Severity, float]]:
         """Checks for mail-spoofing vectors (missing/permissive SPF or missing/none DMARC).
 
+        Respects RFC 7489 organizational domain policy inheritance and validates
+        MX/mail-handling endpoints to eliminate false-positive subdomain reports.
         Returns (issue_type, evidence, severity, cvss_score) if vulnerable, else None.
         """
         spf_record = mock_spf
         dmarc_record = mock_dmarc
+        org_domain = self.get_organizational_domain(domain)
+        is_apex = domain == org_domain
 
         # Query SPF if not mocked
         if spf_record is None:
@@ -470,8 +560,53 @@ class BountyTakeoverSweeper:
             except Exception:
                 dmarc_record = ""
 
-        # Analyze DMARC enforcement
+            # RFC 7489 Section 6.6.3: If subdomain has no explicit DMARC, query organizational domain
+            if not dmarc_record and not is_apex:
+                try:
+                    org_answers = self.resolver.resolve(f"_dmarc.{org_domain}", "TXT")
+                    for rdata in org_answers:
+                        txt = "".join(b.decode("utf-8", errors="ignore") for b in rdata.strings)
+                        if "v=DMARC1" in txt:
+                            p_val, sp_val = self.parse_dmarc_policy(txt)
+                            # If organizational policy enforces reject or quarantine on subdomains, it is protected
+                            if sp_val in ("reject", "quarantine"):
+                                return None
+                            dmarc_record = txt
+                            break
+                except Exception:
+                    pass
+
+        # Determine whether domain handles active email (has MX records)
+        has_mail = (
+            bool(mock_mx)
+            if mock_mx is not None
+            else (True if (mock_spf is not None or mock_dmarc is not None) else self.has_mx_records(domain))
+        )
+
+        # If domain has strict SPF hard fail (-all) AND no MX records, it is explicitly
+        # non-mail with strict sender rejection under RFC 7208 Section 2.6 (e.g. github.io).
+        if not has_mail and spf_record and "-all" in spf_record:
+            return None
+
+        # If still no DMARC record found
         if not dmarc_record:
+            # On subdomains, missing DMARC is only relevant if the host handles mail (has MX)
+            if not is_apex and not has_mail:
+                return None  # Static host without MX, protected or irrelevant for mail spoofing
+
+            # Parked apex domain without MX and without strict SPF
+            if is_apex and not has_mail:
+                evidence = (
+                    f"Apex domain '{domain}' publishes NO DMARC record at _dmarc.{domain} and NO strict SPF (-all). "
+                    "While the domain lacks active MX records, unauthorized outbound senders can forge From: headers to external recipients."
+                )
+                return (
+                    "Missing DMARC on Parked Apex (Outbound Spoofing Risk)",
+                    evidence,
+                    Severity.LOW,
+                    3.1,
+                )
+
             evidence = f"Domain '{domain}' has NO DMARC record published at _dmarc.{domain}. Anyone can spoof email headers with arbitrary envelope senders."
             return (
                 "Missing DMARC Policy (Full Mail Spoofing)",
@@ -481,7 +616,23 @@ class BountyTakeoverSweeper:
             )
 
         # Check for DMARC p=none policy
-        if "p=none" in dmarc_record.lower():
+        p_val, sp_val = self.parse_dmarc_policy(dmarc_record)
+        effective_policy = sp_val if not is_apex else p_val
+        if effective_policy == "none":
+            if not has_mail and spf_record and "-all" in spf_record:
+                return None
+            if not is_apex and not has_mail:
+                return None
+
+            if is_apex and not has_mail:
+                evidence = f"Parked apex domain '{domain}' publishes DMARC record '{dmarc_record}' with 'p=none' monitoring-only policy."
+                return (
+                    "DMARC p=none on Parked Apex (Monitoring Only)",
+                    evidence,
+                    Severity.LOW,
+                    3.1,
+                )
+
             evidence = f"Domain '{domain}' publishes DMARC record '{dmarc_record}' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
             return (
                 "DMARC p=none Monitoring Only (Permissive Mail Spoofing)",
@@ -569,15 +720,16 @@ class BountyTakeoverSweeper:
                     evidence=evidence,
                     cwe_id="CWE-284: Improper Access Control",
                     remediation=sig.remediation,
+                    bounty_viability="HIGH_CONFIDENCE",
                 )
                 vulns.append(vuln)
                 continue  # If takeover found, proceed to next target
 
             # 2. Email Spoofing Check (primarily on apex or mail hosts)
             if "." in target:
-                parts = target.split(".")
-                is_apex = len(parts) == 2 or (len(parts) == 3 and parts[-2] in ("co", "com", "org", "gov", "edu"))
-                if is_apex or "mail" in target or target.count(".") <= 2:
+                org_domain = self.get_organizational_domain(target)
+                is_apex = target == org_domain
+                if is_apex or "mail" in target or mock_spfs.get(target) or mock_dmarcs.get(target):
                     spoof_res = self.check_mail_spoofing(
                         target,
                         mock_spf=mock_spfs.get(target),
@@ -585,6 +737,8 @@ class BountyTakeoverSweeper:
                     )
                     if spoof_res:
                         issue_title, evidence, sev, cvss = spoof_res
+                        has_mx = self.has_mx_records(target)
+                        viability = "CONDITIONAL" if has_mx else "INFORMATIONAL_LOW"
                         vuln = BountyVulnerability(
                             program_id=program.program_id,
                             program_name=program.name,
@@ -598,6 +752,7 @@ class BountyTakeoverSweeper:
                             evidence=evidence,
                             cwe_id="CWE-290: Authentication Bypass by Spoofing",
                             remediation=f"Publish a strict DMARC record at '_dmarc.{target}' with 'v=DMARC1; p=reject; sp=reject;' and ensure valid SPF (~all or -all).",
+                            bounty_viability=viability,
                         )
                         vulns.append(vuln)
 
@@ -654,6 +809,22 @@ class HackerOneDisclosureGenerator:
                 f"3. Observe evidence: `{vuln.evidence}`"
             )
 
+        if vuln.bounty_viability == "INFORMATIONAL_LOW":
+            advisory_box = (
+                "\n> [!NOTE] **HackerOne Triage Advisory**\n"
+                "> This target does not publish active Mail Exchange (MX) records. While missing DMARC on an apex brand domain "
+                "permits unauthorized outbound sender header spoofing to external inboxes, most HackerOne programs require "
+                "demonstrating active inbound mail routing or inbox impact on corporate employees before awarding cash bounties.\n"
+            )
+        elif vuln.bounty_viability == "HIGH_CONFIDENCE":
+            advisory_box = (
+                "\n> [!TIP] **High-Value P1/P2 Bounty Finding**\n"
+                "> Unclaimed SaaS / cloud resource takeover verified via empirical DNS and HTTP response fingerprint. "
+                "Full origin domain control achievable by adversary.\n"
+            )
+        else:
+            advisory_box = ""
+
         report_md = f"""# {title}
 
 **Program:** {prog_name} ({vuln.platform.title()})  
@@ -662,12 +833,13 @@ class HackerOneDisclosureGenerator:
 **Weakness:** `{vuln.cwe_id}`  
 **Severity:** `{vuln.severity.value}` (CVSS 3.1: **{vuln.cvss_score}**)  
 **CVSS Vector:** `{vuln.cvss_vector}`  
+**Bounty Viability Grade:** `{vuln.bounty_viability}`  
 **Date Discovered:** {vuln.timestamp}  
 
 ---
 
-## 1. Summary
-During an external attack surface and DNS perimeter hygiene assessment under the **{prog_name}** Responsible Disclosure Program, Orbit Security identified a high-impact security weakness on `{vuln.target_domain}`.
+## 1. Summary{advisory_box}
+During an external attack surface and DNS perimeter hygiene assessment under the **{prog_name}** Responsible Disclosure Program, Orbit Security identified a security weakness on `{vuln.target_domain}`.
 
 - **Vulnerability Category:** `{vuln.flaw_type.replace('_', ' ').title()}`
 - **Affected Provider/Service:** `{vuln.provider or 'DNS / Mail Infrastructure'}`
