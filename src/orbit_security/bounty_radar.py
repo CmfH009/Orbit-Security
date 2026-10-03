@@ -13,6 +13,7 @@ from dataclasses import asdict, dataclass, field
 import datetime
 import json
 import logging
+import math
 import os
 from pathlib import Path
 import re
@@ -941,6 +942,9 @@ class BountyTakeoverSweeper:
             )
             if takeover_res:
                 sig, cname, evidence = takeover_res
+                score, vector = CVSSv31Calculator.calculate_score(
+                    av="N", ac="L", pr="N", ui="N", s="U", c="N", i="H", a="N"
+                )
                 vuln = BountyVulnerability(
                     program_id=program.program_id,
                     program_name=program.name,
@@ -950,8 +954,8 @@ class BountyTakeoverSweeper:
                     flaw_type="subdomain_takeover",
                     provider=sig.name,
                     severity=Severity.HIGH,
-                    cvss_score=7.5,
-                    cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N",
+                    cvss_score=score,
+                    cvss_vector=vector,
                     evidence=evidence,
                     cwe_id="CWE-284: Improper Access Control",
                     remediation=sig.remediation,
@@ -974,6 +978,14 @@ class BountyTakeoverSweeper:
                         issue_title, evidence, sev, cvss = spoof_res
                         has_mx = self.has_mx_records(target)
                         viability = "CONDITIONAL" if has_mx else "INFORMATIONAL_LOW"
+                        if has_mx:
+                            score, vector = CVSSv31Calculator.calculate_score(
+                                av="N", ac="L", pr="N", ui="N", s="U", c="N", i="L", a="N"
+                            )
+                        else:
+                            score, vector = CVSSv31Calculator.calculate_score(
+                                av="N", ac="L", pr="N", ui="R", s="U", c="N", i="L", a="N"
+                            )
                         vuln = BountyVulnerability(
                             program_id=program.program_id,
                             program_name=program.name,
@@ -982,8 +994,8 @@ class BountyTakeoverSweeper:
                             flaw_type="mail_spoofing",
                             provider=None,
                             severity=sev,
-                            cvss_score=cvss,
-                            cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N" if sev == Severity.MEDIUM else "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N",
+                            cvss_score=score,
+                            cvss_vector=vector,
                             evidence=evidence,
                             cwe_id="CWE-290: Authentication Bypass by Spoofing",
                             remediation=f"Publish a strict DMARC record at '_dmarc.{target}' with 'v=DMARC1; p=reject; sp=reject;' and ensure valid SPF (~all or -all).",
@@ -993,6 +1005,77 @@ class BountyTakeoverSweeper:
 
         program.last_scanned = datetime.datetime.now(datetime.timezone.utc).isoformat()
         return vulns
+
+
+class CVSSv31Calculator:
+    """Deterministic CVSS v3.1 Base Score and Vector generator following FIRST specifications."""
+
+    AV_WEIGHTS = {"N": 0.85, "A": 0.62, "L": 0.55, "P": 0.20}
+    AC_WEIGHTS = {"L": 0.77, "H": 0.44}
+    PR_WEIGHTS = {
+        "U": {"N": 0.85, "L": 0.62, "H": 0.27},
+        "C": {"N": 0.85, "L": 0.68, "H": 0.50},
+    }
+    UI_WEIGHTS = {"N": 0.85, "R": 0.62}
+    CIA_WEIGHTS = {"N": 0.0, "L": 0.22, "H": 0.56}
+
+    @staticmethod
+    def calculate_score(
+        av: str = "N",
+        ac: str = "L",
+        pr: str = "N",
+        ui: str = "N",
+        s: str = "U",
+        c: str = "N",
+        i: str = "H",
+        a: str = "N",
+    ) -> Tuple[float, str]:
+        """Calculates CVSS v3.1 base score and standard vector string."""
+        av = av.upper()
+        ac = ac.upper()
+        pr = pr.upper()
+        ui = ui.upper()
+        s = s.upper()
+        c = c.upper()
+        i = i.upper()
+        a = a.upper()
+
+        vector = f"CVSS:3.1/AV:{av}/AC:{ac}/PR:{pr}/UI:{ui}/S:{s}/C:{c}/I:{i}/A:{a}"
+
+        # 1. Impact Sub-Score (ISS)
+        iss = 1.0 - (
+            (1.0 - CVSSv31Calculator.CIA_WEIGHTS.get(c, 0.0))
+            * (1.0 - CVSSv31Calculator.CIA_WEIGHTS.get(i, 0.0))
+            * (1.0 - CVSSv31Calculator.CIA_WEIGHTS.get(a, 0.0))
+        )
+
+        # 2. Impact
+        if s == "U":
+            impact = 6.42 * iss
+        else:
+            impact = 7.52 * (iss - 0.029) - 3.25 * ((iss - 0.02) ** 15)
+
+        # 3. Exploitability
+        pr_w = CVSSv31Calculator.PR_WEIGHTS.get(s, CVSSv31Calculator.PR_WEIGHTS["U"]).get(pr, 0.85)
+        exploitability = (
+            8.22
+            * CVSSv31Calculator.AV_WEIGHTS.get(av, 0.85)
+            * CVSSv31Calculator.AC_WEIGHTS.get(ac, 0.77)
+            * pr_w
+            * CVSSv31Calculator.UI_WEIGHTS.get(ui, 0.85)
+        )
+
+        # 4. Base Score
+        if impact <= 0:
+            return 0.0, vector
+
+        if s == "U":
+            raw_score = min(impact + exploitability, 10.0)
+        else:
+            raw_score = min(1.08 * (impact + exploitability), 10.0)
+
+        base_score = math.ceil(round(raw_score, 9) * 10.0) / 10.0
+        return round(base_score, 1), vector
 
 
 class HackerOneDisclosureGenerator:
@@ -1121,6 +1204,155 @@ This vulnerability report is submitted in good faith adherence to the **{prog_na
             f.write(content)
 
         return file_path
+
+
+class ResponsibleDisclosureDrafter:
+    """Multi-platform responsible disclosure drafter conforming to HackerOne, Bugcrowd, and RFC 9116 security.txt standards."""
+
+    @staticmethod
+    def generate_h1_report(vuln: BountyVulnerability, program: Optional[BountyProgram] = None) -> str:
+        return HackerOneDisclosureGenerator.generate_h1_report(vuln, program)
+
+    @staticmethod
+    def generate_bugcrowd_report(vuln: BountyVulnerability, program: Optional[BountyProgram] = None) -> str:
+        prog_name = program.name if program else vuln.program_name
+        target = vuln.target_domain
+
+        if vuln.flaw_type == "subdomain_takeover":
+            v_type = "Server Security Misconfiguration > Subdomain Takeover"
+            title = f"Subdomain Takeover on {target} ({vuln.provider or 'SaaS'})"
+            desc = (
+                f"The domain `{target}` delegates to an unclaimed `{vuln.provider}` resource at `{vuln.cname_target}`. "
+                "Because the remote resource is unallocated, an external adversary can claim the tenant and take full control "
+                f"of `{target}`."
+            )
+            poc = (
+                f"1. Query CNAME record: `dig {target} CNAME +short` -> `{vuln.cname_target}`\n"
+                f"2. Query HTTP response: `curl -i -s https://{target}`\n"
+                f"3. Fingerprint: `{vuln.evidence}`"
+            )
+            impact = (
+                f"Complete control of subdomain `{target}`. An attacker can serve arbitrary content, intercept session cookies "
+                "scoped to parent domains, or bypass CORS policies."
+            )
+        else:
+            v_type = "Email Security Misconfiguration > Missing DMARC Policy"
+            title = f"Missing DMARC Protection Enables Email Spoofing on {target}"
+            desc = (
+                f"The domain `{target}` lacks an active DMARC rejection policy (`p=reject`), allowing unauthorized external parties "
+                f"to send spoofed emails claiming to be from `{target}`."
+            )
+            poc = (
+                f"1. Inspect DMARC: `dig _dmarc.{target} TXT +short`\n"
+                f"2. Inspect SPF: `dig {target} TXT +short`\n"
+                f"3. Observed evidence: `{vuln.evidence}`"
+            )
+            impact = (
+                f"Adversaries can craft targeted phishing and invoice fraud emails with spoofed `{target}` sender addresses "
+                "that bypass SPF validation."
+            )
+
+        return f"""# Bugcrowd Vulnerability Report: {title}
+
+**Target Asset:** `{target}`  
+**Vulnerability Type:** {v_type}  
+**Severity Rating:** {vuln.severity.value} (CVSS v3.1: **{vuln.cvss_score}** - `{vuln.cvss_vector}`)  
+**Bounty Program:** {prog_name} ({vuln.platform.title()})  
+**Date Discovered:** {vuln.timestamp}  
+
+---
+
+## 1. Description
+{desc}
+
+---
+
+## 2. Step-by-Step Proof of Concept
+{poc}
+
+---
+
+## 3. Business Impact
+{impact}
+
+---
+
+## 4. Suggested Remediation
+{vuln.remediation}
+
+---
+
+## 5. Security Researcher Coordinate
+Submitted via Orbit Security Automated Perimeter Sentinel. Research strictly adheres to Bugcrowd Standard Disclosure Guidelines.
+"""
+
+    @staticmethod
+    def generate_security_txt_email(vuln: BountyVulnerability, program: Optional[BountyProgram] = None) -> str:
+        prog_name = program.name if program else vuln.program_name
+        target = vuln.target_domain
+        parts = target.split(".")
+        apex = parts[-2] + "." + parts[-1] if len(parts) >= 2 else target
+
+        return f"""Subject: [SECURITY ADVISORY] Responsible Disclosure: {vuln.flaw_type.replace('_', ' ').title()} on {target}
+To: security@{apex}, security-team@{apex}
+Date: {vuln.timestamp}
+X-Security-Coordinator: Orbit Security Perimeter Sentinel
+X-CVSS-Score: {vuln.cvss_score}
+X-CVSS-Vector: {vuln.cvss_vector}
+
+Dear Security Team at {prog_name},
+
+Orbit Security is writing to coordinate responsible disclosure of a perimeter security weakness discovered during automated hygiene analysis.
+
+VULNERABILITY DETAILS:
+----------------------
+Target Domain: {target}
+Vulnerability Type: {vuln.flaw_type.replace('_', ' ').title()} ({vuln.cwe_id})
+Severity: {vuln.severity.value} (CVSS v3.1: {vuln.cvss_score})
+Vector: {vuln.cvss_vector}
+Discovered: {vuln.timestamp}
+
+OBSERVED TECHNICAL EVIDENCE:
+-----------------------------
+{vuln.evidence}
+
+IMPACT:
+-------
+Unclaimed perimeter resources or missing email authentication policies can be abused by external adversaries to impersonate official brand infrastructure.
+
+REMEDIATION RECOMMENDATIONS:
+----------------------------
+{vuln.remediation}
+
+RESPONSIBLE DISCLOSURE NOTICE:
+------------------------------
+This issue has not been publicly disclosed. We adhere to standard 90-day coordinated vulnerability disclosure timelines. No customer data was accessed or altered during verification.
+
+Sincerely,
+Orbit Security Coordinated Disclosure Team
+"""
+
+    @staticmethod
+    def save_bundle(
+        vuln: BountyVulnerability,
+        program: Optional[BountyProgram] = None,
+        output_dir: Optional[Path] = None,
+    ) -> Dict[str, Path]:
+        """Saves disclosure reports across all 3 formats (HackerOne, Bugcrowd, security.txt email)."""
+        out_path = Path(output_dir or DEFAULT_DISCLOSURES_DIR)
+        out_path.mkdir(parents=True, exist_ok=True)
+        clean_domain = re.sub(r"[^a-zA-Z0-9_-]", "_", vuln.target_domain)
+        base_name = f"{vuln.program_id}_{vuln.flaw_type}_{clean_domain}"
+
+        h1_file = out_path / f"{base_name}.md"
+        bc_file = out_path / f"{base_name}.bugcrowd.md"
+        email_file = out_path / f"{base_name}.email.txt"
+
+        h1_file.write_text(ResponsibleDisclosureDrafter.generate_h1_report(vuln, program), encoding="utf-8")
+        bc_file.write_text(ResponsibleDisclosureDrafter.generate_bugcrowd_report(vuln, program), encoding="utf-8")
+        email_file.write_text(ResponsibleDisclosureDrafter.generate_security_txt_email(vuln, program), encoding="utf-8")
+
+        return {"hackerone": h1_file, "bugcrowd": bc_file, "email": email_file}
 
 
 class OffPeakWindow:
