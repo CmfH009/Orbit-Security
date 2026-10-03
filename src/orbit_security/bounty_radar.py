@@ -1485,6 +1485,102 @@ Orbit Security Coordinated Disclosure Team
 
         return {"hackerone": h1_file, "bugcrowd": bc_file, "email": email_file}
 
+    @staticmethod
+    def export_cryptographic_bundle(
+        vuln: BountyVulnerability,
+        program: Optional[BountyProgram] = None,
+        output_dir: Optional[Path] = None,
+    ) -> Dict[str, Any]:
+        """Packages reports, raw technical evidence, and a SHA-256 integrity manifest into a zip archive."""
+        import hashlib
+        import zipfile
+
+        out_path = Path(output_dir or DEFAULT_DISCLOSURES_DIR)
+        out_path.mkdir(parents=True, exist_ok=True)
+        clean_domain = re.sub(r"[^a-zA-Z0-9_-]", "_", vuln.target_domain)
+        folder_name = f"{vuln.program_id}_{vuln.flaw_type}_{clean_domain}_bundle"
+        bundle_dir = out_path / folder_name
+        bundle_dir.mkdir(parents=True, exist_ok=True)
+
+        # 1. Generate core platform reports
+        h1_content = ResponsibleDisclosureDrafter.generate_h1_report(vuln, program)
+        bc_content = ResponsibleDisclosureDrafter.generate_bugcrowd_report(vuln, program)
+        email_content = ResponsibleDisclosureDrafter.generate_security_txt_email(vuln, program)
+
+        (bundle_dir / "hackerone_report.md").write_text(h1_content, encoding="utf-8")
+        (bundle_dir / "bugcrowd_report.md").write_text(bc_content, encoding="utf-8")
+        (bundle_dir / "security_txt_advisory.txt").write_text(email_content, encoding="utf-8")
+
+        # 2. Write raw technical proof file
+        evidence_content = (
+            f"TARGET DOMAIN: {vuln.target_domain}\n"
+            f"VULNERABILITY: {vuln.flaw_type}\n"
+            f"CNAME TARGET: {vuln.cname_target or 'N/A'}\n"
+            f"PROVIDER: {vuln.provider or 'N/A'}\n"
+            f"SEVERITY: {vuln.severity.value}\n"
+            f"CVSS v3.1: {vuln.cvss_score} ({vuln.cvss_vector})\n"
+            f"CWE: {vuln.cwe_id}\n"
+            f"TIMESTAMP UTC: {vuln.timestamp}\n"
+            f"\nOBSERVED RAW EVIDENCE:\n"
+            f"{vuln.evidence}\n"
+            f"\nREMEDIATION GUIDANCE:\n"
+            f"{vuln.remediation}\n"
+        )
+        (bundle_dir / "technical_evidence.txt").write_text(evidence_content, encoding="utf-8")
+
+        # 3. Write structured metadata JSON
+        meta = {
+            "program_id": vuln.program_id,
+            "program_name": program.name if program else vuln.program_name,
+            "platform": program.platform if program else vuln.platform,
+            "target_domain": vuln.target_domain,
+            "cname_target": vuln.cname_target,
+            "flaw_type": vuln.flaw_type,
+            "provider": vuln.provider,
+            "severity": vuln.severity.value,
+            "cvss_score": vuln.cvss_score,
+            "cvss_vector": vuln.cvss_vector,
+            "cwe_id": vuln.cwe_id,
+            "bounty_viability": vuln.bounty_viability,
+            "timestamp": vuln.timestamp,
+        }
+        (bundle_dir / "metadata.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
+        # 4. Generate SHA-256 Manifest
+        manifest: Dict[str, str] = {}
+        for fpath in sorted(bundle_dir.iterdir()):
+            if fpath.is_file() and fpath.name != "manifest_sha256.json":
+                sha = hashlib.sha256(fpath.read_bytes()).hexdigest()
+                manifest[fpath.name] = sha
+
+        manifest_data = {
+            "version": "1.0",
+            "bundle_name": folder_name,
+            "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "target": vuln.target_domain,
+            "flaw_type": vuln.flaw_type,
+            "file_hashes_sha256": manifest,
+        }
+        manifest_file = bundle_dir / "manifest_sha256.json"
+        manifest_file.write_text(json.dumps(manifest_data, indent=2), encoding="utf-8")
+
+        # 5. Build zip archive
+        zip_path = out_path / f"{folder_name}.zip"
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for fpath in sorted(bundle_dir.iterdir()):
+                if fpath.is_file():
+                    zf.write(fpath, arcname=fpath.name)
+
+        zip_hash = hashlib.sha256(zip_path.read_bytes()).hexdigest()
+
+        return {
+            "bundle_dir": bundle_dir,
+            "zip_path": zip_path,
+            "zip_sha256": zip_hash,
+            "manifest": manifest,
+            "total_files": len(manifest) + 1,  # including manifest_sha256.json
+        }
+
 
 class OffPeakWindow:
     """Calculates off-peak execution windows for scheduled radar sweeps (e.g. 2:00 AM - 5:00 AM MST)."""

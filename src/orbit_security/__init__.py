@@ -32,6 +32,8 @@ from orbit_security.cloud_sentinels import (
     GraphQLIntrospectionSentinel,
     CorsMisconfigurationSentinel,
 )
+from orbit_security.bounty_graph import BountyAttackGraph
+from orbit_security.bounty_triage_copilot import GemmaTriageCopilot, TriageDecision
 
 __all__ = [
     "AgencyBranding",
@@ -64,6 +66,9 @@ __all__ = [
     "CloudBucketTakeoverSentinel",
     "GraphQLIntrospectionSentinel",
     "CorsMisconfigurationSentinel",
+    "BountyAttackGraph",
+    "GemmaTriageCopilot",
+    "TriageDecision",
     "hello",
 ]
 
