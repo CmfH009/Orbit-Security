@@ -709,3 +709,49 @@ class TestCVSSv31CalculatorAndDisclosureDrafter:
         assert "bugcrowd" in bundle and bundle["bugcrowd"].exists()
         assert "email" in bundle and bundle["email"].exists()
 
+    def test_sweep_program_with_advanced_sentinels(self):
+        sweeper = BountyTakeoverSweeper()
+        prog = BountyProgram(
+            program_id="fintech_corp",
+            name="Fintech Corp",
+            platform="hackerone",
+            in_scope=["api.fintech.com"],
+        )
+
+        mock_smug = {
+            "api.fintech.com": {
+                "cl_te": {"latency_ms": 2500.0, "status": 504}
+            }
+        }
+        mock_oa = {
+            "api.fintech.com": {
+                "oidc": {
+                    "issuer": "https://api.fintech.com",
+                    "id_token_signing_alg_values_supported": ["none", "RS256"]
+                }
+            }
+        }
+        mock_dep = {
+            "api.fintech.com": {
+                "source_text": "const auth = require('@fintech/internal-sec');",
+                "npm": {"@fintech/internal-sec": 404}
+            }
+        }
+
+        vulns = sweeper.sweep_program(
+            prog,
+            audit_smuggling=True,
+            audit_oauth=True,
+            audit_dependency=True,
+            mock_smuggling_responses=mock_smug,
+            mock_oauth_responses=mock_oa,
+            mock_dependency_responses=mock_dep,
+        )
+
+        flaw_types = {v.flaw_type for v in vulns}
+        assert "http_request_smuggling_cl_te" in flaw_types
+        assert "oidc_insecure_signing_alg" in flaw_types
+        assert "dependency_confusion_namespace_takeover" in flaw_types
+        assert all(v.severity in (Severity.CRITICAL, Severity.HIGH) for v in vulns)
+
+

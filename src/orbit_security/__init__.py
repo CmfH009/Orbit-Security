@@ -34,6 +34,28 @@ from orbit_security.cloud_sentinels import (
 )
 from orbit_security.bounty_graph import BountyAttackGraph
 from orbit_security.bounty_triage_copilot import GemmaTriageCopilot, TriageDecision
+from orbit_security.smuggling_sentinel import (
+    HttpRequestSmugglingSentinel,
+    SmugglingFinding,
+    SmugglingFlawType,
+)
+from orbit_security.oauth_sentinel import (
+    OAuthFlowSentinel,
+    OAuthFinding,
+    OAuthFlawType,
+)
+from orbit_security.dependency_sentinel import (
+    DependencyConfusionSentinel,
+    DependencyFinding,
+    DependencyStatus,
+)
+from orbit_security.exploit_sandbox import (
+    OperatorExploitSandbox,
+    ScriptGenerator,
+    SandboxExecutionHarness,
+    EvidenceComparator,
+    SandboxVerificationReport,
+)
 
 __all__ = [
     "AgencyBranding",
@@ -69,6 +91,20 @@ __all__ = [
     "BountyAttackGraph",
     "GemmaTriageCopilot",
     "TriageDecision",
+    "HttpRequestSmugglingSentinel",
+    "SmugglingFinding",
+    "SmugglingFlawType",
+    "OAuthFlowSentinel",
+    "OAuthFinding",
+    "OAuthFlawType",
+    "DependencyConfusionSentinel",
+    "DependencyFinding",
+    "DependencyStatus",
+    "OperatorExploitSandbox",
+    "ScriptGenerator",
+    "SandboxExecutionHarness",
+    "EvidenceComparator",
+    "SandboxVerificationReport",
     "hello",
 ]
 
