@@ -1,9 +1,28 @@
 {
-  "last_sweep_utc": "2026-10-03T15:09:28.711852+00:00",
-  "total_sweeps": 26,
-  "total_vulnerabilities_found": 131,
+  "last_sweep_utc": "2026-10-03T15:31:29.177285+00:00",
+  "total_sweeps": 28,
+  "total_vulnerabilities_found": 132,
   "programs_scanned": [
     "shopify"
   ],
-  "recent_findings": []
+  "recent_findings": [
+    {
+      "program_id": "shopify",
+      "program_name": "Shopify",
+      "platform": "hackerone",
+      "target_domain": "cdn.shopify.com",
+      "cname_target": null,
+      "flaw_type": "cors_wildcard_origin",
+      "provider": "API Gateway CORS",
+      "severity": "LOW",
+      "cvss_score": 3.7,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N",
+      "evidence": "Domain 'cdn.shopify.com' publishes wildcard Access-Control-Allow-Origin: * on endpoint.",
+      "cwe_id": "CWE-942: Permissive Cross-domain Policy with Untrusted Domains",
+      "remediation": "Restrict Access-Control-Allow-Origin to authorized domain list if this endpoint handles authenticated user data.",
+      "bounty_viability": "INFORMATIONAL_LOW",
+      "timestamp": "2026-10-03T15:31:51.231974+00:00",
+      "status": "discovered"
+    }
+  ]
 }

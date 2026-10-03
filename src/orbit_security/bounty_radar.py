@@ -1708,6 +1708,7 @@ class BountyRadarSupervisor:
         audit_graphql: bool = False,
         audit_cors: bool = False,
         save_disclosures: bool = True,
+        sync_attack_graph: bool = True,
         output_dir: Optional[Path] = None,
         max_programs: int = 25,
     ) -> Dict[str, Any]:
@@ -1764,6 +1765,16 @@ class BountyRadarSupervisor:
         self.state["recent_findings"] = [asdict(v) for v in total_findings[-10:]]
         self._save_state()
         self.ingester.save()
+
+        if sync_attack_graph:
+            try:
+                from orbit_security.bounty_graph import BountyAttackGraph
+                BountyAttackGraph.build_from_ecosystem(
+                    programs_path=self.ingester.data_path,
+                    output_dir=output_dir,
+                )
+            except Exception as graph_err:
+                logger.warning(f"Failed to auto-sync attack graph after sweep: {graph_err}")
 
         return {
             "status": "COMPLETED",

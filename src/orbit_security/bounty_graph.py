@@ -9,10 +9,13 @@ Provides Phase C Milestone C.1 capabilities:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
+import math
 import os
 from pathlib import Path
+import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from orbit_security.bounty_radar import BountyProgram, BountyVulnerability
@@ -233,3 +236,147 @@ class BountyAttackGraph:
             json.dump(self.export_topology(), f, indent=2)
         logger.info(f"Saved BountyAttackGraph to {dest} ({len(self.nodes)} nodes, {len(self.edges)} edges)")
         return dest
+
+    def export_constellation_hubs(self) -> Dict[str, Any]:
+        """Formats attack surface graph into Orbit Web Cockpit 3D Constellation schema."""
+        hubs = []
+        node_list = list(self.nodes.values())
+        total = len(node_list)
+
+        type_meta = {
+            "BOUNTY_PROGRAM": {"cat": "Bounty Fleet", "color": "#818cf8", "base_r": 120.0, "size": 18.0},
+            "PERIMETER_DOMAIN": {"cat": "Perimeter Asset", "color": "#38bdf8", "base_r": 210.0, "size": 10.0},
+            "CNAME_TARGET": {"cat": "CNAME Target", "color": "#f59e0b", "base_r": 280.0, "size": 12.0},
+            "CLOUD_PROVIDER": {"cat": "Cloud Infrastructure", "color": "#c084fc", "base_r": 160.0, "size": 14.0},
+            "VULNERABILITY": {"cat": "Vulnerability", "color": "#ef4444", "base_r": 240.0, "size": 16.0},
+        }
+
+        for i, node in enumerate(node_list):
+            ntype = node.get("type", "PERIMETER_DOMAIN")
+            tinfo = type_meta.get(ntype, {"cat": "Perimeter", "color": "#94a3b8", "base_r": 200.0, "size": 10.0})
+
+            color = tinfo["color"]
+            meta = node.get("meta", {})
+            if ntype == "VULNERABILITY":
+                viability = meta.get("bounty_viability", "")
+                severity = meta.get("severity", "").upper()
+                if viability == "HIGH_CONFIDENCE" or severity in ("CRITICAL", "HIGH"):
+                    color = "#ef4444"  # Red: Cash Ready / High Confidence Takeover
+                else:
+                    color = "#fbbf24"  # Amber: Conditional / Informational Queue
+
+            # Compute deterministic 3D radial distribution
+            golden_angle = math.pi * (3.0 - math.sqrt(5.0))
+            theta = i * golden_angle
+            phi = math.acos(1.0 - 2.0 * (i + 0.5) / max(1, total))
+
+            r = tinfo["base_r"] + (hash(node["id"]) % 40) - 20
+            x = r * math.sin(phi) * math.cos(theta)
+            y = r * math.sin(phi) * math.sin(theta) * 0.7  # Flatter ellipsoid
+            z = r * math.cos(phi)
+
+            symbols = []
+            if meta.get("cname_target"):
+                symbols.append(meta["cname_target"])
+            if meta.get("platform"):
+                symbols.append(meta["platform"])
+            if meta.get("flaw_type"):
+                symbols.append(meta["flaw_type"])
+
+            hubs.append({
+                "id": node["id"],
+                "name": node.get("label", node["id"]),
+                "category": tinfo["cat"],
+                "count": node.get("degree", 1),
+                "size": tinfo["size"],
+                "color": color,
+                "x": round(x, 1),
+                "y": round(y, 1),
+                "z": round(z, 1),
+                "symbols": symbols,
+                "description": f"{ntype}: {node.get('label')} (Degree: {node.get('degree', 1)})",
+                "meta": meta,
+            })
+
+        links = [[e["source"], e["target"]] for e in self.edges]
+        return {
+            "ok": True,
+            "hubs": hubs,
+            "links": links,
+            "total_nodes": len(hubs),
+            "total_links": len(links),
+            "stats": self.export_topology().get("stats", {}),
+        }
+
+    @classmethod
+    def build_from_ecosystem(
+        cls,
+        programs_path: Optional[Path] = None,
+        disclosures_dir: Optional[Path] = None,
+        output_dir: Optional[Path] = None,
+        save_disk: bool = True,
+    ) -> BountyAttackGraph:
+        """Constructs an attack graph by ingesting enrolled programs and all persisted disclosures."""
+        from orbit_security.bounty_radar import BountyScopeIngester, BountyVulnerability
+        from orbit_security.models import Severity
+
+        graph = cls(output_dir=output_dir)
+
+        # 1. Ingest enrolled programs
+        ingester = BountyScopeIngester(data_path=programs_path)
+        programs = ingester.list_programs()
+        for prog in programs:
+            graph.ingest_program(prog)
+
+        # 2. Ingest disclosures
+        disc_path = Path(disclosures_dir or (WORKSPACE_ROOT / "projects" / "orbit-security" / "data" / "disclosures"))
+        if not disc_path.exists():
+            disc_path = Path(r"C:\AgyHut\projects\orbit-security\data\disclosures")
+
+        if disc_path.exists():
+            for f in sorted(disc_path.glob("*.md")):
+                try:
+                    content = f.read_text(encoding="utf-8")
+                    prog_m = re.search(r"\*\*Program:\*\*\s*(.+)", content)
+                    asset_m = re.search(r"\*\*Asset\s*\(In-Scope Target\):\*\*\s*`?([^`\n]+)`?", content)
+                    sev_m = re.search(r"\*\*Severity:\*\*\s*(.+)", content)
+                    grade_m = re.search(r"\*\*Bounty Viability Grade:\*\*\s*`?([^`\n]+)`?", content)
+                    cvss_m = re.search(r"\(CVSS 3\.1:\s*\*\*([0-9.]+)\*\*\)", content)
+                    cname_m = re.search(r"dig\s+\S+\s+CNAME\s+\+short[^\n]*\n\s*# Output:\s*(\S+)", content)
+                    evidence_m = re.search(r"Observe evidence:\s*`([^`]+)`", content)
+                    cat_m = re.search(r"- \*\*Vulnerability Category:\*\*\s*`?([^`\n]+)`?", content)
+                    prov_m = re.search(r"- \*\*Affected Provider/Service:\*\*\s*`?([^`\n]+)`?", content)
+
+                    target_domain = asset_m.group(1).strip() if asset_m else f.stem
+                    raw_prog = prog_m.group(1).strip() if prog_m else "unknown"
+                    prog_id = raw_prog.split(" ")[0].lower()
+                    flaw_type = cat_m.group(1).lower().replace(" ", "_") if cat_m else "vulnerability"
+                    sev_str = sev_m.group(1).replace("`", "").strip().upper() if sev_m else "HIGH"
+                    severity = Severity.HIGH if "HIGH" in sev_str else (Severity.CRITICAL if "CRIT" in sev_str else Severity.MEDIUM)
+                    score = float(cvss_m.group(1)) if cvss_m else 7.5
+                    cname_val = cname_m.group(1).strip() if cname_m else None
+                    evidence = evidence_m.group(1).strip() if evidence_m else "Disclosed vulnerability proof of concept"
+                    viability = grade_m.group(1).strip() if grade_m else "HIGH_CONFIDENCE"
+                    provider = prov_m.group(1).strip() if prov_m else None
+
+                    vuln = BountyVulnerability(
+                        program_id=prog_id,
+                        program_name=raw_prog,
+                        platform="hackerone",
+                        target_domain=target_domain,
+                        cname_target=cname_val,
+                        flaw_type=flaw_type,
+                        provider=provider,
+                        severity=severity,
+                        cvss_score=score,
+                        evidence=evidence,
+                        bounty_viability=viability,
+                    )
+                    graph.ingest_vulnerability(vuln)
+                except Exception as e:
+                    logger.debug(f"Failed parsing disclosure {f.name}: {e}")
+
+        if save_disk:
+            graph.save()
+        return graph
+
