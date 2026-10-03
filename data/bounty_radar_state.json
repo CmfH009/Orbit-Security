@@ -1,78 +1,9 @@
 {
-  "last_sweep_utc": "2026-10-03T11:02:22.746433+00:00",
-  "total_sweeps": 12,
+  "last_sweep_utc": "2026-10-03T11:04:35.241814+00:00",
+  "total_sweeps": 13,
   "total_vulnerabilities_found": 9,
   "programs_scanned": [
-    "shopify",
-    "gitlab",
-    "starbucks",
-    "yahoo",
-    "paypal",
-    "uber",
-    "github",
-    "epicgames",
-    "coinbase",
-    "valve",
-    "hyatt",
-    "deptofdefense",
-    "automattic",
-    "rockstargames",
-    "slack"
+    "shopify"
   ],
-  "recent_findings": [
-    {
-      "program_id": "starbucks",
-      "program_name": "Starbucks",
-      "platform": "hackerone",
-      "target_domain": "starbucksreserve.com",
-      "cname_target": null,
-      "flaw_type": "mail_spoofing",
-      "provider": null,
-      "severity": "LOW",
-      "cvss_score": 3.1,
-      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N",
-      "evidence": "Apex domain 'starbucksreserve.com' publishes NO DMARC record at _dmarc.starbucksreserve.com and NO strict SPF (-all). While the domain lacks active MX records, unauthorized outbound senders can forge From: headers to external recipients.",
-      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
-      "remediation": "Publish a strict DMARC record at '_dmarc.starbucksreserve.com' with 'v=DMARC1; p=reject; sp=reject;' and ensure valid SPF (~all or -all).",
-      "bounty_viability": "INFORMATIONAL_LOW",
-      "timestamp": "2026-10-03T11:02:23.999858+00:00",
-      "status": "discovered"
-    },
-    {
-      "program_id": "deptofdefense",
-      "program_name": "U.S. Dept of Defense",
-      "platform": "hackerone",
-      "target_domain": "assets.mil",
-      "cname_target": null,
-      "flaw_type": "mail_spoofing",
-      "provider": null,
-      "severity": "LOW",
-      "cvss_score": 3.1,
-      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N",
-      "evidence": "Apex domain 'assets.mil' publishes NO DMARC record at _dmarc.assets.mil and NO strict SPF (-all). While the domain lacks active MX records, unauthorized outbound senders can forge From: headers to external recipients.",
-      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
-      "remediation": "Publish a strict DMARC record at '_dmarc.assets.mil' with 'v=DMARC1; p=reject; sp=reject;' and ensure valid SPF (~all or -all).",
-      "bounty_viability": "INFORMATIONAL_LOW",
-      "timestamp": "2026-10-03T11:02:27.944448+00:00",
-      "status": "discovered"
-    },
-    {
-      "program_id": "slack",
-      "program_name": "Slack",
-      "platform": "hackerone",
-      "target_domain": "slack-core.com",
-      "cname_target": null,
-      "flaw_type": "mail_spoofing",
-      "provider": null,
-      "severity": "LOW",
-      "cvss_score": 3.1,
-      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N",
-      "evidence": "Apex domain 'slack-core.com' publishes NO DMARC record at _dmarc.slack-core.com and NO strict SPF (-all). While the domain lacks active MX records, unauthorized outbound senders can forge From: headers to external recipients.",
-      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
-      "remediation": "Publish a strict DMARC record at '_dmarc.slack-core.com' with 'v=DMARC1; p=reject; sp=reject;' and ensure valid SPF (~all or -all).",
-      "bounty_viability": "INFORMATIONAL_LOW",
-      "timestamp": "2026-10-03T11:02:48.515427+00:00",
-      "status": "discovered"
-    }
-  ]
+  "recent_findings": []
 }
