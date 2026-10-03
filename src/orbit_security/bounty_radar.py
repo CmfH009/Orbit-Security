@@ -335,11 +335,50 @@ class BountyTakeoverSweeper:
         self.resolver = resolver or get_orbit_sync_resolver()
         self.prefixes = custom_prefixes or HIGH_FREQUENCY_PREFIXES
 
+    def fetch_crtsh_subdomains(
+        self, apex_domain: str, timeout: float = 4.0, max_results: int = 50
+    ) -> List[str]:
+        """Passively queries Certificate Transparency logs (crt.sh) for known subdomains.
+
+        Zero brute-force noise. Returns distinct sanitized subdomains belonging to apex_domain.
+        Safely falls back to empty list on network error, rate limit, or timeout.
+        """
+        import urllib.request
+        import json
+
+        clean_apex = apex_domain.strip().lower().lstrip("*.")
+        url = f"https://crt.sh/?q=%.{clean_apex}&output=json"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) OrbitSecurity/1.0"
+        }
+        subdomains: Set[str] = set()
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                if getattr(resp, "status", getattr(resp, "code", None)) == 200:
+                    raw_data = resp.read()
+                    entries = json.loads(raw_data)
+                    for entry in entries:
+                        name_val = entry.get("name_value", "")
+                        for line in name_val.split("\n"):
+                            line = line.strip().lower().lstrip("*.")
+                            if line and line.endswith(clean_apex) and line != clean_apex:
+                                subdomains.add(line)
+                                if len(subdomains) >= max_results:
+                                    break
+                        if len(subdomains) >= max_results:
+                            break
+        except Exception as e:
+            logger.debug("crt.sh passive discovery skipped for %s: %s", clean_apex, e)
+            return []
+        return sorted(list(subdomains))
+
     def expand_wildcards(
         self,
         in_scope: List[str],
         out_of_scope: Optional[List[str]] = None,
         max_per_wildcard: int = 25,
+        use_passive_ct: bool = False,
     ) -> List[str]:
         """Expands wildcard patterns (*.target.com) into candidate FQDNs."""
         out_set: Set[str] = set(s.strip().lower() for s in (out_of_scope or []))
@@ -357,6 +396,14 @@ class BountyTakeoverSweeper:
                 if apex not in out_set and apex not in seen:
                     expanded.append(apex)
                     seen.add(apex)
+
+                # Passive Certificate Transparency Discovery if requested
+                if use_passive_ct:
+                    ct_subs = self.fetch_crtsh_subdomains(apex, max_results=max_per_wildcard)
+                    for sub in ct_subs:
+                        if sub not in out_set and sub not in seen:
+                            expanded.append(sub)
+                            seen.add(sub)
 
                 for prefix in self.prefixes[:max_per_wildcard]:
                     candidate = f"{prefix}.{apex}"
@@ -682,6 +729,7 @@ class BountyTakeoverSweeper:
         self,
         program: BountyProgram,
         max_domains: int = 15,
+        use_passive_ct: bool = False,
         mock_cnames: Optional[Dict[str, str]] = None,
         mock_bodies: Optional[Dict[str, str]] = None,
         mock_spfs: Optional[Dict[str, str]] = None,
@@ -690,7 +738,10 @@ class BountyTakeoverSweeper:
     ) -> List[BountyVulnerability]:
         """Performs an automated attack surface sweep across a program's in-scope targets."""
         candidates = self.expand_wildcards(
-            program.in_scope, program.out_of_scope, max_per_wildcard=max_domains
+            program.in_scope,
+            program.out_of_scope,
+            max_per_wildcard=max_domains,
+            use_passive_ct=use_passive_ct,
         )
         vulns: List[BountyVulnerability] = []
         mock_cnames = mock_cnames or {}
@@ -959,6 +1010,7 @@ class BountyRadarSupervisor:
         program_id: Optional[str] = None,
         force_now: bool = False,
         max_domains_per_program: int = 15,
+        use_passive_ct: bool = False,
         save_disclosures: bool = True,
         output_dir: Optional[Path] = None,
     ) -> Dict[str, Any]:
@@ -984,7 +1036,11 @@ class BountyRadarSupervisor:
 
         for prog in programs:
             logger.info(f"Running bounty sweep for {prog.name} ({len(prog.in_scope)} wildcard patterns)...")
-            vulns = self.sweeper.sweep_program(prog, max_domains=max_domains_per_program)
+            vulns = self.sweeper.sweep_program(
+                prog,
+                max_domains=max_domains_per_program,
+                use_passive_ct=use_passive_ct,
+            )
             total_findings.extend(vulns)
 
             if save_disclosures:

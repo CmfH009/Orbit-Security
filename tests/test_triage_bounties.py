@@ -12,6 +12,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 from triage_bounties import (
+    archive_disclosure,
     copy_to_clipboard,
     load_all_disclosures,
     parse_disclosure_file,
@@ -68,3 +69,22 @@ def test_copy_to_clipboard_mocked():
 
         success = copy_to_clipboard("test text")
         assert success is True
+
+
+def test_archive_disclosure(tmp_path):
+    f1 = tmp_path / "finding1.md"
+    f1.write_text(SAMPLE_DISCLOSURE, encoding="utf-8")
+
+    # Before archive, 1 finding in base dir
+    assert len(load_all_disclosures(disclosures_dir=tmp_path)) == 1
+
+    dest = archive_disclosure("assets.example.com", disclosures_dir=tmp_path)
+    assert dest is not None
+    assert dest.exists()
+    assert dest.parent.name == "archive"
+
+    # After archive, 0 in active listing
+    assert len(load_all_disclosures(disclosures_dir=tmp_path)) == 0
+
+    # But 1 in archived listing
+    assert len(load_all_disclosures(disclosures_dir=tmp_path, include_archived=True)) == 1
