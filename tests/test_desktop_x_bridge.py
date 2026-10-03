@@ -235,15 +235,23 @@ def test_clipboard_text_setting():
     assert ok is True
 
     try:
+        import time
         import win32clipboard
         import win32con
 
-        win32clipboard.OpenClipboard()
-        try:
-            clip_text = win32clipboard.GetClipboardData(win32con.CF_UNICODETEXT)
-            assert clip_text == test_str
-        finally:
-            win32clipboard.CloseClipboard()
+        for attempt in range(5):
+            try:
+                win32clipboard.OpenClipboard()
+                try:
+                    clip_text = win32clipboard.GetClipboardData(win32con.CF_UNICODETEXT)
+                    assert clip_text == test_str
+                    break
+                finally:
+                    win32clipboard.CloseClipboard()
+            except Exception:
+                if attempt == 4:
+                    raise
+                time.sleep(0.1 * (attempt + 1))
     except ImportError:
         pass
 
