@@ -925,11 +925,16 @@ class BountyTakeoverSweeper:
         max_domains: int = 15,
         use_passive_ct: bool = False,
         use_archive_harvest: bool = False,
+        audit_cloud_buckets: bool = False,
+        audit_graphql: bool = False,
+        audit_cors: bool = False,
         mock_cnames: Optional[Dict[str, str]] = None,
         mock_bodies: Optional[Dict[str, str]] = None,
         mock_spfs: Optional[Dict[str, str]] = None,
         mock_dmarcs: Optional[Dict[str, str]] = None,
         mock_nxdomain_domains: Optional[Set[str]] = None,
+        mock_graphql_responses: Optional[Dict[str, Dict[str, Any]]] = None,
+        mock_cors_responses: Optional[Dict[str, Dict[str, str]]] = None,
     ) -> List[BountyVulnerability]:
         """Performs an automated attack surface sweep across a program's in-scope targets."""
         candidates = self.expand_wildcards(
@@ -947,11 +952,36 @@ class BountyTakeoverSweeper:
         mock_nxdomain_domains = mock_nxdomain_domains or set()
 
         for target in candidates:
-            # 1. Subdomain Takeover Check
             mock_cn = mock_cnames.get(target)
             mock_bd = mock_bodies.get(target)
             mock_nx = target in mock_nxdomain_domains
 
+            # 1. Cloud Storage Bucket Takeover Check (if enabled)
+            if audit_cloud_buckets:
+                bucket_res = self.audit_cloud_storage_bucket(
+                    target, cname_target=mock_cn, mock_body=mock_bd
+                )
+                if bucket_res and bucket_res.get("vulnerable"):
+                    vuln = BountyVulnerability(
+                        program_id=program.program_id,
+                        program_name=program.name,
+                        platform=program.platform,
+                        target_domain=target,
+                        cname_target=mock_cn,
+                        flaw_type=bucket_res.get("flaw_type", "cloud_storage_takeover"),
+                        provider=bucket_res.get("provider", "Cloud Storage"),
+                        severity=bucket_res.get("severity", Severity.HIGH),
+                        cvss_score=bucket_res.get("cvss_score", 8.6),
+                        cvss_vector=bucket_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:N/I:H/A:N"),
+                        evidence=bucket_res.get("evidence", ""),
+                        cwe_id=bucket_res.get("cwe_id", "CWE-284: Improper Access Control"),
+                        remediation=bucket_res.get("remediation", ""),
+                        bounty_viability=bucket_res.get("bounty_viability", "HIGH_CONFIDENCE"),
+                    )
+                    vulns.append(vuln)
+                    continue
+
+            # 2. Subdomain Takeover Check (SaaS services)
             takeover_res = self.check_subdomain_takeover(
                 target, mock_cname=mock_cn, mock_body=mock_bd, mock_nxdomain=mock_nx
             )
@@ -978,6 +1008,50 @@ class BountyTakeoverSweeper:
                 )
                 vulns.append(vuln)
                 continue  # If takeover found, proceed to next target
+
+            # 3. GraphQL Introspection Check
+            if audit_graphql:
+                gql_mock = mock_graphql_responses.get(target) if mock_graphql_responses else None
+                gql_res = self.audit_graphql_introspection(target, mock_paths=gql_mock)
+                if gql_res and gql_res.get("vulnerable"):
+                    vuln = BountyVulnerability(
+                        program_id=program.program_id,
+                        program_name=program.name,
+                        platform=program.platform,
+                        target_domain=target,
+                        flaw_type="graphql_introspection",
+                        provider="GraphQL",
+                        severity=gql_res.get("severity", Severity.MEDIUM),
+                        cvss_score=gql_res.get("cvss_score", 5.3),
+                        cvss_vector=gql_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"),
+                        evidence=gql_res.get("evidence", ""),
+                        cwe_id=gql_res.get("cwe_id", "CWE-200: Exposure of Sensitive Information to an Unauthorized Actor"),
+                        remediation=gql_res.get("remediation", ""),
+                        bounty_viability="HIGH_CONFIDENCE",
+                    )
+                    vulns.append(vuln)
+
+            # 4. CORS Misconfiguration Check
+            if audit_cors:
+                cors_mock = mock_cors_responses.get(target) if mock_cors_responses else None
+                cors_res = self.audit_cors_misconfiguration(target, mock_responses=cors_mock)
+                if cors_res and cors_res.get("vulnerable"):
+                    vuln = BountyVulnerability(
+                        program_id=program.program_id,
+                        program_name=program.name,
+                        platform=program.platform,
+                        target_domain=target,
+                        flaw_type=cors_res.get("flaw_type", "cors_misconfiguration"),
+                        provider="API Gateway CORS",
+                        severity=cors_res.get("severity", Severity.HIGH),
+                        cvss_score=cors_res.get("cvss_score", 8.1),
+                        cvss_vector=cors_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N"),
+                        evidence=cors_res.get("evidence", ""),
+                        cwe_id=cors_res.get("cwe_id", "CWE-942: Permissive Cross-domain Policy with Untrusted Domains"),
+                        remediation=cors_res.get("remediation", ""),
+                        bounty_viability=cors_res.get("bounty_viability", "HIGH_CONFIDENCE"),
+                    )
+                    vulns.append(vuln)
 
             # 2. Email Spoofing Check (primarily on apex or mail hosts)
             if "." in target:
@@ -1025,6 +1099,43 @@ class BountyTakeoverSweeper:
         """Passively audits frontend JavaScript bundles for internal API routes, cloud buckets, and subdomains."""
         from orbit_security.recon_harvester import JsRouteExtractor
         return JsRouteExtractor.analyze_target_scripts(target_url)
+
+    def audit_cloud_storage_bucket(
+        self,
+        target_domain: str,
+        cname_target: Optional[str] = None,
+        mock_body: Optional[str] = None,
+        mock_status: Optional[int] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Audits target for unallocated S3/GCS/Azure storage bucket takeover or open listing."""
+        from orbit_security.cloud_sentinels import CloudBucketTakeoverSentinel
+        return CloudBucketTakeoverSentinel.audit_target(
+            target_domain, cname_target=cname_target, mock_body=mock_body, mock_status=mock_status
+        )
+
+    def audit_graphql_introspection(
+        self,
+        target_domain: str,
+        timeout: float = 3.5,
+        mock_paths: Optional[Dict[str, Dict[str, Any]]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Audits target domain for public GraphQL schema introspection endpoints."""
+        from orbit_security.cloud_sentinels import GraphQLIntrospectionSentinel
+        return GraphQLIntrospectionSentinel.audit_target(
+            target_domain, timeout=timeout, mock_paths=mock_paths
+        )
+
+    def audit_cors_misconfiguration(
+        self,
+        target_domain: str,
+        timeout: float = 3.5,
+        mock_responses: Optional[Dict[str, Dict[str, str]]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Audits domain for arbitrary CORS origin reflection or null origin trust with credentials."""
+        from orbit_security.cloud_sentinels import CorsMisconfigurationSentinel
+        return CorsMisconfigurationSentinel.audit_target(
+            target_domain, timeout=timeout, mock_responses=mock_responses
+        )
 
 
 class CVSSv31Calculator:
@@ -1497,6 +1608,9 @@ class BountyRadarSupervisor:
         max_domains_per_program: int = 15,
         use_passive_ct: bool = False,
         use_archive_harvest: bool = False,
+        audit_cloud_buckets: bool = False,
+        audit_graphql: bool = False,
+        audit_cors: bool = False,
         save_disclosures: bool = True,
         output_dir: Optional[Path] = None,
         max_programs: int = 25,
@@ -1528,6 +1642,9 @@ class BountyRadarSupervisor:
                 max_domains=max_domains_per_program,
                 use_passive_ct=use_passive_ct,
                 use_archive_harvest=use_archive_harvest,
+                audit_cloud_buckets=audit_cloud_buckets,
+                audit_graphql=audit_graphql,
+                audit_cors=audit_cors,
             )
             total_findings.extend(vulns)
 
