@@ -49,6 +49,7 @@ def main():
     parser.add_argument("--max-targets", type=int, default=15, help="Max expanded subdomains per wildcard scope (default: 15)")
     parser.add_argument("--ingest-h1", type=str, help="Path to HackerOne JSON scope export to ingest")
     parser.add_argument("--ingest-bugcrowd", type=str, help="Path to Bugcrowd JSON scope export to ingest")
+    parser.add_argument("--passive-ct", action="store_true", help="Passively query Certificate Transparency (crt.sh) logs for real subdomains")
     parser.add_argument("--output-dir", type=str, help="Directory to save generated HackerOne Markdown disclosures")
     parser.add_argument("--status", action="store_true", help="Display radar telemetry, programs, and recent findings")
 
@@ -111,6 +112,7 @@ def main():
         program_id=args.program,
         force_now=args.now,
         max_domains_per_program=args.max_targets,
+        use_passive_ct=args.passive_ct,
         output_dir=Path(args.output_dir) if args.output_dir else None,
     )
 

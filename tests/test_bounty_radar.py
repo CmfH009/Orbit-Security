@@ -116,6 +116,40 @@ class TestBountyTakeoverSweeper:
         assert "portal.acme-partners.com" in candidates
         assert "blog.acme.com" not in candidates  # Filtered out_of_scope
 
+    def test_fetch_crtsh_subdomains_success(self):
+        sweeper = BountyTakeoverSweeper()
+        mock_response = MagicMock()
+        mock_context = mock_response.__enter__.return_value
+        mock_context.status = 200
+        mock_payload = [
+            {"name_value": "api.acme.com\nlegacy-docs.acme.com"},
+            {"name_value": "*.acme.com"},
+            {"name_value": "acme.com"},
+            {"name_value": "cdn.acme.com"},
+        ]
+        mock_context.read.return_value = json.dumps(mock_payload).encode("utf-8")
+
+        with patch("urllib.request.urlopen", return_value=mock_response):
+            subs = sweeper.fetch_crtsh_subdomains("acme.com", max_results=10)
+            assert "api.acme.com" in subs
+            assert "legacy-docs.acme.com" in subs
+            assert "cdn.acme.com" in subs
+            assert "acme.com" not in subs  # Apex excluded from subdomain list
+
+    def test_fetch_crtsh_subdomains_timeout_fallback(self):
+        sweeper = BountyTakeoverSweeper()
+        with patch("urllib.request.urlopen", side_effect=Exception("Connection timed out")):
+            subs = sweeper.fetch_crtsh_subdomains("acme.com")
+            assert subs == [], "On timeout or network error, fetch_crtsh_subdomains must gracefully return empty list"
+
+    def test_expand_wildcards_with_passive_ct(self):
+        sweeper = BountyTakeoverSweeper(custom_prefixes=["assets"])
+        with patch.object(sweeper, "fetch_crtsh_subdomains", return_value=["legacy-portal.acme.com"]):
+            candidates = sweeper.expand_wildcards(["*.acme.com"], max_per_wildcard=5, use_passive_ct=True)
+            assert "acme.com" in candidates
+            assert "legacy-portal.acme.com" in candidates
+            assert "assets.acme.com" in candidates
+
     def test_check_subdomain_takeover_aws_s3_match(self):
         sweeper = BountyTakeoverSweeper()
         # Mock CNAME pointing to S3 and HTTP body NoSuchBucket

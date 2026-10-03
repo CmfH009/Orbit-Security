@@ -72,14 +72,17 @@ def parse_disclosure_file(file_path: Path) -> Optional[Dict[str, Any]]:
     }
 
 
-def load_all_disclosures(disclosures_dir: Optional[Path] = None) -> List[Dict[str, Any]]:
+def load_all_disclosures(
+    disclosures_dir: Optional[Path] = None, include_archived: bool = False
+) -> List[Dict[str, Any]]:
     """Loads all disclosure files from disk."""
     dir_path = disclosures_dir or DISCLOSURES_DIR
     if not dir_path.exists():
         return []
 
     disclosures: List[Dict[str, Any]] = []
-    for file_path in dir_path.glob("*.md"):
+    pattern = "**/*.md" if include_archived else "*.md"
+    for file_path in dir_path.glob(pattern):
         parsed = parse_disclosure_file(file_path)
         if parsed:
             disclosures.append(parsed)
@@ -87,6 +90,22 @@ def load_all_disclosures(disclosures_dir: Optional[Path] = None) -> List[Dict[st
     # Sort newest first
     disclosures.sort(key=lambda d: d.get("date_discovered", ""), reverse=True)
     return disclosures
+
+
+def archive_disclosure(domain: str, disclosures_dir: Optional[Path] = None) -> Optional[Path]:
+    """Moves disclosure matching domain to archive/ subfolder."""
+    base_dir = disclosures_dir or DISCLOSURES_DIR
+    archive_dir = base_dir / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+
+    target = domain.strip().lower()
+    for file_path in base_dir.glob("*.md"):
+        parsed = parse_disclosure_file(file_path)
+        if parsed and target in parsed.get("target_domain", "").lower():
+            dest = archive_dir / file_path.name
+            file_path.rename(dest)
+            return dest
+    return None
 
 
 def copy_to_clipboard(text: str) -> bool:
@@ -116,11 +135,22 @@ def main():
     parser.add_argument("--view", help="View full markdown disclosure for target domain")
     parser.add_argument("--copy", help="Copy full markdown disclosure for target domain to clipboard")
     parser.add_argument("--json", action="store_true", help="Output disclosures as JSON")
+    parser.add_argument("--archive", help="Move disclosure report for target domain to archive directory")
+    parser.add_argument("--include-archived", action="store_true", help="Include archived reports in listing")
     parser.add_argument("--clean-informational", action="store_true",
                         help="Purge all INFORMATIONAL_LOW reports from disclosures directory")
 
     args = parser.parse_args()
-    disclosures = load_all_disclosures()
+
+    if args.archive:
+        dest = archive_disclosure(args.archive)
+        if dest:
+            print(f"✓ Archived disclosure for '{args.archive}' to {dest.name}")
+        else:
+            print(f"Error: No active disclosure found matching domain '{args.archive}'.")
+        return
+
+    disclosures = load_all_disclosures(include_archived=args.include_archived)
 
     if args.clean_informational:
         removed = 0
