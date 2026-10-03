@@ -56,5 +56,8 @@ data/generated_videos/
 data/briefings/
 data/disclosures/*.md
 !data/disclosures/.gitkeep
+src/data/
+FREEBUFF_AUDIT_PROMPT.md
+data/EMERGENCY_STOP
 
 

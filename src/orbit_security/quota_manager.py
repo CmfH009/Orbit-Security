@@ -20,18 +20,21 @@ logger = logging.getLogger(__name__)
 class QuotaBudget:
     # Hourly Burst Limits
     max_hourly_posts: int = 1
-    max_hourly_replies: int = 3
+    max_hourly_replies: int = 0  # Automated commenting/replies disabled to prevent platform flags
     max_hourly_likes: int = 6
     max_hourly_reposts: int = 2
-    max_hourly_follows: int = 3
+    max_hourly_follows: int = 0  # Automated following disabled to prevent platform flags
 
     # Hard Daily Caps
-    max_daily_posts: int = 12
-    max_daily_replies: int = 20
+    max_daily_posts: int = 2  # Scaled to twice a day (morning & evening cadence)
+    max_daily_replies: int = 0  # Automated commenting/replies disabled
 
     max_daily_likes: int = 50
     max_daily_reposts: int = 10
-    max_daily_follows: int = 15
+    max_daily_follows: int = 0  # Automated following disabled
+
+    # Minimum spacing between original posts in hours to distribute them across the day
+    min_post_spacing_hours: float = 8.0
 
 
 class SocialQuotaManager:
@@ -56,9 +59,13 @@ class SocialQuotaManager:
         self.current_cycle_hour: Optional[int] = None
         self.last_rollover_date: str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
 
+    def _get_now_utc(self) -> datetime.datetime:
+        """Helper to get current UTC datetime, facilitating deterministic testing."""
+        return datetime.datetime.now(datetime.timezone.utc)
+
     def reset_hourly_cycle(self):
         """Resets the hourly burst tracking for a new execution cycle."""
-        now_utc = datetime.datetime.now(datetime.timezone.utc)
+        now_utc = self._get_now_utc()
         self.current_cycle_hour = now_utc.hour
         for k in self.hourly_executed:
             self.hourly_executed[k] = 0
@@ -73,7 +80,12 @@ class SocialQuotaManager:
         """Enforces uniform 24/7 active pacing without artificial quiet or dormant windows."""
         return 1.0
 
-    def can_perform(self, action_type: str, allow_dormant: bool = False) -> bool:
+    def can_perform(
+        self,
+        action_type: str,
+        allow_dormant: bool = False,
+        ignore_spacing: bool = False,
+    ) -> bool:
         """Determines if a given action is permissible within both hourly and daily quotas."""
         act_upper = action_type.upper()
         if act_upper in ("ORIGINAL_POST", "POST"):
@@ -82,10 +94,8 @@ class SocialQuotaManager:
             daily_limit = self.budget.max_daily_posts
             daily_key = "posts_count"
         elif act_upper in ("REPLY", "COMMENT"):
-            norm = "REPLY"
-            hourly_limit = self.budget.max_hourly_replies
-            daily_limit = self.budget.max_daily_replies
-            daily_key = "replies_count"
+            # Automated commenting and replies permanently disabled to prevent platform flags
+            return False
         elif act_upper == "LIKE":
             norm = "LIKE"
             hourly_limit = self.budget.max_hourly_likes
@@ -97,10 +107,8 @@ class SocialQuotaManager:
             daily_limit = self.budget.max_daily_reposts
             daily_key = "reposts_count"
         elif act_upper == "FOLLOW":
-            norm = "FOLLOW"
-            hourly_limit = self.budget.max_hourly_follows
-            daily_limit = self.budget.max_daily_follows
-            daily_key = "follows_count"
+            # Automated follows permanently disabled to prevent platform flags
+            return False
         else:
             return False
 
@@ -122,6 +130,30 @@ class SocialQuotaManager:
         current_daily_count = daily_metrics.get(daily_key, 0)
         if current_daily_count >= daily_limit:
             return False
+
+        # For original posts: enforce minimum inter-post spacing so the 2 daily posts
+        # are distributed across the day rather than fired in consecutive cycles
+        if norm == "POST" and not ignore_spacing and self.budget.min_post_spacing_hours > 0:
+            if hasattr(self.state_manager, "get_last_post_media_info"):
+                last_post = self.state_manager.get_last_post_media_info()
+                if last_post and last_post.get("created_at_utc"):
+                    try:
+                        last_ts = str(last_post["created_at_utc"])
+                        if last_ts.endswith("Z"):
+                            last_ts = last_ts[:-1] + "+00:00"
+                        last_dt = datetime.datetime.fromisoformat(last_ts)
+                        if last_dt.tzinfo is None:
+                            last_dt = last_dt.replace(tzinfo=datetime.timezone.utc)
+                        now_utc = self._get_now_utc()
+                        elapsed_hours = (now_utc - last_dt).total_seconds() / 3600.0
+                        if elapsed_hours < self.budget.min_post_spacing_hours:
+                            logger.info(
+                                f"Post spacing pacing: {elapsed_hours:.1f}h elapsed since last post "
+                                f"(minimum {self.budget.min_post_spacing_hours}h required for 2/day cadence). Skipping POST."
+                            )
+                            return False
+                    except Exception as e:
+                        logger.warning(f"Error parsing last post timestamp: {e}")
 
         return True
 
@@ -151,6 +183,7 @@ class SocialQuotaManager:
         return {
             "time_of_day_band": "PEAK" if mult >= 1.0 else ("SHOULDER" if mult > 0.0 else "DORMANT"),
             "velocity_multiplier": mult,
+            "min_post_spacing_hours": self.budget.min_post_spacing_hours,
             "hourly_executed": dict(self.hourly_executed),
             "hourly_limits": {
                 "posts": self.budget.max_hourly_posts,

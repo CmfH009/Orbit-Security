@@ -62,7 +62,7 @@ class TweetData:
 @dataclass
 class DriverConfig:
     user_data_dir: Path = field(default_factory=lambda: Path("data/x_browser_profile"))
-    headless: bool = False  # Headless mode: False or True (stealth new headless)
+    headless: bool = True  # Strictly headless background mode
     slow_mo_ms: int = 50
     viewport_width: int = 1440
     viewport_height: int = 900
@@ -72,9 +72,10 @@ class DriverConfig:
         "Chrome/131.0.0.0 Safari/537.36"
     )
     timeout_ms: int = 25000
+    proxy: Optional[Dict[str, str]] = field(default_factory=lambda: {"server": "http://127.0.0.1:8989"})
     cdp_endpoint: Optional[str] = None  # e.g., "http://127.0.0.1:9222" if attaching to running Chrome
     use_desktop_driver: bool = False
-    desktop_fallback: bool = True
+    desktop_fallback: bool = False
 
 
 class HumanKinematics:
@@ -269,13 +270,15 @@ class OrbitXDriver:
             "--window-size=1440,900",
         ]
 
-        logger.info(f"Launching persistent stealth browser context: {self.config.user_data_dir.resolve()}")
+        logger.info(f"Launching persistent stealth browser context: {self.config.user_data_dir.resolve()} (Headless: {self.config.headless}, Proxy: {self.config.proxy}, Channel: chrome)")
         self.context = self.playwright.chromium.launch_persistent_context(
             user_data_dir=str(self.config.user_data_dir.resolve()),
+            channel="chrome",
             headless=self.config.headless,
             slow_mo=self.config.slow_mo_ms,
             viewport={"width": self.config.viewport_width, "height": self.config.viewport_height},
             user_agent=self.config.user_agent,
+            proxy=self.config.proxy,
             args=args,
             accept_downloads=True,
             ignore_https_errors=True,
@@ -407,10 +410,10 @@ class OrbitXDriver:
                 self.is_authenticated = False
                 return False, "Redirected to login flow"
 
-            # Check for Arkose challenge
-            if self.page.locator(self.SELECTORS["arkose_frame"]).count() > 0:
+            # Check for Arkose challenge or account access checkpoint
+            if "account/access" in curr_url or self.page.locator(self.SELECTORS["arkose_frame"]).count() > 0:
                 self.is_authenticated = False
-                return False, "Arkose bot challenge detected"
+                return False, f"Arkose bot challenge or account verification checkpoint detected (URL: {curr_url})"
 
             # Check for home feed presence
             has_feed = self.page.locator(self.SELECTORS["tweet_article"]).count() > 0
@@ -691,159 +694,15 @@ class OrbitXDriver:
         return False
 
     def follow_user(self, handle: str) -> bool:
-        """Follows a user by handle on X. Prevents duplicate follows if already following."""
-        if self.desktop_driver:
-            return self.desktop_driver.follow_user(handle)
-        if not self.ensure_connected():
-            if self.config.desktop_fallback and HAS_DESKTOP_BRIDGE and DesktopAutomationDriver:
-                self.desktop_driver = DesktopAutomationDriver()
-                return self.desktop_driver.follow_user(handle)
-            logger.warning("Cannot follow user: browser page is not active or could not be revived.")
-            return False
-
-        clean_handle = handle.replace("@", "").strip()
-        target_url = f"https://x.com/{clean_handle}"
-        logger.info(f"Targeting FOLLOW on: @{clean_handle} ({target_url})")
-
-        try:
-            self.page.goto(target_url, wait_until="domcontentloaded")
-            try:
-                self.page.wait_for_selector(
-                    f'button[aria-label*="Follow @{clean_handle}" i], [data-testid$="-follow"], [data-testid$="-unfollow"]',
-                    timeout=12000,
-                )
-            except Exception:
-                pass
-            time.sleep(random.uniform(1.5, 2.5))
-
-            # Check if already following
-            unfollow_sel = (
-                f'button[aria-label*="Unfollow @{clean_handle}" i], '
-                f'button[aria-label*="Following @{clean_handle}" i], '
-                f'[data-testid$="-unfollow"]'
-            )
-            if self.page.locator(unfollow_sel).count() > 0:
-                logger.info(f"Already following @{clean_handle}. Skipping.")
-                return True
-
-            follow_sel = (
-                f'button[aria-label*="Follow @{clean_handle}" i], '
-                f'[data-testid$="-follow"]'
-            )
-            follow_btn = self.page.locator(follow_sel).first
-            if not follow_btn.is_visible():
-                follow_btn = self.page.locator('button:has-text("Follow")').first
-
-            if not follow_btn.is_visible():
-                logger.warning(f"Follow button not found on profile for @{clean_handle}.")
-                return False
-
-            box = follow_btn.bounding_box()
-            if box:
-                target_x = box["x"] + box["width"] * random.uniform(0.3, 0.7)
-                target_y = box["y"] + box["height"] * random.uniform(0.3, 0.7)
-                HumanKinematics.move_mouse_humanlike(self.page, target_x, target_y)
-                time.sleep(random.uniform(0.1, 0.3))
-                self.page.mouse.click(target_x, target_y)
-            else:
-                follow_btn.click()
-
-            time.sleep(random.uniform(1.8, 3.0))
-            success = self.page.locator(unfollow_sel).count() > 0
-            logger.info(f"Follow outcome for @{clean_handle}: {'SUCCESS' if success else 'FAILED'}")
-            return success
-        except Exception as e:
-            logger.error(f"Error following user @{clean_handle}: {e}")
-            return False
+        """Automated following is disabled by policy to prevent account flags."""
+        logger.warning(f"OrbitXDriver: Automated follow_user refused for @{handle}. Following is disabled.")
+        return False
 
 
     def reply_to_tweet(self, target_url: str, text: str, media_path: Optional[Union[str, Path]] = None) -> bool:
-        """Posts a comment/reply to a specific tweet with optional media attachment."""
-        tw_units = compute_twitter_length(text)
-        if tw_units > 280:
-            logger.error(f"Cannot reply to tweet: text exceeds Twitter 280-unit limit ({tw_units} > 280). Refusing.")
-            return False
-
-        if self.desktop_driver:
-            return self.desktop_driver.reply_to_tweet(target_url, text, media_path=media_path)
-        if not self.ensure_connected():
-            if self.config.desktop_fallback and HAS_DESKTOP_BRIDGE and DesktopAutomationDriver:
-                self.desktop_driver = DesktopAutomationDriver()
-                return self.desktop_driver.reply_to_tweet(target_url, text, media_path=media_path)
-            logger.warning("Cannot reply to tweet: browser page is not active or could not be revived.")
-            return False
-        logger.info(f"Submitting REPLY to {target_url} (Media: {bool(media_path)})")
-        try:
-            self.page.goto(target_url, wait_until="domcontentloaded")
-        except Exception as e:
-            logger.warning(f"Navigation to {target_url} failed: {e}. Retrying after restart...")
-            if self.restart():
-                try:
-                    self.page.goto(target_url, wait_until="domcontentloaded")
-                except Exception as e2:
-                    logger.error(f"Retry navigation failed: {e2}")
-                    return False
-            else:
-                return False
-
-        time.sleep(random.uniform(2.0, 3.5))
-
-        # Find reply textarea (inline or modal)
-        reply_box = self.page.locator(self.SELECTORS["compose_textarea"]).first
-        if not reply_box.is_visible():
-            reply_trigger = self.page.locator(self.SELECTORS["reply_button"]).first
-            if reply_trigger.is_visible():
-                reply_trigger.click()
-                time.sleep(random.uniform(0.8, 1.4))
-                reply_box = self.page.locator(self.SELECTORS["compose_textarea"]).first
-
-        if not reply_box.is_visible():
-            logger.error("Reply textarea could not be activated.")
-            return False
-
-        # Focus and human-like typing
-        reply_box.click()
-        time.sleep(0.3)
-        HumanKinematics.type_humanlike(self.page, text)
-        time.sleep(random.uniform(0.5, 1.2))
-
-        # Handle media attachment if provided
-        if media_path:
-            p = Path(media_path).resolve()
-            if not p.exists():
-                raise FileNotFoundError(f"Media file not found: {p}")
-
-            logger.info(f"Uploading media file: {p.name}")
-            file_input = self.page.locator(self.SELECTORS["file_input"]).first
-            file_input.set_input_files(str(p))
-
-            # Wait for attachment preview to stabilize
-            time.sleep(3.0)
-            self._wait_for_media_processing()
-
-        # Submit reply via Ctrl+Enter or submit button
-        submit_btn = self.page.locator(self.SELECTORS["tweet_submit_inline"])
-        if not submit_btn.is_visible():
-            submit_btn = self.page.locator(self.SELECTORS["tweet_submit_modal"])
-
-        if submit_btn.is_visible() and submit_btn.get_attribute("aria-disabled") != "true":
-            submit_btn.click()
-        else:
-            # Trusted keyboard submit fallback
-            self.page.keyboard.down("Control")
-            self.page.keyboard.press("Enter")
-            self.page.keyboard.up("Control")
-
-        time.sleep(random.uniform(3.5, 5.5))
-        is_limited, reason = self.check_for_rate_limits()
-        if is_limited:
-            logger.error(f"Rate limit triggered on reply: {reason}")
-            return False
-
-        # Dismiss any post-submission modals (e.g. Premium upsell)
-        self.page.keyboard.press("Escape")
-        logger.info(f"Reply posted successfully to {target_url}")
-        return True
+        """Automated commenting/replying is disabled by policy to prevent account flags."""
+        logger.warning(f"OrbitXDriver: Automated reply_to_tweet refused for {target_url}. Replying is disabled.")
+        return False
 
     def post_tweet(self, text: str, media_path: Optional[Union[str, Path]] = None) -> bool:
         """Publishes an original tweet with optional image or video attachment."""
@@ -984,14 +843,17 @@ class OrbitXDriver:
         """Monitors media upload progress bar and transcoding spinners."""
         logger.info("Waiting for media transcoding & upload stabilization...")
         start = time.time()
+        submit_sel = f'{self.SELECTORS["tweet_submit_modal"]}, {self.SELECTORS["tweet_submit_inline"]}'
         while time.time() - start < max_wait_sec:
-            # Check if progress bar is present
-            progress = self.page.locator('[role="progressbar"]')
-            if progress.count() == 0:
-                # Progress bar gone, preview ready
+            # Check if media-specific progress bar is present inside attachments (avoiding the character-counter SVG progressbar)
+            media_progress = self.page.locator('[data-testid="attachments"] [role="progressbar"]')
+            submit_btn = self.page.locator(submit_sel).first
+            is_ready = submit_btn.is_visible() and submit_btn.get_attribute("aria-disabled") != "true"
+
+            if media_progress.count() == 0 and is_ready:
                 logger.info(f"Media ingestion verified in {time.time() - start:.1f}s.")
                 return True
-            time.sleep(1.5)
+            time.sleep(1.0)
         logger.warning(f"Media processing exceeded {max_wait_sec}s timeout. Proceeding.")
         return False
 

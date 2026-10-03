@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import os
 import sys
+from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -115,6 +116,16 @@ def main():
     social_parser.add_argument("--interval", type=int, default=3600, help="Base execution interval in seconds")
     social_parser.add_argument("--driver-mode", choices=["auto", "desktop", "browser"], default="auto", help="Driver mode: auto (prioritize active desktop window), desktop, or browser")
 
+    # Drafts command (Agent-assisted manual review & clipboard staging)
+    drafts_parser = subparsers.add_parser("drafts", help="Agent-assisted local X draft deck & staging workflow")
+    drafts_parser.add_argument("--list", action="store_true", help="List all staged drafts and their status")
+    drafts_parser.add_argument("--generate", action="store_true", help="Generate a fresh batch of high-signal drafts")
+    drafts_parser.add_argument("--count", type=int, default=5, help="Number of drafts to generate (default: 5)")
+    drafts_parser.add_argument("--copy", metavar="DRAFT_ID", help="Copy draft text to Windows clipboard")
+    drafts_parser.add_argument("--open", metavar="DRAFT_ID", help="Reveal draft media attachment in Windows Explorer")
+    drafts_parser.add_argument("--mark-posted", metavar="DRAFT_ID", help="Mark a draft as posted and log into history")
+    drafts_parser.add_argument("--send-next", action="store_true", help="Send off the next pending staged draft")
+
     args = parser.parse_args()
 
     if args.command == "scan":
@@ -165,6 +176,88 @@ def main():
         elif args.daemon:
             console.print("[cyan]Launching continuous 24/7 background social sentinel...[/cyan]")
             daemon.run_loop()
+    elif args.command == "drafts":
+        from orbit_security.draft_manager import DraftManager
+
+        mgr = DraftManager()
+
+        if args.generate:
+            console.print(f"[cyan]Synthesizing {args.count} publish-ready X drafts with multimodal media...[/cyan]")
+            drafts = mgr.generate_draft_batch(count=args.count)
+            console.print(f"[bold green]✔ Successfully generated {len(drafts)} drafts![/bold green]")
+            console.print(f"[dim]Staged into: {mgr.deck_file}[/dim]\n")
+
+        elif args.copy:
+            draft = mgr.get_draft(args.copy)
+            if not draft:
+                console.print(f"[bold red]✘ Draft '{args.copy}' not found.[/bold red]")
+                return
+            ok = mgr.copy_to_clipboard(args.copy)
+            if ok:
+                console.print(f"[bold green]✔ Draft '{args.copy}' text copied to clipboard![/bold green] ({draft.character_count}/280 chars)")
+                if draft.media_path and Path(draft.media_path).exists():
+                    console.print(f"[cyan]📁 Attached Media:[/cyan] {draft.media_path}")
+            else:
+                console.print(f"[bold yellow]⚠ Could not copy automatically. Draft text:[/bold yellow]\n{draft.text}")
+            return
+
+        elif args.open:
+            draft = mgr.get_draft(args.open)
+            if not draft:
+                console.print(f"[bold red]✘ Draft '{args.open}' not found.[/bold red]")
+                return
+            if draft.media_path and Path(draft.media_path).exists():
+                mgr.open_media(args.open)
+                console.print(f"[bold green]✔ Opened media for '{args.open}':[/bold green] {draft.media_path}")
+            else:
+                console.print(f"[yellow]No media attachment found for '{args.open}'.[/yellow]")
+            return
+
+        elif args.mark_posted:
+            ok = mgr.mark_posted(args.mark_posted)
+            if ok:
+                console.print(f"[bold green]✔ Draft '{args.mark_posted}' marked as POSTED and recorded into history.[/bold green]")
+            else:
+                console.print(f"[bold red]✘ Draft '{args.mark_posted}' not found.[/bold red]")
+            return
+
+        elif args.send_next:
+            console.print("[cyan]Dispatching next staged draft...[/cyan]")
+            res = mgr.send_next_draft()
+            if res.get("success"):
+                console.print(f"[bold green]✔ Successfully dispatched draft [{res['draft_id']}]: '{res['title']}'[/bold green]")
+                console.print(f"[dim]Mode: {res['mode']}[/dim]")
+            else:
+                console.print(f"[bold red]✘ Failed to send draft: {res.get('error')}[/bold red]")
+            return
+
+        # Default or --list: render draft table
+        drafts = mgr.list_drafts()
+        if not drafts:
+            console.print("[yellow]No drafts staged yet. Run [bold]python -m orbit_security.cli drafts --generate[/bold] to stage a fresh batch.[/yellow]")
+            return
+
+        table = Table(title="Orbit Security Staged Draft Deck", border_style="cyan")
+        table.add_column("ID", style="bold cyan")
+        table.add_column("Title", style="bold white")
+        table.add_column("Pillar", style="dim")
+        table.add_column("Chars", style="magenta")
+        table.add_column("Media Asset", style="green")
+        table.add_column("Status", style="bold")
+
+        for d in drafts:
+            status_style = "green" if d.status == "DRAFT" else ("blue" if d.status == "POSTED" else "dim")
+            media_name = Path(d.media_path).name if d.media_path else "-"
+            table.add_row(
+                d.id,
+                d.title[:35],
+                d.pillar,
+                f"{d.character_count}/280",
+                f"{d.media_type.upper()}: {media_name[:24]}",
+                f"[{status_style}]{d.status}[/{status_style}]"
+            )
+        console.print(table)
+        console.print(f"[dim]Markdown Deck: {mgr.deck_file}[/dim]")
 
 
 def main_recon():

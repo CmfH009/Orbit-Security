@@ -1,0 +1,73 @@
+{
+  "last_updated_utc": "2026-10-03T08:04:43.424078+00:00",
+  "total_drafts": 5,
+  "pending_drafts": 4,
+  "posted_count": 1,
+  "drafts": [
+    {
+      "id": "video_trilogy_1",
+      "title": "Astro-Cat Gameplay Showcase",
+      "text": "Most cybersecurity landing pages are boring corporate templates with stock photos of padlocks.\n\nWe built an interactive zero-gravity astronaut cat with orbital thrusters and laser cannons instead. \ud83d\udee1\ufe0f\ud83d\udc3e\n\nPlay with him live & run a free client DNS audit:\nhttps://cmfh009.github.io/Orbit-Security/",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\data\\drafts\\media\\orbit_astro_cat_gameplay_x.mp4",
+      "media_type": "video",
+      "pillar": "video_trilogy",
+      "status": "DRAFT",
+      "created_at_utc": "2026-10-03T08:04:02.648811+00:00",
+      "posted_at_utc": null,
+      "notes": null,
+      "character_count": 293
+    },
+    {
+      "id": "video_trilogy_2",
+      "title": "Full Feature & Animation Montage",
+      "text": "We ditched the corporate playbook for Orbit Security.\n\nHere's the full command deck:\n\u2022 Sub-second RFC 8484 DNS radar\n\u2022 Dangling CNAME takeover diagnostics\n\u2022 Passive fleet portfolio telemetry\n\u2022 Zero-G Astro-Cat with laser cannons \ud83d\ude80\ud83d\udc31\n\nAudit your edge:\nhttps://cmfh009.github.io/Orbit-Security/",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\data\\drafts\\media\\orbit_montage_master.mp4",
+      "media_type": "video",
+      "pillar": "video_trilogy",
+      "status": "DRAFT",
+      "created_at_utc": "2026-10-03T08:04:02.658929+00:00",
+      "posted_at_utc": null,
+      "notes": null,
+      "character_count": 291
+    },
+    {
+      "id": "video_trilogy_3",
+      "title": "The $250/mo Retainer Exploit",
+      "text": "How web agencies justify $250/mo retainers without writing code:\n\n1. Scan client domain (10s passive DoH)\n2. Spot dangling CNAMEs & spoofable DNS\n3. Astro-Cat zaps the threat \ud83d\udc7e\ud83d\udca5\n4. Export white-label executive audit PDF\n\nRun a free scan:\nhttps://cmfh009.github.io/Orbit-Security/",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\data\\drafts\\media\\orbit_teardown_master.mp4",
+      "media_type": "video",
+      "pillar": "video_trilogy",
+      "status": "DRAFT",
+      "created_at_utc": "2026-10-03T08:04:02.665236+00:00",
+      "posted_at_utc": null,
+      "notes": null,
+      "character_count": 279
+    },
+    {
+      "id": "cname_thread_1",
+      "title": "Master Thread 1: The Hook",
+      "text": "How an abandoned $15/mo Unbounce landing page can compromise a $50M Shopify Plus brand:\n\nThe hidden anatomy of Dangling CNAME Subdomain Takeovers \u2014 and how open-source reconnaissance catches them in 800ms. \ud83e\uddf5\ud83d\udc47\nhttps://cmfh009.github.io/Orbit-Security/",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\data\\drafts\\media\\orbit_cname_blackhole.jpg",
+      "media_type": "image",
+      "pillar": "master_thread",
+      "status": "POSTED",
+      "created_at_utc": "2026-10-03T08:04:02.667450+00:00",
+      "posted_at_utc": "2026-10-03T08:04:43.424067+00:00",
+      "notes": null,
+      "character_count": 250
+    },
+    {
+      "id": "cname_thread_2",
+      "title": "Master Thread 2: The Setup",
+      "text": "Web & Shopify agencies launch dozens of promo subdomains every year:\n\u2022 promo.brand.com \u2794 Unbounce\n\u2022 store.brand.com \u2794 Shopify\n\u2022 docs.brand.com \u2794 AWS S3 / GitHub Pages\n\nThe seasonal campaign ends. The agency cancels the SaaS plan.\n\nBut nobody touches the DNS manager.\nhttps://cmfh009.github.io/Orbit-Security/",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\data\\drafts\\media\\orbit_astro_cat_gameplay_x.mp4",
+      "media_type": "video",
+      "pillar": "master_thread",
+      "status": "DRAFT",
+      "created_at_utc": "2026-10-03T08:04:02.667667+00:00",
+      "posted_at_utc": null,
+      "notes": null,
+      "character_count": 308
+    }
+  ]
+}

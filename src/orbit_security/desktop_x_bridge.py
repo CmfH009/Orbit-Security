@@ -211,17 +211,26 @@ class DesktopAutomationDriver:
         if os.name != "nt":
             return False
 
-        win = self.find_x_window()
+        win = self.find_x_window(allow_any_chrome=True)
         if win:
             return True
 
         logger.info(f"No active Chrome window found. Launching desktop Chrome to {url}...")
         try:
-            import subprocess
-            subprocess.Popen(["cmd.exe", "/c", "start", "chrome", url], shell=True)
-            for _ in range(8):
+            chrome_exe = Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe")
+            cmd = f'"{chrome_exe}" --proxy-server="http://127.0.0.1:8989" {url}'
+            if hasattr(self.auto, "launch_on_interactive_desktop"):
+                self.auto.launch_on_interactive_desktop(cmd, as_user=True)
+            else:
+                taskbar_lnk = Path(r"C:\Users\purav\AppData\Roaming\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\Google Chrome.lnk")
+                if taskbar_lnk.exists():
+                    os.startfile(str(taskbar_lnk))
+                else:
+                    subprocess.Popen([str(chrome_exe), '--proxy-server=http://127.0.0.1:8989', url])
+
+            for _ in range(12):
                 time.sleep(0.5)
-                win = self.find_x_window()
+                win = self.find_x_window(allow_any_chrome=True)
                 if win:
                     logger.info(f"Desktop Chrome window acquired: '{win['title']}'")
                     return True
@@ -238,7 +247,11 @@ class DesktopAutomationDriver:
         win = self.find_x_window()
         if not win:
             if self.ensure_browser_open():
-                win = self.find_x_window()
+                for _ in range(10):
+                    time.sleep(1.0)
+                    win = self.find_x_window(allow_any_chrome=True)
+                    if win:
+                        break
         if not win:
             logger.warning("No authenticated X Chrome window found to focus.")
             return False
@@ -557,81 +570,9 @@ class DesktopAutomationDriver:
         text: str,
         media_path: Optional[Union[str, Path]] = None,
     ) -> bool:
-        """Posts a reply to a tweet with optional clipboard media attachment."""
-        logger.info(f"DesktopAutomationDriver: replying to {target_url} ({len(text)} chars)")
-
-        if self.config.mock_mode:
-            self._record_action(
-                "reply_to_tweet",
-                target_url=target_url,
-                text=text,
-                media_path=str(media_path) if media_path else None,
-            )
-            return True
-
-        if not self.focus_x_window():
-            return False
-
-        if not self.navigate_to_url(target_url, wait_seconds=self.config.nav_wait_sec):
-            return False
-
-        time.sleep(0.5)
-
-        # Select tweet with 'j', then trigger reply composer using 'r' hotkey
-        if hasattr(self.auto, "send_key"):
-            self.auto.send_key("esc")
-            time.sleep(0.15)
-            self.auto.send_key("j")
-            time.sleep(0.25)
-            self.auto.send_key("r")
-            time.sleep(0.8)
-
-        # Handle media attachment if provided
-        if media_path:
-            p = Path(media_path).resolve()
-            if not p.exists():
-                raise FileNotFoundError(f"Media file not found: {p}")
-            if p.suffix.lower() in (".mp4", ".mov", ".webm", ".avi", ".m4v"):
-                self._attach_video_file(p)
-            else:
-                self.set_clipboard_image(p)
-                time.sleep(0.2)
-                if hasattr(self.auto, "send_shortcut"):
-                    self.auto.send_shortcut("ctrl+v")
-                elif hasattr(self.auto, "send_key"):
-                    self.auto.send_key("v", ctrl=True)
-            time.sleep(self.config.media_wait_sec)
-
-        # Inject reply text
-        if hasattr(self.auto, "paste_text"):
-            self.auto.paste_text(text)
-        else:
-            self.set_clipboard_text(text)
-            if hasattr(self.auto, "send_shortcut"):
-                self.auto.send_shortcut("ctrl+v")
-
-        time.sleep(0.5)
-
-        # Submit reply via Ctrl+Enter
-        if hasattr(self.auto, "send_key"):
-            self.auto.send_key("enter", ctrl=True)
-        elif hasattr(self.auto, "send_shortcut"):
-            self.auto.send_shortcut("ctrl+enter")
-
-        time.sleep(self.config.post_submit_wait_sec)
-
-        if hasattr(self.auto, "send_key"):
-            self.auto.send_key("esc")
-
-        self._record_action(
-            "reply_to_tweet",
-            target_url=target_url,
-            text=text,
-            media_path=str(media_path) if media_path else None,
-            success=True,
-        )
-        logger.info("DesktopAutomationDriver: Reply published successfully.")
-        return True
+        """Automated commenting/replying is disabled by policy to prevent account flags."""
+        logger.warning("DesktopAutomationDriver: Automated replying/commenting is disabled by policy. Perform manually via operator browser.")
+        return False
 
     def repost_tweet(self, target_url: str) -> bool:
         """Reposts a tweet using 'j', 't' shortcut and Enter confirmation."""
@@ -665,33 +606,9 @@ class DesktopAutomationDriver:
         return True
 
     def follow_user(self, handle: str) -> bool:
-        """Follows a user by handle using desktop automation."""
-        clean_handle = handle.replace("@", "").strip()
-        target_url = f"https://x.com/{clean_handle}"
-        logger.info(f"DesktopAutomationDriver: following @{clean_handle}")
-
-        if self.config.mock_mode:
-            self._record_action("follow_user", handle=clean_handle, success=True)
-            return True
-
-        if not self.focus_x_window():
-            return False
-
-        if not self.navigate_to_url(target_url, wait_seconds=self.config.nav_wait_sec):
-            return False
-
-        time.sleep(1.5)
-
-        # On profile page, click Follow button in header
-        win = self.find_x_window()
-        if win and hasattr(self.auto, "click_at"):
-            left = win.get("left", 0)
-            top = win.get("top", 0)
-            width = win.get("width", 1920)
-            follow_x = left + int(width * 0.58)
-            follow_y = top + 265
-            self.auto.click_at(follow_x, follow_y)
-            time.sleep(0.8)
+        """Automated following is disabled by policy to prevent account flags."""
+        logger.warning(f"DesktopAutomationDriver: Automated follow_user refused for @{handle}. Following is disabled.")
+        return False
 
     def scrape_user_profile(self, handle_or_url: str) -> Optional[Dict[str, str]]:
         """Scrapes user bio, website link, and header details from user profile page."""

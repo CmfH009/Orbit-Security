@@ -150,6 +150,12 @@ def main():
         print("✓ Circuit breaker successfully reset to CLOSED.")
         return
 
+    # Emergency Quarantine Check
+    emergency_file = PROJECT_ROOT / "data" / "EMERGENCY_STOP"
+    if emergency_file.exists() and not args.force:
+        print("[!] EMERGENCY STOP ACTIVE: Account flagged on X. Halting social agent immediately to protect account.")
+        sys.exit(0)
+
     # Check Mutex
     if not acquire_process_mutex():
         print("[!] An Orbit Security Social Daemon is already running (mutex locked). Exiting.")

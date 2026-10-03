@@ -9,10 +9,16 @@ from orbit_security.social_daemon import SocialDaemon
 
 @pytest.fixture
 def dry_daemon(tmp_path):
+    from orbit_security.social_state import SocialStateManager
+    sm = SocialStateManager(
+        db_path=tmp_path / "test_social.db",
+        json_export_path=tmp_path / "test_social.json",
+    )
     return SocialDaemon(
         nominal_interval_seconds=3600,
         dry_run=True,
         state_file=tmp_path / "social_daemon_state.json",
+        state_manager=sm,
     )
 
 
@@ -54,23 +60,4 @@ def test_daemon_live_mode_driver_protection(tmp_path):
 
         cycle_res = daemon.execute_hourly_cycle()
         assert cycle_res["status"] == "DRIVER_UNAVAILABLE"
-
-
-def test_daemon_follow_user_mock(tmp_path):
-    """Verifies that follow_user calls driver when available."""
-    from orbit_security.desktop_x_bridge import DesktopAutomationDriver
-
-    mock_drv = DesktopAutomationDriver(mock_mode=True)
-    daemon = SocialDaemon(
-        nominal_interval_seconds=3600,
-        dry_run=False,
-        driver=mock_drv,
-        state_file=tmp_path / "social_daemon_state.json",
-    )
-
-    # Test single follow execution
-    assert hasattr(daemon.driver, "follow_user")
-    ok = daemon.driver.follow_user("testuser")
-    assert ok is True
-    assert any(a["action"] == "follow_user" for a in mock_drv.action_history)
 

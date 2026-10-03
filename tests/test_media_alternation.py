@@ -154,8 +154,8 @@ def test_social_daemon_dry_run_cycle_alternation(temp_env):
         nominal_interval_seconds=3600,
         dry_run=True,
         state_file=temp_env["root"] / "daemon_state.json",
+        state_manager=sm,
     )
-    daemon.state_manager = sm
     daemon.content_queue = ContentQueue()
     daemon.force_cycle = True
 
