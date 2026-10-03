@@ -928,6 +928,9 @@ class BountyTakeoverSweeper:
         audit_cloud_buckets: bool = False,
         audit_graphql: bool = False,
         audit_cors: bool = False,
+        audit_smuggling: bool = False,
+        audit_oauth: bool = False,
+        audit_dependency: bool = False,
         mock_cnames: Optional[Dict[str, str]] = None,
         mock_bodies: Optional[Dict[str, str]] = None,
         mock_spfs: Optional[Dict[str, str]] = None,
@@ -935,6 +938,9 @@ class BountyTakeoverSweeper:
         mock_nxdomain_domains: Optional[Set[str]] = None,
         mock_graphql_responses: Optional[Dict[str, Dict[str, Any]]] = None,
         mock_cors_responses: Optional[Dict[str, Dict[str, str]]] = None,
+        mock_smuggling_responses: Optional[Dict[str, Dict[str, Any]]] = None,
+        mock_oauth_responses: Optional[Dict[str, Dict[str, Any]]] = None,
+        mock_dependency_responses: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> List[BountyVulnerability]:
         """Performs an automated attack surface sweep across a program's in-scope targets."""
         candidates = self.expand_wildcards(
@@ -1053,7 +1059,90 @@ class BountyTakeoverSweeper:
                     )
                     vulns.append(vuln)
 
-            # 2. Email Spoofing Check (primarily on apex or mail hosts)
+            # 5. HTTP Request Smuggling Check
+            if audit_smuggling:
+                smug_mock = mock_smuggling_responses.get(target) if mock_smuggling_responses else None
+                smug_res = self.audit_http_smuggling(
+                    target,
+                    mock_cl_te=smug_mock.get("cl_te") if smug_mock else None,
+                    mock_te_cl=smug_mock.get("te_cl") if smug_mock else None,
+                    mock_h2=smug_mock.get("h2") if smug_mock else None,
+                )
+                if smug_res and smug_res.get("vulnerable"):
+                    vuln = BountyVulnerability(
+                        program_id=program.program_id,
+                        program_name=program.name,
+                        platform=program.platform,
+                        target_domain=target,
+                        flaw_type=smug_res.get("flaw_type", "http_request_smuggling_cl_te"),
+                        provider="HTTP Reverse Proxy",
+                        severity=Severity.CRITICAL,
+                        cvss_score=smug_res.get("cvss_score", 9.1),
+                        cvss_vector=smug_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N"),
+                        evidence=smug_res.get("evidence", ""),
+                        cwe_id=smug_res.get("cwe_id", "CWE-444: Inconsistent Interpretation of HTTP Requests"),
+                        remediation=smug_res.get("remediation", ""),
+                        bounty_viability="HIGH_CONFIDENCE",
+                    )
+                    vulns.append(vuln)
+
+            # 6. OAuth / OIDC Flow Check
+            if audit_oauth:
+                oa_mock = mock_oauth_responses.get(target) if mock_oauth_responses else None
+                oa_res = self.audit_oauth_flow(
+                    target,
+                    mock_oidc=oa_mock.get("oidc") if oa_mock else None,
+                    mock_redirects=oa_mock.get("redirects") if oa_mock else None,
+                    mock_state=oa_mock.get("state") if oa_mock else None,
+                    mock_pkce=oa_mock.get("pkce") if oa_mock else None,
+                )
+                if oa_res and oa_res.get("vulnerable"):
+                    vuln = BountyVulnerability(
+                        program_id=program.program_id,
+                        program_name=program.name,
+                        platform=program.platform,
+                        target_domain=target,
+                        flaw_type=oa_res.get("flaw_type", "oauth_redirect_uri_hijack"),
+                        provider="OAuth / Identity Provider",
+                        severity=Severity(oa_res.get("severity", "HIGH")),
+                        cvss_score=oa_res.get("cvss_score", 8.1),
+                        cvss_vector=oa_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N"),
+                        evidence=oa_res.get("evidence", ""),
+                        cwe_id=oa_res.get("cwe_id", "CWE-601: URL Redirection to Untrusted Site"),
+                        remediation=oa_res.get("remediation", ""),
+                        bounty_viability="HIGH_CONFIDENCE",
+                    )
+                    vulns.append(vuln)
+
+            # 7. Dependency Confusion Check
+            if audit_dependency:
+                dep_mock = mock_dependency_responses.get(target) if mock_dependency_responses else None
+                source_code = dep_mock.get("source_text", "") if dep_mock else ""
+                dep_res = self.audit_dependency_confusion(
+                    target,
+                    source_text=source_code,
+                    mock_npm=dep_mock.get("npm") if dep_mock else None,
+                    mock_pypi=dep_mock.get("pypi") if dep_mock else None,
+                )
+                if dep_res and dep_res.get("vulnerable"):
+                    vuln = BountyVulnerability(
+                        program_id=program.program_id,
+                        program_name=program.name,
+                        platform=program.platform,
+                        target_domain=target,
+                        flaw_type=dep_res.get("flaw_type", "dependency_confusion_namespace_takeover"),
+                        provider="Public Package Registry",
+                        severity=Severity.CRITICAL,
+                        cvss_score=dep_res.get("cvss_score", 9.8),
+                        cvss_vector=dep_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"),
+                        evidence=dep_res.get("evidence", ""),
+                        cwe_id=dep_res.get("cwe_id", "CWE-427: Uncontrolled Search Path Element"),
+                        remediation=dep_res.get("remediation", ""),
+                        bounty_viability="HIGH_CONFIDENCE",
+                    )
+                    vulns.append(vuln)
+
+            # 8. Email Spoofing Check (primarily on apex or mail hosts)
             if "." in target:
                 org_domain = self.get_organizational_domain(target)
                 is_apex = target == org_domain
@@ -1135,6 +1224,72 @@ class BountyTakeoverSweeper:
         from orbit_security.cloud_sentinels import CorsMisconfigurationSentinel
         return CorsMisconfigurationSentinel.audit_target(
             target_domain, timeout=timeout, mock_responses=mock_responses
+        )
+
+    def audit_http_smuggling(
+        self,
+        target_domain: str,
+        path: str = "/",
+        timeout: float = 4.0,
+        mock_cl_te: Optional[Dict[str, Any]] = None,
+        mock_te_cl: Optional[Dict[str, Any]] = None,
+        mock_h2: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Audits target domain for HTTP Request Smuggling desync vulnerabilities."""
+        from orbit_security.smuggling_sentinel import HttpRequestSmugglingSentinel
+        return HttpRequestSmugglingSentinel.audit_target(
+            target_domain,
+            path=path,
+            timeout=timeout,
+            mock_cl_te=mock_cl_te,
+            mock_te_cl=mock_te_cl,
+            mock_h2=mock_h2,
+        )
+
+    def audit_oauth_flow(
+        self,
+        target_domain: str,
+        auth_url: Optional[str] = None,
+        client_id: Optional[str] = None,
+        redirect_uri: Optional[str] = None,
+        token_url: Optional[str] = None,
+        timeout: float = 3.5,
+        mock_redirects: Optional[Dict[str, Tuple[int, str, Dict[str, str]]]] = None,
+        mock_state: Optional[Tuple[int, str, Dict[str, str]]] = None,
+        mock_pkce: Optional[Tuple[int, str, Dict[str, str]]] = None,
+        mock_oidc: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Audits target domain for OAuth 2.0 / OIDC redirection, CSRF, and signing flaws."""
+        from orbit_security.oauth_sentinel import OAuthFlowSentinel
+        return OAuthFlowSentinel.audit_target(
+            target_domain,
+            auth_url=auth_url,
+            client_id=client_id,
+            redirect_uri=redirect_uri,
+            token_url=token_url,
+            timeout=timeout,
+            mock_redirects=mock_redirects,
+            mock_state=mock_state,
+            mock_pkce=mock_pkce,
+            mock_oidc=mock_oidc,
+        )
+
+    def audit_dependency_confusion(
+        self,
+        target_domain: str,
+        source_text: Optional[str] = None,
+        custom_org_names: Optional[List[str]] = None,
+        mock_npm: Optional[Dict[str, int]] = None,
+        mock_pypi: Optional[Dict[str, int]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Audits target for unclaimed internal package namespaces in public registries."""
+        from orbit_security.dependency_sentinel import DependencyConfusionSentinel
+        return DependencyConfusionSentinel.audit_target(
+            target_domain,
+            source_text=source_text,
+            custom_org_names=custom_org_names,
+            mock_npm=mock_npm,
+            mock_pypi=mock_pypi,
         )
 
 
@@ -1707,6 +1862,9 @@ class BountyRadarSupervisor:
         audit_cloud_buckets: bool = False,
         audit_graphql: bool = False,
         audit_cors: bool = False,
+        audit_smuggling: bool = False,
+        audit_oauth: bool = False,
+        audit_dependency: bool = False,
         save_disclosures: bool = True,
         sync_attack_graph: bool = True,
         output_dir: Optional[Path] = None,
@@ -1742,6 +1900,9 @@ class BountyRadarSupervisor:
                 audit_cloud_buckets=audit_cloud_buckets,
                 audit_graphql=audit_graphql,
                 audit_cors=audit_cors,
+                audit_smuggling=audit_smuggling,
+                audit_oauth=audit_oauth,
+                audit_dependency=audit_dependency,
             )
             total_findings.extend(vulns)
 
