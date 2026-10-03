@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-10-02T09:42:35.840052+00:00",
+  "updated_at": "2026-10-03T11:02:48.662875+00:00",
   "programs": [
     {
       "program_id": "shopify",
@@ -18,7 +18,7 @@
       "bounty_tier": "cash",
       "max_bounty": 50000,
       "state": "active",
-      "last_scanned": "2026-10-02T09:42:35.833101+00:00",
+      "last_scanned": "2026-10-03T11:02:23.680469+00:00",
       "created_at": "2026-10-02T09:32:47.938770+00:00"
     },
     {
@@ -34,7 +34,7 @@
       "bounty_tier": "cash",
       "max_bounty": 35000,
       "state": "active",
-      "last_scanned": null,
+      "last_scanned": "2026-10-03T11:02:23.938930+00:00",
       "created_at": "2026-10-02T09:32:47.938782+00:00"
     },
     {
@@ -50,7 +50,7 @@
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": null,
+      "last_scanned": "2026-10-03T11:02:24.001553+00:00",
       "created_at": "2026-10-02T09:32:47.938786+00:00"
     },
     {
@@ -67,8 +67,107 @@
       "bounty_tier": "cash",
       "max_bounty": 25000,
       "state": "active",
-      "last_scanned": null,
+      "last_scanned": "2026-10-03T11:02:24.310064+00:00",
       "created_at": "2026-10-02T09:32:47.938788+00:00"
+    },
+    {
+      "program_id": "paypal",
+      "name": "PayPal",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/paypal",
+      "in_scope": [
+        "*.paypal.com",
+        "*.paypal-corp.com",
+        "*.braintreepayments.com"
+      ],
+      "out_of_scope": [],
+      "bounty_tier": "cash",
+      "max_bounty": 30000,
+      "state": "active",
+      "last_scanned": "2026-10-03T11:02:24.730029+00:00",
+      "created_at": "2026-10-03T10:52:00.000000+00:00"
+    },
+    {
+      "program_id": "uber",
+      "name": "Uber",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/uber",
+      "in_scope": [
+        "*.uber.com",
+        "*.ubereats.com"
+      ],
+      "out_of_scope": [],
+      "bounty_tier": "cash",
+      "max_bounty": 50000,
+      "state": "active",
+      "last_scanned": "2026-10-03T11:02:25.217954+00:00",
+      "created_at": "2026-10-03T10:52:00.000000+00:00"
+    },
+    {
+      "program_id": "github",
+      "name": "GitHub",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/github",
+      "in_scope": [
+        "*.github.com",
+        "*.github.io",
+        "*.githubassets.com"
+      ],
+      "out_of_scope": [],
+      "bounty_tier": "cash",
+      "max_bounty": 30000,
+      "state": "active",
+      "last_scanned": "2026-10-03T11:02:25.476741+00:00",
+      "created_at": "2026-10-03T10:52:00.000000+00:00"
+    },
+    {
+      "program_id": "epicgames",
+      "name": "Epic Games",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/epicgames",
+      "in_scope": [
+        "*.epicgames.com",
+        "*.unrealengine.com"
+      ],
+      "out_of_scope": [],
+      "bounty_tier": "cash",
+      "max_bounty": 30000,
+      "state": "active",
+      "last_scanned": "2026-10-03T11:02:26.732514+00:00",
+      "created_at": "2026-10-03T10:52:00.000000+00:00"
+    },
+    {
+      "program_id": "coinbase",
+      "name": "Coinbase",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/coinbase",
+      "in_scope": [
+        "*.coinbase.com",
+        "*.pro.coinbase.com"
+      ],
+      "out_of_scope": [],
+      "bounty_tier": "cash",
+      "max_bounty": 50000,
+      "state": "active",
+      "last_scanned": "2026-10-03T11:02:27.001676+00:00",
+      "created_at": "2026-10-03T10:52:00.000000+00:00"
+    },
+    {
+      "program_id": "valve",
+      "name": "Valve Software",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/valve",
+      "in_scope": [
+        "*.steampowered.com",
+        "*.steamcommunity.com",
+        "*.valvesoftware.com"
+      ],
+      "out_of_scope": [],
+      "bounty_tier": "cash",
+      "max_bounty": 20000,
+      "state": "active",
+      "last_scanned": "2026-10-03T11:02:27.337711+00:00",
+      "created_at": "2026-10-03T10:52:00.000000+00:00"
     },
     {
       "program_id": "hyatt",
@@ -82,8 +181,79 @@
       "bounty_tier": "cash",
       "max_bounty": 15000,
       "state": "active",
-      "last_scanned": null,
+      "last_scanned": "2026-10-03T11:02:27.582993+00:00",
       "created_at": "2026-10-02T09:32:47.938791+00:00"
+    },
+    {
+      "program_id": "deptofdefense",
+      "name": "U.S. Dept of Defense",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/deptofdefense",
+      "in_scope": [
+        "*.mil",
+        "*.af.mil",
+        "*.army.mil",
+        "*.navy.mil",
+        "*.defense.gov"
+      ],
+      "out_of_scope": [],
+      "bounty_tier": "points",
+      "max_bounty": 0,
+      "state": "active",
+      "last_scanned": "2026-10-03T11:02:45.262455+00:00",
+      "created_at": "2026-10-03T11:00:00.000000+00:00"
+    },
+    {
+      "program_id": "automattic",
+      "name": "Automattic",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/automattic",
+      "in_scope": [
+        "*.wordpress.com",
+        "*.automattic.com",
+        "*.woocommerce.com",
+        "*.tumblr.com"
+      ],
+      "out_of_scope": [],
+      "bounty_tier": "cash",
+      "max_bounty": 25000,
+      "state": "active",
+      "last_scanned": "2026-10-03T11:02:46.279091+00:00",
+      "created_at": "2026-10-03T11:00:00.000000+00:00"
+    },
+    {
+      "program_id": "rockstargames",
+      "name": "Rockstar Games",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/rockstargames",
+      "in_scope": [
+        "*.rockstargames.com",
+        "*.socialclub.rockstargames.com",
+        "*.2k.com"
+      ],
+      "out_of_scope": [],
+      "bounty_tier": "cash",
+      "max_bounty": 20000,
+      "state": "active",
+      "last_scanned": "2026-10-03T11:02:47.378308+00:00",
+      "created_at": "2026-10-03T11:00:00.000000+00:00"
+    },
+    {
+      "program_id": "slack",
+      "name": "Slack",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/slack",
+      "in_scope": [
+        "*.slack.com",
+        "*.slack-edge.com",
+        "*.slack-core.com"
+      ],
+      "out_of_scope": [],
+      "bounty_tier": "cash",
+      "max_bounty": 15000,
+      "state": "active",
+      "last_scanned": "2026-10-03T11:02:48.659841+00:00",
+      "created_at": "2026-10-03T11:00:00.000000+00:00"
     }
   ]
 }

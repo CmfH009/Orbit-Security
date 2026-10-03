@@ -186,6 +186,84 @@ class TestBountyTakeoverSweeper:
         )
         assert res is None
 
+    def test_check_mail_spoofing_subdomain_inherits_apex_reject(self):
+        sweeper = BountyTakeoverSweeper()
+        # Mock resolver resolving _dmarc.shopify.com to p=reject
+        with patch.object(sweeper.resolver, "resolve") as mock_resolve:
+            mock_rdata = MagicMock()
+            mock_rdata.strings = [b"v=DMARC1; p=reject; pct=100;"]
+            # When querying _dmarc.cdn.shopify.com raise Exception, when querying _dmarc.shopify.com return mock_rdata
+            def side_effect(qname, qtype):
+                if str(qname) == "_dmarc.cdn.shopify.com":
+                    raise Exception("No record")
+                if str(qname) == "_dmarc.shopify.com":
+                    return [mock_rdata]
+                raise Exception("Unknown")
+            mock_resolve.side_effect = side_effect
+
+            res = sweeper.check_mail_spoofing(domain="cdn.shopify.com")
+            assert res is None, "Subdomain inheriting apex p=reject must not be flagged"
+
+    def test_check_mail_spoofing_subdomain_without_mx_ignored(self):
+        sweeper = BountyTakeoverSweeper()
+        # Subdomain with no DMARC and no MX
+        with patch.object(sweeper.resolver, "resolve", side_effect=Exception("No record")):
+            res = sweeper.check_mail_spoofing(domain="assets.unprotected.org", mock_mx=[])
+            assert res is None, "Static subdomain without MX must not be reported as mail spoofing"
+
+    def test_check_subdomain_takeover_beanstalk_active_host_not_vulnerable(self):
+        sweeper = BountyTakeoverSweeper()
+        # Mock CNAME to elasticbeanstalk.com, but target resolves to active A record
+        with patch.object(sweeper.resolver, "resolve") as mock_resolve:
+            mock_cname_rdata = MagicMock()
+            mock_cname_rdata.target = "active-app.us-east-1.elasticbeanstalk.com."
+            mock_a_rdata = MagicMock()
+
+            def side_effect(qname, qtype):
+                if qtype == "CNAME":
+                    return [mock_cname_rdata]
+                if qtype == "A":
+                    return [mock_a_rdata]
+                raise Exception("Unknown")
+            mock_resolve.side_effect = side_effect
+
+            res = sweeper.check_subdomain_takeover("api.acme.com")
+            assert res is None, "Active Beanstalk host resolving to A record must not be flagged"
+
+    def test_check_subdomain_takeover_beanstalk_nxdomain_is_vulnerable(self):
+        sweeper = BountyTakeoverSweeper()
+        import dns.resolver
+        # Mock CNAME to elasticbeanstalk.com, target returns NXDOMAIN
+        with patch.object(sweeper.resolver, "resolve") as mock_resolve:
+            mock_cname_rdata = MagicMock()
+            mock_cname_rdata.target = "dead-app.us-east-1.elasticbeanstalk.com."
+
+            def side_effect(qname, qtype):
+                if qtype == "CNAME":
+                    return [mock_cname_rdata]
+                if qtype == "A":
+                    raise dns.resolver.NXDOMAIN()
+                raise Exception("Unknown")
+            mock_resolve.side_effect = side_effect
+
+            res = sweeper.check_subdomain_takeover("api.acme.com")
+            assert res is not None
+            sig, cname, evidence = res
+            assert sig.name == "AWS Elastic Beanstalk"
+            assert "NXDOMAIN response" in evidence
+
+    def test_check_subdomain_takeover_cloudfront_with_valid_ssl_not_vulnerable(self):
+        sweeper = BountyTakeoverSweeper()
+        with patch.object(sweeper.resolver, "resolve") as mock_resolve:
+            mock_cname_rdata = MagicMock()
+            mock_cname_rdata.target = "d1234.cloudfront.net."
+            mock_resolve.return_value = [mock_cname_rdata]
+
+            with patch.object(sweeper, "_probe_http_body", return_value="<TITLE>ERROR: The request could not be satisfied</TITLE>"):
+                with patch.object(sweeper, "is_ssl_cert_bound_to_domain", return_value=True):
+                    res = sweeper.check_subdomain_takeover("static.acme.com")
+                    assert res is None, "CloudFront distribution with active custom cert must not be flagged"
+
 
 class TestHackerOneDisclosureGenerator:
     def test_generate_h1_takeover_report(self):
