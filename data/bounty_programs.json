@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-10-03T14:07:56.335610+00:00",
+  "updated_at": "2026-10-03T14:55:11.828392+00:00",
   "programs": [
     {
       "program_id": "shopify",
@@ -18,7 +18,7 @@
       "bounty_tier": "cash",
       "max_bounty": 50000,
       "state": "active",
-      "last_scanned": "2026-10-03T14:07:56.334429+00:00",
+      "last_scanned": "2026-10-03T14:55:11.827365+00:00",
       "created_at": "2026-10-02T09:32:47.938770+00:00"
     },
     {
@@ -34,7 +34,7 @@
       "bounty_tier": "cash",
       "max_bounty": 35000,
       "state": "active",
-      "last_scanned": "2026-10-03T11:41:54.256685+00:00",
+      "last_scanned": "2026-10-03T14:38:09.091086+00:00",
       "created_at": "2026-10-02T09:32:47.938782+00:00"
     },
     {
@@ -50,7 +50,7 @@
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": "2026-10-03T11:41:54.318751+00:00",
+      "last_scanned": "2026-10-03T14:38:09.659836+00:00",
       "created_at": "2026-10-02T09:32:47.938786+00:00"
     },
     {
@@ -67,7 +67,7 @@
       "bounty_tier": "cash",
       "max_bounty": 25000,
       "state": "active",
-      "last_scanned": "2026-10-03T11:41:55.327552+00:00",
+      "last_scanned": "2026-10-03T14:38:10.941190+00:00",
       "created_at": "2026-10-02T09:32:47.938788+00:00"
     },
     {
@@ -84,7 +84,7 @@
       "bounty_tier": "cash",
       "max_bounty": 30000,
       "state": "active",
-      "last_scanned": "2026-10-03T11:41:55.972645+00:00",
+      "last_scanned": "2026-10-03T14:38:12.207882+00:00",
       "created_at": "2026-10-03T10:52:00.000000+00:00"
     },
     {
@@ -100,7 +100,7 @@
       "bounty_tier": "cash",
       "max_bounty": 50000,
       "state": "active",
-      "last_scanned": "2026-10-03T11:41:56.601514+00:00",
+      "last_scanned": "2026-10-03T14:38:12.876812+00:00",
       "created_at": "2026-10-03T10:52:00.000000+00:00"
     },
     {
@@ -117,7 +117,7 @@
       "bounty_tier": "cash",
       "max_bounty": 30000,
       "state": "active",
-      "last_scanned": "2026-10-03T11:41:56.869926+00:00",
+      "last_scanned": "2026-10-03T14:38:14.057150+00:00",
       "created_at": "2026-10-03T10:52:00.000000+00:00"
     },
     {
@@ -133,7 +133,7 @@
       "bounty_tier": "cash",
       "max_bounty": 30000,
       "state": "active",
-      "last_scanned": "2026-10-03T11:41:58.170367+00:00",
+      "last_scanned": "2026-10-03T14:38:15.747676+00:00",
       "created_at": "2026-10-03T10:52:00.000000+00:00"
     },
     {
@@ -149,7 +149,7 @@
       "bounty_tier": "cash",
       "max_bounty": 50000,
       "state": "active",
-      "last_scanned": "2026-10-03T11:41:58.725974+00:00",
+      "last_scanned": "2026-10-03T14:38:16.329688+00:00",
       "created_at": "2026-10-03T10:52:00.000000+00:00"
     },
     {
@@ -166,7 +166,7 @@
       "bounty_tier": "cash",
       "max_bounty": 20000,
       "state": "active",
-      "last_scanned": "2026-10-03T11:41:59.050116+00:00",
+      "last_scanned": "2026-10-03T14:38:17.568055+00:00",
       "created_at": "2026-10-03T10:52:00.000000+00:00"
     },
     {
@@ -181,7 +181,7 @@
       "bounty_tier": "cash",
       "max_bounty": 15000,
       "state": "active",
-      "last_scanned": "2026-10-03T11:41:59.437627+00:00",
+      "last_scanned": "2026-10-03T14:38:17.963451+00:00",
       "created_at": "2026-10-02T09:32:47.938791+00:00"
     },
     {
@@ -200,7 +200,7 @@
       "bounty_tier": "points",
       "max_bounty": 0,
       "state": "active",
-      "last_scanned": "2026-10-03T11:42:13.030972+00:00",
+      "last_scanned": "2026-10-03T14:38:31.237336+00:00",
       "created_at": "2026-10-03T11:00:00.000000+00:00"
     },
     {
@@ -218,7 +218,7 @@
       "bounty_tier": "cash",
       "max_bounty": 25000,
       "state": "active",
-      "last_scanned": "2026-10-03T11:42:14.236843+00:00",
+      "last_scanned": "2026-10-03T14:38:32.947052+00:00",
       "created_at": "2026-10-03T11:00:00.000000+00:00"
     },
     {
@@ -235,7 +235,7 @@
       "bounty_tier": "cash",
       "max_bounty": 20000,
       "state": "active",
-      "last_scanned": "2026-10-03T11:42:14.563427+00:00",
+      "last_scanned": "2026-10-03T14:38:34.141117+00:00",
       "created_at": "2026-10-03T11:00:00.000000+00:00"
     },
     {
@@ -252,7 +252,7 @@
       "bounty_tier": "cash",
       "max_bounty": 15000,
       "state": "active",
-      "last_scanned": "2026-10-03T11:42:15.430767+00:00",
+      "last_scanned": "2026-10-03T14:38:35.108600+00:00",
       "created_at": "2026-10-03T11:00:00.000000+00:00"
     },
     {
@@ -309,7 +309,7 @@
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": null,
+      "last_scanned": "2026-10-03T14:39:23.310207+00:00",
       "created_at": "2026-10-03T11:56:14.045652+00:00"
     },
     {
@@ -399,7 +399,7 @@
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": null,
+      "last_scanned": "2026-10-03T14:40:00.220848+00:00",
       "created_at": "2026-10-03T11:56:14.045828+00:00"
     },
     {
@@ -458,7 +458,7 @@
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": "2026-10-03T11:57:03.874181+00:00",
+      "last_scanned": "2026-10-03T14:40:15.952154+00:00",
       "created_at": "2026-10-03T11:56:14.045946+00:00"
     },
     {
@@ -525,7 +525,7 @@
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": null,
+      "last_scanned": "2026-10-03T14:40:29.725208+00:00",
       "created_at": "2026-10-03T11:56:14.046062+00:00"
     },
     {
@@ -570,7 +570,7 @@
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": null,
+      "last_scanned": "2026-10-03T14:40:41.523974+00:00",
       "created_at": "2026-10-03T11:56:14.046145+00:00"
     },
     {
@@ -650,7 +650,7 @@
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": null,
+      "last_scanned": "2026-10-03T14:41:06.247247+00:00",
       "created_at": "2026-10-03T11:56:14.046290+00:00"
     },
     {
@@ -704,7 +704,7 @@
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": null,
+      "last_scanned": "2026-10-03T14:41:14.166919+00:00",
       "created_at": "2026-10-03T11:56:14.046375+00:00"
     },
     {
@@ -733,7 +733,7 @@
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": null,
+      "last_scanned": "2026-10-03T14:41:21.167037+00:00",
       "created_at": "2026-10-03T11:56:14.046412+00:00"
     },
     {
@@ -781,7 +781,7 @@
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": null,
+      "last_scanned": "2026-10-03T14:41:28.774779+00:00",
       "created_at": "2026-10-03T11:56:14.046484+00:00"
     },
     {
@@ -811,7 +811,7 @@
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": null,
+      "last_scanned": "2026-10-03T14:41:35.686914+00:00",
       "created_at": "2026-10-03T11:56:14.046519+00:00"
     },
     {
