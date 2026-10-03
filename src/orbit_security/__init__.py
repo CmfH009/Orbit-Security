@@ -27,6 +27,11 @@ from orbit_security.recon_harvester import (
     ArchiveHarvester,
     JsRouteExtractor,
 )
+from orbit_security.cloud_sentinels import (
+    CloudBucketTakeoverSentinel,
+    GraphQLIntrospectionSentinel,
+    CorsMisconfigurationSentinel,
+)
 
 __all__ = [
     "AgencyBranding",
@@ -56,6 +61,9 @@ __all__ = [
     "CertificateTransparencyStreamer",
     "ArchiveHarvester",
     "JsRouteExtractor",
+    "CloudBucketTakeoverSentinel",
+    "GraphQLIntrospectionSentinel",
+    "CorsMisconfigurationSentinel",
     "hello",
 ]
 
