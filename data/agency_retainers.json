@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-10-02T09:32:43.846091+00:00",
+  "updated_at": "2026-10-05T01:06:02.934725+00:00",
   "agencies": [
     {
       "agency_id": "eastside-co",
@@ -168,6 +168,99 @@
       "stripe_subscription_id": null,
       "sla_guarantee": "99.9% Perimeter Uptime & <15-Min Takeover Alert Guarantee",
       "created_at": "2026-10-02T09:32:43.845508+00:00",
+      "last_audit_at": null
+    },
+    {
+      "agency_id": "wholegrain-digital",
+      "agency_name": "Wholegrain Digital",
+      "tier": "Scale",
+      "monthly_price": 499,
+      "custom_domain": "security.wholegraindigital.com",
+      "agency_tagline": "Managed Web & Security Operations",
+      "primary_color": "#0F172A",
+      "accent_color": "#3B82F6",
+      "support_email": "eat@wholegraindigital.com",
+      "website": "https://example.com",
+      "logo_svg": null,
+      "client_domains": [
+        {
+          "domain": "climbingtrees.com",
+          "client_name": "Climbing Trees",
+          "status": "active",
+          "last_score": 100,
+          "last_grade": "A+",
+          "critical_findings": 0,
+          "high_findings": 0,
+          "medium_findings": 0,
+          "last_scanned": null
+        }
+      ],
+      "billing_status": "active",
+      "stripe_subscription_id": null,
+      "sla_guarantee": "99.9% Perimeter Uptime & <15-Min Takeover Alert Guarantee",
+      "created_at": "2026-10-05T01:05:30.052202+00:00",
+      "last_audit_at": null
+    },
+    {
+      "agency_id": "moove-agency",
+      "agency_name": "Moove Agency",
+      "tier": "Scale",
+      "monthly_price": 499,
+      "custom_domain": "security.mooveagency.com",
+      "agency_tagline": "Managed Web & Security Operations",
+      "primary_color": "#0F172A",
+      "accent_color": "#3B82F6",
+      "support_email": "info@mooveagency.com",
+      "website": "https://example.com",
+      "logo_svg": null,
+      "client_domains": [
+        {
+          "domain": "charityjob.co.uk",
+          "client_name": "CharityJob UK",
+          "status": "active",
+          "last_score": 100,
+          "last_grade": "A+",
+          "critical_findings": 0,
+          "high_findings": 0,
+          "medium_findings": 0,
+          "last_scanned": null
+        }
+      ],
+      "billing_status": "active",
+      "stripe_subscription_id": null,
+      "sla_guarantee": "99.9% Perimeter Uptime & <15-Min Takeover Alert Guarantee",
+      "created_at": "2026-10-05T01:05:41.886322+00:00",
+      "last_audit_at": null
+    },
+    {
+      "agency_id": "propeller",
+      "agency_name": "Propeller",
+      "tier": "Scale",
+      "monthly_price": 499,
+      "custom_domain": "security.propeller.co.uk",
+      "agency_tagline": "Managed Web & Security Operations",
+      "primary_color": "#0F172A",
+      "accent_color": "#3B82F6",
+      "support_email": "info@propeller.co.uk",
+      "website": "https://example.com",
+      "logo_svg": null,
+      "client_domains": [
+        {
+          "domain": "cotswoldsdistillery.com",
+          "client_name": "Cotswolds Distillery",
+          "status": "active",
+          "last_score": 100,
+          "last_grade": "A+",
+          "critical_findings": 0,
+          "high_findings": 0,
+          "medium_findings": 0,
+          "last_scanned": null
+        }
+      ],
+      "billing_status": "active",
+      "stripe_subscription_id": null,
+      "sla_guarantee": "99.9% Perimeter Uptime & <15-Min Takeover Alert Guarantee",
+      "created_at": "2026-10-05T01:05:55.938905+00:00",
       "last_audit_at": null
     }
   ]

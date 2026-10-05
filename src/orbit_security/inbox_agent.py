@@ -20,6 +20,7 @@ class LeadIntent(str, Enum):
     INQUIRY_PRICING = "INQUIRY_PRICING"
     INQUIRY_TECHNICAL = "INQUIRY_TECHNICAL"
     NOT_INTERESTED = "NOT_INTERESTED"
+    AUTO_REPLY_OR_TICKET = "AUTO_REPLY_OR_TICKET"
     UNCLEAR = "UNCLEAR"
 
 
@@ -87,14 +88,30 @@ class InboxAgent:
         with open(self.state_file, "w", encoding="utf-8") as f:
             json.dump(self.state, f, indent=2)
 
-    def classify_intent(self, text: str) -> LeadIntent:
+    def classify_intent(self, text: str, subject: str = "") -> LeadIntent:
         lower = text.lower()
+        sub_lower = subject.lower()
+        combined = f"{sub_lower} {lower}"
 
-        # Check for unsubscribe / not interested first
+        # 1. Detect auto-replies, ticketing acknowledgements, out-of-office FIRST
+        auto_ticket_signals = [
+            "support request received", "support terms", "out of office", "autoreply", "auto-reply",
+            "automatic reply", "delivery status", "mailer-daemon", "failure notice", "undeliverable",
+            "reception team", "nl reception", "we will review your request",
+            "has been received and will be reviewed", "please allow up to 24 hours",
+            "ticket created", "ticket #", "do not reply to this email",
+            "this email is a service from", "limited scope of support",
+            "position to the bottom of our queue", "i am currently away",
+            "i will be out of the office", "thank you for contacting"
+        ]
+        if any(sig in combined for sig in auto_ticket_signals) or re.search(r"\b(query-\d+|ticket\s*#?\d+)\b", combined):
+            return LeadIntent.AUTO_REPLY_OR_TICKET
+
+        # 2. Check for unsubscribe / not interested
         if any(w in lower for w in ["unsubscribe", "not interested", "remove me", "don't email", "do not email", "already have", "stop emailing"]):
             return LeadIntent.NOT_INTERESTED
 
-        # Check for explicit request to speak with a human, phone call, Zoom, or Carson directly
+        # 3. Check for explicit request to speak with a human, phone call, Zoom, or Carson directly
         human_signals = [
             "talk to a human", "speak to a human", "speak with a human", "real person",
             "human being", "talk to carson", "speak with carson", "call me", "phone number",
@@ -106,18 +123,18 @@ class InboxAgent:
         if any(h in lower for h in human_signals):
             return LeadIntent.REQUEST_HUMAN
 
-        # Ready to buy / sign up / send payment link / payment methods
+        # 4. Ready to buy / sign up / send payment link / payment methods (strictly word-boundary for short tokens)
         buy_signals = [
             "payment link", "send over the payment", "how do we sign up", "sign up", 
             "get started", "stripe", "invoice", "ready to buy", "onboard", "want to buy",
-            "send details to pay", "send payment", "ready to move forward", "wire", "ach",
+            "send details to pay", "send payment", "ready to move forward",
             "bank transfer", "direct deposit", "chime", "how can i pay", "how do we pay",
             "payment method", "credit card", "debit card"
         ]
-        if any(s in lower for s in buy_signals):
+        if any(s in lower for s in buy_signals) or re.search(r"\b(wire|ach|pay)\b", lower):
             return LeadIntent.READY_TO_BUY
 
-        # Pricing inquiry
+        # 5. Pricing inquiry
         pricing_signals = [
             "how much", "what are your prices", "pricing", "cost", "retainer", 
             "what does it cost", "pricing tiers", "rates"
@@ -125,7 +142,7 @@ class InboxAgent:
         if any(s in lower for s in pricing_signals):
             return LeadIntent.INQUIRY_PRICING
 
-        # Technical questions / mechanism / white-label partnerships
+        # 6. Technical questions / mechanism / white-label partnerships
         tech_signals = [
             "how did you", "how does", "dmarc", "scanner", "automated", "port scan", 
             "branding", "customize", "false positive", "cname", "hsts", "subdomain",
@@ -140,10 +157,14 @@ class InboxAgent:
         self, sender_email: str, subject: str, message_body: str
     ) -> Tuple[str, bool]:
         """Processes message body, determines response, and triggers operator escalation if ready to buy or human requested."""
-        intent = self.classify_intent(message_body)
+        intent = self.classify_intent(message_body, subject=subject)
         needs_escalation = False
         reply_text = ""
         lower = message_body.lower()
+
+        if intent == LeadIntent.AUTO_REPLY_OR_TICKET:
+            # Strictly do not auto-reply or escalate automated ticketing receipts
+            return "", False
 
         if intent == LeadIntent.REQUEST_HUMAN:
             needs_escalation = True
@@ -417,51 +438,76 @@ class InboxAgent:
                     if payload:
                         body = payload.decode("utf-8", errors="ignore")
 
-                # Strict Filter: Must be from a target agency or explicitly reference AgencySentry outreach
-
-                is_agency_outreach = (
-                    any(kw in subject.lower() for kw in self.known_keywords)
-                    or any(dom in clean_email.lower() for dom in self.known_agency_domains)
-                    or "charle.co.uk" in clean_email.lower()
-                )
-
-                if not is_agency_outreach:
-                    # Ignore unrelated personal, newsletter, or billing emails
-                    continue
-
                 if clean_email == self.operator_email:
                     # Ignore emails from ourselves
                     continue
 
-                # Detect delivery failure / bounce notifications
-                is_bounce = "delivery status" in subject.lower() or "mailer-daemon" in clean_email.lower()
+                # 1. Detect delivery failure / bounce notifications FIRST
+                is_bounce = (
+                    "delivery status" in subject.lower()
+                    or "undeliverable" in subject.lower()
+                    or "mailer-daemon" in clean_email.lower()
+                    or "postmaster" in clean_email.lower()
+                )
                 if is_bounce:
                     failed_match = re.findall(r"([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)", body)
-                    bounced_target = next((e for e in failed_match if e != self.operator_email and "google" not in e), "unknown")
+                    bounced_target = next((e for e in failed_match if e.lower() != self.operator_email.lower() and "google" not in e.lower() and "mailer-daemon" not in e.lower()), "unknown").lower()
 
                     print(f"    [!] Detected bounce notification for: {bounced_target}")
 
-                    # Judgement Logic:
-                    # If the bounce is an internal forwarder (e.g. alice@charle.co.uk) from an agency where the primary was delivered
-                    if "charle.co.uk" in bounced_target:
-                        print(f"    [✔ Judgement] Internal forwarder alias ({bounced_target}) failed, but founder (andre@charle.co.uk) received. No follow-up needed.")
-                        verdict = "FORWARDER_BOUNCE_FOUNDER_RECEIVED"
-                    else:
-                        print(f"    [✂ Judgement] Primary address {bounced_target} bounced. Pruning from active outreach to protect sender reputation.")
-                        verdict = "HARD_BOUNCE_PRUNED"
+                    # Prune from active outreach and update dispatched campaigns
+                    dispatched_file = os.path.join(os.path.dirname(__file__), "..", "..", "data", "dispatched_campaigns.json")
+                    if os.path.exists(dispatched_file):
+                        try:
+                            with open(dispatched_file, "r", encoding="utf-8") as df:
+                                disp_data = json.load(df)
+                            domain = bounced_target.split("@")[-1]
+                            for d_k, d_v in disp_data.items():
+                                if d_k == domain or d_v.get("contact_email", "").lower() == bounced_target:
+                                    disp_data[d_k]["status"] = "BOUNCED"
+                                    disp_data[d_k]["bounced_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+                                    disp_data[d_k]["bounce_reason"] = "Address not found / 550 Mailbox unavailable"
+                            with open(dispatched_file, "w", encoding="utf-8") as df:
+                                json.dump(disp_data, df, indent=2)
+                        except Exception as e:
+                            print(f"[!] Error updating dispatched campaigns for bounce: {e}")
 
                     self.state[message_key] = {
                         "sender": clean_email,
                         "bounced_target": bounced_target,
                         "subject": subject,
                         "intent": "BOUNCE",
-                        "verdict": verdict,
+                        "verdict": "HARD_BOUNCE_PRUNED",
                         "escalated": False,
                     }
                     self._save_state()
                     continue
 
-                # Filter out system and automated out-of-office notices
+                # 2. Strict Filter: Must be from a target agency or explicitly reference AgencySentry outreach
+                is_agency_outreach = (
+                    any(kw in subject.lower() for kw in self.known_keywords)
+                    or any(dom in clean_email.lower() for dom in self.known_agency_domains)
+                    or "charle.co.uk" in clean_email.lower()
+                    or any(tick in clean_email.lower() for tick in ["support@", "hello@", "receptie@"])
+                )
+
+                if not is_agency_outreach:
+                    # Ignore unrelated personal, newsletter, or billing emails
+                    continue
+
+                # 3. Filter out system, ticketing acknowledgements, and automated out-of-office notices
+                intent = self.classify_intent(body, subject=subject)
+                if intent == LeadIntent.AUTO_REPLY_OR_TICKET:
+                    print(f"    [-] Detected ticket system / auto-reply from: {clean_email} ({subject}). Logged, skipping auto-reply.")
+                    self.state[message_key] = {
+                        "sender": clean_email,
+                        "subject": subject,
+                        "intent": "TICKET_ACKNOWLEDGED",
+                        "escalated": False,
+                    }
+                    self._save_state()
+                    continue
+
                 is_auto_response = any(w in subject.lower() for w in [
                     "out of office", "automatic reply", "undeliverable"
                 ]) or any(w in clean_email.lower() for w in [

@@ -1,0 +1,217 @@
+{
+  "swankyagency.com": {
+    "bounced_email": "hello@swankyagency.com",
+    "agency_name": "Swanky",
+    "date": "Fri, 02 Oct 2026 01:37:35 -0700 (PDT)"
+  },
+  "anatta.io": {
+    "bounced_email": "hello@anatta.io",
+    "agency_name": "Anatta",
+    "date": "Sat, 26 Sep 2026 20:13:26 -0700 (PDT)"
+  },
+  "fostr.online": {
+    "bounced_email": "hello@fostr.online",
+    "agency_name": "Fostr",
+    "date": "Sat, 26 Sep 2026 20:14:04 -0700 (PDT)"
+  },
+  "guidance.com": {
+    "bounced_email": "info@guidance.com",
+    "agency_name": "Guidance",
+    "date": "Sat, 26 Sep 2026 20:15:01 -0700 (PDT)"
+  },
+  "bva.com": {
+    "bounced_email": "info@bva.com",
+    "agency_name": "BVA Agency",
+    "date": "Sun, 04 Oct 2026 13:54:24 -0700 (PDT)"
+  },
+  "fuelmade.com": {
+    "bounced_email": "hello@fuelmade.com",
+    "agency_name": "Fuel Made",
+    "date": "Sun, 04 Oct 2026 13:56:33 -0700 (PDT)"
+  },
+  "pointercreative.com": {
+    "bounced_email": "hello@pointercreative.com",
+    "agency_name": "Pointer Creative",
+    "date": "Sun, 04 Oct 2026 13:57:23 -0700 (PDT)"
+  },
+  "avexdesigns.com": {
+    "bounced_email": "hello@avexdesigns.com",
+    "agency_name": "Avex Designs",
+    "date": "Sun, 04 Oct 2026 13:58:13 -0700 (PDT)"
+  },
+  "scoutside.com": {
+    "bounced_email": "hello@scoutside.com",
+    "agency_name": "Scoutside",
+    "date": "Sun, 04 Oct 2026 13:58:30 -0700 (PDT)"
+  },
+  "askphill.com": {
+    "bounced_email": "hello@askphill.com",
+    "agency_name": "Ask Phill",
+    "date": "Sun, 04 Oct 2026 13:59:46 -0700 (PDT)"
+  },
+  "woolman.io": {
+    "bounced_email": "hello@woolman.io",
+    "agency_name": "Woolman",
+    "date": "Sun, 04 Oct 2026 13:59:56 -0700 (PDT)"
+  },
+  "webdevstudios.com": {
+    "bounced_email": "info@webdevstudios.com",
+    "agency_name": "WebDevStudios",
+    "date": "Sun, 04 Oct 2026 14:01:07 -0700 (PDT)"
+  },
+  "electricenjin.com": {
+    "bounced_email": "hello@electricenjin.com",
+    "agency_name": "Electric Enjin",
+    "date": "Sun, 04 Oct 2026 14:01:51 -0700 (PDT)"
+  },
+  "fourkitchens.com": {
+    "bounced_email": "info@fourkitchens.com",
+    "agency_name": "Four Kitchens",
+    "date": "Sun, 04 Oct 2026 14:02:20 -0700 (PDT)"
+  },
+  "palantir.net": {
+    "bounced_email": "inquire@palantir.net",
+    "agency_name": "Palantir.net",
+    "date": "Sun, 04 Oct 2026 14:02:49 -0700 (PDT)"
+  },
+  "chromatichq.com": {
+    "bounced_email": "hello@chromatichq.com",
+    "agency_name": "Chromatic",
+    "date": "Sun, 04 Oct 2026 14:03:10 -0700 (PDT)"
+  },
+  "ffw.com": {
+    "bounced_email": "hello@ffw.com",
+    "agency_name": "FFW Agency",
+    "date": "Sun, 04 Oct 2026 14:03:35 -0700 (PDT)"
+  },
+  "bounteous.com": {
+    "bounced_email": "info@bounteous.com",
+    "agency_name": "Bounteous",
+    "date": "Sun, 4 Oct 2026 21:03:50 +0000"
+  },
+  "vml.com": {
+    "bounced_email": "contact@vml.com",
+    "agency_name": "VML Commerce",
+    "date": "Sun, 04 Oct 2026 14:05:04 -0700 (PDT)"
+  },
+  "rga.com": {
+    "bounced_email": "info@rga.com",
+    "agency_name": "R/GA",
+    "date": "Sun, 04 Oct 2026 14:06:56 -0700 (PDT)"
+  },
+  "work.co": {
+    "bounced_email": "hello@work.co",
+    "agency_name": "Work & Co",
+    "date": "Sun, 04 Oct 2026 14:07:50 -0700 (PDT)"
+  },
+  "fantasy.co": {
+    "bounced_email": "hello@fantasy.co",
+    "agency_name": "Fantasy Interactive",
+    "date": "Sun, 04 Oct 2026 14:08:04 -0700 (PDT)"
+  },
+  "area17.com": {
+    "bounced_email": "info@area17.com",
+    "agency_name": "AREA 17",
+    "date": "Sun, 04 Oct 2026 14:10:06 -0700 (PDT)"
+  },
+  "codeandtheory.com": {
+    "bounced_email": "hello@codeandtheory.com",
+    "agency_name": "Code and Theory",
+    "date": "Sun, 04 Oct 2026 14:10:35 -0700 (PDT)"
+  },
+  "ideo.com": {
+    "bounced_email": "info@ideo.com",
+    "agency_name": "Ideo",
+    "date": "Sun, 04 Oct 2026 14:11:12 -0700 (PDT)"
+  },
+  "dockyard.com": {
+    "bounced_email": "inquiries@dockyard.com",
+    "agency_name": "DockYard",
+    "date": "Sun, 04 Oct 2026 14:11:42 -0700 (PDT)"
+  },
+  "basicagency.com": {
+    "bounced_email": "hello@basicagency.com",
+    "agency_name": "BASIC/DEPT",
+    "date": "Sun, 04 Oct 2026 14:12:56 -0700 (PDT)"
+  },
+  "ironpaper.com": {
+    "bounced_email": "inquiry@ironpaper.com",
+    "agency_name": "Ironpaper",
+    "date": "Sun, 04 Oct 2026 14:13:50 -0700 (PDT)"
+  },
+  "majortom.com": {
+    "bounced_email": "search@majortom.com",
+    "agency_name": "Major Tom",
+    "date": "Sun, 04 Oct 2026 14:20:11 -0700 (PDT)"
+  },
+  "heco.design": {
+    "bounced_email": "hello@heco.design",
+    "agency_name": "Heco Studio",
+    "date": "Sun, 04 Oct 2026 14:25:07 -0700 (PDT)"
+  },
+  "immersive-g.com": {
+    "bounced_email": "contact@immersive-g.com",
+    "agency_name": "Immersive Garden",
+    "date": "Sun, 04 Oct 2026 14:41:38 -0700 (PDT)"
+  },
+  "activetheory.net": {
+    "bounced_email": "contact@activetheory.net",
+    "agency_name": "Active Theory",
+    "date": "Sun, 04 Oct 2026 14:42:20 -0700 (PDT)"
+  },
+  "b-reel.com": {
+    "bounced_email": "hello@b-reel.com",
+    "agency_name": "B-Reel",
+    "date": "Sun, 04 Oct 2026 14:43:52 -0700 (PDT)"
+  },
+  "goodface.agency": {
+    "bounced_email": "hello@goodface.agency",
+    "agency_name": "Goodface Agency",
+    "date": "Sun, 04 Oct 2026 14:44:08 -0700 (PDT)"
+  },
+  "juno-ecommerce.co.uk": {
+    "bounced_email": "hello@juno-ecommerce.co.uk",
+    "agency_name": "Juno E-Commerce",
+    "date": "Sun, 04 Oct 2026 14:45:29 -0700 (PDT)"
+  },
+  "thedylanagency.com": {
+    "bounced_email": "hello@thedylanagency.com",
+    "agency_name": "The Dylan Agency",
+    "date": "Sun, 04 Oct 2026 14:46:40 -0700 (PDT)"
+  },
+  "danmall.com": {
+    "bounced_email": "hello@danmall.com",
+    "agency_name": "Dan Mall Studio",
+    "date": "Sun, 04 Oct 2026 14:47:54 -0700 (PDT)"
+  },
+  "eightshapes.com": {
+    "bounced_email": "info@eightshapes.com",
+    "agency_name": "EightShapes",
+    "date": "Sun, 04 Oct 2026 14:48:06 -0700 (PDT)"
+  },
+  "paravelinc.com": {
+    "bounced_email": "hello@paravelinc.com",
+    "agency_name": "Paravel",
+    "date": "Sun, 04 Oct 2026 14:48:24 -0700 (PDT)"
+  },
+  "diffagency.com": {
+    "bounced_email": "info@diffagency.com",
+    "agency_name": "Diff Agency",
+    "date": "Sun, 04 Oct 2026 14:48:52 -0700 (PDT)"
+  },
+  "thepapayagroup.com": {
+    "bounced_email": "hello@thepapayagroup.com",
+    "agency_name": "The Papaya Group",
+    "date": "Sun, 04 Oct 2026 14:49:04 -0700 (PDT)"
+  },
+  "hook42.com": {
+    "bounced_email": "info@hook42.com",
+    "agency_name": "Hook 42",
+    "date": "Sun, 04 Oct 2026 14:49:35 -0700 (PDT)"
+  },
+  "bvaccel.com": {
+    "bounced_email": "hello@bvaccel.com",
+    "agency_name": "BVAccel",
+    "date": "Sun, 04 Oct 2026 14:50:45 -0700 (PDT)"
+  }
+}

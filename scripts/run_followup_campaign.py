@@ -89,9 +89,21 @@ def get_eligible_followups(
     # Map prospect indices for cohort filtering (1-indexed cohorts of 10)
     prospect_order = [p.get("agency_domain") for p in prospects]
 
+    # Load bounced agencies dynamically
+    bounced_path = DATA_DIR / "bounced_agencies.json"
+    dynamic_bounced = set()
+    if bounced_path.exists():
+        try:
+            with open(bounced_path, "r", encoding="utf-8") as bf:
+                dynamic_bounced = set(json.load(bf).keys())
+        except Exception:
+            pass
+
     for agency_domain, info in dispatched.items():
-        # Exclude hard bounces
-        if agency_domain in EXCLUDED_BOUNCE_DOMAINS:
+        # Exclude hard bounces and non-sent statuses
+        if agency_domain in EXCLUDED_BOUNCE_DOMAINS or agency_domain in dynamic_bounced:
+            continue
+        if info.get("status") == "BOUNCED":
             continue
 
         # Exclude already followed up

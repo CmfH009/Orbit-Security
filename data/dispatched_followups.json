@@ -118,5 +118,149 @@
     "followup_dispatched_at": "2026-10-02 02:38:09",
     "bump_number": 1,
     "status": "SENT"
+  },
+  "wholegraindigital.com": {
+    "agency_name": "Wholegrain Digital",
+    "contact_email": "eat@wholegraindigital.com",
+    "client_domain": "climbingtrees.com",
+    "followup_dispatched_at": "2026-10-04 18:49:21",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "mooveagency.com": {
+    "agency_name": "Moove Agency",
+    "contact_email": "info@mooveagency.com",
+    "client_domain": "charityjob.co.uk",
+    "followup_dispatched_at": "2026-10-04 18:49:25",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "steadfastcollective.com": {
+    "agency_name": "Steadfast Collective",
+    "contact_email": "hello@steadfastcollective.com",
+    "client_domain": "adoptium.net",
+    "followup_dispatched_at": "2026-10-04 18:49:29",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "tinyfrog.com": {
+    "agency_name": "Tiny Frog Technologies",
+    "contact_email": "info@tinyfrog.com",
+    "client_domain": "definefinancial.com",
+    "followup_dispatched_at": "2026-10-04 18:49:32",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "electriceye.io": {
+    "agency_name": "Electric Eye",
+    "contact_email": "info@electriceye.io",
+    "client_domain": "giordanos.com",
+    "followup_dispatched_at": "2026-10-04 18:49:36",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "propeller.co.uk": {
+    "agency_name": "Propeller",
+    "contact_email": "info@propeller.co.uk",
+    "client_domain": "cotswoldsdistillery.com",
+    "followup_dispatched_at": "2026-10-04 18:49:51",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "neverbland.com": {
+    "agency_name": "NEVERBLAND",
+    "contact_email": "hello@neverbland.com",
+    "client_domain": "mothdrinks.com",
+    "followup_dispatched_at": "2026-10-04 18:49:55",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "alley.com": {
+    "agency_name": "Alley",
+    "contact_email": "info@alley.com",
+    "client_domain": "suntimes.com",
+    "followup_dispatched_at": "2026-10-04 18:49:58",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "tri.be": {
+    "agency_name": "Modern Tribe",
+    "contact_email": "hello@tri.be",
+    "client_domain": "littleleague.org",
+    "followup_dispatched_at": "2026-10-04 18:50:02",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "rtcamp.com": {
+    "agency_name": "rtCamp",
+    "contact_email": "sales@rtcamp.com",
+    "client_domain": "readylogistics.com",
+    "followup_dispatched_at": "2026-10-04 18:50:06",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "impressiondigital.com": {
+    "agency_name": "Impression",
+    "contact_email": "hello@impressiondigital.com",
+    "client_domain": "abigailahern.com",
+    "followup_dispatched_at": "2026-10-04 18:50:18",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "verbalplusvisual.com": {
+    "agency_name": "Verbal+Visual",
+    "contact_email": "hello@verbalplusvisual.com",
+    "client_domain": "carawayhome.com",
+    "followup_dispatched_at": "2026-10-04 18:50:22",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "growthspark.com": {
+    "agency_name": "Growth Spark",
+    "contact_email": "hello@growthspark.com",
+    "client_domain": "johnnycupcakes.com",
+    "followup_dispatched_at": "2026-10-04 18:50:26",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "loungelizard.com": {
+    "agency_name": "Lounge Lizard",
+    "contact_email": "sales@loungelizard.com",
+    "client_domain": "broadway.com",
+    "followup_dispatched_at": "2026-10-04 18:50:30",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "taoti.com": {
+    "agency_name": "Taoti Creative",
+    "contact_email": "hello@taoti.com",
+    "client_domain": "nationalgeographic.org",
+    "followup_dispatched_at": "2026-10-04 18:50:34",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "northern.co": {
+    "agency_name": "Northern Commerce",
+    "contact_email": "info@northern.co",
+    "client_domain": "rexall.ca",
+    "followup_dispatched_at": "2026-10-04 18:50:39",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "zeekinteractive.com": {
+    "agency_name": "Zeek Interactive",
+    "contact_email": "info@zeekinteractive.com",
+    "client_domain": "zeek.com",
+    "followup_dispatched_at": "2026-10-04 18:50:43",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "webfx.com": {
+    "agency_name": "WebFX",
+    "contact_email": "info@webfx.com",
+    "client_domain": "reynoldsam.com",
+    "followup_dispatched_at": "2026-10-04 18:50:47",
+    "bump_number": 1,
+    "status": "SENT"
   }
 }
