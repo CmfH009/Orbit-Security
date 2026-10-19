@@ -65,7 +65,35 @@ class ReportGenerator:
                 lines.append(f"- **Recommended Remediation:** {f.remediation}")
                 lines.append("")
 
-        # Section 3: Agency Care Plan Value Breakdown
+        # Section 3: Passive OSINT Intelligence
+        osint = audit.osint_intel or {}
+        if osint.get("bridge_available"):
+            lines.extend([
+                "---",
+                "",
+                "## 3. Passive OSINT Intelligence",
+                f"This audit cross-referenced the target against the public-apis catalog "
+                f"({osint.get('total_catalog_apis', 0)} indexed APIs) for security and OSINT-relevant "
+                f"endpoints ({osint.get('security_osint_count', 0)} in security categories).",
+                "",
+            ])
+            matches = osint.get("domain_matches", [])
+            if matches:
+                lines.append(f"### Domain-Relevant OSINT Endpoints ({len(matches)})")
+                lines.append("")
+                for m in matches[:10]:
+                    lines.append(
+                        f"- **{m.get('name', '')}** ({m.get('category', '')}) — {m.get('link', '')}"
+                    )
+                lines.append("")
+            pivot = osint.get("pivot_domains", [])
+            if pivot:
+                lines.append(f"### Pivot Domains ({len(pivot)})")
+                lines.append("")
+                lines.append(", ".join(f"`{d}`" for d in pivot[:20]))
+                lines.append("")
+
+        # Section 4: Agency Care Plan Value Breakdown
         lines.extend([
             "---",
             "",
@@ -263,6 +291,56 @@ class ReportGenerator:
                 ]))
 
                 story.append(KeepTogether([t_finding, Spacer(1, 8)]))
+
+        # PDF Section: Passive OSINT Intelligence
+        osint = audit.osint_intel or {}
+        if osint.get("bridge_available"):
+            story.append(Spacer(1, 4))
+            story.append(Paragraph("Passive OSINT Intelligence (public-apis catalog)", h2_style))
+            story.append(HRFlowable(width="100%", thickness=0.75, color=colors.HexColor("#CBD5E1"), spaceBefore=2, spaceAfter=8))
+
+            osint_summary = (
+                f"This audit cross-referenced the target against the public-apis catalog "
+                f"({osint.get('total_catalog_apis', 0)} indexed APIs) for security and OSINT-relevant "
+                f"endpoints ({osint.get('security_osint_count', 0)} in security categories)."
+            )
+            story.append(Paragraph(osint_summary, body_style))
+            story.append(Spacer(1, 6))
+
+            matches = osint.get("domain_matches", [])
+            if matches:
+                story.append(Paragraph(f"Domain-Relevant OSINT Endpoints ({len(matches)})", ParagraphStyle(
+                    "OsintSubH", parent=styles["Heading3"], fontSize=11, leading=14,
+                    fontName="Helvetica-Bold", textColor=colors.HexColor("#0F172A"), spaceBefore=6, spaceAfter=4
+                )))
+                match_rows = [[Paragraph("API", ParagraphStyle("OsintH", fontName="Helvetica-Bold", fontSize=8.5)),
+                               Paragraph("Category", ParagraphStyle("OsintH", fontName="Helvetica-Bold", fontSize=8.5)),
+                               Paragraph("Link", ParagraphStyle("OsintH", fontName="Helvetica-Bold", fontSize=8.5))]]
+                for m in matches[:10]:
+                    match_rows.append([
+                        Paragraph(m.get("name", ""), body_style),
+                        Paragraph(m.get("category", ""), body_style),
+                        Paragraph(m.get("link", ""), body_style),
+                    ])
+                t_osint = Table(match_rows, colWidths=[140, 120, 280])
+                t_osint.setStyle(TableStyle([
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F8FAFC")),
+                    ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+                    ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#E2E8F0")),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("PADDING", (0, 0), (-1, -1), 4),
+                ]))
+                story.append(t_osint)
+                story.append(Spacer(1, 6))
+
+            pivot = osint.get("pivot_domains", [])
+            if pivot:
+                pivot_text = ", ".join(f"<font face='Courier'>{d}</font>" for d in pivot[:20])
+                story.append(Paragraph(f"Pivot Domains ({len(pivot)})", ParagraphStyle(
+                    "OsintSubH2", parent=styles["Heading3"], fontSize=11, leading=14,
+                    fontName="Helvetica-Bold", textColor=colors.HexColor("#0F172A"), spaceBefore=6, spaceAfter=4
+                )))
+                story.append(Paragraph(pivot_text, body_style))
 
         story.append(Spacer(1, 12))
         story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#CBD5E1"), spaceBefore=8, spaceAfter=8))

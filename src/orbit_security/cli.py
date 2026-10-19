@@ -76,6 +76,34 @@ async def run_scan(args):
     else:
         console.print("[bold green]✔ Zero perimeter vulnerabilities detected. Domain is hardened.[/bold green]")
 
+    # Render Passive OSINT Intelligence summary
+    osint = result.osint_intel or {}
+    if osint.get("bridge_available"):
+        osint_table = Table(
+            title="Passive OSINT Intelligence (public-apis catalog)", border_style="dim"
+        )
+        osint_table.add_column("Metric", style="bold cyan")
+        osint_table.add_column("Value", style="bold white")
+        osint_table.add_row("Catalog APIs Indexed", str(osint.get("total_catalog_apis", 0)))
+        osint_table.add_row("Security / OSINT Endpoints", str(osint.get("security_osint_count", 0)))
+        osint_table.add_row("Domain Matches", str(len(osint.get("domain_matches", []))))
+        osint_table.add_row("Pivot Domains", str(len(osint.get("pivot_domains", []))))
+        console.print(osint_table)
+
+        matches = osint.get("domain_matches", [])
+        if matches:
+            match_table = Table(title="OSINT Domain Matches", border_style="green")
+            match_table.add_column("API", style="bold white", width=28)
+            match_table.add_column("Category", style="cyan", width=20)
+            match_table.add_column("Link", style="dim")
+            for m in matches[:10]:
+                match_table.add_row(
+                    m.get("name", ""),
+                    m.get("category", ""),
+                    m.get("link", ""),
+                )
+            console.print(match_table)
+
     # Export Reports
     if args.output_pdf:
         ReportGenerator.generate_pdf(result, args.output_pdf)
@@ -86,6 +114,183 @@ async def run_scan(args):
         with open(args.output_md, "w", encoding="utf-8") as f:
             f.write(md_content)
         console.print(f"[bold green]✔ Markdown audit generated:[/bold green] [underline]{os.path.abspath(args.output_md)}[/underline]")
+
+
+async def run_disclose(args):
+    """Automated bounty-radar -> disclosure pipeline.
+
+    Sweeps enrolled bug bounty programs for subdomain takeover / mail-spoofing
+    findings, generates HackerOne-compliant disclosure reports, and dispatches
+    HIGH_CONFIDENCE alerts via Discord/Slack webhooks.
+    """
+    from orbit_security.bounty_radar import (
+        BountyScopeIngester,
+        BountyRadarSupervisor,
+        BountyVulnerability,
+    )
+    from orbit_security.models import Severity
+
+    # --- Triage / view / copy / json / grade delegation -----------------------
+    if args.list or args.view or args.copy or args.json or args.grade:
+        scripts_dir = Path(__file__).resolve().parent.parent.parent / "scripts"
+        if str(scripts_dir) not in sys.path:
+            sys.path.insert(0, str(scripts_dir))
+        import triage_bounties
+
+        output_dir = Path(args.output_dir) if args.output_dir else triage_bounties.DISCLOSURES_DIR
+        disclosures = triage_bounties.load_all_disclosures(disclosures_dir=output_dir)
+
+        if args.view:
+            target = args.view.strip().lower()
+            match = next(
+                (d for d in disclosures if target in d["target_domain"].lower()), None
+            )
+            if not match:
+                console.print(
+                    f"[bold red]✘ No disclosure found matching domain '{args.view}'.[/bold red]"
+                )
+                return 1
+            console.print("\n" + match["content"] + "\n")
+            return 0
+
+        if args.copy:
+            target = args.copy.strip().lower()
+            match = next(
+                (d for d in disclosures if target in d["target_domain"].lower()), None
+            )
+            if not match:
+                console.print(
+                    f"[bold red]✘ No disclosure found matching domain '{args.copy}'.[/bold red]"
+                )
+                return 1
+            ok = triage_bounties.copy_to_clipboard(match["content"])
+            if ok:
+                console.print(
+                    f"[bold green]✔ Copied HackerOne report for '{match['target_domain']}' to clipboard![/bold green]"
+                )
+            else:
+                console.print(
+                    "[bold yellow]⚠ Could not copy automatically. Use --view to display full text.[/bold yellow]"
+                )
+            return 0
+
+        filtered = disclosures
+        if args.grade:
+            filtered = [d for d in filtered if d.get("viability") == args.grade]
+
+        if args.json:
+            export_data = [
+                {k: v for k, v in d.items() if k != "content"} for d in filtered
+            ]
+            console.print_json(data=export_data)
+            return 0
+
+        # Default: summary table (--list or no filter)
+        if not filtered:
+            console.print(
+                "[yellow]No vulnerability disclosures match the selected filter criteria.[/yellow]"
+            )
+            return 0
+        table = Table(title="Orbit Security Bug Bounty Disclosure Triage", border_style="cyan")
+        table.add_column("Viability Grade", style="bold cyan")
+        table.add_column("Target Domain", style="bold white")
+        table.add_column("Program", style="dim")
+        table.add_column("Severity", style="magenta")
+        table.add_column("Discovered Date", style="green")
+        for d in filtered:
+            grade = d.get("viability", "UNKNOWN")
+            grade_badge = (
+                f"🎯 {grade}"
+                if grade == "HIGH_CONFIDENCE"
+                else (f"⚠️ {grade}" if grade == "CONDITIONAL" else f"ℹ️ {grade}")
+            )
+            date_short = d.get("date_discovered", "")[:10]
+            table.add_row(
+                grade_badge[:18],
+                d.get("target_domain", "")[:24],
+                d.get("program", "")[:22],
+                d.get("severity", "")[:10],
+                date_short[:19],
+            )
+        console.print(table)
+        return 0
+
+    # --- Sweep -> disclose pipeline -------------------------------------------
+    ingester = BountyScopeIngester()
+    supervisor = BountyRadarSupervisor(ingester=ingester)
+
+    output_dir = Path(args.output_dir) if args.output_dir else None
+
+    with console.status("[bold green]Running bounty-radar sweep...[/bold green]"):
+        res = supervisor.run_sweep(
+            program_id=args.program,
+            force_now=args.now,
+            max_domains_per_program=args.max_targets,
+            use_passive_ct=args.passive_ct,
+            save_disclosures=True,
+            output_dir=output_dir,
+        )
+
+    if res.get("status") == "SKIPPED_OUTSIDE_WINDOW":
+        console.print(f"[bold yellow]⚠ {res.get('message')}[/bold yellow]")
+        console.print("Tip: Run with --now to bypass the off-peak restriction.")
+        return 0
+
+    programs_scanned = res.get("programs_scanned", 0)
+    vulnerabilities_found = res.get("vulnerabilities_found", 0)
+    disclosed_files = res.get("disclosed_files", [])
+
+    console.print(f"\n[bold green]✔ Sweep Completed.[/bold green]")
+    console.print(f"  • Programs Scanned:      {programs_scanned}")
+    console.print(f"  • Vulnerabilities Found: {vulnerabilities_found}")
+    if disclosed_files:
+        console.print(f"\n📄 Generated HackerOne Disclosures ({len(disclosed_files)}):")
+        for f in disclosed_files:
+            console.print(f"  - {f}")
+    else:
+        console.print(
+            "  • No new takeover or spoofing vulnerabilities detected in scanned scopes."
+        )
+
+    # Dispatch HIGH_CONFIDENCE bounty alerts via Discord/Slack webhooks.
+    programs_by_id = {p.program_id: p for p in ingester.list_programs()}
+    alert_count = 0
+    for v_dict in res.get("vulnerabilities", []):
+        if v_dict.get("bounty_viability") != "HIGH_CONFIDENCE":
+            continue
+        prog = programs_by_id.get(v_dict.get("program_id"))
+        if prog is None:
+            continue
+        sev = v_dict.get("severity")
+        if isinstance(sev, str):
+            try:
+                sev = Severity(sev)
+            except ValueError:
+                sev = Severity.HIGH
+        vuln = BountyVulnerability(**{**v_dict, "severity": sev})
+        try:
+            alert_res = supervisor.dispatch_bounty_alert(
+                vuln,
+                prog,
+                discord_webhook_url=args.webhook_discord,
+                slack_webhook_url=args.webhook_slack,
+            )
+            if alert_res.get("dispatched"):
+                alert_count += 1
+        except Exception as alert_err:  # noqa: BLE001
+            console.print(
+                f"[bold yellow]⚠ Failed to dispatch alert for {vuln.target_domain}: {alert_err}[/bold yellow]"
+            )
+
+    if alert_count:
+        console.print(
+            f"[bold green]✔ Dispatched {alert_count} HIGH_CONFIDENCE bounty alert(s).[/bold green]"
+        )
+
+    console.print(
+        "\n[dim]Run [bold]disclose --list[/bold] to review generated disclosures.[/dim]"
+    )
+    return 0
 
 
 def main():
@@ -125,6 +330,52 @@ def main():
     drafts_parser.add_argument("--open", metavar="DRAFT_ID", help="Reveal draft media attachment in Windows Explorer")
     drafts_parser.add_argument("--mark-posted", metavar="DRAFT_ID", help="Mark a draft as posted and log into history")
     drafts_parser.add_argument("--send-next", action="store_true", help="Send off the next pending staged draft")
+
+    # Disclose command (automated bounty-radar -> disclosure pipeline)
+    disclose_parser = subparsers.add_parser(
+        "disclose", help="Automated bug-bounty radar sweep and HackerOne disclosure pipeline"
+    )
+    disclose_parser.add_argument(
+        "--program", "-p", help="Specific program ID to sweep (e.g. 'shopify')"
+    )
+    disclose_parser.add_argument(
+        "--now", action="store_true", help="Force sweep immediately (bypass off-peak window)"
+    )
+    disclose_parser.add_argument(
+        "--max-targets",
+        type=int,
+        default=15,
+        help="Max expanded subdomains per wildcard scope (default: 15)",
+    )
+    disclose_parser.add_argument(
+        "--passive-ct",
+        action="store_true",
+        help="Use Certificate Transparency passive discovery (crt.sh)",
+    )
+    disclose_parser.add_argument(
+        "--output-dir",
+        default="data/disclosures",
+        help="Directory to save generated disclosures (default: data/disclosures)",
+    )
+    disclose_parser.add_argument(
+        "--webhook-discord", help="Discord webhook URL for HIGH_CONFIDENCE alerts"
+    )
+    disclose_parser.add_argument(
+        "--webhook-slack", help="Slack webhook URL for HIGH_CONFIDENCE alerts"
+    )
+    disclose_parser.add_argument(
+        "--list", action="store_true", help="List existing disclosures in data/disclosures"
+    )
+    disclose_parser.add_argument("--view", help="View full disclosure for a domain")
+    disclose_parser.add_argument("--copy", help="Copy disclosure to clipboard for a domain")
+    disclose_parser.add_argument(
+        "--json", action="store_true", help="Output disclosures as JSON"
+    )
+    disclose_parser.add_argument(
+        "--grade",
+        choices=["HIGH_CONFIDENCE", "CONDITIONAL", "INFORMATIONAL_LOW"],
+        help="Filter by bounty viability grade",
+    )
 
     args = parser.parse_args()
 
@@ -258,6 +509,10 @@ def main():
             )
         console.print(table)
         console.print(f"[dim]Markdown Deck: {mgr.deck_file}[/dim]")
+
+    elif args.command == "disclose":
+        exit_code = asyncio.run(run_disclose(args))
+        return exit_code
 
 
 def main_recon():

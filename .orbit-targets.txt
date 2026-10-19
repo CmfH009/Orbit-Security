@@ -1,0 +1,7 @@
+# Orbit Security - Perimeter Sentinel target domains
+# Only reserved/documentation domains (RFC 2606) are safe to scan by default.
+# Do NOT add real third-party production domains without explicit permission.
+example.com
+example.org
+example.net
+example.edu
