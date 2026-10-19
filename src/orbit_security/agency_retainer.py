@@ -74,6 +74,10 @@ TIER_POLICIES: Dict[RetainerTier, TierPolicy] = {
 }
 
 
+# Maximum number of per-scan snapshots retained per client site (rolling window).
+MAX_SCAN_HISTORY = 12
+
+
 @dataclass
 class AgencyClientSite:
     domain: str
@@ -85,6 +89,30 @@ class AgencyClientSite:
     high_findings: int = 0
     medium_findings: int = 0
     last_scanned: Optional[str] = None
+    # Rolling history of prior scans (oldest first). Each entry:
+    # {"score", "grade", "critical", "high", "medium", "scanned_at"}.
+    scan_history: List[Dict[str, Any]] = field(default_factory=list)
+    # Quick last-vs-current comparison (None until a second scan establishes history).
+    previous_score: Optional[int] = None
+    previous_grade: Optional[str] = None
+    score_delta: Optional[int] = None
+
+    def get_score_trend(self) -> str:
+        """Classify the score trend since the previous scan.
+
+        Returns one of:
+          - "baseline": no prior scan history, score_delta is None
+          - "improved": score_delta > 0
+          - "declined": score_delta < 0
+          - "stable":   score_delta == 0
+        """
+        if self.score_delta is None:
+            return "baseline"
+        if self.score_delta > 0:
+            return "improved"
+        if self.score_delta < 0:
+            return "declined"
+        return "stable"
 
 
 @dataclass
@@ -357,6 +385,32 @@ class AgencyRetainerManager:
 
         for site in agency.client_domains:
             if site.domain == clean_domain:
+                # Snapshot the *pre-update* values onto the rolling history first,
+                # so we can diff old vs. new before overwriting.
+                has_prior_scan = site.last_scanned is not None
+                if has_prior_scan:
+                    site.scan_history.append(
+                        {
+                            "score": site.last_score,
+                            "grade": site.last_grade,
+                            "critical": site.critical_findings,
+                            "high": site.high_findings,
+                            "medium": site.medium_findings,
+                            "scanned_at": site.last_scanned,
+                        }
+                    )
+                    # Cap the rolling window to the most recent MAX_SCAN_HISTORY entries.
+                    if len(site.scan_history) > MAX_SCAN_HISTORY:
+                        site.scan_history = site.scan_history[-MAX_SCAN_HISTORY:]
+                    site.previous_score = site.last_score
+                    site.previous_grade = site.last_grade
+                    site.score_delta = score - site.last_score
+                else:
+                    # First real scan: baseline established, no delta yet.
+                    site.previous_score = None
+                    site.previous_grade = None
+                    site.score_delta = None
+
                 site.last_score = score
                 site.last_grade = grade
                 site.critical_findings = critical_count
@@ -393,6 +447,24 @@ class AgencyPortalRenderer:
                 site.last_scanned[:16].replace("T", " ") if site.last_scanned else "Scheduled"
             )
 
+            # Per-client change indicator (delta badge + trend arrow).
+            trend = site.get_score_trend()
+            if trend == "baseline":
+                delta_html = (
+                    '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold font-mono text-gray-400 '
+                    'bg-gray-800/60 border border-gray-700" title="First scan — baseline established">baseline</span>'
+                )
+            else:
+                delta_val = int(site.score_delta or 0)
+                delta_color = "#10B981" if trend == "improved" else ("#EF4444" if trend == "declined" else "#94A3B8")
+                arrow = "↑" if trend == "improved" else ("↓" if trend == "declined" else "→")
+                sign = "+" if delta_val > 0 else ""
+                delta_html = (
+                    f'<span class="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold font-mono" '
+                    f'style="color: {delta_color}; background: {delta_color}22; border: 1px solid {delta_color}55" '
+                    f'title="Change since last scan">{arrow} {sign}{delta_val}</span>'
+                )
+
             rows_html.append(f"""
                 <tr class="border-b border-gray-800 hover:bg-gray-800/40 transition">
                     <td class="py-4 px-6 font-medium text-white flex items-center gap-3">
@@ -405,7 +477,7 @@ class AgencyPortalRenderer:
                     <td class="py-4 px-6 text-center">
                         <span class="px-2.5 py-1 rounded text-xs font-bold font-mono" style="background-color: {badge_color}22; color: {badge_color}; border: 1px solid {badge_color}55">
                             {score}/100 ({grade})
-                        </span>
+                        </span>{delta_html}
                     </td>
                     <td class="py-4 px-6 text-center">
                         <span class="text-xs font-semibold px-2 py-0.5 rounded {'text-red-400 bg-red-950/40 border border-red-800/50' if site.critical_findings > 0 else 'text-gray-400'}">
