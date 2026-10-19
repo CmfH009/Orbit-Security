@@ -1,0 +1,73 @@
+name: "Orbit Security Perimeter Sentinel"
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  perimeter-audit:
+    name: Perimeter Audit
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read target domains
+        id: targets
+        shell: bash
+        run: |
+          TARGETS_FILE=".orbit-targets.txt"
+          TARGETS=""
+          OUTPUT_TARGETS_FILE=""
+
+          if [ -f "$TARGETS_FILE" ]; then
+            # Strip full-line comments, inline comments, blank lines; trim whitespace.
+            TARGETS=$(grep -v '^\s*#' "$TARGETS_FILE" \
+              | sed 's/#.*//' \
+              | grep -v '^\s*$' \
+              | sed 's/^\s*//;s/\s*$//')
+            OUTPUT_TARGETS_FILE="$TARGETS_FILE"
+          else
+            # Default: scan the repo's own GitHub Pages domain when a CNAME is present;
+            # otherwise fall back to the reserved documentation domain example.com.
+            DEFAULT_TARGET="example.com"
+            if [ -f "CNAME" ]; then
+              CNAME_DOMAIN=$(tr -d '[:space:]' < CNAME)
+              if [ -n "$CNAME_DOMAIN" ]; then
+                DEFAULT_TARGET="$CNAME_DOMAIN"
+              fi
+            fi
+            TARGETS="$DEFAULT_TARGET"
+            OUTPUT_TARGETS_FILE="${RUNNER_TEMP:-/tmp}/orbit-default-targets.txt"
+            printf '%s\n' "$DEFAULT_TARGET" > "$OUTPUT_TARGETS_FILE"
+          fi
+
+          # Safety fallback: never invoke the scanner with an empty target list.
+          if [ -z "$TARGETS" ]; then
+            TARGETS="example.com"
+            OUTPUT_TARGETS_FILE="${RUNNER_TEMP:-/tmp}/orbit-default-targets.txt"
+            printf '%s\n' "$TARGETS" > "$OUTPUT_TARGETS_FILE"
+          fi
+
+          {
+            echo 'targets<<EOF'
+            printf '%s\n' "$TARGETS"
+            echo 'EOF'
+            echo "targets-file=$OUTPUT_TARGETS_FILE"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Run Orbit Security Perimeter Audit
+        uses: ./
+        with:
+          targets-file: ${{ steps.targets.outputs.targets-file }}
+          fail-on-critical: 'true'
+          markdown-summary: 'true'
+          export-markdown: 'orbit-perimeter-audit.md'
+
+      - name: Upload audit report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: orbit-perimeter-audit
+          path: orbit-perimeter-audit.md

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from enum import Enum
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -39,6 +39,7 @@ class DomainAuditResult(BaseModel):
     findings: List[Finding] = Field(default_factory=list)
     subdomains_scanned: List[str] = Field(default_factory=list)
     agency_branding: AgencyBranding = Field(default_factory=AgencyBranding)
+    osint_intel: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
     def calculate_grade_and_score(self):
         penalty = 0

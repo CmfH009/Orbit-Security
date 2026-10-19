@@ -1,14 +1,17 @@
 import asyncio
 import datetime
 import ipaddress
+import logging
 import socket
 import ssl
-from typing import List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 from urllib.parse import urlparse
 import dns.asyncresolver
 import dns.exception
 import dns.resolver
 import httpx
+
+logger = logging.getLogger(__name__)
 
 from orbit_security.models import AgencyBranding, DomainAuditResult, Finding, Severity
 from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES
@@ -1163,6 +1166,18 @@ class OrbitSecurityScanner:
             for res in takeover_results:
                 if isinstance(res, Finding):
                     result.findings.append(res)
+
+            # Passive OSINT intelligence from the public-apis catalog (local file, no network to target)
+            try:
+                from orbit_security.recon_harvester import PublicAPIsIntelHarvester
+
+                osint_harvester = PublicAPIsIntelHarvester()
+                result.osint_intel = osint_harvester.harvest_public_api_intel(domain)
+                if result.osint_intel.get("error"):
+                    logger.debug("OSINT intel harvest incomplete for %s: %s", domain, result.osint_intel["error"])
+            except Exception as e:  # pragma: no cover - catalog import/read failure
+                logger.debug("OSINT intel harvest skipped for %s: %s", domain, e)
+                result.osint_intel = {"error": str(e), "bridge_available": False}
 
         result.calculate_grade_and_score()
         return result
