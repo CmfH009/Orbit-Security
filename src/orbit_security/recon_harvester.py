@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 import re
 import socket
 import ssl
@@ -19,6 +20,23 @@ import urllib.parse
 import urllib.request
 
 from orbit_security.scanner import is_safe_host
+
+# Public APIs OSINT bridge (namespace package at repo root). Import is
+# defensive: the `orbit` namespace package is importable when the repo root
+# is on sys.path (tests/dev), but optional so the recon module still loads in
+# a strictly installed src-layout production context.
+try:  # noqa: WPS501
+    from orbit.recon.public_apis_osint import (
+        PublicApisOsintBridge,
+        ApiEndpoint,
+        SECURITY_OSINT_CATEGORIES,
+    )
+    _OSINT_BRIDGE_AVAILABLE = True
+except Exception:  # pragma: no cover - production src-layout without repo root
+    PublicApisOsintBridge = None  # type: ignore[assignment]
+    ApiEndpoint = None  # type: ignore[assignment]
+    SECURITY_OSINT_CATEGORIES = frozenset()
+    _OSINT_BRIDGE_AVAILABLE = False
 
 logger = logging.getLogger("orbit_security.recon_harvester")
 
@@ -354,3 +372,90 @@ class JsRouteExtractor:
             "internal_subdomains": sorted(list(all_subs)),
             "potential_env_keys": all_keys[:10],
         }
+
+
+class PublicAPIsIntelHarvester:
+    """Passive OSINT intelligence from the public-apis directory catalog.
+
+    Queries the curated ``A:\\reference\\public-apis\\db\\resources.json``
+    catalog (1,600+ public APIs) for security/OSINT-relevant endpoints related
+    to a target domain, supporting passive recon and attack-surface pivoting
+    without sending a single packet to the target itself.
+    """
+
+    def __init__(self, db_path: Optional[Path | str] = None):
+        self.db_path = Path(db_path) if db_path else None
+        self.bridge = None
+        if _OSINT_BRIDGE_AVAILABLE:
+            try:
+                self.bridge = PublicApisOsintBridge(db_path=self.db_path)
+            except Exception as e:  # pragma: no cover - catalog missing
+                logger.debug("Public APIs OSINT bridge unavailable: %s", e)
+                self.bridge = None
+
+    def available(self) -> bool:
+        """True when the OSINT bridge and catalog could be loaded."""
+        return self.bridge is not None
+
+    def harvest_public_api_intel(
+        self,
+        apex_domain: str,
+        limit: int = 50,
+    ) -> Dict[str, Any]:
+        """Returns security/OSINT API intelligence relevant to ``apex_domain``.
+
+        Results:
+        - ``security_osint_endpoints``: catalog entries in security/anti-malware/
+          email/geocoding/URL-shortener categories (OSINT tooling).
+        - ``domain_matches``: entries whose name/description/domain/link mention
+          the target apex domain (candidate pivot/recon APIs).
+        - ``pivot_domains``: unique host domains across security/OSINT catalog
+          entries, for attack-surface expansion and passive inspection.
+        """
+        clean_apex = (apex_domain or "").strip().lower().lstrip("*.")
+        result: Dict[str, Any] = {
+            "apex_domain": clean_apex,
+            "bridge_available": self.available(),
+            "total_catalog_apis": 0,
+            "security_osint_count": 0,
+            "security_osint_endpoints": [],
+            "domain_matches": [],
+            "pivot_domains": [],
+            "error": None,
+        }
+
+        if not self.available():
+            result["error"] = "OSINT bridge unavailable"
+            return result
+        if not clean_apex or "." not in clean_apex:
+            result["error"] = "Invalid apex domain"
+            return result
+
+        try:
+            sec_osint: List[ApiEndpoint] = self.bridge.filter_security_and_osint()
+            result["total_catalog_apis"] = self.bridge.total_count
+            result["security_osint_count"] = len(sec_osint)
+            result["security_osint_endpoints"] = [
+                ep.to_dict() for ep in sec_osint[:limit]
+            ]
+
+            domain_matches: List[ApiEndpoint] = []
+            for ep in sec_osint:
+                haystack = (
+                    f"{ep.name} {ep.description} {ep.domain} {ep.link}".lower()
+                )
+                if (
+                    clean_apex in haystack
+                    or ep.domain == clean_apex
+                    or ep.domain.endswith("." + clean_apex)
+                ):
+                    domain_matches.append(ep)
+            result["domain_matches"] = [ep.to_dict() for ep in domain_matches[:limit]]
+
+            result["pivot_domains"] = sorted(
+                self.bridge.extract_domains(sec_osint)
+            )[:200]
+        except Exception as e:  # pragma: no cover - catalog read failure
+            result["error"] = str(e)
+
+        return result
