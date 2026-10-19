@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import wave
 from typing import Any, Dict, List, Optional, Tuple
 
 from orbit_security.media_generator import MediaGenerator
@@ -23,6 +24,25 @@ from orbit_security.voice_model import CatVoiceEngine, VoiceProfile
 from orbit_security.core_affinity import apply_worker_affinity
 
 logger = logging.getLogger(__name__)
+
+# Silent stereo PCM fallback rendered when the upstream TTS service is
+# unreachable (e.g. blocked network endpoint). Keeps video muxing deterministic
+# and prevents a voice outage from taking down the whole video pipeline.
+_SILENT_WAV_CACHE: Optional[Path] = None
+
+
+def _write_silent_wav(output_path: Path, duration_seconds: float = 1.0) -> Path:
+    """Writes a short silent PCM WAV to output_path using only the stdlib."""
+    sample_rate = 44100
+    channels = 1
+    sample_width = 2  # 16-bit PCM
+    n_frames = int(sample_rate * duration_seconds)
+    with wave.open(str(output_path), "wb") as wf:
+        wf.setnchannels(channels)
+        wf.setsampwidth(sample_width)
+        wf.setframerate(sample_rate)
+        wf.writeframes(b"\x00" * (n_frames * channels * sample_width))
+    return output_path
 
 
 class VideoGenerator:
@@ -53,11 +73,19 @@ class VideoGenerator:
             raw_audio = Path(tmpdir) / "voice_raw.mp3"
             helmet_audio = Path(tmpdir) / "voice_helmet.wav"
 
-            # Voice synthesis
-            self.voice_engine.synthesize_speech(
-                text=script_text,
-                output_path=raw_audio,
-            )
+            # Voice synthesis (gracefully degrade to silent audio when the TTS
+            # service is unavailable, e.g. blocked upstream endpoint, so video
+            # muxing still succeeds rather than taking down the whole pipeline)
+            try:
+                self.voice_engine.synthesize_speech(
+                    text=script_text,
+                    output_path=raw_audio,
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Voice synthesis unavailable ({e}); rendering silent audio fallback"
+                )
+                _write_silent_wav(raw_audio, duration_seconds=1.0)
 
             # Apply helmet DSP (bandpass, resonance, companding, and comms chirps)
             try:
