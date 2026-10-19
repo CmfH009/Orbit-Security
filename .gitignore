@@ -53,6 +53,7 @@ data/*.png
 data/*.mp3
 data/generated_media/
 data/generated_videos/
+data/generated_audits/
 data/briefings/
 data/disclosures/*.md
 !data/disclosures/.gitkeep
