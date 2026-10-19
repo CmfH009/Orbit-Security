@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import datetime
 import os
 import sys
 from pathlib import Path
@@ -127,6 +128,7 @@ async def run_disclose(args):
         BountyScopeIngester,
         BountyRadarSupervisor,
         BountyVulnerability,
+        OffPeakWindow,
     )
     from orbit_security.models import Severity
 
@@ -218,6 +220,67 @@ async def run_disclose(args):
     # --- Sweep -> disclose pipeline -------------------------------------------
     ingester = BountyScopeIngester()
     supervisor = BountyRadarSupervisor(ingester=ingester)
+
+    # --- Dry-run preview (no external probing) ---------------------------------
+    if args.dry_run:
+        now_utc = datetime.datetime.now(datetime.timezone.utc)
+        in_window = OffPeakWindow.is_off_peak(now_utc)
+        would_bypass = args.now or in_window
+
+        programs = (
+            [ingester.get_program(args.program)]
+            if args.program
+            else [p for p in ingester.list_programs() if p.state == "active"]
+        )
+        programs = programs[: args.max_targets] if args.program else programs[:25]
+
+        console.print("[bold yellow]DRY-RUN — no external targets will be probed[/bold yellow]\n")
+        console.print(
+            f"Off-peak window (2:00 AM - 5:00 AM MST): "
+            f"{'IN WINDOW' if in_window else 'OUTSIDE WINDOW'}  "
+            f"{'--now would bypass' if args.now else ''}"
+        )
+        console.print(
+            f"Sweep would{' ' if would_bypass else ' NOT '}execute "
+            f"{'(blocked by off-peak window; add --now to force)' if not would_bypass else ''}\n"
+        )
+
+        table = Table(title="Programs That Would Be Swept", border_style="cyan")
+        table.add_column("Program ID", style="bold cyan")
+        table.add_column("Name", style="bold white")
+        table.add_column("Platform", style="dim")
+        table.add_column("In-Scope Patterns", style="green", justify="right")
+        table.add_column("Max Targets/Program", style="magenta", justify="right")
+        total_patterns = 0
+        for prog in programs:
+            if prog is None:
+                console.print(
+                    f"[bold yellow]⚠ Program '{args.program}' not found. Skipping.[/bold yellow]"
+                )
+                continue
+            pattern_count = len(prog.in_scope)
+            total_patterns += pattern_count
+            table.add_row(
+                prog.program_id,
+                prog.name,
+                prog.platform,
+                str(pattern_count),
+                str(args.max_targets),
+            )
+        console.print(table)
+        console.print(
+            f"\nTotal in-scope patterns across {len(programs)} program(s): {total_patterns}"
+        )
+        console.print(
+            f"Disclosures would be saved to: {args.output_dir or 'data/disclosures'}"
+        )
+        console.print(
+            "HIGH_CONFIDENCE alerts would be dispatched via configured webhooks."
+        )
+        console.print(
+            "\n[dim]Remove --dry-run to execute the live sweep.[/dim]"
+        )
+        return 0
 
     output_dir = Path(args.output_dir) if args.output_dir else None
 
@@ -375,6 +438,11 @@ def main():
         "--grade",
         choices=["HIGH_CONFIDENCE", "CONDITIONAL", "INFORMATIONAL_LOW"],
         help="Filter by bounty viability grade",
+    )
+    disclose_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview what would be swept without probing external targets",
     )
 
     args = parser.parse_args()
