@@ -41,6 +41,83 @@ def is_static_hosting_domain(domain: str) -> bool:
     return clean == "github.io" or any(clean.endswith(s) for s in STATIC_HOST_SUFFIXES)
 
 
+# RFC 2606 reserved domains / TLDs that are never active production targets.
+RFC_2606_RESERVED_DOMAINS = (
+    "example.com",
+    "example.org",
+    "example.net",
+    "example.edu",
+    "example.int",
+    "example.co",
+)
+RESERVED_TLDS = (".test", ".invalid", ".localhost", ".example")
+
+# Common HTML fingerprints of generic parked / placeholder pages.
+PARKED_HTML_FINGERPRINTS = (
+    "parked",
+    "this domain is registered",
+    "buy this domain",
+    "domain parked",
+    "this domain has been parked",
+    "premium domain",
+    "available for purchase",
+    "under construction",
+)
+
+
+def is_reserved_domain(domain: str) -> bool:
+    """True for RFC 2606 reserved domains (example.com, ...) and reserved TLDs (.test, .invalid, ...)."""
+    clean = (domain or "").strip().lower().rstrip(".")
+    if not clean:
+        return False
+    if clean in RFC_2606_RESERVED_DOMAINS:
+        return True
+    labels = clean.split(".")
+    if len(labels) >= 2:
+        tld = "." + labels[-1]
+        if tld in RESERVED_TLDS:
+            return True
+    return False
+
+
+async def is_parked_or_reserved_domain(
+    domain: str, client: Optional[httpx.AsyncClient] = None
+) -> bool:
+    """True if the domain is RFC 2606 reserved or serves a generic parked page.
+
+    Reserved domains match without any network traffic. Parked detection fetches
+    the homepage and matches against common parked-page HTML fingerprints.
+    Network failures are treated as "not parked" so active domains are never
+    mistakenly excluded from an audit.
+    """
+    if is_reserved_domain(domain):
+        return True
+
+    clean = (domain or "").strip().lower().rstrip(".")
+    if not clean:
+        return False
+
+    should_close = False
+    if client is None:
+        client = httpx.AsyncClient(timeout=6.0)
+        should_close = True
+
+    try:
+        for scheme in ("https", "http"):
+            try:
+                resp = await client.get(f"{scheme}://{clean}", follow_redirects=True)
+                text = getattr(resp, "text", "") or ""
+                lowered = text.lower()
+                if any(fp in lowered for fp in PARKED_HTML_FINGERPRINTS):
+                    return True
+            except Exception:
+                continue
+    finally:
+        if should_close:
+            await client.aclose()
+    return False
+
+
 def is_safe_ip(ip_str: str) -> bool:
     """Verifies that an IP is a public, routable Internet address.
 
@@ -660,6 +737,8 @@ class OrbitSecurityScanner:
         if parsed_base.hostname and not await async_is_safe_host(parsed_base.hostname):
             return []
 
+        domain = parsed_base.hostname or ""
+        is_static = is_static_hosting_domain(domain)
         findings: List[Finding] = []
         checks = [
             (
@@ -754,6 +833,10 @@ class OrbitSecurityScanner:
             max_bytes = 128 * 1024  # 128 KB memory streaming cap (tuned for PC specs)
 
             for path, needles, title, severity, desc, remed in checks:
+                # Static hosts (GitHub Pages / Netlify / Vercel / ...) never serve dotfiles,
+                # so /.env and /.git/* exposure checks are N/A and skipped to avoid false positives.
+                if is_static and (path.startswith("/.env") or path.startswith("/.git")):
+                    continue
                 url = f"{clean_base}{path}"
                 try:
                     # Handle both real httpx.AsyncClient streaming and mock clients
@@ -832,21 +915,21 @@ class OrbitSecurityScanner:
             headers = resp.headers
 
             if "Strict-Transport-Security" not in headers:
-                findings.append(
-                    Finding(
-                        title="Missing HSTS Header (HTTP Strict Transport Security)",
-                        severity=Severity.INFO if is_static else Severity.MEDIUM,
-                        category="Transport Security",
-                        description=(
-                            "Managed static host edge (HSTS managed at CDN level)."
-                            if is_static
-                            else "HSTS is not configured. Browsers can be downgraded to unencrypted HTTP via man-in-the-middle attacks."
-                        ),
-                        remediation="Add `Strict-Transport-Security: max-age=31536000; includeSubDomains` header to web server responses.",
-                        target=base_url,
-                        evidence="Header 'Strict-Transport-Security' not present.",
+                # HSTS is managed at the CDN edge on static hosts; skip entirely.
+                if not is_static:
+                    findings.append(
+                        Finding(
+                            title="Missing HSTS Header (HTTP Strict Transport Security)",
+                            severity=Severity.MEDIUM,
+                            category="Transport Security",
+                            description=(
+                                "HSTS is not configured. Browsers can be downgraded to unencrypted HTTP via man-in-the-middle attacks."
+                            ),
+                            remediation="Add `Strict-Transport-Security: max-age=31536000; includeSubDomains` header to web server responses.",
+                            target=base_url,
+                            evidence="Header 'Strict-Transport-Security' not present.",
+                        )
                     )
-                )
             else:
                 hsts_val = headers.get("Strict-Transport-Security", "").lower()
                 if "includesubdomains" not in hsts_val or "preload" not in hsts_val:
@@ -866,30 +949,34 @@ class OrbitSecurityScanner:
                     )
 
             if "Content-Security-Policy" not in headers:
-                findings.append(
-                    Finding(
-                        title="Missing Content Security Policy (CSP)",
-                        severity=Severity.INFO if is_static else Severity.LOW,
-                        category="Application Security",
-                        description="CSP header is absent. Restricting sources of scripts, images, and frames prevents cross-site scripting (XSS) and data injection.",
-                        remediation="Define a baseline `Content-Security-Policy` header allowing only trusted asset origins.",
-                        target=base_url,
-                        evidence="Header 'Content-Security-Policy' not present.",
+                # CSP is typically managed at the CDN/edge on static hosts; skip entirely.
+                if not is_static:
+                    findings.append(
+                        Finding(
+                            title="Missing Content Security Policy (CSP)",
+                            severity=Severity.LOW,
+                            category="Application Security",
+                            description="CSP header is absent. Restricting sources of scripts, images, and frames prevents cross-site scripting (XSS) and data injection.",
+                            remediation="Define a baseline `Content-Security-Policy` header allowing only trusted asset origins.",
+                            target=base_url,
+                            evidence="Header 'Content-Security-Policy' not present.",
+                        )
                     )
-                )
 
             if "X-Frame-Options" not in headers:
-                findings.append(
-                    Finding(
-                        title="Missing X-Frame-Options (Clickjacking Protection)",
-                        severity=Severity.INFO if is_static else Severity.LOW,
-                        category="Application Security",
-                        description="Missing clickjacking protection. Third-party sites can embed this application inside an iframe to hijack user interactions.",
-                        remediation="Set `X-Frame-Options: SAMEORIGIN` or `DENY`.",
-                        target=base_url,
-                        evidence="Header 'X-Frame-Options' not present.",
+                # Clickjacking framing policy is managed at the CDN edge on static hosts; skip entirely.
+                if not is_static:
+                    findings.append(
+                        Finding(
+                            title="Missing X-Frame-Options (Clickjacking Protection)",
+                            severity=Severity.LOW,
+                            category="Application Security",
+                            description="Missing clickjacking protection. Third-party sites can embed this application inside an iframe to hijack user interactions.",
+                            remediation="Set `X-Frame-Options: SAMEORIGIN` or `DENY`.",
+                            target=base_url,
+                            evidence="Header 'X-Frame-Options' not present.",
+                        )
                     )
-                )
 
             if "X-Content-Type-Options" not in headers:
                 findings.append(
@@ -908,20 +995,22 @@ class OrbitSecurityScanner:
                 )
 
             if "Referrer-Policy" not in headers:
-                findings.append(
-                    Finding(
-                        title="Missing Referrer-Policy Header",
-                        severity=Severity.INFO if is_static else Severity.LOW,
-                        category="Application Security",
-                        description=(
-                            "No Referrer-Policy header is defined. Browsers may leak confidential URLs "
-                            "and query parameters in the Referer header to external destinations."
-                        ),
-                        remediation="Set `Referrer-Policy: strict-origin-when-cross-origin`.",
-                        target=base_url,
-                        evidence="Header 'Referrer-Policy' not present.",
+                # Referrer policy is typically managed at the CDN edge on static hosts; skip entirely.
+                if not is_static:
+                    findings.append(
+                        Finding(
+                            title="Missing Referrer-Policy Header",
+                            severity=Severity.LOW,
+                            category="Application Security",
+                            description=(
+                                "No Referrer-Policy header is defined. Browsers may leak confidential URLs "
+                                "and query parameters in the Referer header to external destinations."
+                            ),
+                            remediation="Set `Referrer-Policy: strict-origin-when-cross-origin`.",
+                            target=base_url,
+                            evidence="Header 'Referrer-Policy' not present.",
+                        )
                     )
-                )
 
             if "Permissions-Policy" not in headers:
                 findings.append(
@@ -1088,84 +1177,107 @@ class OrbitSecurityScanner:
 
         # Hardened discovery: Certificate Transparency logs with pooled client
         async with self.create_http_client() as shared_client:
-            if use_crtsh:
-                ct_subs = await self.fetch_subdomains_from_crtsh(domain, client=shared_client)
-                for s in ct_subs:
+            # Reserved (RFC 2606) / parked domains: record a single INFO finding and
+            # skip all active checks (mail, exposures, headers, SSL, takeover) so they
+            # are never penalized as false positives. The passive OSINT catalog lookup
+            # (local file, no network to target) still runs; it adds no findings and
+            # cannot affect the score.
+            is_parked = await is_parked_or_reserved_domain(domain, client=shared_client)
+            if is_parked:
+                result.findings.append(
+                    Finding(
+                        title="Reserved / Parked Domain (No Active Audit)",
+                        severity=Severity.INFO,
+                        category="Input Validation",
+                        description=(
+                            f"Domain {domain} is a reserved (RFC 2606) or parked domain. "
+                            "No active security audit was performed against it."
+                        ),
+                        remediation="No remediation required; not an active production target.",
+                        target=domain,
+                        evidence=f"Domain {domain} matched the reserved/parked domain list.",
+                    )
+                )
+
+            if not is_parked:
+                if use_crtsh:
+                    ct_subs = await self.fetch_subdomains_from_crtsh(domain, client=shared_client)
+                    for s in ct_subs:
+                        subs_to_check.add(s)
+
+                # Baseline common candidates
+                default_candidates = [
+                    f"staging.{domain}",
+                    f"dev.{domain}",
+                    f"test.{domain}",
+                    f"promo.{domain}",
+                    f"blog.{domain}",
+                    f"app.{domain}",
+                    f"shop.{domain}",
+                    f"vpn.{domain}",
+                    f"mail.{domain}",
+                ]
+                for s in default_candidates:
                     subs_to_check.add(s)
 
-            # Baseline common candidates
-            default_candidates = [
-                f"staging.{domain}",
-                f"dev.{domain}",
-                f"test.{domain}",
-                f"promo.{domain}",
-                f"blog.{domain}",
-                f"app.{domain}",
-                f"shop.{domain}",
-                f"vpn.{domain}",
-                f"mail.{domain}",
-            ]
-            for s in default_candidates:
-                subs_to_check.add(s)
+                result.subdomains_scanned = sorted(list(subs_to_check))
 
-            result.subdomains_scanned = sorted(list(subs_to_check))
+                # Run mail audits (SPF, DMARC, BIMI, MTA-STS, TLS-RPT)
+                dmarc_finding = await self.audit_dmarc(domain)
+                if dmarc_finding:
+                    result.findings.append(dmarc_finding)
 
-            # Run mail audits (SPF, DMARC, BIMI, MTA-STS, TLS-RPT)
-            dmarc_finding = await self.audit_dmarc(domain)
-            if dmarc_finding:
-                result.findings.append(dmarc_finding)
+                spf_finding = await self.audit_spf(domain)
+                if spf_finding:
+                    result.findings.append(spf_finding)
 
-            spf_finding = await self.audit_spf(domain)
-            if spf_finding:
-                result.findings.append(spf_finding)
+                bimi_finding = await self.audit_bimi(domain)
+                if bimi_finding:
+                    result.findings.append(bimi_finding)
 
-            bimi_finding = await self.audit_bimi(domain)
-            if bimi_finding:
-                result.findings.append(bimi_finding)
+                mta_sts_finding = await self.audit_mta_sts(domain)
+                if mta_sts_finding:
+                    result.findings.append(mta_sts_finding)
 
-            mta_sts_finding = await self.audit_mta_sts(domain)
-            if mta_sts_finding:
-                result.findings.append(mta_sts_finding)
+                tls_rpt_finding = await self.audit_tls_rpt(domain)
+                if tls_rpt_finding:
+                    result.findings.append(tls_rpt_finding)
 
-            tls_rpt_finding = await self.audit_tls_rpt(domain)
-            if tls_rpt_finding:
-                result.findings.append(tls_rpt_finding)
+                # Audit CAA policy (RFC 8659)
+                caa_finding = await self.audit_caa(domain)
+                if caa_finding:
+                    result.findings.append(caa_finding)
 
-            # Audit CAA policy (RFC 8659)
-            caa_finding = await self.audit_caa(domain)
-            if caa_finding:
-                result.findings.append(caa_finding)
+                # Run exposure and header audits on apex domain
+                base_url = f"https://{domain}"
+                exposure_findings = await self.audit_exposures(base_url, client=shared_client)
+                result.findings.extend(exposure_findings)
 
-            # Run exposure and header audits on apex domain
-            base_url = f"https://{domain}"
-            exposure_findings = await self.audit_exposures(base_url, client=shared_client)
-            result.findings.extend(exposure_findings)
+                header_findings = await self.audit_security_headers(base_url, client=shared_client)
+                result.findings.extend(header_findings)
 
-            header_findings = await self.audit_security_headers(base_url, client=shared_client)
-            result.findings.extend(header_findings)
+                # Audit RFC 9116 security.txt disclosure
+                security_txt_finding = await self.audit_security_txt(base_url, client=shared_client)
+                if security_txt_finding:
+                    result.findings.append(security_txt_finding)
 
-            # Audit RFC 9116 security.txt disclosure
-            security_txt_finding = await self.audit_security_txt(base_url, client=shared_client)
-            if security_txt_finding:
-                result.findings.append(security_txt_finding)
+                # Run SSL check on apex in worker thread to prevent event loop blocking
+                ssl_finding = await asyncio.to_thread(self.audit_ssl, domain)
+                if ssl_finding:
+                    result.findings.append(ssl_finding)
 
-            # Run SSL check on apex in worker thread to prevent event loop blocking
-            ssl_finding = await asyncio.to_thread(self.audit_ssl, domain)
-            if ssl_finding:
-                result.findings.append(ssl_finding)
+                # Run subdomain takeover checks concurrently with bounded semaphore (tuned for 8 logical threads)
+                sem = asyncio.Semaphore(8)
 
-            # Run subdomain takeover checks concurrently with bounded semaphore (tuned for 8 logical threads)
-            sem = asyncio.Semaphore(8)
+                async def bounded_takeover(sub: str):
+                    async with sem:
+                        return await self.check_subdomain_takeover(sub, client=shared_client)
 
-            async def bounded_takeover(sub: str):
-                async with sem:
-                    return await self.check_subdomain_takeover(sub, client=shared_client)
-
-            takeover_tasks = [bounded_takeover(sub) for sub in result.subdomains_scanned]
-            takeover_results = await asyncio.gather(*takeover_tasks, return_exceptions=True)
-            for res in takeover_results:
-                if isinstance(res, Finding):
-                    result.findings.append(res)
+                takeover_tasks = [bounded_takeover(sub) for sub in result.subdomains_scanned]
+                takeover_results = await asyncio.gather(*takeover_tasks, return_exceptions=True)
+                for res in takeover_results:
+                    if isinstance(res, Finding):
+                        result.findings.append(res)
 
             # Passive OSINT intelligence from the public-apis catalog (local file, no network to target)
             try:

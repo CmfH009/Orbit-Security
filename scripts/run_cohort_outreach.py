@@ -13,6 +13,12 @@ Usage:
 
     # Run a limited batch with a custom output directory
     python scripts/run_cohort_outreach.py --limit 10 --output-dir out/audits
+
+    # Email each generated audit PDF to the prospect after generation
+    python scripts/run_cohort_outreach.py --limit 5 --send-email
+
+    # Export .eml drafts to outbound_campaigns/audit_emails/ instead of sending live
+    python scripts/run_cohort_outreach.py --limit 5 --export-eml
 """
 
 from __future__ import annotations
@@ -31,6 +37,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from orbit_security.mailer import EmailDispatcher
 from orbit_security.models import AgencyBranding
 from orbit_security.reporter import ReportGenerator
 from orbit_security.scanner import OrbitSecurityScanner
@@ -119,6 +126,18 @@ def main() -> None:
         default=str(DEFAULT_OUTPUT_DIR),
         help="Custom output directory (default: data/generated_audits)",
     )
+    parser.add_argument(
+        "--send-email",
+        "--email",
+        action="store_true",
+        help="Email each generated audit PDF to the prospect's contact_email",
+    )
+    parser.add_argument(
+        "--export-eml",
+        "--eml",
+        action="store_true",
+        help="Export .eml draft files to outbound_campaigns/audit_emails/ instead of sending live",
+    )
     args = parser.parse_args()
 
     prospects_path = DEFAULT_PROSPECTS_PATH
@@ -151,6 +170,8 @@ def main() -> None:
     print(f"Prospects to process : {len(prospects)}")
     print(f"Output dir     : {output_dir}")
     print(f"Dry run        : {args.dry_run}")
+    print(f"Send email     : {args.send_email}")
+    print(f"Export EML     : {args.export_eml}")
     print("=" * 70)
 
     if args.dry_run:
@@ -169,6 +190,9 @@ def main() -> None:
     scanner = OrbitSecurityScanner()
     processed = 0
     failed = 0
+    emailed = 0
+
+    outbound_eml_dir = PROJECT_ROOT / "outbound_campaigns" / "audit_emails"
 
     for idx, p in enumerate(prospects, 1):
         agency_name = str(p.get("agency_name", "Unknown Agency"))
@@ -177,6 +201,7 @@ def main() -> None:
         agency_slug = slugify(agency_name)
 
         print(f"\n[{idx}/{len(prospects)}] {agency_name} — {domain}")
+        scan_succeeded = False
         try:
             result = asyncio.run(scan_one(scanner, domain, branding))
             pdf_path, md_path = write_reports(
@@ -190,16 +215,65 @@ def main() -> None:
             print(f"    PDF : {pdf_path}")
             print(f"    MD  : {md_path}")
             processed += 1
+            scan_succeeded = True
         except Exception as e:
             failed += 1
             print(f"    [❌] Scan failed for {domain}: {e}")
+
+        if scan_succeeded:
+            score = result.score
+            grade = result.grade
+            findings_count = len(result.findings)
+            recipient_email = str(p.get("contact_email", ""))
+            subject = f"Perimeter Hygiene Audit for {domain} — Score {score}/100"
+            body_text = (
+                f"Hi {agency_name} team,\n\n"
+                f"I ran a perimeter-hygiene audit of {domain} and wanted to share "
+                f"the co-branded report with you.\n\n"
+                f"🛡️  Security Score: {score}/100\n"
+                f"📊  Overall Grade: {grade}\n"
+                f"🔍  Total Findings: {findings_count}\n\n"
+                f"The full audit PDF is attached to this message.\n\n"
+                f"Best regards,\n"
+                f"Carson @ Orbit Security\n"
+            )
+
+            try:
+                dispatcher = EmailDispatcher()
+                if args.export_eml:
+                    eml_path = outbound_eml_dir / f"{domain}_audit.eml"
+                    dispatcher.export_eml(
+                        recipient_email=recipient_email,
+                        subject=subject,
+                        body_text=body_text,
+                        pdf_attachment_path=pdf_path,
+                        output_eml_path=str(eml_path),
+                    )
+                    emailed += 1
+                    print(f"    EML : {eml_path}")
+                elif args.send_email:
+                    if not dispatcher.is_configured():
+                        print(
+                            f"    [⚠] SMTP not configured — skipping email for {domain}"
+                        )
+                    else:
+                        dispatcher.send_email(
+                            recipient_email=recipient_email,
+                            subject=subject,
+                            body_text=body_text,
+                            pdf_attachment_path=pdf_path,
+                        )
+                        emailed += 1
+                        print(f"    Email: {recipient_email}")
+            except Exception as e:
+                print(f"    [❌] Email failed for {domain}: {e}")
 
         # DNS-polite rate limiting between scans (skip after the last one)
         if idx < len(prospects):
             time.sleep(RATE_LIMIT_SLEEP)
 
     print("\n" + "=" * 70)
-    print(f"✓ Cohort outreach complete: {processed} succeeded, {failed} failed.")
+    print(f"✓ Cohort outreach complete: {processed} succeeded, {failed} failed, {emailed} emailed.")
     print("=" * 70)
 
 

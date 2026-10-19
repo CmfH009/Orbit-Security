@@ -181,7 +181,7 @@ def test_main_error_isolation_continues_batch(capsys, tmp_path, monkeypatch):
     assert "[❌] Scan failed for fail.com: boom" in out
     assert "Ok Agency" in out
     assert "Score: 85/100" in out
-    assert "✓ Cohort outreach complete: 1 succeeded, 1 failed." in out
+    assert "✓ Cohort outreach complete: 1 succeeded, 1 failed, 0 emailed." in out
 
 
 # ---------------------------------------------------------------- main() agency filter
