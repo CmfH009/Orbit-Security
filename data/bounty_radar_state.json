@@ -1,7 +1,7 @@
 {
-  "last_sweep_utc": "2026-10-19T21:58:32.012554+00:00",
-  "total_sweeps": 52,
-  "total_vulnerabilities_found": 2906,
+  "last_sweep_utc": "2026-10-20T00:18:16.826699+00:00",
+  "total_sweeps": 59,
+  "total_vulnerabilities_found": 2913,
   "programs_scanned": [
     "shopify"
   ],
@@ -21,7 +21,7 @@
       "cwe_id": "CWE-942: Permissive Cross-domain Policy with Untrusted Domains",
       "remediation": "Restrict Access-Control-Allow-Origin to authorized domain list if this endpoint handles authenticated user data.",
       "bounty_viability": "INFORMATIONAL_LOW",
-      "timestamp": "2026-10-19T21:58:44.468215+00:00",
+      "timestamp": "2026-10-20T00:18:31.484492+00:00",
       "status": "discovered"
     }
   ]

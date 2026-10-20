@@ -1,5 +1,55 @@
 {
   "version": "1.0",
-  "updated_at": "2026-10-02T09:39:51.820326+00:00",
-  "baselines": {}
+  "updated_at": "2026-10-20T00:24:38.326829+00:00",
+  "baselines": {
+    "candykittens.co.uk": {
+      "domain": "candykittens.co.uk",
+      "records": {
+        "A": [
+          "23.227.38.32"
+        ],
+        "MX": [
+          "1 aspmx.l.google.com",
+          "10 alt3.aspmx.l.google.com",
+          "10 alt4.aspmx.l.google.com",
+          "5 alt1.aspmx.l.google.com",
+          "5 alt2.aspmx.l.google.com"
+        ],
+        "TXT": [
+          "\"MS=ms74254456\"",
+          "\"apple-domain-verification=Wz82hxBpv880I8tD\"",
+          "\"asv=45e5eb6c641b4902e0507dcf880ecf8c\"",
+          "\"google-site-verification=7Qo33ioxFomvnSVo4_sifGNk5YfUA0FiDje5KbjLqc4\"",
+          "\"klaviyo-site-verification=Xuq2fQ\"",
+          "\"v=spf1 a mx include:_spf.google.com include:mailgun.org include:shops.shopify.com ~all\""
+        ]
+      },
+      "created_at": "2026-10-20T00:24:37.861488+00:00",
+      "last_verified": "2026-10-20T00:24:37.861472+00:00"
+    },
+    "eastsideco.com": {
+      "domain": "eastsideco.com",
+      "records": {
+        "A": [
+          "138.201.57.218"
+        ],
+        "MX": [
+          "1 aspmx.l.google.com",
+          "10 alt3.aspmx.l.google.com",
+          "10 alt4.aspmx.l.google.com",
+          "5 alt1.aspmx.l.google.com",
+          "5 alt2.aspmx.l.google.com"
+        ],
+        "TXT": [
+          "\"facebook-domain-verification=t6tgenuoxif2mghcb0gxye51mgn4ct\"",
+          "\"google-site-verification=UChk_Ma6lQK5-tT_2qaybfzwbse6KRctjiEkgQSuJIk\"",
+          "\"google-site-verification=qgznWm5XZtI3MU_8x7i2b0bF3XNu2YWK8b7BxEzgL0E\"",
+          "\"klaviyo-site-verification=WaGy4m\"",
+          "\"v=spf1 include:_spf.google.com include:amazonses.com include:helpscoutemail.com include:3029083.spf01.hubspotemail.net ~all\""
+        ]
+      },
+      "created_at": "2026-10-20T00:24:38.325710+00:00",
+      "last_verified": "2026-10-20T00:24:38.325694+00:00"
+    }
+  }
 }

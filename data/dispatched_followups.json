@@ -262,5 +262,85 @@
     "followup_dispatched_at": "2026-10-04 18:50:47",
     "bump_number": 1,
     "status": "SENT"
+  },
+  "bluestout.com": {
+    "agency_name": "Blue Stout",
+    "contact_email": "hello@bluestout.com",
+    "client_domain": "goruck.com",
+    "followup_dispatched_at": "2026-10-19 18:27:43",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "corra.com": {
+    "agency_name": "Corra",
+    "contact_email": "hello@corra.com",
+    "client_domain": "jcrew.com",
+    "followup_dispatched_at": "2026-10-19 18:27:47",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "onerockwell.com": {
+    "agency_name": "One Rockwell",
+    "contact_email": "info@onerockwell.com",
+    "client_domain": "lelesadoughi.com",
+    "followup_dispatched_at": "2026-10-19 18:27:52",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "cqlcorp.com": {
+    "agency_name": "CQL",
+    "contact_email": "info@cqlcorp.com",
+    "client_domain": "petermillar.com",
+    "followup_dispatched_at": "2026-10-19 18:27:55",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "halfhelix.com": {
+    "agency_name": "Half Helix",
+    "contact_email": "hello@halfhelix.com",
+    "client_domain": "glossier.com",
+    "followup_dispatched_at": "2026-10-19 18:27:59",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "growwithtrellis.com": {
+    "agency_name": "Trellis",
+    "contact_email": "hello@growwithtrellis.com",
+    "client_domain": "lumens.com",
+    "followup_dispatched_at": "2026-10-19 18:28:02",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "netalico.com": {
+    "agency_name": "Netalico",
+    "contact_email": "info@netalico.com",
+    "client_domain": "spicewalla.com",
+    "followup_dispatched_at": "2026-10-19 18:28:07",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "absoluteweb.com": {
+    "agency_name": "Absolute Web",
+    "contact_email": "info@absoluteweb.com",
+    "client_domain": "miguelina.com",
+    "followup_dispatched_at": "2026-10-19 18:28:10",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "sleeplessmedia.com": {
+    "agency_name": "Sleepless Media",
+    "contact_email": "hello@sleeplessmedia.com",
+    "client_domain": "norrona.com",
+    "followup_dispatched_at": "2026-10-19 18:28:14",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "pixelunion.net": {
+    "agency_name": "Pixel Union",
+    "contact_email": "support@pixelunion.net",
+    "client_domain": "superdry.com",
+    "followup_dispatched_at": "2026-10-19 18:28:18",
+    "bump_number": 1,
+    "status": "SENT"
   }
 }

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-10-05T01:06:02.934725+00:00",
+  "updated_at": "2026-10-20T00:00:59.046267+00:00",
   "agencies": [
     {
       "agency_id": "eastside-co",
@@ -24,7 +24,11 @@
           "critical_findings": 0,
           "high_findings": 0,
           "medium_findings": 0,
-          "last_scanned": null
+          "last_scanned": null,
+          "scan_history": [],
+          "previous_score": null,
+          "previous_grade": null,
+          "score_delta": null
         },
         {
           "domain": "wildfang.com",
@@ -35,7 +39,11 @@
           "critical_findings": 0,
           "high_findings": 0,
           "medium_findings": 0,
-          "last_scanned": null
+          "last_scanned": null,
+          "scan_history": [],
+          "previous_score": null,
+          "previous_grade": null,
+          "score_delta": null
         },
         {
           "domain": "trolli.com",
@@ -46,10 +54,15 @@
           "critical_findings": 1,
           "high_findings": 0,
           "medium_findings": 0,
-          "last_scanned": null
+          "last_scanned": null,
+          "scan_history": [],
+          "previous_score": null,
+          "previous_grade": null,
+          "score_delta": null
         }
       ],
       "billing_status": "active",
+      "stripe_customer_id": null,
       "stripe_subscription_id": null,
       "sla_guarantee": "99.9% Perimeter Uptime & <15-Min Takeover Alert Guarantee",
       "created_at": "2026-10-02T09:32:43.845472+00:00",
@@ -77,7 +90,11 @@
           "critical_findings": 0,
           "high_findings": 0,
           "medium_findings": 0,
-          "last_scanned": null
+          "last_scanned": null,
+          "scan_history": [],
+          "previous_score": null,
+          "previous_grade": null,
+          "score_delta": null
         },
         {
           "domain": "skinnydip.com",
@@ -88,10 +105,15 @@
           "critical_findings": 0,
           "high_findings": 0,
           "medium_findings": 0,
-          "last_scanned": null
+          "last_scanned": null,
+          "scan_history": [],
+          "previous_score": null,
+          "previous_grade": null,
+          "score_delta": null
         }
       ],
       "billing_status": "active",
+      "stripe_customer_id": null,
       "stripe_subscription_id": null,
       "sla_guarantee": "99.9% Perimeter Uptime & <15-Min Takeover Alert Guarantee",
       "created_at": "2026-10-02T09:32:43.845494+00:00",
@@ -119,10 +141,15 @@
           "critical_findings": 0,
           "high_findings": 0,
           "medium_findings": 0,
-          "last_scanned": null
+          "last_scanned": null,
+          "scan_history": [],
+          "previous_score": null,
+          "previous_grade": null,
+          "score_delta": null
         }
       ],
       "billing_status": "active",
+      "stripe_customer_id": null,
       "stripe_subscription_id": null,
       "sla_guarantee": "99.9% Perimeter Uptime & <15-Min Takeover Alert Guarantee",
       "created_at": "2026-10-02T09:32:43.845501+00:00",
@@ -150,7 +177,11 @@
           "critical_findings": 0,
           "high_findings": 0,
           "medium_findings": 0,
-          "last_scanned": null
+          "last_scanned": null,
+          "scan_history": [],
+          "previous_score": null,
+          "previous_grade": null,
+          "score_delta": null
         },
         {
           "domain": "chillysbottles.com",
@@ -161,10 +192,15 @@
           "critical_findings": 0,
           "high_findings": 0,
           "medium_findings": 0,
-          "last_scanned": null
+          "last_scanned": null,
+          "scan_history": [],
+          "previous_score": null,
+          "previous_grade": null,
+          "score_delta": null
         }
       ],
       "billing_status": "active",
+      "stripe_customer_id": null,
       "stripe_subscription_id": null,
       "sla_guarantee": "99.9% Perimeter Uptime & <15-Min Takeover Alert Guarantee",
       "created_at": "2026-10-02T09:32:43.845508+00:00",
@@ -192,10 +228,15 @@
           "critical_findings": 0,
           "high_findings": 0,
           "medium_findings": 0,
-          "last_scanned": null
+          "last_scanned": null,
+          "scan_history": [],
+          "previous_score": null,
+          "previous_grade": null,
+          "score_delta": null
         }
       ],
       "billing_status": "active",
+      "stripe_customer_id": null,
       "stripe_subscription_id": null,
       "sla_guarantee": "99.9% Perimeter Uptime & <15-Min Takeover Alert Guarantee",
       "created_at": "2026-10-05T01:05:30.052202+00:00",
@@ -223,10 +264,15 @@
           "critical_findings": 0,
           "high_findings": 0,
           "medium_findings": 0,
-          "last_scanned": null
+          "last_scanned": null,
+          "scan_history": [],
+          "previous_score": null,
+          "previous_grade": null,
+          "score_delta": null
         }
       ],
       "billing_status": "active",
+      "stripe_customer_id": null,
       "stripe_subscription_id": null,
       "sla_guarantee": "99.9% Perimeter Uptime & <15-Min Takeover Alert Guarantee",
       "created_at": "2026-10-05T01:05:41.886322+00:00",
@@ -254,14 +300,85 @@
           "critical_findings": 0,
           "high_findings": 0,
           "medium_findings": 0,
-          "last_scanned": null
+          "last_scanned": null,
+          "scan_history": [],
+          "previous_score": null,
+          "previous_grade": null,
+          "score_delta": null
         }
       ],
       "billing_status": "active",
+      "stripe_customer_id": null,
       "stripe_subscription_id": null,
       "sla_guarantee": "99.9% Perimeter Uptime & <15-Min Takeover Alert Guarantee",
       "created_at": "2026-10-05T01:05:55.938905+00:00",
       "last_audit_at": null
+    },
+    {
+      "agency_id": "orbit-core",
+      "agency_name": "orbit-core",
+      "tier": "Scale",
+      "monthly_price": 499,
+      "custom_domain": null,
+      "agency_tagline": "Managed Web & Security Operations",
+      "primary_color": "#0F172A",
+      "accent_color": "#3B82F6",
+      "support_email": "ops@orbit-core.example.com",
+      "website": "",
+      "logo_svg": null,
+      "client_domains": [
+        {
+          "domain": "apexapparel.example.com",
+          "client_name": "Apex Apparel Co.",
+          "status": "active",
+          "last_score": 20,
+          "last_grade": "F",
+          "critical_findings": 0,
+          "high_findings": 3,
+          "medium_findings": 0,
+          "last_scanned": "2026-10-20T00:00:45.470652+00:00",
+          "scan_history": [],
+          "previous_score": null,
+          "previous_grade": null,
+          "score_delta": null
+        },
+        {
+          "domain": "nexushealth.example.com",
+          "client_name": "Nexus Health Diagnostics",
+          "status": "active",
+          "last_score": 20,
+          "last_grade": "F",
+          "critical_findings": 0,
+          "high_findings": 3,
+          "medium_findings": 0,
+          "last_scanned": "2026-10-20T00:00:49.269616+00:00",
+          "scan_history": [],
+          "previous_score": null,
+          "previous_grade": null,
+          "score_delta": null
+        },
+        {
+          "domain": "velvetcraft.com",
+          "client_name": "Velvet Craft Apparel",
+          "status": "active",
+          "last_score": 5,
+          "last_grade": "F",
+          "critical_findings": 0,
+          "high_findings": 2,
+          "medium_findings": 1,
+          "last_scanned": "2026-10-20T00:00:59.045977+00:00",
+          "scan_history": [],
+          "previous_score": null,
+          "previous_grade": null,
+          "score_delta": null
+        }
+      ],
+      "billing_status": "active",
+      "stripe_customer_id": null,
+      "stripe_subscription_id": null,
+      "sla_guarantee": "99.9% Perimeter Uptime & <15-Min Takeover Alert Guarantee",
+      "created_at": "2026-10-20T00:00:45.468004+00:00",
+      "last_audit_at": "2026-10-20T00:00:59.045977+00:00"
     }
   ]
 }
