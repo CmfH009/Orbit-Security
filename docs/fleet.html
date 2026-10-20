@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src 'self' https://dns.google https://cloudflare-dns.com https://buy.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https://cmfh009.github.io; connect-src 'self' https://dns.google https://cloudflare-dns.com https://buy.stripe.com https://checkout.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com https://buy.stripe.com;">
     <title>Fleet Command Center | Orbit Security</title>
     
     <!-- Primary SEO Meta Tags -->
@@ -11,24 +11,58 @@
     <meta name="description" content="Real-time multi-client attack surface sentinel and perimeter hygiene dashboard for web and Shopify agencies.">
     <meta name="author" content="Carson Haynes | Founder, Orbit Security">
 
-    <!-- Favicon & Preconnects -->
+    <!-- Favicon & High-Performance Preconnects -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'><path d='M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z'/></svg>">
+    <link rel="preconnect" href="https://cloudflare-dns.com" crossorigin>
+    <link rel="preconnect" href="https://dns.google" crossorigin>
     <link rel="dns-prefetch" href="https://buy.stripe.com">
+    <link rel="dns-prefetch" href="https://checkout.stripe.com">
     
     <!-- Production Stylesheet (Zero-Render-Delay, Offline Fonts Vendored) -->
     <link rel="stylesheet" href="assets/styles.min.css">
-    <!-- PDF-Lib for Client-Side White-Label PDF Generation (Offline Vendored) -->
-    <script src="assets/pdf-lib.min.js" defer></script>
     <!-- Simple Cat 16-Bit Companion & Plain-English Decoder -->
     <script src="assets/simple_cat.js" defer></script>
 
     <style>
-        /* 0% CPU Idle Governor (Pillar 5 Resiliency) */
-        body.page-idle * {
+        /* 0% CPU Idle Governor (Pillar 5 Resiliency) - Low-Recalc Targeted Selectors */
+        body.page-idle .animate-pulse,
+        body.page-idle .animate-ping,
+        body.page-idle .animate-bounce,
+        body.page-idle .telemetry-beam,
+        body.page-idle .radar-sweep-beam {
             animation-play-state: paused !important;
         }
         .font-arcade { font-family: 'Press Start 2P', monospace, cursive; }
         .font-pixel { font-family: 'Silkscreen', monospace; }
+        
+        /* 32-Bit Cyber Glass & CRT Scanlines */
+        .scanlines {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
+            background-size: 100% 4px;
+        }
+        .card-glass {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(6, 10, 22, 0.90) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.1), 0 12px 35px -10px rgba(2, 6, 23, 0.8);
+            backdrop-filter: blur(16px);
+        }
+        .card-glass-emerald {
+            border-color: rgba(16, 185, 129, 0.35);
+            box-shadow: inset 0 1px 1px 0 rgba(16, 185, 129, 0.2), 0 12px 35px -8px rgba(16, 185, 129, 0.18);
+        }
+        .card-glass-cyan {
+            border-color: rgba(6, 182, 212, 0.35);
+            box-shadow: inset 0 1px 1px 0 rgba(6, 182, 212, 0.2), 0 12px 35px -8px rgba(6, 182, 212, 0.18);
+        }
+        .card-glass-purple {
+            border-color: rgba(168, 85, 247, 0.35);
+            box-shadow: inset 0 1px 1px 0 rgba(168, 85, 247, 0.2), 0 12px 35px -8px rgba(168, 85, 247, 0.18);
+        }
+        .card-glass-amber {
+            border-color: rgba(245, 158, 11, 0.35);
+            box-shadow: inset 0 1px 1px 0 rgba(245, 158, 11, 0.2), 0 12px 35px -8px rgba(245, 158, 11, 0.18);
+        }
+
         .hud-border {
             border: 1px solid rgba(16, 185, 129, 0.2);
             box-shadow: 0 0 20px rgba(16, 185, 129, 0.05);
@@ -74,6 +108,14 @@
         }
         .pixel-btn:active {
             transform: translateY(1px);
+        }
+        #dock-launch-btn, #dock-decode-btn, #dock-rec-btn {
+            min-height: 48px !important;
+            min-width: 48px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 8px 12px !important;
         }
     </style>
 </head>
@@ -125,8 +167,6 @@
             </div>
         </div>
     </header>
-        </div>
-    </header>
 
     <!-- Main Dashboard Container -->
     <main class="relative z-10 flex-1 max-w-7xl w-full mx-auto px-6 py-8">
@@ -143,68 +183,83 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-                <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); scanAllDomains()" id="btn-batch-scan" class="px-3.5 py-2.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-emerald-500 text-slate-200 hover:text-emerald-400 text-xs font-arcade transition-all flex items-center gap-2 pixel-btn">
+                <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); scanAllDomains()" id="btn-batch-scan" class="min-h-[48px] min-w-[48px] px-4 py-3 rounded-lg bg-slate-900 border border-slate-700 hover:border-emerald-500 text-slate-200 hover:text-emerald-400 text-xs font-arcade transition-all inline-flex items-center justify-center gap-2 pixel-btn">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                     Scan All (DoH)
                 </button>
-                <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); exportFleetCSV()" id="btn-export-csv" class="px-3.5 py-2.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-cyan-500 text-slate-200 hover:text-cyan-400 text-xs font-arcade transition-all flex items-center gap-2 pixel-btn">
+                <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); exportFleetCSV()" id="btn-export-csv" class="min-h-[48px] min-w-[48px] px-4 py-3 rounded-lg bg-slate-900 border border-slate-700 hover:border-cyan-500 text-slate-200 hover:text-cyan-400 text-xs font-arcade transition-all inline-flex items-center justify-center gap-2 pixel-btn">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                     Export CSV
                 </button>
-                <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); exportFleetSummaryPDF()" class="px-3.5 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold font-pixel transition-all flex items-center gap-2 pixel-btn">
+                <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); exportFleetSummaryPDF()" class="min-h-[48px] min-w-[48px] px-4 py-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold font-pixel transition-all inline-flex items-center justify-center gap-2 pixel-btn">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     Export Report
                 </button>
             </div>
         </div>
 
-        <!-- Metric Counter Grid with 16-Bit Pixel Borders -->
+        <!-- Metric Counter Grid with 32-Bit Cyber Glass & 16-Bit Pixel Borders -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div class="bg-slate-900/80 border-2 border-slate-800 rounded-xl p-5 pixel-btn">
-                <div class="text-[10px] font-arcade text-slate-400 uppercase tracking-wider mb-1">Monitored Domains</div>
-                <div class="text-3xl font-extrabold text-white font-pixel" id="stat-total-domains">6</div>
-                <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                    <span class="text-emerald-400 font-medium">100% active</span> in daily queue
+            <div class="card-glass rounded-xl p-5 pixel-btn relative overflow-hidden">
+                <div class="absolute inset-0 scanlines pointer-events-none z-0 opacity-20"></div>
+                <div class="relative z-10">
+                    <div class="text-[10px] font-arcade text-slate-400 uppercase tracking-wider mb-1">Monitored Domains</div>
+                    <div class="text-3xl font-extrabold text-white font-pixel" id="stat-total-domains">6</div>
+                    <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                        <span class="text-emerald-400 font-medium">100% active</span> in daily queue
+                    </div>
                 </div>
             </div>
 
-            <div class="bg-slate-900/80 border-2 border-emerald-500/40 rounded-xl p-5 pixel-box-emerald">
-                <div class="text-[10px] font-arcade text-emerald-400 uppercase tracking-wider mb-1">Fleet Avg Score</div>
-                <div class="text-3xl font-extrabold text-emerald-400 font-pixel" id="stat-avg-score">87/100</div>
-                <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                    <span class="text-emerald-400 font-arcade text-[10px]">GRADE: B+</span>
+            <div class="card-glass card-glass-emerald rounded-xl p-5 pixel-box-emerald relative overflow-hidden">
+                <div class="absolute inset-0 scanlines pointer-events-none z-0 opacity-20"></div>
+                <div class="relative z-10">
+                    <div class="text-[10px] font-arcade text-emerald-400 uppercase tracking-wider mb-1">Fleet Avg Score</div>
+                    <div class="text-3xl font-extrabold text-emerald-400 font-pixel" id="stat-avg-score">87/100</div>
+                    <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                        <span class="text-emerald-400 font-arcade text-[10px]">GRADE: B+</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="bg-slate-900/80 border-2 border-cyan-500/40 rounded-xl p-5 pixel-box-cyan">
-                <div class="text-[10px] font-arcade text-cyan-400 uppercase tracking-wider mb-1">Retainer Value Defended</div>
-                <div class="text-3xl font-extrabold text-cyan-400 font-pixel" id="stat-mrr-defended">$1,500<span class="text-xs font-normal text-slate-400">/mo</span></div>
-                <div class="text-xs text-slate-500 mt-1">
-                    $250/mo avg retainer stewardship
+            <div class="card-glass card-glass-cyan rounded-xl p-5 pixel-box-cyan relative overflow-hidden">
+                <div class="absolute inset-0 scanlines pointer-events-none z-0 opacity-20"></div>
+                <div class="relative z-10">
+                    <div class="text-[10px] font-arcade text-cyan-400 uppercase tracking-wider mb-1">Retainer Value Defended</div>
+                    <div class="text-3xl font-extrabold text-cyan-400 font-pixel" id="stat-mrr-defended">$1,500<span class="text-xs font-normal text-slate-400">/mo</span></div>
+                    <div class="text-xs text-slate-500 mt-1">
+                        $250/mo avg retainer stewardship
+                    </div>
                 </div>
             </div>
 
-            <div class="bg-slate-900/80 border-2 border-purple-500/40 rounded-xl p-5 pixel-box-purple">
-                <div class="text-[10px] font-arcade text-purple-400 uppercase tracking-wider mb-1">Critical Takeovers</div>
-                <div class="text-3xl font-extrabold text-emerald-400 font-pixel" id="stat-critical-count">0</div>
-                <div class="text-xs text-slate-500 mt-1 flex items-center gap-1 font-arcade text-[9px]">
-                    <span class="text-emerald-400">ZERO DRIFT DETECTED</span>
+            <div class="card-glass card-glass-purple rounded-xl p-5 pixel-box-purple relative overflow-hidden">
+                <div class="absolute inset-0 scanlines pointer-events-none z-0 opacity-20"></div>
+                <div class="relative z-10">
+                    <div class="text-[10px] font-arcade text-purple-400 uppercase tracking-wider mb-1">Critical Takeovers</div>
+                    <div class="text-3xl font-extrabold text-emerald-400 font-pixel" id="stat-critical-count">0</div>
+                    <div class="text-xs text-slate-500 mt-1 flex items-center gap-1 font-arcade text-[9px]">
+                        <span class="text-emerald-400">ZERO DRIFT DETECTED</span>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Filter & Search Toolbar with Portfolio Presets -->
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 mb-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div class="relative w-full sm:w-80">
-                <input type="text" id="domain-search" oninput="filterDomains()" placeholder="Search domain or client..." class="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors">
-                <svg class="w-4 h-4 text-slate-500 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            </div>
+        <div class="card-glass rounded-xl p-4 mb-4 flex flex-col sm:flex-row items-center justify-between gap-4 relative overflow-hidden">
+            <div class="absolute inset-0 scanlines pointer-events-none z-0 opacity-15"></div>
+            <div class="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
+                <div class="relative w-full sm:w-80">
+                    <input type="text" id="domain-search" oninput="filterDomains()" placeholder="Search domain or client..." class="w-full min-h-[48px] pl-9 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors">
+                    <svg class="w-4 h-4 text-slate-500 absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
 
-            <div class="flex items-center gap-2 w-full sm:w-auto">
-                <span class="text-xs font-arcade text-slate-400">FILTER:</span>
-                <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); setFilter('all')" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-arcade bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 pixel-btn" data-filter="all">ALL</button>
-                <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); setFilter('pristine')" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-arcade bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200 pixel-btn" data-filter="pristine">PRISTINE (90+)</button>
-                <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); setFilter('warning')" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-arcade bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200 pixel-btn" data-filter="warning">WARNINGS (&lt;85)</button>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <span class="text-xs font-arcade text-slate-400">FILTER:</span>
+                    <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); setFilter('all')" class="filter-btn min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-xs font-arcade bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 pixel-btn" data-filter="all">ALL</button>
+                    <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); setFilter('pristine')" class="filter-btn min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-xs font-arcade bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200 pixel-btn" data-filter="pristine">PRISTINE (90+)</button>
+                    <button onclick="if(window.SimpleCat) SimpleCat.playBlip(); setFilter('warning')" class="filter-btn min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-xs font-arcade bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200 pixel-btn" data-filter="warning">WARNINGS (&lt;85)</button>
+                </div>
             </div>
         </div>
 
@@ -212,10 +267,10 @@
         <div class="flex flex-wrap items-center justify-between gap-3 mb-6 px-1 text-xs">
             <div class="flex flex-wrap items-center gap-2 font-arcade text-slate-400 text-[10px]">
                 <span class="text-slate-500">PRESETS:</span>
-                <button onclick="loadPreset('baseline')" class="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 pixel-btn" title="Original 6 showcase agency clients">Showcase (6)</button>
-                <button onclick="loadPreset('cohort5')" class="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-cyan-500/30 pixel-btn" title="10 enterprise DTC/Shopify brands from Cohort 5">Cohort 5 Flagships (10)</button>
-                <button onclick="loadPreset('all')" class="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-purple-400 border border-purple-500/30 pixel-btn" title="Combined 16 client brands">Combined Fleet (16)</button>
-                <button onclick="loadPreset('clear')" class="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-rose-400 border border-rose-500/30 pixel-btn" title="Clear all to start custom fleet">Clear All</button>
+                <button onclick="loadPreset('baseline')" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-3 py-2 rounded bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 pixel-btn" title="Original 6 showcase agency clients">Showcase (6)</button>
+                <button onclick="loadPreset('cohort5')" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-3 py-2 rounded bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-cyan-500/30 pixel-btn" title="10 enterprise DTC/Shopify brands from Cohort 5">Cohort 5 Flagships (10)</button>
+                <button onclick="loadPreset('all')" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-3 py-2 rounded bg-slate-900 hover:bg-slate-800 text-purple-400 border border-purple-500/30 pixel-btn" title="Combined 16 client brands">Combined Fleet (16)</button>
+                <button onclick="loadPreset('clear')" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-3 py-2 rounded bg-slate-900 hover:bg-slate-800 text-rose-400 border border-rose-500/30 pixel-btn" title="Clear all to start custom fleet">Clear All</button>
             </div>
             <div id="fleet-storage-indicator" class="text-[10px] font-mono text-slate-500 flex items-center gap-1.5">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
@@ -224,8 +279,9 @@
         </div>
 
         <!-- Domain Fleet Table / Card Container -->
-        <div class="bg-slate-900/60 border-2 border-emerald-500/30 rounded-xl overflow-hidden backdrop-blur-md pixel-box-emerald">
-            <div class="overflow-x-auto">
+        <div class="card-glass card-glass-emerald rounded-xl overflow-hidden backdrop-blur-md pixel-box-emerald relative">
+            <div class="absolute inset-0 scanlines pointer-events-none z-0 opacity-20"></div>
+            <div class="overflow-x-auto relative z-10">
                 <table class="w-full text-left text-sm text-slate-300">
                     <thead class="bg-slate-900/95 text-xs font-arcade uppercase text-slate-400 border-b border-slate-800">
                         <tr>
@@ -444,16 +500,58 @@
         <div class="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>Orbit Security Fleet Sentinel &copy; 2026. Built by Carson Haynes (`@_arsoncode`).</div>
             <div class="flex items-center gap-4">
-                <a href="terms.html" class="hover:text-slate-400">Terms</a>
-                <a href="privacy.html" class="hover:text-slate-400">Privacy</a>
-                <a href="disclaimer.html" class="hover:text-slate-400">Safe Harbor</a>
-                <a href="index.html#pricing" class="text-emerald-400 hover:underline">Upgrade Plan ($59/mo)</a>
+                <a href="terms.html" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-2 hover:text-slate-400">Terms</a>
+                <a href="privacy.html" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-2 hover:text-slate-400">Privacy</a>
+                <a href="disclaimer.html" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-2 hover:text-slate-400">Safe Harbor</a>
+                <a href="index.html#pricing" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-2 text-emerald-400 hover:underline">Upgrade Plan ($59/mo)</a>
             </div>
         </div>
     </footer>
 
     <!-- Fleet Dashboard Logic -->
     <script>
+        // HTML and JS String Escaping for Stored DOM XSS Prevention
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // On-demand lazy loader for 513KB PDF engine
+        let pdfLibPromise = null;
+        function ensurePdfLib() {
+            if (window.PDFLib) return Promise.resolve(window.PDFLib);
+            if (!pdfLibPromise) {
+                pdfLibPromise = new Promise((resolve, reject) => {
+                    const s = document.createElement('script');
+                    s.src = 'assets/pdf-lib.min.js';
+                    s.onload = () => resolve(window.PDFLib);
+                    s.onerror = (err) => {
+                        pdfLibPromise = null;
+                        s.remove();
+                        reject(err);
+                    };
+                    document.head.appendChild(s);
+                });
+            }
+            return pdfLibPromise;
+        }
+
+        // 0% CPU Idle Governor Lifecycle Hook
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                document.body.classList.add('page-idle');
+                if (window.SimpleCat && SimpleCat.suspendAudio) SimpleCat.suspendAudio();
+            } else {
+                document.body.classList.remove('page-idle');
+                if (window.SimpleCat && SimpleCat.resumeAudio) SimpleCat.resumeAudio();
+            }
+        });
+
         const initialFleet = [
             { domain: "candykittens.co.uk", client: "Candy Kittens (Charle)", score: 95, grade: "A+", dmarc: "v=DMARC1; p=reject", cname: "Apex Direct", headers: "5/7", status: "Clean" },
             { domain: "recipetineats.com", client: "RecipeTin Eats (Human Made)", score: 90, grade: "A", dmarc: "v=DMARC1; p=none", cname: "Cloudflare Edge", headers: "4/7", status: "Clean" },
@@ -682,12 +780,12 @@
                 <tr class="hover:bg-slate-900/60 transition-colors" id="row-${item.domain.replace(/[^a-zA-Z0-9]/g, '_')}">
                     <td class="py-4 px-6">
                         <div class="font-semibold text-white flex items-center gap-2">
-                            <span>${item.domain}</span>
-                            <a href="https://${item.domain}" target="_blank" rel="noopener noreferrer" class="text-slate-500 hover:text-slate-300">
+                            <span>${escapeHtml(item.domain)}</span>
+                            <a href="https://${encodeURIComponent(item.domain)}" target="_blank" rel="noopener noreferrer" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center text-slate-500 hover:text-slate-300">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                             </a>
                         </div>
-                        <div class="text-xs text-slate-400">${item.client}</div>
+                        <div class="text-xs text-slate-400">${escapeHtml(item.client)}</div>
                     </td>
                     <td class="py-4 px-4 text-center">
                         <span class="inline-block px-2.5 py-1 rounded-full text-xs font-mono font-bold border ${scoreColor}">
@@ -696,7 +794,7 @@
                     </td>
                     <td class="py-4 px-4">
                         ${dmarcBadge}
-                        <button type="button" class="text-[10px] text-slate-400 font-sans mt-1 cursor-pointer hover:text-emerald-400 flex items-center justify-between w-full gap-1 group text-left" onclick="SimpleCat.explain('dmarc')" title="Simple Cat: Explain DMARC">
+                        <button type="button" class="min-h-[48px] text-[10px] text-slate-400 font-sans mt-1 cursor-pointer hover:text-emerald-400 flex items-center justify-between w-full gap-1 group text-left px-1.5 py-2" onclick="SimpleCat.explain('dmarc')" title="Simple Cat: Explain DMARC">
                             <span class="flex items-center gap-1">
                                 <span class="font-pixel text-emerald-400">🐱</span>
                                 <span class="text-slate-300 group-hover:text-emerald-300 underline decoration-dotted">${item.dmarc.includes('reject') ? 'Bouncer active' : (item.dmarc.includes('quarantine') ? 'Strict quarantine' : 'Bouncer asleep')}</span>
@@ -706,7 +804,7 @@
                     </td>
                     <td class="py-4 px-4 font-mono text-xs text-slate-300">
                         <div>${item.cname}</div>
-                        <button type="button" class="text-[10px] text-slate-400 font-sans mt-1 cursor-pointer hover:text-emerald-400 flex items-center justify-between w-full gap-1 group text-left" onclick="SimpleCat.explain('cname')" title="Simple Cat: Explain CNAME Takeovers">
+                        <button type="button" class="min-h-[48px] text-[10px] text-slate-400 font-sans mt-1 cursor-pointer hover:text-emerald-400 flex items-center justify-between w-full gap-1 group text-left px-1.5 py-2" onclick="SimpleCat.explain('cname')" title="Simple Cat: Explain CNAME Takeovers">
                             <span class="flex items-center gap-1">
                                 <span class="font-pixel text-emerald-400">🐱</span>
                                 <span class="text-slate-300 group-hover:text-emerald-300 underline decoration-dotted">${item.cname.includes('Apex') || item.cname.includes('Edge') || item.cname.includes('Fastly') || item.cname.includes('Shopify') || item.cname.includes('Engine') ? 'Locker safe' : 'Check route'}</span>
@@ -716,7 +814,7 @@
                     </td>
                     <td class="py-4 px-4 font-mono text-xs text-slate-400">
                         <div>${item.headers} Active</div>
-                        <button type="button" class="text-[10px] text-slate-400 font-sans mt-1 cursor-pointer hover:text-emerald-400 flex items-center justify-between w-full gap-1 group text-left" onclick="SimpleCat.explain('headers')" title="Simple Cat: Explain Security Headers">
+                        <button type="button" class="min-h-[48px] text-[10px] text-slate-400 font-sans mt-1 cursor-pointer hover:text-emerald-400 flex items-center justify-between w-full gap-1 group text-left px-1.5 py-2" onclick="SimpleCat.explain('headers')" title="Simple Cat: Explain Security Headers">
                             <span class="flex items-center gap-1">
                                 <span class="font-pixel text-emerald-400">🐱</span>
                                 <span class="text-slate-300 group-hover:text-emerald-300 underline decoration-dotted">Digital Deadbolts</span>
@@ -726,14 +824,14 @@
                     </td>
                     <td class="py-4 px-6 text-right">
                         <div class="flex items-center justify-end gap-2">
-                            <button onclick="recheckDomain('${item.domain}')" title="Recheck DNS via DoH" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 transition-colors pixel-btn">
+                            <button onclick="recheckDomain(decodeURIComponent('${encodeURIComponent(item.domain)}'))" title="Recheck DNS via DoH" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center p-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 transition-colors pixel-btn">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                             </button>
-                            <button onclick="downloadSinglePDF('${item.domain}', '${item.client}', ${item.score})" title="Export Audit PDF" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-emerald-500 hover:text-slate-950 text-xs font-bold font-pixel text-slate-200 transition-all flex items-center gap-1.5 pixel-btn">
+                            <button onclick="downloadSinglePDF(decodeURIComponent('${encodeURIComponent(item.domain)}'), decodeURIComponent('${encodeURIComponent(item.client)}'), ${Number(item.score) || 0})" title="Export Audit PDF" class="min-h-[48px] min-w-[48px] px-3.5 py-2.5 rounded-lg bg-slate-800 hover:bg-emerald-500 hover:text-slate-950 text-xs font-bold font-pixel text-slate-200 transition-all inline-flex items-center justify-center gap-1.5 pixel-btn">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                 PDF
                             </button>
-                            <button onclick="deleteDomain('${item.domain}')" title="Remove domain from fleet" class="p-1.5 rounded-lg bg-slate-900/60 hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-500/30 transition-colors pixel-btn">
+                            <button onclick="deleteDomain(decodeURIComponent('${encodeURIComponent(item.domain)}'))" title="Remove domain from fleet" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center p-2.5 rounded-lg bg-slate-900/60 hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-500/30 transition-colors pixel-btn">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                             </button>
                         </div>
@@ -871,6 +969,7 @@
         async function downloadSinglePDF(domain, client, score) {
             showToast(`Rendering white-label audit PDF for ${domain}...`);
             try {
+                await ensurePdfLib();
                 const { PDFDocument, rgb, StandardFonts } = PDFLib;
                 const pdfDoc = await PDFDocument.create();
                 const page = pdfDoc.addPage([595.28, 841.89]); // A4
@@ -891,11 +990,14 @@
                     x: 60, y: 765, size: 14, font: fontBold, color: rgb(0.06, 0.72, 0.5)
                 });
 
-                page.drawText(`Target Perimeter: ${domain}`, {
+                const safeDomain = String(domain || '').replace(/[^\x20-\x7E]/g, '');
+                const safeClient = String(client || '').replace(/[^\x20-\x7E]/g, '');
+
+                page.drawText(`Target Perimeter: ${safeDomain}`, {
                     x: 60, y: 690, size: 16, font: fontBold, color: rgb(1, 1, 1)
                 });
 
-                page.drawText(`Stewardship Agency: ${client}`, {
+                page.drawText(`Stewardship Agency: ${safeClient}`, {
                     x: 60, y: 670, size: 11, font: font, color: rgb(0.6, 0.65, 0.75)
                 });
 
@@ -926,7 +1028,7 @@
                 showToast(`✓ Downloaded Orbit_Audit_${domain}.pdf`);
             } catch (e) {
                 console.error(e);
-                showToast("PDF generation completed.");
+                showToast("Failed to generate PDF. Please try again.");
             }
         }
 
@@ -950,7 +1052,7 @@
             const nameInput = document.getElementById("new-name-input");
             const submitBtn = e.target.querySelector("button[type='submit']");
 
-            const domain = input.value.trim().toLowerCase().replace(/https?:\/\//, '').split('/')[0];
+            const domain = input.value.trim().toLowerCase().replace(/[^a-z0-9.-]/g, '').split('/')[0];
             const client = nameInput.value.trim() || domain;
 
             if (!domain) return;
@@ -1029,7 +1131,7 @@
                 const agencyName = params.get("agency");
                 
                 if (targetDomain) {
-                    const cleanedDomain = targetDomain.toLowerCase().trim().replace(/https?:\/\//, '').split('/')[0];
+                    const cleanedDomain = targetDomain.toLowerCase().trim().replace(/[^a-z0-9.-]/g, '').split('/')[0];
                     if (!cleanedDomain) return;
 
                     const rowId = `row-${cleanedDomain.replace(/[^a-zA-Z0-9]/g, '_')}`;

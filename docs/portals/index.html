@@ -1,181 +1,316 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="dark scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Orbit Security | White-Label Agency Partner Portals</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'><path d='M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z'/></svg>">
+    <link rel="stylesheet" href="../assets/styles.min.css">
     <style>
-        body {
-            background-color: #0b0f17;
-            color: #e2e8f0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        .font-arcade { font-family: 'Press Start 2P', monospace, cursive; }
+        .font-pixel { font-family: 'Silkscreen', monospace; }
+        
+        .scanlines {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
+            background-size: 100% 4px;
         }
-        .brand-gradient {
-            background: linear-gradient(135deg, #0F172A 0%, #1e293b 100%);
+        .card-glass {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(6, 10, 22, 0.90) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.1), 0 12px 35px -10px rgba(2, 6, 23, 0.8);
+            backdrop-filter: blur(16px);
+        }
+        .card-glass-emerald {
+            border-color: rgba(16, 185, 129, 0.35);
+            box-shadow: inset 0 1px 1px 0 rgba(16, 185, 129, 0.2), 0 12px 35px -8px rgba(16, 185, 129, 0.18);
+        }
+        .card-glass-cyan {
+            border-color: rgba(6, 182, 212, 0.35);
+            box-shadow: inset 0 1px 1px 0 rgba(6, 182, 212, 0.2), 0 12px 35px -8px rgba(6, 182, 212, 0.18);
+        }
+        .card-glass-purple {
+            border-color: rgba(168, 85, 247, 0.35);
+            box-shadow: inset 0 1px 1px 0 rgba(168, 85, 247, 0.2), 0 12px 35px -8px rgba(168, 85, 247, 0.18);
+        }
+        .card-glass-amber {
+            border-color: rgba(245, 158, 11, 0.35);
+            box-shadow: inset 0 1px 1px 0 rgba(245, 158, 11, 0.2), 0 12px 35px -8px rgba(245, 158, 11, 0.18);
+        }
+        .pixel-btn {
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3), 0 2px 4px rgba(0, 0, 0, 0.4);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+        }
+        .pixel-btn:hover {
+            box-shadow: 0 0 16px rgba(16, 185, 129, 0.35);
+            border-color: #34d399;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between">
-    <!-- Header -->
-    <header class="border-b border-gray-800 bg-[#0d131f]/80 backdrop-blur-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+<body class="bg-transparent text-slate-100 font-sans antialiased selection:bg-emerald-500 selection:text-white min-h-screen flex flex-col justify-between" style="background-color: #060a16;">
+
+    <!-- Header Navigation -->
+    <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <span class="text-2xl">🛡️</span>
-                <div>
-                    <h1 class="text-base font-bold text-white tracking-tight">Orbit Security</h1>
-                    <p class="text-xs text-emerald-400 font-mono">Agency White-Label Fleet Portals</p>
-                </div>
+                <a href="../index.html" class="flex items-center gap-3 group">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/30 transition-all border border-emerald-500/40">
+                        <svg class="w-6 h-6 text-slate-950 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent font-pixel">Orbit Security</span>
+                        <div class="text-[10px] font-arcade text-emerald-400 tracking-wider">AGENCY WHITE-LABEL FLEET PORTALS</div>
+                    </div>
+                </a>
             </div>
-            <div class="flex items-center gap-4">
-                <a href="../fleet.html" class="text-xs text-gray-400 hover:text-white transition">Fleet Command</a>
-                <a href="../index.html" class="text-xs text-gray-400 hover:text-white transition">Main Showcase</a>
-                <a href="https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-black transition">Activate Retainer</a>
-            </div>
+            <nav class="hidden md:flex items-center gap-5 text-xs font-semibold">
+                <a href="../index.html#audit-preview" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-2 text-slate-300 hover:text-emerald-400 transition font-pixel gap-1.5">
+                    <span>🔬</span> Teardown Studio
+                </a>
+                <a href="../fleet.html" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-2 text-slate-300 hover:text-emerald-400 transition font-pixel gap-1.5">
+                    <span>🛰️</span> Fleet Command
+                </a>
+                <a href="../index.html" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-2 text-slate-300 hover:text-emerald-400 transition">Main Showcase</a>
+                <a href="../signup.html" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-3.5 py-2.5 rounded-lg text-xs font-bold font-pixel bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 transition shadow-lg shadow-emerald-500/20 pixel-btn">
+                    Upgrade Retainer Tier
+                </a>
+            </nav>
         </div>
     </header>
 
-    <!-- Main Gallery -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-1">
+    <!-- Main Showcase Gallery -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-1 w-full">
         <div class="text-center max-w-3xl mx-auto mb-12">
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-4">
-                White-Label Agency Tier ($299 – $499/mo)
-            </span>
-            <h2 class="text-3xl font-extrabold text-white tracking-tight sm:text-4xl">
+            <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-900 border border-emerald-500/30 text-emerald-400 text-[10px] font-arcade mb-4 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                WHITE-LABEL AGENCY TIER ($299 – $499/MO) // 32-BIT CYBER GLASS
+            </div>
+            <h1 class="text-3xl font-extrabold text-white tracking-tight sm:text-4xl font-pixel">
                 Client Security Command Centers
-            </h2>
-            <p class="mt-3 text-base text-gray-400">
-                Explore co-branded white-label client security dashboards configured for premier digital agencies. Each portal provides passive DoH lookups, automated takeover alerts, and branded PDF audit exports.
+            </h1>
+            <p class="mt-3 text-sm text-slate-400">
+                Explore 8 co-branded white-label client security dashboards configured for premier digital agencies, plus the Orbit Core flagship sentinel. Continuous DoH lookups, automated takeover defense, and branded PDF audit exports.
             </p>
+            <div class="mt-6 flex flex-wrap items-center justify-center gap-3 text-xs font-arcade">
+                <a href="../index.html#audit-preview" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-4 py-3 rounded-lg card-glass text-cyan-400 border border-cyan-500/30 hover:border-cyan-400 transition">
+                    🔬 Executive Teardown Studio
+                </a>
+                <a href="../fleet.html" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-4 py-3 rounded-lg card-glass text-emerald-400 border border-emerald-500/30 hover:border-emerald-400 transition">
+                    🛰️ Fleet Command Center
+                </a>
+            </div>
         </div>
 
+        <!-- 3x3 Responsive Portals Grid (8 Agencies + Orbit Core) -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Wholegrain Digital -->
-            <div class="rounded-xl border border-gray-800 bg-[#111827]/70 p-6 flex flex-col justify-between hover:border-emerald-500/50 transition">
-                <div>
+
+            <!-- 1. Wholegrain Digital -->
+            <div class="card-glass card-glass-emerald rounded-xl p-6 flex flex-col justify-between relative overflow-hidden group hover:border-emerald-500/60 transition">
+                <div class="absolute inset-0 scanlines pointer-events-none z-0 opacity-15"></div>
+                <div class="relative z-10">
                     <div class="flex items-center justify-between mb-4">
-                        <span class="text-xs font-bold text-emerald-400 font-mono uppercase">Scale Tier ($499/mo)</span>
-                        <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">Active</span>
+                        <span class="text-[10px] font-bold text-emerald-400 font-arcade uppercase">Scale Tier ($499/mo)</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono">Active SLA</span>
                     </div>
-                    <h3 class="text-lg font-bold text-white mb-1">Wholegrain Digital</h3>
-                    <p class="text-xs text-gray-400 mb-4">security.wholegraindigital.com</p>
-                    <p class="text-xs text-gray-300 mb-2 font-medium">Showcase Client Domain:</p>
-                    <div class="bg-gray-900/80 rounded-lg p-2.5 border border-gray-800 flex items-center justify-between mb-4">
-                        <span class="text-xs font-mono text-gray-300">climbingtrees.com</span>
-                        <span class="text-[10px] font-bold text-emerald-400">A+ Grade</span>
+                    <h2 class="text-lg font-bold text-white mb-1 font-pixel">Wholegrain Digital</h2>
+                    <p class="text-xs text-slate-400 font-mono mb-4">security.wholegraindigital.com</p>
+                    <p class="text-xs text-slate-300 mb-2 font-medium">Showcase Client Domain:</p>
+                    <div class="bg-slate-950/80 rounded-lg p-3 border border-slate-800 flex items-center justify-between mb-5">
+                        <span class="text-xs font-mono text-slate-300">climbingtrees.com</span>
+                        <span class="text-[10px] font-bold text-emerald-400 font-arcade">95/100 (A+)</span>
                     </div>
                 </div>
-                <a href="wholegrain-digital.html" class="w-full text-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition">
+                <a href="wholegrain-digital.html" class="relative z-10 w-full min-h-[48px] inline-flex items-center justify-center text-center px-4 py-3.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold font-pixel transition shadow-lg shadow-emerald-500/20 pixel-btn">
                     View Live Portal →
                 </a>
             </div>
 
-            <!-- Moove Agency -->
-            <div class="rounded-xl border border-gray-800 bg-[#111827]/70 p-6 flex flex-col justify-between hover:border-blue-500/50 transition">
-                <div>
+            <!-- 2. Moove Agency -->
+            <div class="card-glass card-glass-cyan rounded-xl p-6 flex flex-col justify-between relative overflow-hidden group hover:border-cyan-500/60 transition">
+                <div class="absolute inset-0 scanlines pointer-events-none z-0 opacity-15"></div>
+                <div class="relative z-10">
                     <div class="flex items-center justify-between mb-4">
-                        <span class="text-xs font-bold text-blue-400 font-mono uppercase">Scale Tier ($499/mo)</span>
-                        <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">Active</span>
+                        <span class="text-[10px] font-bold text-cyan-400 font-arcade uppercase">Scale Tier ($499/mo)</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono">Active SLA</span>
                     </div>
-                    <h3 class="text-lg font-bold text-white mb-1">Moove Agency</h3>
-                    <p class="text-xs text-gray-400 mb-4">security.mooveagency.com</p>
-                    <p class="text-xs text-gray-300 mb-2 font-medium">Showcase Client Domain:</p>
-                    <div class="bg-gray-900/80 rounded-lg p-2.5 border border-gray-800 flex items-center justify-between mb-4">
-                        <span class="text-xs font-mono text-gray-300">charityjob.co.uk</span>
-                        <span class="text-[10px] font-bold text-blue-400">B Grade</span>
+                    <h2 class="text-lg font-bold text-white mb-1 font-pixel">Moove Agency</h2>
+                    <p class="text-xs text-slate-400 font-mono mb-4">security.mooveagency.com</p>
+                    <p class="text-xs text-slate-300 mb-2 font-medium">Showcase Client Domain:</p>
+                    <div class="bg-slate-950/80 rounded-lg p-3 border border-slate-800 flex items-center justify-between mb-5">
+                        <span class="text-xs font-mono text-slate-300">charityjob.co.uk</span>
+                        <span class="text-[10px] font-bold text-cyan-400 font-arcade">85/100 (B)</span>
                     </div>
                 </div>
-                <a href="moove-agency.html" class="w-full text-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition">
+                <a href="moove-agency.html" class="relative z-10 w-full min-h-[48px] inline-flex items-center justify-center text-center px-4 py-3.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold font-pixel transition shadow-lg shadow-cyan-500/20 pixel-btn">
                     View Live Portal →
                 </a>
             </div>
 
-            <!-- Propeller -->
-            <div class="rounded-xl border border-gray-800 bg-[#111827]/70 p-6 flex flex-col justify-between hover:border-purple-500/50 transition">
-                <div>
+            <!-- 3. Propeller -->
+            <div class="card-glass card-glass-purple rounded-xl p-6 flex flex-col justify-between relative overflow-hidden group hover:border-purple-500/60 transition">
+                <div class="absolute inset-0 scanlines pointer-events-none z-0 opacity-15"></div>
+                <div class="relative z-10">
                     <div class="flex items-center justify-between mb-4">
-                        <span class="text-xs font-bold text-purple-400 font-mono uppercase">Scale Tier ($499/mo)</span>
-                        <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">Active</span>
+                        <span class="text-[10px] font-bold text-purple-400 font-arcade uppercase">Scale Tier ($499/mo)</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono">Active SLA</span>
                     </div>
-                    <h3 class="text-lg font-bold text-white mb-1">Propeller</h3>
-                    <p class="text-xs text-gray-400 mb-4">security.propeller.co.uk</p>
-                    <p class="text-xs text-gray-300 mb-2 font-medium">Showcase Client Domain:</p>
-                    <div class="bg-gray-900/80 rounded-lg p-2.5 border border-gray-800 flex items-center justify-between mb-4">
-                        <span class="text-xs font-mono text-gray-300">cotswoldsdistillery.com</span>
-                        <span class="text-[10px] font-bold text-purple-400">A Grade</span>
+                    <h2 class="text-lg font-bold text-white mb-1 font-pixel">Propeller</h2>
+                    <p class="text-xs text-slate-400 font-mono mb-4">security.propeller.co.uk</p>
+                    <p class="text-xs text-slate-300 mb-2 font-medium">Showcase Client Domain:</p>
+                    <div class="bg-slate-950/80 rounded-lg p-3 border border-slate-800 flex items-center justify-between mb-5">
+                        <span class="text-xs font-mono text-slate-300">cotswoldsdistillery.com</span>
+                        <span class="text-[10px] font-bold text-purple-400 font-arcade">85/100 (B)</span>
                     </div>
                 </div>
-                <a href="propeller.html" class="w-full text-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition">
+                <a href="propeller.html" class="relative z-10 w-full min-h-[48px] inline-flex items-center justify-center text-center px-4 py-3.5 rounded-lg bg-purple-500 hover:bg-purple-400 text-slate-950 text-xs font-bold font-pixel transition shadow-lg shadow-purple-500/20 pixel-btn">
                     View Live Portal →
                 </a>
             </div>
 
-            <!-- Eastside Co -->
-            <div class="rounded-xl border border-gray-800 bg-[#111827]/70 p-6 flex flex-col justify-between hover:border-cyan-500/50 transition">
-                <div>
+            <!-- 4. Eastside Co -->
+            <div class="card-glass card-glass-cyan rounded-xl p-6 flex flex-col justify-between relative overflow-hidden group hover:border-cyan-500/60 transition">
+                <div class="absolute inset-0 scanlines pointer-events-none z-0 opacity-15"></div>
+                <div class="relative z-10">
                     <div class="flex items-center justify-between mb-4">
-                        <span class="text-xs font-bold text-cyan-400 font-mono uppercase">Enterprise SLA</span>
-                        <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">Active</span>
+                        <span class="text-[10px] font-bold text-cyan-400 font-arcade uppercase">Enterprise SLA</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono">3 Clients Active</span>
                     </div>
-                    <h3 class="text-lg font-bold text-white mb-1">Eastside Co</h3>
-                    <p class="text-xs text-gray-400 mb-4">security.eastsideco.com</p>
-                    <p class="text-xs text-gray-300 mb-2 font-medium">Showcase Client Domain:</p>
-                    <div class="bg-gray-900/80 rounded-lg p-2.5 border border-gray-800 flex items-center justify-between mb-4">
-                        <span class="text-xs font-mono text-gray-300">candykittens.co.uk</span>
-                        <span class="text-[10px] font-bold text-cyan-400">B Grade</span>
+                    <h2 class="text-lg font-bold text-white mb-1 font-pixel">Eastside Co</h2>
+                    <p class="text-xs text-slate-400 font-mono mb-4">security.eastsideco.com</p>
+                    <p class="text-xs text-slate-300 mb-2 font-medium">Showcase Client Portfolio:</p>
+                    <div class="bg-slate-950/80 rounded-lg p-3 border border-slate-800 flex items-center justify-between mb-5">
+                        <span class="text-xs font-mono text-slate-300">candykittens.co.uk</span>
+                        <span class="text-[10px] font-bold text-cyan-400 font-arcade">85/100 (B)</span>
                     </div>
                 </div>
-                <a href="eastside-co.html" class="w-full text-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition">
+                <a href="eastside-co.html" class="relative z-10 w-full min-h-[48px] inline-flex items-center justify-center text-center px-4 py-3.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold font-pixel transition shadow-lg shadow-cyan-500/20 pixel-btn">
                     View Live Portal →
                 </a>
             </div>
 
-            <!-- We Make Websites -->
-            <div class="rounded-xl border border-gray-800 bg-[#111827]/70 p-6 flex flex-col justify-between hover:border-pink-500/50 transition">
-                <div>
+            <!-- 5. We Make Websites -->
+            <div class="card-glass card-glass-purple rounded-xl p-6 flex flex-col justify-between relative overflow-hidden group hover:border-indigo-500/60 transition">
+                <div class="absolute inset-0 scanlines pointer-events-none z-0 opacity-15"></div>
+                <div class="relative z-10">
                     <div class="flex items-center justify-between mb-4">
-                        <span class="text-xs font-bold text-pink-400 font-mono uppercase">Scale Tier ($499/mo)</span>
-                        <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">Active</span>
+                        <span class="text-[10px] font-bold text-indigo-400 font-arcade uppercase">Scale Tier ($499/mo)</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono">Active SLA</span>
                     </div>
-                    <h3 class="text-lg font-bold text-white mb-1">We Make Websites</h3>
-                    <p class="text-xs text-gray-400 mb-4">security.wemakewebsites.com</p>
-                    <p class="text-xs text-gray-300 mb-2 font-medium">Showcase Client Domain:</p>
-                    <div class="bg-gray-900/80 rounded-lg p-2.5 border border-gray-800 flex items-center justify-between mb-4">
-                        <span class="text-xs font-mono text-gray-300">pangaia.com</span>
-                        <span class="text-[10px] font-bold text-pink-400">A Grade</span>
+                    <h2 class="text-lg font-bold text-white mb-1 font-pixel">We Make Websites</h2>
+                    <p class="text-xs text-slate-400 font-mono mb-4">security.wemakewebsites.com</p>
+                    <p class="text-xs text-slate-300 mb-2 font-medium">Showcase Client Domain:</p>
+                    <div class="bg-slate-950/80 rounded-lg p-3 border border-slate-800 flex items-center justify-between mb-5">
+                        <span class="text-xs font-mono text-slate-300">haslemerecellar.co.uk</span>
+                        <span class="text-[10px] font-bold text-indigo-400 font-arcade">92/100 (A)</span>
                     </div>
                 </div>
-                <a href="we-make-websites.html" class="w-full text-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition">
+                <a href="we-make-websites.html" class="relative z-10 w-full min-h-[48px] inline-flex items-center justify-center text-center px-4 py-3.5 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-slate-950 text-xs font-bold font-pixel transition shadow-lg shadow-indigo-500/20 pixel-btn">
                     View Live Portal →
                 </a>
             </div>
 
-            <!-- Swanky -->
-            <div class="rounded-xl border border-gray-800 bg-[#111827]/70 p-6 flex flex-col justify-between hover:border-amber-500/50 transition">
-                <div>
+            <!-- 6. Swanky -->
+            <div class="card-glass card-glass-amber rounded-xl p-6 flex flex-col justify-between relative overflow-hidden group hover:border-amber-500/60 transition">
+                <div class="absolute inset-0 scanlines pointer-events-none z-0 opacity-15"></div>
+                <div class="relative z-10">
                     <div class="flex items-center justify-between mb-4">
-                        <span class="text-xs font-bold text-amber-400 font-mono uppercase">Scale Tier ($499/mo)</span>
-                        <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">Active</span>
+                        <span class="text-[10px] font-bold text-amber-400 font-arcade uppercase">Scale Tier ($499/mo)</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono">Active SLA</span>
                     </div>
-                    <h3 class="text-lg font-bold text-white mb-1">Swanky</h3>
-                    <p class="text-xs text-gray-400 mb-4">security.swankyagency.com</p>
-                    <p class="text-xs text-gray-300 mb-2 font-medium">Showcase Client Domain:</p>
-                    <div class="bg-gray-900/80 rounded-lg p-2.5 border border-gray-800 flex items-center justify-between mb-4">
-                        <span class="text-xs font-mono text-gray-300">wilkinson-sword.co.uk</span>
-                        <span class="text-[10px] font-bold text-amber-400">B Grade</span>
+                    <h2 class="text-lg font-bold text-white mb-1 font-pixel">Swanky Agency</h2>
+                    <p class="text-xs text-slate-400 font-mono mb-4">security.swankyagency.com</p>
+                    <p class="text-xs text-slate-300 mb-2 font-medium">Showcase Client Domain:</p>
+                    <div class="bg-slate-950/80 rounded-lg p-3 border border-slate-800 flex items-center justify-between mb-5">
+                        <span class="text-xs font-mono text-slate-300">loop-earplugs.com</span>
+                        <span class="text-[10px] font-bold text-amber-400 font-arcade">90/100 (A)</span>
                     </div>
                 </div>
-                <a href="swanky.html" class="w-full text-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition">
+                <a href="swanky.html" class="relative z-10 w-full min-h-[48px] inline-flex items-center justify-center text-center px-4 py-3.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold font-pixel transition shadow-lg shadow-amber-500/20 pixel-btn">
                     View Live Portal →
                 </a>
             </div>
+
+            <!-- 7. Barrel -->
+            <div class="card-glass card-glass-emerald rounded-xl p-6 flex flex-col justify-between relative overflow-hidden group hover:border-emerald-500/60 transition">
+                <div class="absolute inset-0 scanlines pointer-events-none z-0 opacity-15"></div>
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-[10px] font-bold text-emerald-400 font-arcade uppercase">Starter SLA ($299/mo)</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono">Active SLA</span>
+                    </div>
+                    <h2 class="text-lg font-bold text-white mb-1 font-pixel">Barrel</h2>
+                    <p class="text-xs text-slate-400 font-mono mb-4">security.barrelny.com</p>
+                    <p class="text-xs text-slate-300 mb-2 font-medium">Showcase Client Domain:</p>
+                    <div class="bg-slate-950/80 rounded-lg p-3 border border-slate-800 flex items-center justify-between mb-5">
+                        <span class="text-xs font-mono text-slate-300">edenbrothers.com</span>
+                        <span class="text-[10px] font-bold text-emerald-400 font-arcade">90/100 (A)</span>
+                    </div>
+                </div>
+                <a href="barrel.html" class="relative z-10 w-full min-h-[48px] inline-flex items-center justify-center text-center px-4 py-3.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold font-pixel transition shadow-lg shadow-emerald-500/20 pixel-btn">
+                    View Live Portal →
+                </a>
+            </div>
+
+            <!-- 8. Charle Agency -->
+            <div class="card-glass card-glass-amber rounded-xl p-6 flex flex-col justify-between relative overflow-hidden group hover:border-amber-500/60 transition">
+                <div class="absolute inset-0 scanlines pointer-events-none z-0 opacity-15"></div>
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-[10px] font-bold text-amber-400 font-arcade uppercase">Scale Tier ($499/mo)</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/20 font-mono">10 Findings</span>
+                    </div>
+                    <h2 class="text-lg font-bold text-white mb-1 font-pixel">Charle Agency</h2>
+                    <p class="text-xs text-slate-400 font-mono mb-4">security.charleagency.com</p>
+                    <p class="text-xs text-slate-300 mb-2 font-medium">Showcase Client Audit:</p>
+                    <div class="bg-slate-950/80 rounded-lg p-3 border border-slate-800 flex items-center justify-between mb-5">
+                        <span class="text-xs font-mono text-slate-300">candykittens.co.uk</span>
+                        <span class="text-[10px] font-bold text-amber-400 font-arcade">65/100 (C)</span>
+                    </div>
+                </div>
+                <a href="charle.html" class="relative z-10 w-full min-h-[48px] inline-flex items-center justify-center text-center px-4 py-3.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold font-pixel transition shadow-lg shadow-amber-500/20 pixel-btn">
+                    View Live Portal →
+                </a>
+            </div>
+
+            <!-- 9. Orbit Core Sentinel -->
+            <div class="card-glass card-glass-cyan rounded-xl p-6 flex flex-col justify-between relative overflow-hidden group hover:border-cyan-500/60 transition">
+                <div class="absolute inset-0 scanlines pointer-events-none z-0 opacity-15"></div>
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-[10px] font-bold text-cyan-400 font-arcade uppercase">Flagship Showcase</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-mono">Core Telemetry</span>
+                    </div>
+                    <h2 class="text-lg font-bold text-white mb-1 font-pixel">Orbit Core Labs</h2>
+                    <p class="text-xs text-slate-400 font-mono mb-4">security.orbitsecurity.org</p>
+                    <p class="text-xs text-slate-300 mb-2 font-medium">Showcase Client Fleet:</p>
+                    <div class="bg-slate-950/80 rounded-lg p-3 border border-slate-800 flex items-center justify-between mb-5">
+                        <span class="text-xs font-mono text-slate-300">apexapparel.example.com</span>
+                        <span class="text-[10px] font-bold text-cyan-400 font-arcade">3 Enrolled</span>
+                    </div>
+                </div>
+                <a href="orbit-core.html" class="relative z-10 w-full min-h-[48px] inline-flex items-center justify-center text-center px-4 py-3.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold font-pixel transition shadow-lg shadow-cyan-500/20 pixel-btn">
+                    View Live Portal →
+                </a>
+            </div>
+
         </div>
     </main>
 
     <!-- Footer -->
-    <footer class="border-t border-gray-800 py-6 text-center text-xs text-gray-500">
-        <p>© 2026 Orbit Security. Autonomous Attack Surface Telemetry &amp; White-Label Infrastructure for Agencies.</p>
-        <p class="mt-1">Carson Haynes, Founder &amp; Systems Architect — <a href="mailto:carsonmail009@gmail.com" class="text-gray-400 hover:text-white">carsonmail009@gmail.com</a></p>
+    <footer class="border-t border-slate-800 py-8 text-center text-xs text-slate-500 bg-slate-950/60">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p>© 2026 Orbit Security. Autonomous Attack Surface Telemetry &amp; White-Label Infrastructure for Agencies.</p>
+            <div class="flex items-center gap-4 text-xs font-mono">
+                <a href="../index.html#audit-preview" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-2 hover:text-emerald-400 transition">Audit Studio</a>
+                <span class="text-slate-700">•</span>
+                <a href="../signup.html" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-2 hover:text-emerald-400 transition">Upgrade Retainer</a>
+                <span class="text-slate-700">•</span>
+                <a href="../fleet.html" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-2 hover:text-emerald-400 transition">Fleet Command</a>
+                <span class="text-slate-700">•</span>
+                <a href="../disclaimer.html" class="min-h-[48px] min-w-[48px] inline-flex items-center justify-center px-2 hover:text-emerald-400 transition">Safe Harbor</a>
+            </div>
+        </div>
     </footer>
 </body>
 </html>

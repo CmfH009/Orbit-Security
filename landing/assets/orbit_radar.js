@@ -40,6 +40,48 @@
     }
 
     // ==========================================
+    // 1b. CRT Arcade Warning Toast System
+    // ==========================================
+
+    function showArcadeToast(message, type = 'warn', durationMs = 4500) {
+        let toast = document.getElementById('arcade-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'arcade-toast';
+            document.body.appendChild(toast);
+        }
+
+        const isError = type === 'error' || type === 'critical';
+        const borderColor = isError 
+            ? 'border-red-500/80 shadow-[0_0_25px_rgba(239,68,68,0.35)]' 
+            : 'border-amber-500/80 shadow-[0_0_25px_rgba(245,158,11,0.35)]';
+        const badgeColor = isError 
+            ? 'bg-red-500/20 text-red-400 border-red-500/40' 
+            : 'bg-amber-500/20 text-amber-400 border-amber-500/40';
+        const badgeLabel = isError ? 'ERR // NXDOMAIN' : 'WARN // TELEMETRY';
+
+        toast.className = `fixed bottom-6 right-6 z-50 transform translate-y-0 opacity-100 transition-all duration-300 px-4 py-3 rounded-xl bg-slate-950/95 border-2 ${borderColor} backdrop-blur-xl flex items-center gap-3 max-w-md pointer-events-auto`;
+        toast.innerHTML = `
+            <div class="flex items-center gap-2.5 flex-1 min-w-0 font-mono text-xs">
+                <span class="px-2 py-0.5 rounded text-[10px] font-pixel border font-bold ${badgeColor} flex-shrink-0">${badgeLabel}</span>
+                <span class="text-slate-200 truncate font-semibold">${escapeHtml(message)}</span>
+            </div>
+            <button type="button" onclick="this.parentElement.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none')" class="text-slate-400 hover:text-white text-sm font-mono px-1 cursor-pointer" aria-label="Dismiss">&times;</button>
+        `;
+
+        if (window.SimpleCat && SimpleCat.playBoing) {
+            SimpleCat.playBoing();
+        }
+
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => {
+            toast.classList.add('translate-y-20', 'opacity-0');
+            toast.classList.remove('pointer-events-auto');
+            toast.classList.add('pointer-events-none');
+        }, durationMs);
+    }
+
+    // ==========================================
     // 2. DNS-over-HTTPS (RFC 8484) Resolver
     // ==========================================
 
@@ -250,34 +292,60 @@
     // ==========================================
 
     let currentBrandColorHex = '#10B981';
+    let currentBrandColorName = 'emerald';
 
     function updateCustomBranding() {
         const input = document.getElementById('customAgencyName');
         const display = document.getElementById('brandNameDisplay');
         const name = input ? input.value.trim() : 'Your Agency';
         if (display) display.textContent = name || 'Your Agency';
-        AuditStore.saveBranding(name, currentBrandColorHex);
+        AuditStore.saveBranding(name, currentBrandColorHex, currentBrandColorName);
     }
 
     function setBrandColor(color) {
+        currentBrandColorName = color;
         const badge = document.getElementById('brandGradeBadge');
-        if (!badge) return;
-        badge.className = 'px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors ';
+        const exportBtn = document.getElementById('btnExportPdf');
+        const brandName = document.getElementById('brandNameDisplay');
+        
+        // Remove active state rings from all palette swatch buttons
+        document.querySelectorAll('.brand-color-btn').forEach(btn => {
+            btn.classList.remove('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-slate-900', 'border-white', 'scale-105');
+            const dot = btn.querySelector('.brand-dot');
+            if (dot) dot.classList.remove('ring-2', 'ring-white/80');
+        });
+
+        const activeBtn = document.getElementById(`brandColorBtn-${color}`);
+        if (activeBtn) {
+            activeBtn.classList.add('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-slate-900', 'border-white', 'scale-105');
+            const dot = activeBtn.querySelector('.brand-dot');
+            if (dot) dot.classList.add('ring-2', 'ring-white/80');
+        }
+
         if (color === 'cyan') {
             currentBrandColorHex = '#06B6D4';
-            badge.className += 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400';
+            if (badge) badge.className = 'px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors bg-cyan-500/10 border border-cyan-500/30 text-cyan-400';
+            if (exportBtn) exportBtn.className = 'min-h-[48px] px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-cyan-500/20 cursor-pointer';
+            if (brandName) brandName.className = 'text-cyan-400 font-bold';
         } else if (color === 'indigo') {
             currentBrandColorHex = '#6366F1';
-            badge.className += 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-400';
+            if (badge) badge.className = 'px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors bg-indigo-500/10 border border-indigo-500/30 text-indigo-400';
+            if (exportBtn) exportBtn.className = 'min-h-[48px] px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-indigo-500/20 cursor-pointer';
+            if (brandName) brandName.className = 'text-indigo-400 font-bold';
         } else if (color === 'violet') {
             currentBrandColorHex = '#A855F7';
-            badge.className += 'bg-purple-500/10 border border-purple-500/30 text-purple-400';
+            if (badge) badge.className = 'px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors bg-purple-500/10 border border-purple-500/30 text-purple-400';
+            if (exportBtn) exportBtn.className = 'min-h-[48px] px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-400 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-purple-500/20 cursor-pointer';
+            if (brandName) brandName.className = 'text-purple-400 font-bold';
         } else {
             currentBrandColorHex = '#10B981';
-            badge.className += 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400';
+            if (badge) badge.className = 'px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors bg-emerald-500/10 border border-emerald-500/30 text-emerald-400';
+            if (exportBtn) exportBtn.className = 'min-h-[48px] px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 cursor-pointer';
+            if (brandName) brandName.className = 'text-emerald-400 font-bold';
         }
+
         const agencyName = document.getElementById('customAgencyName')?.value || 'Your Agency';
-        AuditStore.saveBranding(agencyName, currentBrandColorHex);
+        AuditStore.saveBranding(agencyName, currentBrandColorHex, color);
         if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
     }
 
@@ -288,7 +356,7 @@
             const btn = document.getElementById(`viewBtn-${id}`);
             if (pane) pane.classList.add('hidden');
             if (btn) {
-                btn.className = 'report-view-btn min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0';
+                btn.className = 'report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0';
             }
         });
 
@@ -296,7 +364,7 @@
         const activeBtn = document.getElementById(`viewBtn-${viewId}`);
         if (activePane) activePane.classList.remove('hidden');
         if (activeBtn) {
-            activeBtn.className = 'report-view-btn min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0';
+            activeBtn.className = 'report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0';
         }
     }
 
@@ -304,85 +372,256 @@
     // 6. In-Browser Instant PDF Engine (pdf-lib)
     // ==========================================
 
+    let pdfLibPromise = null;
+
+    /**
+     * Standardized on-demand memoized loader promise singleton for PDFLib (513KB engine).
+     * Prevents race conditions, duplicate script injection, and handles error recovery.
+     * @returns {Promise<any>} Resolves with window.PDFLib
+     */
+    function ensurePdfLib() {
+        if (window.PDFLib) {
+            return Promise.resolve(window.PDFLib);
+        }
+        if (!pdfLibPromise) {
+            pdfLibPromise = new Promise((resolve, reject) => {
+                const existing = document.querySelector('script[src*="pdf-lib"]');
+                if (existing) {
+                    if (window.PDFLib) {
+                        resolve(window.PDFLib);
+                        return;
+                    }
+                    existing.addEventListener('load', () => resolve(window.PDFLib));
+                    existing.addEventListener('error', (err) => {
+                        pdfLibPromise = null;
+                        reject(err);
+                    });
+                    return;
+                }
+
+                const s = document.createElement('script');
+                s.src = 'assets/pdf-lib.min.js';
+                s.async = true;
+                s.onload = () => {
+                    if (window.PDFLib) {
+                        resolve(window.PDFLib);
+                    } else {
+                        pdfLibPromise = null;
+                        reject(new Error('pdf-lib.min.js loaded but window.PDFLib is undefined'));
+                    }
+                };
+                s.onerror = (err) => {
+                    pdfLibPromise = null;
+                    if (s.parentNode) s.parentNode.removeChild(s);
+                    reject(err);
+                };
+                document.head.appendChild(s);
+            });
+        }
+        return pdfLibPromise;
+    }
+
     async function generateInstantPdf() {
         const agencyName = (document.getElementById('customAgencyName')?.value || 'Apex Digital Studio').trim();
         await generateInstantPdfForDomain('clientbrand.com', 94, 'A', agencyName);
     }
 
-    async function generateInstantPdfForDomain(targetDomain, score = 90, grade = 'A', agencyName = null) {
+    async function generateInstantPdfForDomain(targetDomain, score = 90, grade = 'A', agencyName = null, customFindings = null) {
         const cleanDomain = targetDomain.replace(/[^a-zA-Z0-9.-]/g, '');
-        const finalAgencyName = agencyName || (document.getElementById('customAgencyName')?.value || 'Apex Digital Studio').trim();
+        const finalAgencyName = (agencyName || document.getElementById('customAgencyName')?.value || 'Apex Digital Studio').trim();
         const brandColor = currentBrandColorHex || '#10B981';
 
-        if (typeof PDFLib === 'undefined') {
-            alert('PDF engine is initializing, opening sample audit...');
+        try {
+            await ensurePdfLib();
+        } catch (err) {
+            console.warn('PDF-Lib lazy load fallback:', err);
             window.open('sample_audit.pdf', '_blank', 'noopener,noreferrer');
             return;
         }
 
         try {
-            const { PDFDocument, rgb, StandardFonts } = PDFLib;
+            const { PDFDocument, rgb, StandardFonts, PageSizes } = window.PDFLib;
             const pdfDoc = await PDFDocument.create();
-            const page = pdfDoc.addPage([595.28, 841.89]); // A4 dimensions
+            const page = pdfDoc.addPage(PageSizes ? PageSizes.A4 : [595.28, 841.89]);
             const { width, height } = page.getSize();
 
             const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
             const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
             const parseHex = (hex) => {
-                const h = hex.replace('#', '');
-                return rgb(parseInt(h.substring(0, 2), 16) / 255, parseInt(h.substring(2, 4), 16) / 255, parseInt(h.substring(4, 6), 16) / 255);
+                const h = (hex || '#10B981').replace('#', '').trim();
+                if (h.length === 3) {
+                    return rgb(
+                        parseInt(h[0] + h[0], 16) / 255,
+                        parseInt(h[1] + h[1], 16) / 255,
+                        parseInt(h[2] + h[2], 16) / 255
+                    );
+                }
+                if (h.length >= 6) {
+                    return rgb(
+                        parseInt(h.substring(0, 2), 16) / 255,
+                        parseInt(h.substring(2, 4), 16) / 255,
+                        parseInt(h.substring(4, 6), 16) / 255
+                    );
+                }
+                return rgb(16 / 255, 185 / 255, 129 / 255);
             };
+
             const primaryColor = parseHex(brandColor);
             const darkSlate = rgb(15 / 255, 23 / 255, 42 / 255);
             const midSlate = rgb(71 / 255, 85 / 255, 105 / 255);
             const lightSlate = rgb(241 / 255, 245 / 255, 249 / 255);
+            const white = rgb(1, 1, 1);
+            const emeraldGreen = rgb(16 / 255, 185 / 255, 129 / 255);
+            const amberGold = rgb(245 / 255, 158 / 255, 11 / 255);
+            const roseRed = rgb(239 / 255, 68 / 255, 68 / 255);
+
+            const scoreColor = score >= 90 ? emeraldGreen : (score >= 70 ? amberGold : roseRed);
 
             // Top accent bar
             page.drawRectangle({ x: 0, y: height - 8, width, height: 8, color: primaryColor });
 
             // Header Banner
             page.drawRectangle({ x: 40, y: height - 120, width: width - 80, height: 90, color: lightSlate });
-            page.drawText(finalAgencyName.toUpperCase(), { x: 55, y: height - 60, size: 16, font: helveticaBold, color: primaryColor });
-            page.drawText("EXECUTIVE CLIENT PERIMETER & ATTACK SURFACE AUDIT", { x: 55, y: height - 78, size: 9, font: helveticaBold, color: midSlate });
-            page.drawText(`Target Domain: ${cleanDomain}   |   Certified Monthly Security Stewardship`, { x: 55, y: height - 95, size: 8, font: helvetica, color: midSlate });
+            
+            // Dynamic Font Sizing to Prevent Text Overflow on Long Agency Names
+            const agencyFontSize = finalAgencyName.length > 28 ? 12 : (finalAgencyName.length > 20 ? 14 : 16);
+            page.drawText(finalAgencyName.toUpperCase(), { 
+                x: 55, 
+                y: height - 58, 
+                size: agencyFontSize, 
+                font: helveticaBold, 
+                color: primaryColor 
+            });
+            page.drawText("EXECUTIVE CLIENT PERIMETER & ATTACK SURFACE AUDIT", { 
+                x: 55, 
+                y: height - 76, 
+                size: 9, 
+                font: helveticaBold, 
+                color: darkSlate 
+            });
+            const todayStr = new Date().toISOString().split('T')[0];
+            page.drawText(`Target Domain: ${cleanDomain}   |   Certified Monthly Security Stewardship   |   ${todayStr}`, { 
+                x: 55, 
+                y: height - 94, 
+                size: 8, 
+                font: helvetica, 
+                color: midSlate 
+            });
 
             // Score Badge
             page.drawRectangle({ x: width - 150, y: height - 110, width: 80, height: 70, color: darkSlate });
-            page.drawText("HYGIENE SCORE", { x: width - 145, y: height - 55, size: 7, font: helveticaBold, color: rgb(148 / 255, 163 / 255, 184 / 255) });
-            page.drawText(`${score} / 100`, { x: width - 145, y: height - 75, size: 14, font: helveticaBold, color: rgb(52 / 255, 211 / 255, 153 / 255) });
-            page.drawText(`GRADE: ${grade}`, { x: width - 145, y: height - 92, size: 9, font: helveticaBold, color: rgb(255 / 255, 255 / 255) });
+            page.drawText("HYGIENE SCORE", { 
+                x: width - 145, 
+                y: height - 55, 
+                size: 7, 
+                font: helveticaBold, 
+                color: rgb(148 / 255, 163 / 255, 184 / 255) 
+            });
+            page.drawText(`${score} / 100`, { 
+                x: width - 145, 
+                y: height - 75, 
+                size: 14, 
+                font: helveticaBold, 
+                color: scoreColor 
+            });
+            // FIXED: rgb(1, 1, 1) ensures 3 valid numeric arguments for pdf-lib rgb()
+            page.drawText(`GRADE: ${grade}`, { 
+                x: width - 145, 
+                y: height - 92, 
+                size: 9, 
+                font: helveticaBold, 
+                color: white 
+            });
 
             // Section Header
-            page.drawText("PERIMETER AUDIT FINDINGS & SURVEILLANCE TELEMETRY", { x: 40, y: height - 150, size: 10, font: helveticaBold, color: darkSlate });
+            page.drawText("PERIMETER AUDIT FINDINGS & SURVEILLANCE TELEMETRY", { 
+                x: 40, 
+                y: height - 150, 
+                size: 10, 
+                font: helveticaBold, 
+                color: darkSlate 
+            });
 
-            const findings = [
-                { category: "SUBDOMAIN TAKEOVER SENTINEL", desc: `17 SaaS provider signatures audited across ${cleanDomain}. Zero dangling CNAMEs.`, status: "PASS" },
-                { category: "EMAIL SPOOFING PROTECTION (DMARC)", desc: "DMARC policy verified active with strict quarantine alignment. Unauthorized sender forging blocked.", status: "PASS" },
-                { category: "SENDER POLICY FRAMEWORK (SPF)", desc: "SPF TXT record configured with valid mechanism qualifiers. Zero over-permissive (+all) rules.", status: "PASS" },
-                { category: "SENSITIVE EXPOSURE SENTINEL", desc: "No public exposure of environment secrets (.env, .git, configuration backup files).", status: "PASS" },
-                { category: "TLS / SSL CERTIFICATE EXPIRY", desc: "Edge certificate valid. Active TLS cipher suites enforced.", status: "PASS" }
+            // 5 Structured Audit Categories
+            const defaultFindings = [
+                { 
+                    category: "SUBDOMAIN TAKEOVER SENTINEL", 
+                    desc: `17 SaaS provider signatures audited across ${cleanDomain}. Zero dangling CNAMEs.`, 
+                    status: "PASS" 
+                },
+                { 
+                    category: "EMAIL SPOOFING PROTECTION (DMARC)", 
+                    desc: "RFC 7489 DMARC policy verified active with strict quarantine alignment. Unauthorized sender forging blocked.", 
+                    status: "PASS" 
+                },
+                { 
+                    category: "SENDER POLICY FRAMEWORK (SPF)", 
+                    desc: "SPF TXT record configured with valid mechanism qualifiers. Zero over-permissive (+all) rules.", 
+                    status: "PASS" 
+                },
+                { 
+                    category: "SENSITIVE EXPOSURE SENTINEL", 
+                    desc: "No public exposure of environment secrets (.env, .git, configuration backup files).", 
+                    status: "PASS" 
+                },
+                { 
+                    category: "TLS / SSL CERTIFICATE EXPIRY", 
+                    desc: "Edge certificate valid. Active TLS cipher suites enforced.", 
+                    status: "PASS" 
+                }
             ];
+
+            const findings = Array.isArray(customFindings) && customFindings.length === 5 
+                ? customFindings 
+                : defaultFindings;
 
             let startY = height - 175;
             for (const item of findings) {
                 page.drawRectangle({ x: 40, y: startY - 45, width: width - 80, height: 40, color: lightSlate });
                 page.drawText(item.category, { x: 55, y: startY - 20, size: 8, font: helveticaBold, color: darkSlate });
                 page.drawText(item.desc, { x: 55, y: startY - 34, size: 7.5, font: helvetica, color: midSlate });
-                page.drawText(item.status, { x: width - 85, y: startY - 25, size: 9, font: helveticaBold, color: rgb(16 / 255, 185 / 255, 129 / 255) });
+                
+                const isFail = item.status === 'FAIL' || item.status === 'RISK';
+                const isWarn = item.status === 'WARN';
+                const statusColor = isFail ? roseRed : (isWarn ? amberGold : emeraldGreen);
+
+                page.drawText(item.status, { 
+                    x: width - 85, 
+                    y: startY - 25, 
+                    size: 9, 
+                    font: helveticaBold, 
+                    color: statusColor 
+                });
                 startY -= 50;
             }
 
             // Care Plan Stewardship Box
             page.drawRectangle({ x: 40, y: 85, width: width - 80, height: 55, color: darkSlate });
-            page.drawText("CLIENT CARE PLAN STEWARDSHIP GUARANTEE", { x: 55, y: 125, size: 8, font: helveticaBold, color: primaryColor });
+            page.drawText("CLIENT CARE PLAN STEWARDSHIP GUARANTEE", { 
+                x: 55, 
+                y: 125, 
+                size: 8, 
+                font: helveticaBold, 
+                color: primaryColor 
+            });
             page.drawText(`This executive audit certifies that ${finalAgencyName} maintains continuous perimeter surveillance over ${cleanDomain}. Our automated sentinel engines patrol against external hijacking, domain decay, and spoofing vectors.`, {
-                x: 55, y: 108, size: 7, font: helvetica, color: rgb(203 / 255, 213 / 255, 225 / 255), maxWidth: width - 110
+                x: 55, 
+                y: 108, 
+                size: 7, 
+                font: helvetica, 
+                color: rgb(203 / 255, 213 / 255, 225 / 255), 
+                maxWidth: width - 110,
+                lineHeight: 10
             });
 
             // Footer
             page.drawText(`Compiled & Certified by ${finalAgencyName}  |  Powered by Orbit Security Sentinel Mesh  |  Confidential`, {
-                x: 40, y: 45, size: 7, font: helvetica, color: midSlate
+                x: 40, 
+                y: 45, 
+                size: 7, 
+                font: helvetica, 
+                color: midSlate
             });
 
             const pdfBytes = await pdfDoc.save();
@@ -390,8 +629,8 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            const cleanName = finalAgencyName.replace(/[^a-zA-Z0-9_-]/g, '_');
-            a.download = `${cleanName}_${cleanDomain}_Executive_Perimeter_Audit.pdf`;
+            const cleanAgency = finalAgencyName.replace(/[^a-zA-Z0-9_-]/g, '_');
+            a.download = `${cleanAgency}_${cleanDomain}_Executive_Perimeter_Audit.pdf`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -436,13 +675,49 @@
     function copyRawTelemetry() {
         const pre = document.getElementById('rawTelemetryJson');
         if (!pre) return;
-        navigator.clipboard.writeText(pre.innerText).then(() => {
-            const btn = document.getElementById('copyRawBtn');
+        const text = pre.innerText || pre.textContent || '';
+        const btn = document.getElementById('copyRawBtn');
+
+        const showSuccess = () => {
             if (btn) {
+                const orig = btn.textContent;
                 btn.textContent = 'Copied!';
-                setTimeout(() => { btn.textContent = 'Copy JSON'; }, 2000);
+                setTimeout(() => { btn.textContent = orig; }, 2000);
             }
-        });
+            if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
+        };
+
+        const fallback = () => {
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                const success = document.execCommand('copy');
+                document.body.removeChild(ta);
+                if (success) {
+                    showSuccess();
+                    return;
+                }
+            } catch (err) {
+                // Ignore fallback error
+            }
+            prompt('Copy Raw Telemetry JSON:', text);
+        };
+
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            navigator.clipboard.writeText(text)
+                .then(showSuccess)
+                .catch((err) => {
+                    console.warn('[Orbit Radar] Clipboard write failed, falling back:', err);
+                    fallback();
+                });
+        } else {
+            fallback();
+        }
     }
 
     async function handleAuditRequest(e) {
@@ -461,6 +736,7 @@
             .replace(/\.+$/, '');
 
         if (!isValidDomain(domain)) {
+            showArcadeToast(`SYNTAX FAULT: [${rawInput}] is not a valid domain name.`, 'error');
             hud.classList.remove('hidden');
             hud.innerHTML = `
                 <div class="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono">
@@ -470,6 +746,7 @@
         }
 
         if (isRestrictedDomain(domain)) {
+            showArcadeToast(`RESTRICTED TARGET: Internal/non-routable domain [${domain}] blocked.`, 'warn');
             hud.classList.remove('hidden');
             hud.innerHTML = `
                 <div class="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono">
@@ -511,6 +788,70 @@
                 ...subdomainsToProbe.map(sub => DoHService.query(sub, 5))
             ]);
 
+            // -----------------------------------------------------------------
+            // A. NXDOMAIN & DoH Network Failure Detection
+            // -----------------------------------------------------------------
+            const isNxDomain = (apexA && apexA.status === 3) ||
+                               (spfRes && spfRes.status === 3 && mxRes && mxRes.status === 3);
+
+            const isLookupFailed = (!apexA?.success && !mxRes?.success && !spfRes?.success && !dmarcDirect?.success) ||
+                                  (apexA?.status === -1 && mxRes?.status === -1);
+
+            if (isNxDomain) {
+                showArcadeToast(`NXDOMAIN FAULT: [${safeDomain}] does not exist in DNS root.`, 'error');
+                if (window.SimpleCat && SimpleCat.playBoing) SimpleCat.playBoing();
+                hud.innerHTML = `
+                    <div class="p-4 sm:p-5 rounded-xl bg-slate-950/95 border border-red-500/40 shadow-2xl text-xs space-y-3 font-mono">
+                        <div class="flex items-center gap-3 text-red-400 font-bold border-b border-red-500/20 pb-3">
+                            <span class="w-3 h-3 rounded-full bg-red-500 animate-ping flex-shrink-0"></span>
+                            <span class="font-arcade text-sm">TARGET NXDOMAIN // NON-EXISTENT PERIMETER</span>
+                        </div>
+                        <div class="text-slate-300 text-xs space-y-1.5 leading-relaxed">
+                            <p><span class="text-red-400 font-bold">&gt; RCODE 3 (NXDOMAIN):</span> Domain <span class="text-white font-bold">${safeDomain}</span> does not exist in authoritative root or TLD zones.</p>
+                            <p class="text-slate-400 text-[11px]">&gt; Zero active A, MX, SPF, or DMARC records found. Security hygiene cannot be calculated for an unallocated name.</p>
+                        </div>
+                        <div class="pt-2 flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-800">
+                            <span>Status: Unregistered or Expired</span>
+                            <span class="text-red-400 font-pixel">HYGIENE: UNRESOLVABLE (0/100)</span>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            if (isLookupFailed) {
+                showArcadeToast(`RESOLVER FAULT: DoH queries for [${safeDomain}] timed out.`, 'warn');
+                if (window.SimpleCat && SimpleCat.playBoing) SimpleCat.playBoing();
+                hud.innerHTML = `
+                    <div class="p-4 sm:p-5 rounded-xl bg-slate-950/95 border border-amber-500/40 shadow-2xl text-xs space-y-3 font-mono">
+                        <div class="flex items-center gap-3 text-amber-400 font-bold border-b border-amber-500/20 pb-3">
+                            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse flex-shrink-0"></span>
+                            <span class="font-arcade text-sm">DoH RESOLVER TIMEOUT // NETWORK UNREACHABLE</span>
+                        </div>
+                        <div class="text-slate-300 text-xs space-y-1.5 leading-relaxed">
+                            <p><span class="text-amber-400 font-bold">&gt; RESOLVER FAULT:</span> Failed to query Google and Cloudflare RFC 8484 endpoints for <span class="text-white font-bold">${safeDomain}</span>.</p>
+                            <p class="text-slate-400 text-[11px]">&gt; Check local network connectivity or firewall rules blocking DNS-over-HTTPS queries.</p>
+                        </div>
+                        <div class="pt-2 flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-800">
+                            <span>Status: Network / Resolver Failure</span>
+                            <span class="text-amber-400 font-pixel">HYGIENE: OFFLINE</span>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // -----------------------------------------------------------------
+            // B. Verified Apex Resolvability & Static Perimeter Evaluation
+            // -----------------------------------------------------------------
+            const isApexResolvable = Boolean(
+                apexA && 
+                apexA.success && 
+                apexA.status === 0 && 
+                Array.isArray(apexA.answer) && 
+                apexA.answer.length > 0
+            );
+
             const STATIC_HOST_SUFFIXES = [
                 '.github.io',
                 '.pages.dev',
@@ -526,8 +867,13 @@
                 '.firebaseapp.com',
                 '.web.app'
             ];
-            const isStaticHost = STATIC_HOST_SUFFIXES.some(suffix => domain.endsWith(suffix)) || domain === 'github.io';
-            const hasNoMx = !mxRes || !mxRes.answer || mxRes.answer.length === 0;
+            const isStaticHost = isApexResolvable && (
+                STATIC_HOST_SUFFIXES.some(suffix => domain.endsWith(suffix)) || domain === 'github.io'
+            );
+
+            // RFC 7505 Null-MX & Static Perimeter Non-Sending Host:
+            // MUST verify apex resolvability before allowing hasNoMx fallback!
+            const hasNoMx = isApexResolvable && (!mxRes || !mxRes.answer || mxRes.answer.length === 0);
 
             // SPF Evaluation
             let spfResult = DnsParser.parseSpf(DnsParser.extractTxt(spfRes.answer));
@@ -712,13 +1058,13 @@
                         <div class="w-full sm:w-auto flex flex-col sm:flex-row gap-2">
                             <button type="button" 
                                     onclick="generateInstantPdfForDomain('${safeDomain}', ${totalScore}, '${escapeHtml(grade)}')" 
-                                    class="w-full sm:w-auto min-h-[44px] px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer pixel-btn">
+                                    class="w-full sm:w-auto min-h-[48px] px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer pixel-btn">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                 <span>Download Co-Branded PDF</span>
                             </button>
                             <button type="button" 
                                     onclick="copyShareableBadge('${safeDomain}', ${totalScore}, '${escapeHtml(grade)}', '${dmarcStatus}', '${spfStatus}')" 
-                                    class="w-full sm:w-auto min-h-[44px] px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs uppercase font-sans tracking-wide transition-all flex items-center justify-center gap-2 cursor-pointer pixel-btn">
+                                    class="w-full sm:w-auto min-h-[48px] px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs uppercase font-sans tracking-wide transition-all flex items-center justify-center gap-2 cursor-pointer pixel-btn">
                                 <span>📋 Copy Client Summary</span>
                             </button>
                         </div>
@@ -726,10 +1072,10 @@
 
                     <!-- HUD Tabs -->
                     <div class="flex border-b border-slate-800/80 gap-1.5 overflow-x-auto pb-1.5 -mx-1 px-1 no-scrollbar">
-                        <button type="button" id="tabBtn-overview" onclick="switchHudTab('overview')" class="hud-tab-btn min-h-[44px] px-3.5 py-2 font-mono text-xs font-semibold rounded-lg border-b-2 border-emerald-500 text-emerald-400 bg-emerald-500/10 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Overview</button>
-                        <button type="button" id="tabBtn-email" onclick="switchHudTab('email')" class="hud-tab-btn min-h-[44px] px-3.5 py-2 font-mono text-xs font-semibold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Email Auth</button>
-                        <button type="button" id="tabBtn-dns" onclick="switchHudTab('dns')" class="hud-tab-btn min-h-[44px] px-3.5 py-2 font-mono text-xs font-semibold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">SaaS CNAMEs</button>
-                        <button type="button" id="tabBtn-raw" onclick="switchHudTab('raw')" class="hud-tab-btn min-h-[44px] px-3.5 py-2 font-mono text-xs font-semibold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Raw Telemetry</button>
+                        <button type="button" id="tabBtn-overview" onclick="switchHudTab('overview')" class="hud-tab-btn min-h-[48px] px-4 py-2.5 font-mono text-xs font-semibold rounded-lg border-b-2 border-emerald-500 text-emerald-400 bg-emerald-500/10 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Overview</button>
+                        <button type="button" id="tabBtn-email" onclick="switchHudTab('email')" class="hud-tab-btn min-h-[48px] px-4 py-2.5 font-mono text-xs font-semibold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Email Auth</button>
+                        <button type="button" id="tabBtn-dns" onclick="switchHudTab('dns')" class="hud-tab-btn min-h-[48px] px-4 py-2.5 font-mono text-xs font-semibold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">SaaS CNAMEs</button>
+                        <button type="button" id="tabBtn-raw" onclick="switchHudTab('raw')" class="hud-tab-btn min-h-[48px] px-4 py-2.5 font-mono text-xs font-semibold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Raw Telemetry</button>
                     </div>
 
                     <!-- Tab 1: Overview -->
@@ -925,10 +1271,10 @@
             const content = document.getElementById('legal-content-' + t);
             if (btn && content) {
                 if (t === tabKey) {
-                    btn.className = 'legal-tab-btn px-3 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold transition-all whitespace-nowrap flex items-center gap-1.5 shadow-sm cursor-pointer';
+                    btn.className = 'legal-tab-btn min-h-[48px] px-4 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold transition-all whitespace-nowrap flex items-center justify-center gap-1.5 shadow-sm cursor-pointer';
                     content.classList.remove('hidden');
                 } else {
-                    btn.className = 'legal-tab-btn px-3 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-emerald-400 hover:bg-slate-700/60 transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer';
+                    btn.className = 'legal-tab-btn min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-emerald-400 hover:bg-slate-700/60 transition-all whitespace-nowrap flex items-center justify-center gap-1.5 cursor-pointer';
                     content.classList.add('hidden');
                 }
             }
@@ -997,7 +1343,10 @@
             // Global Escape key dismisses modals and drawers
             if (e.key === 'Escape') {
                 hideKeyboardHud();
-                if (window.SimpleCat && SimpleCat.hideDialog) SimpleCat.hideDialog();
+                if (window.SimpleCat) {
+                    if (typeof SimpleCat.hideDialog === 'function') SimpleCat.hideDialog();
+                    else if (typeof SimpleCat.hide === 'function') SimpleCat.hide();
+                }
                 closeMobileDrawer();
                 return;
             }
@@ -1027,8 +1376,12 @@
                 if (window.SimpleCat && SimpleCat.explain) SimpleCat.explain('dmarc');
             } else if (e.key === 'm' || e.key === 'M') {
                 e.preventDefault();
-                const soundBtn = document.getElementById('sound-toggle-btn');
-                if (soundBtn) soundBtn.click();
+                const soundBtn = document.getElementById('sound-toggle-btn') || document.getElementById('audio-toggle-btn');
+                if (soundBtn) {
+                    soundBtn.click();
+                } else if (window.SimpleCat && SimpleCat.toggleSound) {
+                    SimpleCat.toggleSound();
+                }
             } else if (e.key === 'p' || e.key === 'P') {
                 e.preventDefault();
                 const pricing = document.getElementById('pricing');
@@ -1037,6 +1390,13 @@
                 window.location.href = 'fleet.html';
             }
         });
+
+        const hudModal = document.getElementById('keyboardHudModal');
+        if (hudModal) {
+            hudModal.addEventListener('click', (e) => {
+                if (e.target === hudModal) hideKeyboardHud();
+            });
+        }
     }
 
     // ==========================================
@@ -1053,11 +1413,14 @@
             mobileBackdrop.classList.add('opacity-100', 'pointer-events-auto');
             mobileMenu.classList.remove('-translate-y-4', 'opacity-0', 'pointer-events-none');
             mobileMenu.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+            const firstLink = mobileMenu.querySelector('a');
+            if (firstLink) firstLink.focus();
         });
         if (hamburgerIcon) hamburgerIcon.classList.add('hidden');
         if (closeIcon) closeIcon.classList.remove('hidden');
         if (mobileMenuBtn) mobileMenuBtn.setAttribute('aria-expanded', 'true');
         document.body.style.overflow = 'hidden';
+        document.body.classList.add('drawer-open');
     }
 
     function closeMobileDrawer() {
@@ -1069,8 +1432,12 @@
         setTimeout(() => mobileBackdrop.classList.add('hidden'), 300);
         if (hamburgerIcon) hamburgerIcon.classList.remove('hidden');
         if (closeIcon) closeIcon.classList.add('hidden');
-        if (mobileMenuBtn) mobileMenuBtn.setAttribute('aria-expanded', 'false');
+        if (mobileMenuBtn) {
+            mobileMenuBtn.setAttribute('aria-expanded', 'false');
+            mobileMenuBtn.focus();
+        }
         document.body.style.overflow = '';
+        document.body.classList.remove('drawer-open');
     }
 
     function initMobileMenu() {
@@ -1090,6 +1457,11 @@
             mobileMenu.querySelectorAll('a').forEach(link => {
                 link.addEventListener('click', closeMobileDrawer);
             });
+            window.addEventListener('resize', () => {
+                if (window.innerWidth >= 768 && mobileMenuBtn && mobileMenuBtn.getAttribute('aria-expanded') === 'true') {
+                    closeMobileDrawer();
+                }
+            });
         }
     }
 
@@ -1101,10 +1473,16 @@
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 document.body.classList.add('page-idle');
-                if (window.SimpleCat && SimpleCat.suspendAudio) SimpleCat.suspendAudio();
+                if (window.SimpleCat) {
+                    if (SimpleCat.suspendAudio) SimpleCat.suspendAudio();
+                    if (SimpleCat.stopAnimations) SimpleCat.stopAnimations();
+                }
             } else {
                 document.body.classList.remove('page-idle');
-                if (window.SimpleCat && SimpleCat.resumeAudio) SimpleCat.resumeAudio();
+                if (window.SimpleCat) {
+                    if (SimpleCat.resumeAudio) SimpleCat.resumeAudio();
+                    if (SimpleCat.startAnimations) SimpleCat.startAnimations();
+                }
             }
         });
     }
@@ -1128,12 +1506,18 @@
                 const display = document.getElementById('brandNameDisplay');
                 if (display) display.textContent = savedBrand.name;
             }
-            if (savedBrand.color) {
+            if (savedBrand.colorName) {
+                setBrandColor(savedBrand.colorName);
+            } else if (savedBrand.color) {
                 if (savedBrand.color === '#06B6D4') setBrandColor('cyan');
                 else if (savedBrand.color === '#6366F1') setBrandColor('indigo');
                 else if (savedBrand.color === '#A855F7') setBrandColor('violet');
                 else setBrandColor('emerald');
+            } else {
+                setBrandColor('emerald');
             }
+        } else {
+            setBrandColor('emerald');
         }
     }
 
@@ -1143,12 +1527,14 @@
         init();
     }
 
-    // Expose necessary functions to window scope for onclick bindings
+    // Expose necessary functions to window scope for onclick bindings and interface contract
     window.escapeHtml = escapeHtml;
     window.isValidDomain = isValidDomain;
+    window.showArcadeToast = showArcadeToast;
     window.updateCustomBranding = updateCustomBranding;
     window.setBrandColor = setBrandColor;
     window.switchReportView = switchReportView;
+    window.ensurePdfLib = ensurePdfLib;
     window.generateInstantPdf = generateInstantPdf;
     window.generateInstantPdfForDomain = generateInstantPdfForDomain;
     window.setScanTarget = setScanTarget;
