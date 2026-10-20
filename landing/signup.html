@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orbit Security — Agency Retainer Signup</title>
+    <style>
+        :root {
+            --primary: #0F172A;
+            --accent: #2563EB;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #090b12;
+            color: #e2e8f0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+        }
+        .container { max-width: 640px; margin: 0 auto; padding: 40px 20px; }
+        header {
+            border-bottom: 1px solid #1f2937;
+            padding: 24px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .brand-mark {
+            width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center;
+            font-size: 22px; color: #fff;
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+        }
+        .brand-name { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; color: #fff; }
+        .brand-tagline { font-size: 12.5px; color: #94a3b8; }
+        .card {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            padding: 32px 28px;
+            margin-top: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+        }
+        h2 { font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+             color: #fff; margin-bottom: 20px; }
+        p.muted { font-size: 13px; color: #94a3b8; margin-bottom: 24px; }
+        .grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
+        @media (min-width: 640px) { .grid { grid-template-columns: 1fr 1fr; } }
+        .field { display: flex; flex-direction: column; gap: 6px; }
+        .field.full { grid-column: 1 / -1; }
+        label { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+                color: #94a3b8; }
+        input, select {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            background: #0b1019;
+            color: #e2e8f0;
+            font-size: 13px;
+        }
+        input:focus, select:focus { outline: none; border-color: var(--accent); }
+        .tier-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .tile {
+            border: 1px solid #334155; border-radius: 10px; padding: 14px 10px;
+            text-align: center; cursor: pointer; background: #0b1019;
+        }
+        .tile.selected { border-color: var(--accent); background: #111827; }
+        .tier-name { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px;
+                     color: #94a3b8; margin-bottom: 4px; display: block; }
+        .tier-price { display: block; font-size: 17px; font-weight: 900; color: #fff; }
+        .tier-note { font-size: 10.5px; color: #64748b; margin-top: 4px; display: block; }
+        input[type="radio"] { display: none; }
+        button.btn {
+            margin-top: 10px;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            font-size: 14px; font-weight: 800; text-decoration: none;
+            padding: 10px 18px; border-radius: 8px; border: none;
+            background: var(--accent); color: #090b12; cursor: pointer;
+        }
+        button.btn:hover { opacity: 0.9; }
+        button.btn:active { transform: translateY(1px); }
+        .hint { margin-top: 16px; font-size: 12px; color: #94a3b8; }
+        .hint b { color: #e2e8f0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="brand-mark">🛡️</div>
+            <div>
+                <div class="brand-name">Orbit Security</div>
+                <div class="brand-tagline">White-label agency retainer onboarding</div>
+            </div>
+        </header>
+
+        <div class="card">
+            <h2>Start a Retainer</h2>
+            <p class="muted">Choose your tier, enter your agency details, and you&rsquo;ll be sent to
+            Stripe Checkout to complete subscription. Your white-label client portal is generated
+            automatically once payment succeeds.</p>
+
+            <form id="signupForm" action="/create-checkout-session" method="POST">
+                <div class="grid">
+                    <div class="field">
+                        <label for="agency_id">Agency ID / slug</label>
+                        <input id="agency_id" name="agency_id" type="text"
+                               placeholder="eastside-co" required
+                               value="eastside-co">
+                    </div>
+                    <div class="field">
+                        <label for="agency_name">Agency name</label>
+                        <input id="agency_name" name="agency_name" type="text"
+                               placeholder="Eastside Co" required value="Eastside Co">
+                    </div>
+                    <div class="field full">
+                        <label for="contact_email">Contact email</label>
+                        <input id="contact_email" name="contact_email" type="email"
+                               placeholder="ops@agency.com" required value="ops@eastsideco.com">
+                    </div>
+                    <div class="field">
+                        <label for="website">Agency website</label>
+                        <input id="website" name="website" type="url"
+                               placeholder="https://agency.com" required value="https://eastsideco.com">
+                    </div>
+                    <div class="field">
+                        <label for="tier">Retainer tier</label>
+                        <div class="tier-grid">
+                            <label class="tile">
+                                <input type="radio" name="tier" value="Starter">
+                                <span class="tier-name">Starter</span>
+                                <span class="tier-price">$299/mo</span>
+                                <span class="tier-note">Up to 15 domains &bull; Weekly scans</span>
+                            </label>
+                            <label class="tile selected">
+                                <input type="radio" name="tier" value="Scale" checked>
+                                <span class="tier-name">Scale</span>
+                                <span class="tier-price">$499/mo</span>
+                                <span class="tier-note">Up to 50 domains &bull; Daily scans &bull; SLA certs</span>
+                            </label>
+                            <label class="tile">
+                                <input type="radio" name="tier" value="Enterprise">
+                                <span class="tier-name">Enterprise</span>
+                                <span class="tier-price">$999/mo</span>
+                                <span class="tier-note">Unlimited domains &bull; Continuous scans</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="custom_domain">Custom portal domain (optional)</label>
+                        <input id="custom_domain" name="custom_domain" type="text"
+                               placeholder="security.agency.com">
+                    </div>
+                    <div class="field">
+                        <label for="support_email">Support email</label>
+                        <input id="support_email" name="support_email" type="email"
+                               placeholder="ops@agency.com" value="ops@eastsideco.com">
+                    </div>
+                    <div class="field full">
+                        <label for="tagline">Tagline</label>
+                        <input id="tagline" name="tagline" type="text"
+                               placeholder="Managed Web &amp; Security Operations"
+                               value="Enterprise Shopify Plus Technical Solutions">
+                    </div>
+                    <div class="field">
+                        <label for="primary_color">Primary color</label>
+                        <input id="primary_color" name="primary_color" type="color" value="#0B132B">
+                    </div>
+                    <div class="field">
+                        <label for="accent_color">Accent color</label>
+                        <input id="accent_color" name="accent_color" type="color" value="#48CAE4">
+                    </div>
+                </div>
+                <button class="btn" type="submit">Create Stripe Checkout Session &rarr;</button>
+            </form>
+
+            <p class="hint">
+                Runs against <b>Stripe test mode</b> when STRIPE_SECRET_KEY is a test key.
+                Success returns you to your generated portal at <code>/portal/&lt;agency-id&gt;</code>.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const tiles = document.querySelectorAll('.tier-grid .tile');
+        const radios = document.querySelectorAll('input[name="tier"]');
+        tiles.forEach((tile, i) => {
+            tile.addEventListener('click', () => {
+                tiles.forEach(t => t.classList.remove('selected'));
+                radios.forEach(r => r.checked = false);
+                tile.classList.add('selected');
+                radios[i].checked = true;
+            });
+        });
+    </script>
+</body>
+</html>
