@@ -14,7 +14,11 @@ import sys
 import time
 from typing import Any, Dict, List, Optional
 
+from dotenv import load_dotenv
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(REPO_ROOT / ".env")
+
 SRC_DIR = REPO_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
@@ -26,11 +30,14 @@ DISPATCHED_CAMPAIGNS_PATH = DATA_DIR / "dispatched_campaigns.json"
 PROSPECTS_PATH = DATA_DIR / "prospects.json"
 FOLLOWUPS_LOG_PATH = DATA_DIR / "dispatched_followups.json"
 
-# Known hard bounces / blocked SMTP destinations (contacted via X instead)
+# Known hard bounces / blocked SMTP destinations / ticketing helpdesks
 EXCLUDED_BOUNCE_DOMAINS = {
     "anatta.io",
     "fostr.online",
     "guidance.com",
+    "mediamonks.com",
+    "cleancanvas.co.uk",
+    "outofthesandbox.com",
 }
 
 

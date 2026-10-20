@@ -494,5 +494,213 @@
     "followup_dispatched_at": "2026-10-19 19:10:09",
     "bump_number": 1,
     "status": "SENT"
+  },
+  "hashrocket.com": {
+    "agency_name": "Hashrocket",
+    "contact_email": "info@hashrocket.com",
+    "client_domain": "postmates.com",
+    "followup_dispatched_at": "2026-10-20 15:42:08",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "viget.com": {
+    "agency_name": "Viget",
+    "contact_email": "hello@viget.com",
+    "client_domain": "wcs.org",
+    "followup_dispatched_at": "2026-10-20 15:42:12",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "happycog.com": {
+    "agency_name": "Happy Cog",
+    "contact_email": "hello@happycog.com",
+    "client_domain": "benjerry.com",
+    "followup_dispatched_at": "2026-10-20 15:42:16",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "clearleft.com": {
+    "agency_name": "Clearleft",
+    "contact_email": "info@clearleft.com",
+    "client_domain": "virginatlantic.com",
+    "followup_dispatched_at": "2026-10-20 15:42:21",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "sparkbox.com": {
+    "agency_name": "Sparkbox",
+    "contact_email": "info@sparkbox.com",
+    "client_domain": "lexisnexis.com",
+    "followup_dispatched_at": "2026-10-20 15:42:26",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "upstatement.com": {
+    "agency_name": "Upstatement",
+    "contact_email": "hello@upstatement.com",
+    "client_domain": "boston.com",
+    "followup_dispatched_at": "2026-10-20 15:42:32",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "postlight.com": {
+    "agency_name": "Postlight",
+    "contact_email": "hello@postlight.com",
+    "client_domain": "nymag.com",
+    "followup_dispatched_at": "2026-10-20 15:42:37",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "sanctuary.computer": {
+    "agency_name": "Sanctuary Computer",
+    "contact_email": "hello@sanctuary.computer",
+    "client_domain": "lightphone.com",
+    "followup_dispatched_at": "2026-10-20 15:42:41",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "ustwo.com": {
+    "agency_name": "ustwo",
+    "contact_email": "hello@ustwo.com",
+    "client_domain": "monumentvalleygame.com",
+    "followup_dispatched_at": "2026-10-20 15:42:45",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "strv.com": {
+    "agency_name": "STRV",
+    "contact_email": "hello@strv.com",
+    "client_domain": "classpass.com",
+    "followup_dispatched_at": "2026-10-20 15:42:52",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "o3world.com": {
+    "agency_name": "O3 World",
+    "contact_email": "hello@o3world.com",
+    "client_domain": "vertexinc.com",
+    "followup_dispatched_at": "2026-10-20 15:42:57",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "fictivekin.com": {
+    "agency_name": "Fictive Kin",
+    "contact_email": "hello@fictivekin.com",
+    "client_domain": "thewirecutter.com",
+    "followup_dispatched_at": "2026-10-20 15:43:02",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "clevertech.com": {
+    "agency_name": "Clevertech",
+    "contact_email": "info@clevertech.com",
+    "client_domain": "citi.com",
+    "followup_dispatched_at": "2026-10-20 15:43:05",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "redantler.com": {
+    "agency_name": "Red Antler",
+    "contact_email": "info@redantler.com",
+    "client_domain": "casper.com",
+    "followup_dispatched_at": "2026-10-20 15:43:09",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "locomotive.ca": {
+    "agency_name": "Locomotive",
+    "contact_email": "info@locomotive.ca",
+    "client_domain": "locomotive.ca",
+    "followup_dispatched_at": "2026-10-20 15:43:14",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "resn.co.nz": {
+    "agency_name": "Resn",
+    "contact_email": "hi@resn.co.nz",
+    "client_domain": "adidas.com",
+    "followup_dispatched_at": "2026-10-20 15:43:18",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "hellomonday.com": {
+    "agency_name": "Hello Monday",
+    "contact_email": "hello@hellomonday.com",
+    "client_domain": "youtube.com",
+    "followup_dispatched_at": "2026-10-20 15:43:21",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "northkingdom.com": {
+    "agency_name": "North Kingdom",
+    "contact_email": "info@northkingdom.com",
+    "client_domain": "lego.com",
+    "followup_dispatched_at": "2026-10-20 15:43:27",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "stinkstudios.com": {
+    "agency_name": "Stink Studios",
+    "contact_email": "hello@stinkstudios.com",
+    "client_domain": "ray-ban.com",
+    "followup_dispatched_at": "2026-10-20 15:43:32",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "revoltmedia.com": {
+    "agency_name": "Revolt Media",
+    "contact_email": "contact@revoltmedia.com",
+    "client_domain": "timberland.com",
+    "followup_dispatched_at": "2026-10-20 15:43:36",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "firstpagedigital.com": {
+    "agency_name": "First Page Digital",
+    "contact_email": "info@firstpagedigital.com",
+    "client_domain": "singaporeair.com",
+    "followup_dispatched_at": "2026-10-20 15:43:40",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "augustash.com": {
+    "agency_name": "August Ash",
+    "contact_email": "info@augustash.com",
+    "client_domain": "cargill.com",
+    "followup_dispatched_at": "2026-10-20 15:43:44",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "milkshake.studio": {
+    "agency_name": "Milkshake Studio",
+    "contact_email": "hello@milkshake.studio",
+    "client_domain": "milkshake.studio",
+    "followup_dispatched_at": "2026-10-20 15:43:47",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "wemakeitpop.com": {
+    "agency_name": "We Make It Pop",
+    "contact_email": "hello@wemakeitpop.com",
+    "client_domain": "warbyparker.com",
+    "followup_dispatched_at": "2026-10-20 15:43:51",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "dentsucreative.com": {
+    "agency_name": "Isobar",
+    "contact_email": "info@dentsucreative.com",
+    "client_domain": "shiseido.com",
+    "followup_dispatched_at": "2026-10-20 15:43:57",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "pattern.com": {
+    "agency_name": "Pattern E-Commerce",
+    "contact_email": "info@pattern.com",
+    "client_domain": "panasonic.com",
+    "followup_dispatched_at": "2026-10-20 15:44:00",
+    "bump_number": 1,
+    "status": "SENT"
   }
 }
