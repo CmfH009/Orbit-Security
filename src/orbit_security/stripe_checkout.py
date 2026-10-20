@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
@@ -368,11 +369,11 @@ class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
                 "Redirecting agency %s to Stripe Checkout: %s", agency_id, checkout_url
             )
         except Exception as exc:  # noqa: BLE001 - surface Stripe errors plainly
-            logger.exception("Checkout session creation failed")
+            logger.exception("Checkout session creation failed: %s", exc)
             self._send_text(
                 502,
-                f"<h1>Checkout failed</h1><pre>{exc}</pre>"
-                "<p><a href='/signup'>Back</a></p>",
+                "<h1>Checkout temporarily unavailable</h1><p>Unable to initialize Stripe checkout session. Please try again later.</p>"
+                "<p><a href='/signup'>Back to Onboarding</a></p>",
                 "text/html",
             )
 
@@ -458,7 +459,17 @@ class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
         self._send_text(200, html, "text/html")
 
     def _serve_portal(self, agency_id: str):
-        portal_path = PORTALS_DIR / f"{agency_id}.html"
+        if not re.match(r"^[a-zA-Z0-9_-]+$", agency_id):
+            self._send_text(400, "Invalid portal identifier", "text/plain")
+            return
+        portal_path = (PORTALS_DIR / f"{agency_id}.html").resolve()
+        try:
+            if not portal_path.is_relative_to(PORTALS_DIR.resolve()):
+                self._send_text(403, "Access denied", "text/plain")
+                return
+        except (ValueError, AttributeError):
+            self._send_text(403, "Access denied", "text/plain")
+            return
         if portal_path.exists():
             self._send_text(200, portal_path.read_text(encoding="utf-8"), "text/html")
         else:

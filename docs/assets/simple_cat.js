@@ -158,6 +158,45 @@
             analogy: "When an architect builds a skyscraper, the building owner can't see the steel rebar deep inside the concrete. If the architect never sends an inspection report, the owner eventually asks: 'Why do we need building maintenance?' A monthly executive audit is like a certified structural safety certificate delivered to your client's desk on the 1st of every month. It proves their perimeter is locked tight, making your $250/mo retainer the easiest invoice they approve all year.",
             walletRisk: "Without tangible monthly deliverables, non-technical clients forget about invisible backend maintenance. When renewal time comes, they cut maintenance contracts because they don't see what they're paying for.",
             howToFix: "Activate Orbit Security, enter your agency name, and let automated executive PDF audits generate on the 1st of every month ready to deliver to your clients."
+        },
+        dnssec: {
+            title: "DNSSEC: The Certified Notary",
+            tag: "TAMPER-PROOF DNS ROUTING",
+            acronym: "Domain Name System Security Extensions",
+            acronymBreakdown: [
+                { term: "Domain Name System (DNS)", meaning: "The global internet phonebook mapping domain names into computer IP numbers." },
+                { term: "Security", meaning: "Cryptographic mathematical proof that lookup records were not forged or altered." },
+                { term: "Extensions", meaning: "Modern upgrade layers added to legacy 1980s internet routing protocols." }
+            ],
+            analogy: "Imagine an impostor sneaks into the telephone company and replaces the phone number of Chase Bank with their own burner phone. When you dial Chase, the impostor answers and asks for your PIN! That is 'DNS Cache Poisoning'. Standard DNS lookups have zero signatures. DNSSEC is like having a licensed government notary stamp an embossed holographic seal onto every page of the phonebook. If a hacker tries to reroute your visitors to a clone website, the browser spots the missing seal and instantly refuses to load.",
+            walletRisk: "Attackers poison DNS caches at coffee shops or ISPs to redirect your client's ecommerce checkout traffic to a replica phishing site. Customers enter credit cards, funds vanish, and your client faces $100,000+ in fraud chargebacks and brand destruction.",
+            howToFix: "It takes 2 minutes: Log into your domain registrar (Cloudflare, GoDaddy, Namecheap) and click 'Enable DNSSEC'. The registrar generates a DS record that links with your parent registry (.com / .io). Orbit scans your DS record status and cryptographic validation daily."
+        },
+        mx: {
+            title: "MX Records: The Official Post Office Box",
+            tag: "MAIL ROUTING ARCHITECTURE",
+            acronym: "Mail Exchange (MX) DNS Resource Record",
+            acronymBreakdown: [
+                { term: "Mail", meaning: "All incoming client messages, contract proposals, invoices, and password reset codes." },
+                { term: "Exchange", meaning: "The physical or cloud server designated to accept and process incoming mail." },
+                { term: "Record", meaning: "The verified priority entry in your domain's public DNS database." }
+            ],
+            analogy: "Think of your domain as a company headquarters. An MX record is the official sign in the front lobby telling the postman: 'Deliver all incoming mail to Mailroom #3 (Google Workspace) on the 4th floor.' If your MX record has a typo, the postman dumps all your mail on the street or returns it to sender. Worse, if an old abandoned MX record from a cancelled email provider lingers in your DNS, malicious actors can hijack that abandoned inbox and read your private client emails!",
+            walletRisk: "Misconfigured or dangling MX records cause 100% of incoming client leads, contracts, and urgent support tickets to bounce. Even worse, dangling mail servers allow attackers to receive password reset links for agency admin accounts.",
+            howToFix: "Ensure your DNS has exactly one authoritative mail provider configured (e.g. priority '10 aspmx.l.google.com' or Microsoft 365) and delete all orphaned legacy mail server pointers. If the domain sends NO mail, configure an RFC 7505 Null-MX record ('. 0') to permanently prevent mail routing misuse. Orbit audits MX priority and dangling endpoints automatically."
+        },
+        subdomain: {
+            title: "Subdomain Hijacking: The Guest House Squatter",
+            tag: "UNAUTHORIZED DOMAIN ANNEXATION",
+            acronym: "Subdomain Takeover via Orphaned DNS Delegation",
+            acronymBreakdown: [
+                { term: "Subdomain", meaning: "A prefix off your main domain (e.g., 'vip.yourclient.com' or 'beta.agency.com')." },
+                { term: "Hijacking", meaning: "An unauthorized party seizing complete operational control of that address." },
+                { term: "Takeover", meaning: "Serving malicious code, cookies, or forms directly under your client's trusted SSL padlock." }
+            ],
+            analogy: "Imagine you built a luxury guest house on your property, put a key under the mat, and rented it to a tenant on Airbnb. Six months later, the tenant moves out, but you never change the locks or take down the listing! A squatter moves into your guest house, throws wild parties, sells counterfeit goods on your lawn, and tells the neighbors they are your business partner. Because the guest house sits on your official land, everyone trusts them! In web security, if an old DNS record points to a deleted Webflow, AWS S3 bucket, Shopify store, or GitHub Page, an attacker can claim that bucket for $0 and host phishing attacks directly under your client's URL.",
+            walletRisk: "Because hijacked subdomains inherit root domain cookies and carry the client's trusted SSL certificate, attackers steal authentication tokens, bypass Single Sign-On (SSO), and launch spear-phishing campaigns that bypass all corporate spam filters. Remediation and legal cleanup averages $45,000+ per incident.",
+            howToFix: "Audit all DNS records quarterly or use continuous automated monitoring. When tearing down a landing page, marketing campaign, or staging site on AWS/Webflow/Shopify, delete the DNS CNAME record FIRST before deleting the cloud account. Orbit monitors 20+ cloud provider fingerprints 24/7 and alerts you within 60 seconds of an orphaned pointer."
         }
     };
 
@@ -178,6 +217,37 @@
             audioCtx.resume();
         }
         return audioCtx;
+    }
+
+    function suspendAudio() {
+        if (audioCtx && audioCtx.state === 'running') {
+            audioCtx.suspend().catch(() => {});
+        }
+    }
+
+    function resumeAudio() {
+        if (audioCtx && audioCtx.state === 'suspended' && soundEnabled) {
+            audioCtx.resume().catch(() => {});
+        }
+    }
+
+    function toggleSound() {
+        soundEnabled = !soundEnabled;
+        try {
+            localStorage.setItem("orbit_sound_enabled", soundEnabled.toString());
+        } catch (e) {}
+
+        const btn = document.getElementById("audio-toggle-btn") || document.getElementById("sound-toggle-btn");
+        if (btn) {
+            btn.innerHTML = soundEnabled ? `<span>🔊</span> <span>AUDIO: ON</span>` : `<span>🔇</span> <span>AUDIO: OFF</span>`;
+        }
+        if (soundEnabled) {
+            playBlip();
+            resumeAudio();
+        } else {
+            suspendAudio();
+        }
+        return soundEnabled;
     }
 
     function playTone(freq, type, duration, delay = 0) {
@@ -330,22 +400,26 @@
         } catch (e) {}
     }
 
+    let lastHoverTickTime = 0;
     function playHoverTick() {
         if (!soundEnabled) return;
+        const now = performance.now();
+        if (now - lastHoverTickTime < 60) return; // 60ms throttle
+        lastHoverTickTime = now;
         try {
             const ctx = getAudioContext();
             if (!ctx) return;
-            const now = ctx.currentTime;
+            const t = ctx.currentTime;
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(2400, now);
-            gain.gain.setValueAtTime(0.015, now);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.012);
+            osc.frequency.setValueAtTime(2400, t);
+            gain.gain.setValueAtTime(0.015, t);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.012);
             osc.connect(gain);
             gain.connect(ctx.destination);
-            osc.start(now);
-            osc.stop(now + 0.015);
+            osc.start(t);
+            osc.stop(t + 0.015);
         } catch (e) {}
     }
 
@@ -495,43 +569,67 @@
     // =========================================================================
     let currentActiveTab = 'story';
     let currentTermKey = 'dmarc';
+    let lastFocusedElement = null;
 
     function buildModalHtml() {
         return `
-        <div id="simple-cat-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; align-items: center; justify-content: center; background-color: rgba(2, 6, 23, 0.88); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 1rem; box-sizing: border-box;">
-            <div class="relative bg-slate-900 border-2 border-emerald-500 max-w-2xl w-full p-6 shadow-[0_0_50px_rgba(16,185,129,0.35)] rounded-2xl max-h-[90vh] flex flex-col" style="box-shadow: 6px 6px 0px #064e3b; margin: auto;">
+        <div id="simple-cat-modal" 
+             class="hidden"
+             role="dialog" 
+             aria-modal="true" 
+             aria-labelledby="cat-dialog-title" 
+             aria-describedby="cat-dialog-analogy"
+             tabindex="-1"
+             style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; align-items: center; justify-content: center; background-color: rgba(2, 6, 23, 0.90); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 1rem; box-sizing: border-box;">
+            
+            <div class="relative bg-slate-900 border-2 border-emerald-500 max-w-2xl w-full p-5 sm:p-6 shadow-[0_0_50px_rgba(16,185,129,0.35)] rounded-2xl max-h-[92vh] flex flex-col focus:outline-none" 
+                 style="box-shadow: 6px 6px 0px #064e3b; margin: auto;"
+                 tabindex="0">
                 
-                <!-- Close button -->
-                <button id="cat-close-btn" class="absolute top-4 right-4 text-slate-400 hover:text-emerald-400 font-mono text-xl px-2.5 py-1 border border-slate-700 hover:border-emerald-500 rounded bg-slate-950 transition-colors cursor-pointer" title="Close (Esc)">✕</button>
+                <!-- Close Button with explicit ARIA label -->
+                <button id="cat-close-btn" 
+                        class="absolute top-4 right-4 text-slate-400 hover:text-emerald-400 font-mono text-xl min-w-[48px] min-h-[48px] flex items-center justify-center border border-slate-700 hover:border-emerald-500 rounded-lg bg-slate-950 transition-colors cursor-pointer" 
+                        title="Close (Esc)" 
+                        aria-label="Close Simple Cat Decoder dialog">✕</button>
 
                 <!-- Header with pixel cat avatar and quick term switcher -->
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-                    <div class="flex items-center gap-3.5">
-                        <div id="cat-avatar-box" class="p-2 bg-slate-950 border border-emerald-500/40 rounded-xl animate-bounce flex-shrink-0" style="animation-duration: 2.2s;">
-                            ${getPixelCatSVG(48)}
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 pb-4 border-b border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <div id="cat-avatar-box" class="p-2 bg-slate-950 border border-emerald-500/40 rounded-xl flex-shrink-0">
+                            ${getPixelCatSVG(44)}
                         </div>
                         <div>
-                            <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-[10px] font-bold uppercase tracking-wider mb-1">
+                            <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-[9px] font-bold uppercase tracking-wider mb-1">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                                 <span id="cat-badge-tag">SIMPLE CAT // LEVEL 99 DECODER</span>
                             </div>
-                            <h3 id="cat-dialog-title" class="text-xl font-extrabold text-white font-mono tracking-tight">Security Term</h3>
+                            <h3 id="cat-dialog-title" class="text-lg sm:text-xl font-extrabold text-white font-mono tracking-tight">Security Term</h3>
                         </div>
                     </div>
 
-                    <!-- Quick Switcher Dropdown -->
-                    <div class="flex items-center gap-2 self-stretch sm:self-auto">
-                        <label for="cat-term-select" class="text-[10px] font-mono text-slate-400 uppercase">Topic:</label>
-                        <select id="cat-term-select" class="bg-slate-950 border border-emerald-500/40 text-emerald-300 font-mono text-xs rounded px-2 py-1.5 focus:outline-none focus:border-emerald-400 cursor-pointer">
+                    <!-- Glossary Search & Term Dropdown Cluster -->
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <input type="text" 
+                               id="cat-glossary-search" 
+                               placeholder="🔍 Search 12+ terms..." 
+                               class="bg-slate-950 border border-emerald-500/40 text-emerald-300 font-mono text-xs rounded px-2.5 py-1.5 focus:outline-none focus:border-emerald-400 w-full sm:w-44 placeholder-slate-500" 
+                               role="searchbox" 
+                               aria-label="Search security terms" />
+                        <select id="cat-term-select" 
+                                class="bg-slate-950 border border-emerald-500/40 text-emerald-300 font-mono text-xs rounded px-2 py-1.5 focus:outline-none focus:border-emerald-400 cursor-pointer hidden sm:block"
+                                aria-label="Select security topic">
                             <option value="dmarc">DMARC (The Bouncer)</option>
                             <option value="spf">SPF (The Guest List)</option>
                             <option value="dkim">DKIM (The Wax Seal)</option>
+                            <option value="dnssec">DNSSEC (The Notary)</option>
                             <option value="cname">CNAME Takeover (The Locker)</option>
-                            <option value="hsts">HSTS (The Armored Truck)</option>
+                            <option value="subdomain">Subdomain Hijack (Squatter)</option>
                             <option value="doh">DoH (The Secret Envelope)</option>
+                            <option value="mx">MX Records (Post Office)</option>
+                            <option value="hsts">HSTS (The Armored Truck)</option>
+                            <option value="csp">CSP (The House Rules)</option>
                             <option value="headers">OWASP Headers (Deadbolts)</option>
                             <option value="drift">Perimeter Drift (Forgotten Promo)</option>
-                            <option value="csp">CSP (The House Rules)</option>
                             <option value="bimi">BIMI (The Verified Badge)</option>
                             <option value="mta_sts">MTA-STS (The Tunnel Shield)</option>
                             <option value="audit">Retainer Audit (Monthly Proof)</option>
@@ -539,18 +637,63 @@
                     </div>
                 </div>
 
-                <!-- Navigation Tabs -->
-                <div class="flex items-center gap-1.5 pt-4 pb-2 border-b border-slate-800 overflow-x-auto text-xs font-mono">
-                    <button type="button" id="cat-tab-story" onclick="SimpleCat.switchTab('story')" class="px-3 py-1.5 rounded-t-lg border-b-2 font-bold transition-all cursor-pointer border-emerald-400 text-emerald-300 bg-emerald-500/10">
+                <!-- Quick-Jump Term Chips Row -->
+                <div id="cat-quick-chips" class="flex items-center gap-1.5 py-2.5 overflow-x-auto border-b border-slate-800 text-[10px] font-mono no-scrollbar">
+                    <button type="button" onclick="SimpleCat.explain('dmarc')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="dmarc">DMARC</button>
+                    <button type="button" onclick="SimpleCat.explain('spf')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="spf">SPF</button>
+                    <button type="button" onclick="SimpleCat.explain('dkim')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="dkim">DKIM</button>
+                    <button type="button" onclick="SimpleCat.explain('dnssec')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="dnssec">DNSSEC</button>
+                    <button type="button" onclick="SimpleCat.explain('cname')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="cname">CNAME</button>
+                    <button type="button" onclick="SimpleCat.explain('subdomain')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-purple-400 hover:border-purple-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="subdomain">Subdomain</button>
+                    <button type="button" onclick="SimpleCat.explain('doh')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="doh">DoH</button>
+                    <button type="button" onclick="SimpleCat.explain('mx')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-purple-400 hover:border-purple-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="mx">MX</button>
+                    <button type="button" onclick="SimpleCat.explain('hsts')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="hsts">HSTS</button>
+                    <button type="button" onclick="SimpleCat.explain('drift')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-purple-400 hover:border-purple-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="drift">Drift</button>
+                    <button type="button" onclick="SimpleCat.explain('audit')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="audit">Retainer</button>
+                </div>
+
+                <!-- Navigation Tabs with ARIA Tablist Semantics -->
+                <div class="flex items-center gap-1.5 pt-3 pb-2 border-b border-slate-800 overflow-x-auto text-xs font-mono" 
+                     role="tablist" 
+                     aria-label="Security Term Breakdown Tabs">
+                    <button type="button" 
+                            id="cat-tab-story" 
+                            role="tab" 
+                            aria-selected="true" 
+                            aria-controls="pane-story" 
+                            tabindex="0"
+                            onclick="SimpleCat.switchTab('story')" 
+                            class="min-h-[48px] px-4 py-2 rounded-t-lg border-b-2 font-bold transition-all cursor-pointer border-emerald-400 text-emerald-300 bg-emerald-500/10 flex items-center justify-center">
                         🐱 1. Layman Story
                     </button>
-                    <button type="button" id="cat-tab-acronym" onclick="SimpleCat.switchTab('acronym')" class="px-3 py-1.5 rounded-t-lg border-b-2 font-bold transition-all cursor-pointer border-transparent text-slate-400 hover:text-white">
+                    <button type="button" 
+                            id="cat-tab-acronym" 
+                            role="tab" 
+                            aria-selected="false" 
+                            aria-controls="pane-acronym" 
+                            tabindex="-1"
+                            onclick="SimpleCat.switchTab('acronym')" 
+                            class="min-h-[48px] px-4 py-2 rounded-t-lg border-b-2 font-bold transition-all cursor-pointer border-transparent text-slate-400 hover:text-white flex items-center justify-center">
                         🔤 2. Letters Decoded
                     </button>
-                    <button type="button" id="cat-tab-risk" onclick="SimpleCat.switchTab('risk')" class="px-3 py-1.5 rounded-t-lg border-b-2 font-bold transition-all cursor-pointer border-transparent text-slate-400 hover:text-white">
+                    <button type="button" 
+                            id="cat-tab-risk" 
+                            role="tab" 
+                            aria-selected="false" 
+                            aria-controls="pane-risk" 
+                            tabindex="-1"
+                            onclick="SimpleCat.switchTab('risk')" 
+                            class="min-h-[48px] px-4 py-2 rounded-t-lg border-b-2 font-bold transition-all cursor-pointer border-transparent text-slate-400 hover:text-white flex items-center justify-center">
                         💥 3. Wallet Risk
                     </button>
-                    <button type="button" id="cat-tab-fix" onclick="SimpleCat.switchTab('fix')" class="px-3 py-1.5 rounded-t-lg border-b-2 font-bold transition-all cursor-pointer border-transparent text-slate-400 hover:text-white">
+                    <button type="button" 
+                            id="cat-tab-fix" 
+                            role="tab" 
+                            aria-selected="false" 
+                            aria-controls="pane-fix" 
+                            tabindex="-1"
+                            onclick="SimpleCat.switchTab('fix')" 
+                            class="min-h-[48px] px-4 py-2 rounded-t-lg border-b-2 font-bold transition-all cursor-pointer border-transparent text-slate-400 hover:text-white flex items-center justify-center">
                         🛠️ 4. The 2-Min Fix
                     </button>
                 </div>
@@ -559,7 +702,7 @@
                 <div class="py-4 overflow-y-auto flex-1 text-sm text-slate-300 leading-relaxed font-sans pr-1">
                     
                     <!-- Tab 1: Layman Story -->
-                    <div id="pane-story" class="space-y-3">
+                    <div id="pane-story" role="tabpanel" aria-labelledby="cat-tab-story" tabindex="0" class="space-y-3">
                         <div class="p-3.5 bg-slate-950/80 rounded-xl border border-emerald-500/20">
                             <div class="text-xs font-mono text-emerald-400 uppercase tracking-widest mb-1.5 font-bold">
                                 📖 The 5-Year-Old Explanation:
@@ -569,7 +712,7 @@
                     </div>
 
                     <!-- Tab 2: Letters Decoded -->
-                    <div id="pane-acronym" class="space-y-3" style="display: none;">
+                    <div id="pane-acronym" role="tabpanel" aria-labelledby="cat-tab-acronym" tabindex="0" class="space-y-3" style="display: none;">
                         <div class="p-3 bg-slate-950/80 rounded-xl border border-cyan-500/20">
                             <div class="text-xs font-mono text-cyan-400 uppercase tracking-widest mb-1 font-bold">
                                 🔤 What the Crazy Acronym Stands For:
@@ -580,7 +723,7 @@
                     </div>
 
                     <!-- Tab 3: Wallet Risk -->
-                    <div id="pane-risk" class="space-y-3" style="display: none;">
+                    <div id="pane-risk" role="tabpanel" aria-labelledby="cat-tab-risk" tabindex="0" class="space-y-3" style="display: none;">
                         <div class="p-3.5 bg-slate-950/80 rounded-xl border border-red-500/30">
                             <div class="text-xs font-mono text-red-400 uppercase tracking-widest mb-1.5 font-bold flex items-center gap-1.5">
                                 <span>⚠️ Real-World Danger & Financial Loss:</span>
@@ -590,7 +733,7 @@
                     </div>
 
                     <!-- Tab 4: Fix -->
-                    <div id="pane-fix" class="space-y-3" style="display: none;">
+                    <div id="pane-fix" role="tabpanel" aria-labelledby="cat-tab-fix" tabindex="0" class="space-y-3" style="display: none;">
                         <div class="p-3.5 bg-slate-950/80 rounded-xl border border-emerald-500/30">
                             <div class="text-xs font-mono text-emerald-400 uppercase tracking-widest mb-1.5 font-bold flex items-center gap-1.5">
                                 <span>⚡ How It Gets Fixed in 2 Minutes:</span>
@@ -604,7 +747,9 @@
                 <!-- Footer Controls -->
                 <div class="pt-3 border-t border-slate-800 flex items-center justify-between text-xs font-mono text-slate-400">
                     <span class="text-[11px] text-slate-500 hidden sm:inline">"Security explained so your creative clients actually get it."</span>
-                    <button id="cat-got-it-btn" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] cursor-pointer">
+                    <button id="cat-got-it-btn" 
+                            class="min-h-[48px] px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] cursor-pointer pixel-btn flex items-center justify-center"
+                            aria-label="Confirm and close dialog">
                         Got it! (Close)
                     </button>
                 </div>
@@ -622,18 +767,35 @@
             if (!btn || !pane) return;
 
             if (tab === currentActiveTab) {
-                btn.className = "px-3 py-1.5 rounded-t-lg border-b-2 font-bold transition-all cursor-pointer border-emerald-400 text-emerald-300 bg-emerald-500/10";
+                btn.className = "min-h-[48px] px-4 py-2 rounded-t-lg border-b-2 font-bold transition-all cursor-pointer border-emerald-400 text-emerald-300 bg-emerald-500/10 flex items-center justify-center";
+                btn.setAttribute("aria-selected", "true");
+                btn.tabIndex = 0;
                 pane.style.display = 'block';
             } else {
-                btn.className = "px-3 py-1.5 rounded-t-lg border-b-2 font-bold transition-all cursor-pointer border-transparent text-slate-400 hover:text-white";
+                btn.className = "min-h-[48px] px-4 py-2 rounded-t-lg border-b-2 font-bold transition-all cursor-pointer border-transparent text-slate-400 hover:text-white flex items-center justify-center";
+                btn.setAttribute("aria-selected", "false");
+                btn.tabIndex = -1;
                 pane.style.display = 'none';
             }
         });
     }
 
     function populateModalContent(termKey) {
-        currentTermKey = termKey.toLowerCase();
-        const data = DICTIONARY[currentTermKey] || DICTIONARY['dmarc'];
+        const ALIASES = {
+            'takeover': 'cname',
+            'takeovers': 'cname',
+            'subdomains': 'subdomain',
+            'subdomain_hijack': 'subdomain',
+            'hijack': 'subdomain',
+            'hijacking': 'subdomain',
+            'mail': 'mx',
+            'email': 'dmarc',
+            'retainer': 'audit',
+            'reports': 'audit'
+        };
+        const resolvedKey = ALIASES[termKey.toLowerCase()] || termKey.toLowerCase();
+        currentTermKey = resolvedKey;
+        const data = DICTIONARY[resolvedKey] || DICTIONARY['dmarc'];
 
         document.getElementById("cat-badge-tag").innerText = `SIMPLE CAT // ${data.tag}`;
         document.getElementById("cat-dialog-title").innerText = data.title;
@@ -658,11 +820,22 @@
             selector.value = currentTermKey;
         }
 
+        // Highlight active chip
+        document.querySelectorAll("#cat-quick-chips button").forEach(b => {
+            if (b.dataset.chip === currentTermKey) {
+                b.className = "chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-emerald-500 border border-emerald-400 text-slate-950 font-bold cursor-pointer flex-shrink-0 flex items-center justify-center";
+            } else {
+                b.className = "chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center";
+            }
+        });
+
         renderActiveTab();
     }
 
     function showSimpleCatDialog(termKey = 'dmarc') {
         playChirp();
+        lastFocusedElement = document.activeElement;
+
         let modal = document.getElementById("simple-cat-modal");
         if (!modal) {
             document.body.insertAdjacentHTML('beforeend', buildModalHtml());
@@ -670,10 +843,40 @@
 
             document.getElementById("cat-close-btn").addEventListener("click", hideSimpleCatDialog);
             document.getElementById("cat-got-it-btn").addEventListener("click", hideSimpleCatDialog);
-            document.getElementById("cat-term-select").addEventListener("change", (e) => {
-                playBlip();
-                populateModalContent(e.target.value);
-            });
+
+            const termSelect = document.getElementById("cat-term-select");
+            if (termSelect) {
+                termSelect.addEventListener("change", (e) => {
+                    playBlip();
+                    populateModalContent(e.target.value);
+                });
+            }
+
+            // Live Glossary Search Handler
+            const searchInput = document.getElementById("cat-glossary-search");
+            if (searchInput) {
+                searchInput.addEventListener("input", (e) => {
+                    const q = e.target.value.toLowerCase().trim();
+                    if (!q) return;
+                    const match = Object.keys(DICTIONARY).find(k => {
+                        const entry = DICTIONARY[k];
+                        return k.includes(q) || 
+                               entry.title.toLowerCase().includes(q) || 
+                               entry.acronym.toLowerCase().includes(q) ||
+                               entry.tag.toLowerCase().includes(q);
+                    });
+                    if (match) {
+                        populateModalContent(match);
+                    }
+                });
+
+                searchInput.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") {
+                        playChirp();
+                        e.target.blur();
+                    }
+                });
+            }
 
             modal.addEventListener("click", (e) => {
                 if (e.target === modal) {
@@ -681,9 +884,31 @@
                 }
             });
 
-            window.addEventListener("keydown", (e) => {
-                if (e.key === "Escape" && modal.style.display === "flex") {
+            // Focus Trap Listener
+            modal.addEventListener("keydown", (e) => {
+                if (e.key === "Escape") {
+                    e.preventDefault();
                     hideSimpleCatDialog();
+                    return;
+                }
+
+                if (e.key === "Tab") {
+                    const focusables = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+                    if (!focusables || focusables.length === 0) return;
+                    const firstEl = focusables[0];
+                    const lastEl = focusables[focusables.length - 1];
+
+                    if (e.shiftKey) {
+                        if (document.activeElement === firstEl) {
+                            e.preventDefault();
+                            lastEl.focus();
+                        }
+                    } else {
+                        if (document.activeElement === lastEl) {
+                            e.preventDefault();
+                            firstEl.focus();
+                        }
+                    }
                 }
             });
         }
@@ -692,6 +917,15 @@
         modal.style.display = 'flex';
         modal.classList.add('cat-modal-open');
         modal.classList.remove('hidden');
+
+        // Initial focus management
+        const searchInput = document.getElementById("cat-glossary-search");
+        if (searchInput && window.innerWidth >= 640) {
+            setTimeout(() => searchInput.focus(), 60);
+        } else {
+            const closeBtn = document.getElementById("cat-close-btn");
+            if (closeBtn) closeBtn.focus();
+        }
     }
 
     function hideSimpleCatDialog() {
@@ -701,6 +935,9 @@
             modal.style.display = 'none';
             modal.classList.remove('cat-modal-open');
             modal.classList.add('hidden');
+        }
+        if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+            lastFocusedElement.focus();
         }
     }
 
@@ -713,6 +950,15 @@
     // =========================================================================
     // 5. 16-BIT CYBER ARCADE BACKGROUND CANVAS & STARFIELD ENGINE
     // =========================================================================
+    let _startBgAnimation = () => {};
+    let _stopBgAnimation = () => {};
+    function startBgAnimation() {
+        _startBgAnimation();
+    }
+    function stopBgAnimation() {
+        _stopBgAnimation();
+    }
+
     function initArcadeBackground() {
         if (document.getElementById("retro-arcade-canvas")) return;
 
@@ -808,10 +1054,26 @@
 
         // Cyber Horizon Grid State
         let gridOffset = 0;
+        let bgAnimId = null;
+        let bgLoopActive = false;
+
+        function startBgAnimation() {
+            if (bgLoopActive || document.hidden) return;
+            bgLoopActive = true;
+            bgAnimId = requestAnimationFrame(drawArcadeFrame);
+        }
+
+        function stopBgAnimation() {
+            bgLoopActive = false;
+            if (bgAnimId !== null) {
+                cancelAnimationFrame(bgAnimId);
+                bgAnimId = null;
+            }
+        }
 
         function drawArcadeFrame() {
-            if (document.hidden) {
-                requestAnimationFrame(drawArcadeFrame);
+            if (document.hidden || !bgLoopActive) {
+                stopBgAnimation();
                 return;
             }
 
@@ -917,10 +1179,16 @@
 
             // Reset shadows for next frame
             ctx.shadowBlur = 0;
-            requestAnimationFrame(drawArcadeFrame);
+            if (bgLoopActive && !document.hidden) {
+                bgAnimId = requestAnimationFrame(drawArcadeFrame);
+            }
         }
 
-        requestAnimationFrame(drawArcadeFrame);
+        // Expose background animation hooks for master idle governor
+        _startBgAnimation = startBgAnimation;
+        _stopBgAnimation = stopBgAnimation;
+
+        startBgAnimation();
     }
 
     // =========================================================================
@@ -1046,15 +1314,15 @@
         // 5. Corner Docking Station
         dockEl = document.createElement("div");
         dockEl.id = "simple-cat-dock";
-        dockEl.className = "fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 flex items-center gap-2";
+        dockEl.className = "fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex items-center gap-2";
         dockEl.innerHTML = `
-            <div class="px-3 py-2 bg-slate-900/95 border-2 border-emerald-500 rounded-xl shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:border-emerald-400 transition-all flex items-center gap-2.5 backdrop-blur-md" style="box-shadow: 4px 4px 0px #064e3b;">
-                <div class="relative flex-shrink-0 cursor-pointer" id="dock-avatar-btn">
+            <div class="w-[52px] h-[52px] min-w-[52px] min-h-[52px] rounded-full p-0 flex items-center justify-center sm:w-auto sm:h-auto sm:rounded-xl sm:px-3 sm:py-2 bg-slate-900/95 border-2 border-emerald-500 shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:border-emerald-400 transition-all sm:gap-2.5 backdrop-blur-md" style="box-shadow: 4px 4px 0px #064e3b;">
+                <div class="relative flex-shrink-0 cursor-pointer min-w-[48px] min-h-[48px] flex items-center justify-center" id="dock-avatar-btn" title="Astro-Cat Copilot">
                     ${getPixelCatSVG(32)}
                     <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping"></span>
                     <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border border-slate-900"></span>
                 </div>
-                <div class="flex flex-col text-left pr-0.5">
+                <div class="hidden sm:flex flex-col text-left pr-0.5">
                     <div class="flex items-center gap-1.5">
                         <span class="text-[9px] font-arcade text-emerald-400 tracking-wider">ASTRO-CAT</span>
                         <span class="text-[8px] font-mono px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">ONLINE</span>
@@ -1081,7 +1349,7 @@
         document.body.appendChild(dockEl);
 
         bindCopilotEvents();
-        requestAnimationFrame(updateCopilotLoop);
+        startCopilotAnimation();
     }
 
     function resizeFxCanvas() {
@@ -1611,8 +1879,30 @@
         }
     }
 
-    // Main 60fps Physics & Render Loop
+    let copilotAnimId = null;
+    let copilotLoopActive = false;
+
+    function startCopilotAnimation() {
+        if (copilotLoopActive || document.hidden) return;
+        copilotLoopActive = true;
+        copilotAnimId = requestAnimationFrame(updateCopilotLoop);
+    }
+
+    function stopCopilotAnimation() {
+        copilotLoopActive = false;
+        if (copilotAnimId !== null) {
+            cancelAnimationFrame(copilotAnimId);
+            copilotAnimId = null;
+        }
+    }
+
+    // Main 60fps Physics & Render Loop (with 0% CPU Idle Governor)
     function updateCopilotLoop() {
+        if (document.hidden || !copilotLoopActive) {
+            stopCopilotAnimation();
+            return;
+        }
+
         if (copilot.state !== 'docked') {
             copilot.bobAngle += 0.05;
 
@@ -1863,34 +2153,34 @@
             }
         }
 
-        requestAnimationFrame(updateCopilotLoop);
+        if (copilotLoopActive && !document.hidden) {
+            copilotAnimId = requestAnimationFrame(updateCopilotLoop);
+        }
     }
 
     // =========================================================================
     // 7. AUDIO TOGGLE BUTTON (WITH PERSISTENCE)
     // =========================================================================
     function createSoundToggle() {
-        if (document.getElementById("audio-toggle-btn")) return;
+        if (document.getElementById("audio-toggle-btn") || document.getElementById("sound-toggle-btn")) return;
         
         // Load saved sound preference
-        const saved = localStorage.getItem("orbit_sound_enabled");
-        if (saved !== null) {
-            soundEnabled = (saved === "true");
-        }
+        try {
+            const saved = localStorage.getItem("orbit_sound_enabled");
+            if (saved !== null) {
+                soundEnabled = (saved === "true");
+            }
+        } catch (e) {}
 
         const btn = document.createElement("button");
         btn.id = "audio-toggle-btn";
+        btn.setAttribute("data-sound-alias", "sound-toggle-btn");
         btn.className = "text-[11px] font-mono px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/40 transition-colors flex items-center gap-1.5 cursor-pointer";
         btn.innerHTML = soundEnabled ? `<span>🔊</span> <span>AUDIO: ON</span>` : `<span>🔇</span> <span>AUDIO: OFF</span>`;
-        btn.title = "Toggle 8-Bit Retro Audio SFX";
+        btn.title = "Toggle 8-Bit Retro Audio SFX (Hotkey: M)";
 
         btn.addEventListener("click", () => {
-            soundEnabled = !soundEnabled;
-            localStorage.setItem("orbit_sound_enabled", soundEnabled.toString());
-            btn.innerHTML = soundEnabled ? `<span>🔊</span> <span>AUDIO: ON</span>` : `<span>🔇</span> <span>AUDIO: OFF</span>`;
-            if (soundEnabled) {
-                playBlip();
-            }
+            toggleSound();
         });
 
         const navActions = document.querySelector("header .max-w-7xl .sm\\:flex") || document.querySelector("header .max-w-6xl .sm\\:flex") || document.querySelector("header nav");
@@ -1910,16 +2200,23 @@
             });
         });
 
-        // Specular mouse cursor spotlight on glass cards
+        // Specular mouse cursor spotlight on glass cards (rAF throttled)
         const glassCards = document.querySelectorAll(".card-glass, .card-glass-emerald, .card-glass-cyan, .pricing-grid > div");
         glassCards.forEach(card => {
+            let ticking = false;
             card.addEventListener("mousemove", (e) => {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                card.style.setProperty("--mouse-x", `${x}px`);
-                card.style.setProperty("--mouse-y", `${y}px`);
-            });
+                if (!ticking) {
+                    requestAnimationFrame(() => {
+                        const rect = card.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
+                        card.style.setProperty("--mouse-x", `${x}px`);
+                        card.style.setProperty("--mouse-y", `${y}px`);
+                        ticking = false;
+                    });
+                    ticking = true;
+                }
+            }, { passive: true });
         });
 
         // Helper Chips
@@ -2267,6 +2564,7 @@
     window.SimpleCat = {
         explain: showSimpleCatDialog,
         hide: hideSimpleCatDialog,
+        hideDialog: hideSimpleCatDialog, // Alias for cross-engine compatibility with orbit_radar.js
         switchTab: switchTab,
         playBlip: playBlip,
         playChirp: playChirp,
@@ -2279,6 +2577,17 @@
         playCoin: playCoin,
         playHoverTick: playHoverTick,
         playThruster: playThruster,
+        suspendAudio: suspendAudio,
+        resumeAudio: resumeAudio,
+        toggleSound: toggleSound,
+        startAnimations: function() {
+            startBgAnimation();
+            startCopilotAnimation();
+        },
+        stopAnimations: function() {
+            stopBgAnimation();
+            stopCopilotAnimation();
+        },
         launchZeroG: launchAstroCatIntoZeroG,
         dock: dockAstroCat,
         laserChase: toggleLaserChase,
@@ -2294,6 +2603,68 @@
         bindHelperChips: bindTactileInteractions,
         initBackground: initArcadeBackground
     };
+
+    // Ensure backwards-compatible alias directly on object
+    SimpleCat.hideDialog = SimpleCat.hide;
+
+    // Master 0% CPU Idle Governor & Audio Context Lifecycle
+    function handleVisibilityOrFocusChange() {
+        const vid = document.getElementById("astrocat-gameplay-video");
+        if (document.hidden) {
+            suspendAudio();
+            stopBgAnimation();
+            stopCopilotAnimation();
+            if (vid && !vid.paused) {
+                try { vid.pause(); vid._wasPlayingBeforeHide = true; } catch (e) {}
+            }
+        } else {
+            if (soundEnabled) resumeAudio();
+            startBgAnimation();
+            startCopilotAnimation();
+            if (vid && vid._wasPlayingBeforeHide) {
+                try { vid.play().catch(() => {}); } catch (e) {}
+                vid._wasPlayingBeforeHide = false;
+            }
+        }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityOrFocusChange);
+
+    // Audio suspension on window blur (clicks outside tab / other monitor)
+    window.addEventListener("blur", () => {
+        suspendAudio();
+    });
+
+    // Audio restoration on window focus
+    window.addEventListener("focus", () => {
+        if (!document.hidden && soundEnabled) {
+            resumeAudio();
+        }
+    });
+
+    // Pagehide / Pageshow events for mobile browser bfcache handling
+    window.addEventListener("pagehide", () => {
+        suspendAudio();
+        stopBgAnimation();
+        stopCopilotAnimation();
+    });
+
+    window.addEventListener("pageshow", (e) => {
+        if (!document.hidden) {
+            if (soundEnabled) resumeAudio();
+            startBgAnimation();
+            startCopilotAnimation();
+        }
+    });
+
+    // User interaction unlock for Web Audio policy compliance
+    const unlockAudio = () => {
+        if (audioCtx && audioCtx.state === 'suspended' && soundEnabled) {
+            audioCtx.resume().catch(() => {});
+        }
+    };
+    window.addEventListener("pointerdown", unlockAudio, { passive: true, once: false });
+    window.addEventListener("keydown", unlockAudio, { passive: true, once: false });
 
     function initAll() {
         injectStyleGuarantees();

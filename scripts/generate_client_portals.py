@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -127,9 +128,9 @@ def pdf_href(output_dir: Path, pdf: Optional[Path]) -> str:
     if pdf is None:
         return "#"
     try:
-        return pdf.resolve().relative_to(output_dir.resolve()).as_posix()
+        return os.path.relpath(pdf.resolve(), output_dir.resolve()).replace("\\", "/")
     except ValueError:
-        return pdf.resolve().as_posix()
+        return "#"
 
 
 def portal_css(primary: str, accent: str) -> str:
@@ -164,7 +165,9 @@ def portal_css(primary: str, accent: str) -> str:
     .meta-link {{
         font-size: 12.5px; color: {accent}; text-decoration: none;
         border: 1px solid rgba(74, 144, 226, 0.35);
-        padding: 4px 10px; border-radius: 6px;
+        padding: 6px 12px; border-radius: 6px;
+        display: inline-flex; align-items: center; justify-content: center;
+        min-height: 48px; min-width: 48px; box-sizing: border-box;
     }}
     .meta-link:hover {{ opacity: 0.9; }}
     .tier-badge {{
@@ -235,10 +238,31 @@ def portal_css(primary: str, accent: str) -> str:
         font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
     }}
     .status-dot {{ width: 6px; height: 6px; border-radius: 50%; }}
+    .font-arcade {{ font-family: 'Press Start 2P', monospace, cursive; }}
+    .font-pixel {{ font-family: 'Silkscreen', monospace; }}
+    .scanlines {{
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
+        background-size: 100% 4px;
+    }}
+    .card-glass {{
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(6, 10, 22, 0.90) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.1), 0 12px 35px -10px rgba(2, 6, 23, 0.8);
+        backdrop-filter: blur(16px);
+    }}
+    .nav-btn {{
+        display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        font-size: 11.5px; font-weight: 700; text-decoration: none;
+        padding: 8px 14px; min-height: 48px; min-width: 48px; box-sizing: border-box; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #94a3b8; transition: all 0.15s ease;
+    }}
+    .nav-btn:hover {{ color: #fff; border-color: rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.05); }}
+    .nav-btn-highlight {{ color: {accent}; border-color: {accent}55; background: {accent}1a; }}
+    .nav-btn-highlight:hover {{ border-color: {accent}; }}
     .btn {{
-        display: inline-flex; align-items: center; gap: 6px;
+        display: inline-flex; align-items: center; justify-content: center; gap: 6px;
         font-size: 12.5px; font-weight: 700; text-decoration: none;
-        padding: 6px 12px; border-radius: 8px; border: 1px solid;
+        padding: 8px 16px; min-height: 48px; min-width: 48px; box-sizing: border-box; border-radius: 8px; border: 1px solid;
     }}
     .btn-primary {{
         background: {accent}; color: #090b12; border-color: {accent};
@@ -255,7 +279,7 @@ def portal_css(primary: str, accent: str) -> str:
         border-top: 1px solid #1f2937; background: #0a0c11;
         padding: 26px 0; color: #64748b; font-size: 12px; text-align: center;
     }}
-    footer a {{ color: {accent}; text-decoration: none; }}
+    footer a {{ color: {accent}; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; min-height: 48px; min-width: 48px; padding: 0 8px; }}
     footer a:hover {{ text-decoration: underline; }}
     @media (max-width: 768px) {{
         .stats-grid {{ grid-template-columns: repeat(3, 1fr); }}
@@ -351,6 +375,7 @@ def render_portal_html(
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{agency_name} | Client Security Audit Portal — Orbit Security</title>
+    <link rel="stylesheet" href="../assets/styles.min.css">
     <style>{css}</style>
 </head>
 <body>
@@ -358,16 +383,20 @@ def render_portal_html(
         <div class="container">
             <div class="header-inner">
                 <div class="brand">
-                    <div class="brand-mark">🛡️</div>
+                    <div class="brand-mark font-pixel">🛡️</div>
                     <div class="brand-info">
-                        <div class="brand-name">{agency_name}</div>
+                        <div class="brand-name font-pixel">{agency_name}</div>
                         <div class="brand-tagline">{tagline}</div>
                     </div>
                 </div>
                 <div class="portal-meta">
+                    <a href="../index.html#audit-preview" class="nav-btn nav-btn-highlight font-pixel" title="View Executive Audit Teardown Studio">🔬 Teardown Studio</a>
+                    <a href="../signup.html" class="nav-btn nav-btn-highlight font-pixel" title="Self-Serve Tier Upgrade">⚡ Upgrade Retainer</a>
+                    <a href="../fleet.html" class="nav-btn" title="Multi-Domain Fleet Command Center">🛰️ Fleet Command</a>
+                    <a href="index.html" class="nav-btn" title="All Agency Demo Portals">🏢 All Portals</a>
                     <a href="mailto:{support_email}" class="meta-link">✉ {support_email}</a>
                     <a href="{html.escape(website_url)}" class="meta-link" target="_blank" rel="noopener">🌐 {website_label}</a>
-                    <span class="tier-badge">{tier_label}</span>
+                    <span class="tier-badge font-arcade">{tier_label}</span>
                 </div>
             </div>
         </div>
@@ -377,23 +406,23 @@ def render_portal_html(
         <div class="container">
             <div class="section-title">Dashboard Summary</div>
             <div class="stats-grid">
-                <div class="stat-card">
+                <div class="stat-card card-glass">
                     <span class="stat-label">Total Clients</span>
                     <span class="stat-value">{total_clients}</span>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card card-glass">
                     <span class="stat-label">Average Score</span>
                     <span class="stat-value">{avg_score}/100</span>
                 </div>
-                <div class="stat-card crit">
+                <div class="stat-card card-glass crit">
                     <span class="stat-label">Critical Findings</span>
                     <span class="stat-value">{critical_total}</span>
                 </div>
-                <div class="stat-card high">
+                <div class="stat-card card-glass high">
                     <span class="stat-label">High Findings</span>
                     <span class="stat-value">{high_total}</span>
                 </div>
-                <div class="stat-card med">
+                <div class="stat-card card-glass med">
                     <span class="stat-label">Medium Findings</span>
                     <span class="stat-value">{medium_total}</span>
                 </div>
@@ -404,7 +433,7 @@ def render_portal_html(
     <section class="clients">
         <div class="container">
             <div class="section-title">Client Portfolio</div>
-            <div class="table-wrap">
+            <div class="table-wrap card-glass">
                 <table>
                     <thead>
                         <tr>
@@ -429,6 +458,9 @@ def render_portal_html(
             <p>
                 © {REPORT_YEAR} <strong>Orbit Security Labs</strong> &bull;
                 White-label client audit portal for <strong>{agency_name}</strong> &bull;
+                <a href="../index.html#audit-preview">Executive Audit Studio</a> &bull;
+                <a href="../signup.html">Upgrade Retainer</a> &bull;
+                <a href="../fleet.html">Fleet Command</a> &bull;
                 Report generated {REPORT_DATE}
             </p>
         </div>

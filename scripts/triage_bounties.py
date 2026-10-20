@@ -103,6 +103,8 @@ def archive_disclosure(domain: str, disclosures_dir: Optional[Path] = None) -> O
         parsed = parse_disclosure_file(file_path)
         if parsed and target in parsed.get("target_domain", "").lower():
             dest = archive_dir / file_path.name
+            if dest.exists():
+                dest.unlink()
             file_path.rename(dest)
             return dest
     return None

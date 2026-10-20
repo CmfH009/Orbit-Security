@@ -662,3 +662,33 @@ def test_signup_endpoint_happy_path(monkeypatch):
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
+
+
+def test_serve_portal_path_traversal_blocked():
+    from http.client import HTTPConnection
+    from http.server import HTTPServer
+    import threading
+    from orbit_security.stripe_checkout import StripeCheckoutRequestHandler
+
+    server = HTTPServer(("127.0.0.1", 0), StripeCheckoutRequestHandler)
+    port = server.server_address[1]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    try:
+        conn = HTTPConnection("127.0.0.1", port, timeout=5)
+        # Attempt path traversal
+        conn.request("GET", "/portal/../../landing/signup")
+        resp = conn.getresponse()
+        resp.read()
+        assert resp.status in (400, 403, 404)
+
+        # Attempt invalid characters
+        conn.request("GET", "/portal/<script>alert(1)</script>")
+        resp = conn.getresponse()
+        resp.read()
+        assert resp.status == 400
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
