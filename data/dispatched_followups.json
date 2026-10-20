@@ -342,5 +342,157 @@
     "followup_dispatched_at": "2026-10-19 18:28:18",
     "bump_number": 1,
     "status": "SENT"
+  },
+  "statementagency.com": {
+    "agency_name": "Statement Agency",
+    "contact_email": "hello@statementagency.com",
+    "client_domain": "neomorganics.com",
+    "followup_dispatched_at": "2026-10-19 19:04:17",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "mindsize.com": {
+    "agency_name": "Mindsize",
+    "contact_email": "hello@mindsize.com",
+    "client_domain": "crunchyroll.com",
+    "followup_dispatched_at": "2026-10-19 19:04:47",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "kanopi.com": {
+    "agency_name": "Kanopi Studios",
+    "contact_email": "hello@kanopi.com",
+    "client_domain": "cityofberkeley.info",
+    "followup_dispatched_at": "2026-10-19 19:04:57",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "atendesigngroup.com": {
+    "agency_name": "Aten Design Group",
+    "contact_email": "info@atendesigngroup.com",
+    "client_domain": "humanrightswatch.org",
+    "followup_dispatched_at": "2026-10-19 19:05:12",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "mediacurrent.com": {
+    "agency_name": "Mediacurrent",
+    "contact_email": "info@mediacurrent.com",
+    "client_domain": "weather.com",
+    "followup_dispatched_at": "2026-10-19 19:05:32",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "phase2technology.com": {
+    "agency_name": "Phase2 Technology",
+    "contact_email": "info@phase2technology.com",
+    "client_domain": "northwell.edu",
+    "followup_dispatched_at": "2026-10-19 19:05:42",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "lullabot.com": {
+    "agency_name": "Lullabot",
+    "contact_email": "hello@lullabot.com",
+    "client_domain": "grammy.com",
+    "followup_dispatched_at": "2026-10-19 19:05:49",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "vardot.com": {
+    "agency_name": "Vardot",
+    "contact_email": "info@vardot.com",
+    "client_domain": "unrwa.org",
+    "followup_dispatched_at": "2026-10-19 19:05:55",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "rightpoint.com": {
+    "agency_name": "Rightpoint",
+    "contact_email": "info@rightpoint.com",
+    "client_domain": "cadillac.com",
+    "followup_dispatched_at": "2026-10-19 19:06:08",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "overdose.digital": {
+    "agency_name": "Overdose Digital",
+    "contact_email": "info@overdose.digital",
+    "client_domain": "tarocash.com.au",
+    "followup_dispatched_at": "2026-10-19 19:09:26",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "deptagency.com": {
+    "agency_name": "Dept Agency",
+    "contact_email": "hello@deptagency.com",
+    "client_domain": "patagonia.com",
+    "followup_dispatched_at": "2026-10-19 19:09:30",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "valtech.com": {
+    "agency_name": "Valtech",
+    "contact_email": "info@valtech.com",
+    "client_domain": "audi.com",
+    "followup_dispatched_at": "2026-10-19 19:09:34",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "hugeinc.com": {
+    "agency_name": "Huge Inc",
+    "contact_email": "hello@hugeinc.com",
+    "client_domain": "pantheon.io",
+    "followup_dispatched_at": "2026-10-19 19:09:38",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "instrument.com": {
+    "agency_name": "Instrument",
+    "contact_email": "hello@instrument.com",
+    "client_domain": "nike.com",
+    "followup_dispatched_at": "2026-10-19 19:09:41",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "metalab.com": {
+    "agency_name": "MetaLab",
+    "contact_email": "hello@metalab.com",
+    "client_domain": "slack.com",
+    "followup_dispatched_at": "2026-10-19 19:09:50",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "akqa.com": {
+    "agency_name": "AKQA",
+    "contact_email": "contact@akqa.com",
+    "client_domain": "rolls-royce.com",
+    "followup_dispatched_at": "2026-10-19 19:09:58",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "frogdesign.com": {
+    "agency_name": "Frog Design",
+    "contact_email": "info@frogdesign.com",
+    "client_domain": "sony.com",
+    "followup_dispatched_at": "2026-10-19 19:10:02",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "thoughtbot.com": {
+    "agency_name": "Thoughtbot",
+    "contact_email": "hello@thoughtbot.com",
+    "client_domain": "splitwise.com",
+    "followup_dispatched_at": "2026-10-19 19:10:06",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "testdouble.com": {
+    "agency_name": "Test Double",
+    "contact_email": "hello@testdouble.com",
+    "client_domain": "gusto.com",
+    "followup_dispatched_at": "2026-10-19 19:10:09",
+    "bump_number": 1,
+    "status": "SENT"
   }
 }

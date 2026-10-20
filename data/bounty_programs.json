@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-10-20T00:41:30.954669+00:00",
+  "updated_at": "2026-10-20T01:33:05.662949+00:00",
   "programs": [
     {
       "program_id": "shopify",
@@ -18,7 +18,7 @@
       "bounty_tier": "cash",
       "max_bounty": 50000,
       "state": "active",
-      "last_scanned": "2026-10-20T00:41:30.953591+00:00",
+      "last_scanned": "2026-10-20T01:33:05.660567+00:00",
       "created_at": "2026-10-02T09:32:47.938770+00:00"
     },
     {
