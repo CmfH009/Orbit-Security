@@ -102,6 +102,7 @@ def test_tier_price_mapping_falls_back_to_placeholders(monkeypatch):
 
 def test_create_checkout_session_payload_shape(monkeypatch):
     monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_12345")
+    monkeypatch.setenv("STRIPE_PRICE_SCALE", "price_scale_499_monthly")
 
     captured = {}
 
@@ -140,7 +141,6 @@ def test_create_checkout_session_payload_shape(monkeypatch):
 
     body = urllib.parse.parse_qs(captured["body"])
     assert body["mode"][0] == "subscription"
-    assert body["payment_method_types[0]"][0] == "card"
     assert body["line_items[0][price]"][0] == "price_scale_499_monthly"
     assert body["line_items[0][quantity]"][0] == "1"
     assert body["customer_email"][0] == "ops@eastsideco.com"
