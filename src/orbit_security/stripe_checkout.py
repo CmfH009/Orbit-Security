@@ -136,7 +136,6 @@ def create_checkout_session(
 
     body_fields: Dict[str, Any] = {
         "mode": "subscription",
-        "payment_method_types[0]": "card",
         "line_items[0][price]": price_id,
         "line_items[0][quantity]": "1",
         "customer_email": contact_email,
