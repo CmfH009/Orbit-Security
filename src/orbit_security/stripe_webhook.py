@@ -41,6 +41,7 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+from orbit_security.agency_retainer import AgencyRetainerManager, RetainerTier
 from orbit_security.fleet import ClientTarget, FleetRegistry
 
 logger = logging.getLogger("orbit_security.stripe_webhook")
@@ -407,11 +408,13 @@ class StripeWebhookHandler:
         subscriber_manager: Optional[SubscriberManager] = None,
         sla_generator: Optional[SlaCertificateGenerator] = None,
         fleet_registry: Optional[FleetRegistry] = None,
+        retainer_manager: Optional[AgencyRetainerManager] = None,
     ):
         self.webhook_secret = webhook_secret or os.environ.get("STRIPE_WEBHOOK_SECRET")
         self.subscriber_mgr = subscriber_manager or SubscriberManager()
         self.sla_generator = sla_generator or SlaCertificateGenerator()
         self.fleet_registry = fleet_registry or FleetRegistry()
+        self.retainer_manager = retainer_manager or AgencyRetainerManager()
 
     def register_client_for_monitoring(
         self,
@@ -475,7 +478,15 @@ class StripeWebhookHandler:
                     if client:
                         client.status = "canceled"
                         self.fleet_registry.save()
+            # Mirror cancellation onto the agency retainer billing status.
+            subscription_id = event_data.get("id")
+            if subscription_id:
+                self._mark_retainer_billing_status(subscription_id, "past_due")
             return {"status": "DEPROVISIONED", "target": target}
+
+        # 5. Handle customer.subscription.updated (past_due / paused / active)
+        elif event_type == "customer.subscription.updated":
+            return self._handle_subscription_updated(event_data)
 
         return {"status": "IGNORED", "event_type": event_type}
 
@@ -530,6 +541,10 @@ class StripeWebhookHandler:
             plan=plan,
         )
 
+        # Step 4: Create/update the agency retainer and link the Stripe
+        # customer + subscription so billing status stays in sync.
+        retainer = self._sync_agency_retainer(session)
+
         return {
             "status": "PROVISIONED",
             "apex_domain": apex_domain,
@@ -537,6 +552,118 @@ class StripeWebhookHandler:
             "sla_certificate_path": str(cert_path),
             "sla_crypto_hash": crypto_hash,
             "subscriber": subscriber_record,
+            "agency_id": retainer.agency_id if retainer else None,
+            "agency_name": retainer.agency_name if retainer else None,
+            "stripe_customer_id": retainer.stripe_customer_id if retainer else None,
+            "stripe_subscription_id": retainer.stripe_subscription_id if retainer else None,
+            "billing_status": retainer.billing_status if retainer else None,
+        }
+
+    def _sync_agency_retainer(self, session: Dict[str, Any]) -> Optional[Any]:
+        """Create/update the AgencyRetainer from a completed checkout session.
+
+        Registers the agency (tier + branding from Checkout Session metadata)
+        and persists the Stripe customer id, subscription id, and an active
+        billing status on the retainer.
+        """
+        metadata = session.get("metadata") or {}
+        agency_id = metadata.get("agency_id")
+        if not agency_id:
+            logger.warning(
+                "checkout.session.completed metadata missing agency_id; "
+                "skipping retainer sync"
+            )
+            return None
+
+        try:
+            tier = RetainerTier(metadata.get("tier", RetainerTier.SCALE.value))
+        except ValueError:
+            tier = RetainerTier.SCALE
+
+        retainer = self.retainer_manager.register_agency(
+            agency_id=agency_id,
+            agency_name=metadata.get("agency_name", agency_id),
+            tier=tier,
+            custom_domain=metadata.get("custom_domain") or None,
+            support_email=metadata.get("support_email") or None,
+            primary_color=metadata.get("primary_color") or "#0F172A",
+            accent_color=metadata.get("accent_color") or "#3B82F6",
+            agency_tagline=metadata.get("tagline") or "Managed Web & Security Operations",
+            website=metadata.get("website") or "https://example.com",
+        )
+
+        customer_id = session.get("customer")
+        subscription_id = session.get("subscription")
+        if customer_id:
+            retainer.stripe_customer_id = customer_id
+        if subscription_id:
+            retainer.stripe_subscription_id = subscription_id
+        retainer.billing_status = "active"
+        self.retainer_manager.save()
+
+        logger.info(
+            "Synced retainer %s: tier=%s customer=%s subscription=%s billing=active",
+            agency_id,
+            tier.value,
+            customer_id,
+            subscription_id,
+        )
+        return retainer
+
+    def _find_agency_by_subscription(
+        self, subscription_id: Optional[str]
+    ) -> Optional[Any]:
+        """Find the agency retainer linked to a Stripe subscription id."""
+        if not subscription_id:
+            return None
+        for agency in self.retainer_manager.list_agencies():
+            if agency.stripe_subscription_id == subscription_id:
+                return agency
+        return None
+
+    def _mark_retainer_billing_status(
+        self, subscription_id: str, billing_status: str
+    ) -> bool:
+        """Sets billing_status on the agency retainer linked to a subscription."""
+        agency = self._find_agency_by_subscription(subscription_id)
+        if not agency:
+            return False
+        agency.billing_status = billing_status
+        self.retainer_manager.save()
+        logger.info(
+            "Retainer %s billing_status -> %s (subscription %s)",
+            agency.agency_id,
+            billing_status,
+            subscription_id,
+        )
+        return True
+
+    def _handle_subscription_updated(self, event_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Handles customer.subscription.updated (past_due / paused / active)."""
+        subscription_id = event_data.get("id")
+        status = event_data.get("status")
+        if not subscription_id:
+            return {"status": "IGNORED", "reason": "missing subscription id"}
+
+        billing_map = {
+            "active": "active",
+            "past_due": "past_due",
+            "paused": "paused",
+            "canceled": "past_due",
+            "unpaid": "past_due",
+        }
+        billing_status = billing_map.get((status or "").lower(), "past_due")
+        self._mark_retainer_billing_status(subscription_id, billing_status)
+
+        # Mirror into subscriber record when keyed by customer id.
+        customer_id = event_data.get("customer")
+        if customer_id:
+            self.subscriber_mgr.update_status(customer_id, billing_status)
+
+        return {
+            "status": "UPDATED",
+            "subscription_id": subscription_id,
+            "billing_status": billing_status,
         }
 
 

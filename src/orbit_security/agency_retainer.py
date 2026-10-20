@@ -130,7 +130,8 @@ class AgencyRetainer:
     logo_svg: Optional[str] = None
     client_domains: List[AgencyClientSite] = field(default_factory=list)
     billing_status: str = "active"  # active, past_due, trial
-    stripe_subscription_id: Optional[str] = None
+    stripe_customer_id: Optional[str] = None  # Stripe customer id (from Checkout Session)
+    stripe_subscription_id: Optional[str] = None  # Stripe subscription id (from Checkout Session)
     sla_guarantee: str = "99.9% Perimeter Uptime & <15-Min Takeover Alert Guarantee"
     created_at: str = field(
         default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat()
