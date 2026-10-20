@@ -988,5 +988,105 @@
       "koparibeauty.com"
     ],
     "personalization_hook": "We've long admired BVAccel's pioneering role as one of the original Tier-1 Shopify Plus partners scaling iconic DTC brands."
+  },
+  {
+    "agency_name": "Roswell NYC",
+    "agency_domain": "roswellnyc.com",
+    "contact_email": "contact@roswellnyc.com",
+    "portfolio_domains": [
+      "ruggable.com",
+      "adinasjewels.com"
+    ],
+    "personalization_hook": "We've long admired Roswell's D2C engineering excellence, especially the frictionless headless Shopify architecture powering Ruggable."
+  },
+  {
+    "agency_name": "Zehner",
+    "agency_domain": "zehnergroup.com",
+    "contact_email": "hello@zehnergroup.com",
+    "portfolio_domains": [
+      "stampd.com",
+      "blendsus.com"
+    ],
+    "personalization_hook": "We have immense respect for Zehner's digital flagship executions and elevated lifestyle brand architecture for Stampd."
+  },
+  {
+    "agency_name": "Vervaunt",
+    "agency_domain": "vervaunt.com",
+    "contact_email": "hello@vervaunt.com",
+    "portfolio_domains": [
+      "gymshark.com",
+      "pandora.net"
+    ],
+    "personalization_hook": "We admire Vervaunt's premier e-commerce consultancy and high-performance infrastructure consulting for market leaders like Gymshark."
+  },
+  {
+    "agency_name": "Velstar",
+    "agency_domain": "velstar.co.uk",
+    "contact_email": "hello@velstar.co.uk",
+    "portfolio_domains": [
+      "castore.com",
+      "frenchconnection.com"
+    ],
+    "personalization_hook": "We follow Velstar's robust Shopify Plus enterprise builds, particularly your omnichannel scaling work for Castore."
+  },
+  {
+    "agency_name": "Superco",
+    "agency_domain": "superco.net",
+    "contact_email": "hello@superco.net",
+    "portfolio_domains": [
+      "sohohome.com",
+      "spoke-london.com"
+    ],
+    "personalization_hook": "We've tracked Superco's bespoke luxury commerce experiences and conversion optimization behind Soho Home."
+  },
+  {
+    "agency_name": "Novatize",
+    "agency_domain": "novatize.com",
+    "contact_email": "info@novatize.com",
+    "portfolio_domains": [
+      "kanuk.com",
+      "laura.ca"
+    ],
+    "personalization_hook": "We respect Novatize's full-funnel digital commerce implementations and robust catalog management for heritage brands like Kanuk."
+  },
+  {
+    "agency_name": "Ether Creative",
+    "agency_domain": "ethercreative.co.uk",
+    "contact_email": "hello@ethercreative.co.uk",
+    "portfolio_domains": [
+      "churchs.com",
+      "bensherman.co.uk"
+    ],
+    "personalization_hook": "We love Ether's focus on bespoke British luxury design systems and headless commerce builds for Church's footwear."
+  },
+  {
+    "agency_name": "Pinpoint",
+    "agency_domain": "pinpointdesigns.co.uk",
+    "contact_email": "hello@pinpointdesigns.co.uk",
+    "portfolio_domains": [
+      "bramblecrest.com",
+      "smiggle.co.uk"
+    ],
+    "personalization_hook": "We admire Pinpoint's technical rigor and custom ERP/eCommerce integration patterns for Bramblecrest."
+  },
+  {
+    "agency_name": "Metacake",
+    "agency_domain": "metacake.com",
+    "contact_email": "hello@metacake.com",
+    "portfolio_domains": [
+      "groovelife.com",
+      "tonyrobbins.com"
+    ],
+    "personalization_hook": "We've admired Metacake's growth marketing engineering and resilient high-volume Shopify setups for Groove Life."
+  },
+  {
+    "agency_name": "Blue Thirst",
+    "agency_domain": "bluethirst.co.uk",
+    "contact_email": "info@bluethirst.co.uk",
+    "portfolio_domains": [
+      "bathstore.com",
+      "purecollection.com"
+    ],
+    "personalization_hook": "We follow Blue Thirst's data-led digital growth and high-converting checkout experiences across UK retail."
   }
 ]
