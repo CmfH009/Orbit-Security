@@ -170,6 +170,116 @@ def create_checkout_session(
 
 
 # ---------------------------------------------------------------------------
+# Subscription lifecycle management (upgrade / downgrade / cancel)
+# ---------------------------------------------------------------------------
+
+
+def _stripe_get(endpoint: str, http_open: Optional[Callable] = None) -> Dict[str, Any]:
+    """GET a Stripe API endpoint and return the parsed JSON body."""
+    opener = http_open or urllib.request.urlopen
+    req = urllib.request.Request(
+        f"{STRIPE_API_BASE}/{endpoint}",
+        method="GET",
+        headers={"Authorization": f"Bearer {_stripe_secret_key()}"},
+    )
+    try:
+        with opener(req, timeout=30) as resp:
+            if getattr(resp, "status", 200) not in (200, 201):
+                raise RuntimeError(f"Stripe returned HTTP {resp.status}")
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        body_text = e.read().decode("utf-8", errors="replace")
+        logger.error("Stripe GET %s failed: %s %s", endpoint, e.code, body_text)
+        raise RuntimeError(f"Stripe API error {e.code}: {body_text}") from e
+
+
+def _stripe_post(
+    endpoint: str,
+    fields: Optional[Dict[str, Any]] = None,
+    http_open: Optional[Callable] = None,
+) -> Dict[str, Any]:
+    """POST form-encoded fields to a Stripe API endpoint and return parsed JSON."""
+    opener = http_open or urllib.request.urlopen
+    body = urllib.parse.urlencode(fields or {}).encode("utf-8")
+    req = urllib.request.Request(
+        f"{STRIPE_API_BASE}/{endpoint}",
+        data=body,
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {_stripe_secret_key()}",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+    )
+    try:
+        with opener(req, timeout=30) as resp:
+            if getattr(resp, "status", 200) not in (200, 201):
+                raise RuntimeError(f"Stripe returned HTTP {resp.status}")
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        body_text = e.read().decode("utf-8", errors="replace")
+        logger.error("Stripe POST %s failed: %s %s", endpoint, e.code, body_text)
+        raise RuntimeError(f"Stripe API error {e.code}: {body_text}") from e
+
+
+def get_subscription(
+    subscription_id: str, http_open: Optional[Callable] = None
+) -> Dict[str, Any]:
+    """Retrieve a Stripe Subscription by id."""
+    return _stripe_get(f"subscriptions/{subscription_id}", http_open=http_open)
+
+
+def update_subscription(
+    subscription_id: str,
+    new_tier: RetainerTier,
+    http_open: Optional[Callable] = None,
+    proration_behavior: str = "create_prorations",
+) -> Dict[str, Any]:
+    """Change a subscription's plan to a new retainer tier.
+
+    Updates the subscription's line item to the new tier's Stripe Price ID.
+    Returns the updated Subscription object from Stripe.
+    """
+    price_id = get_price_id(new_tier)
+
+    # Retrieve the subscription to find the subscription item id.
+    sub = get_subscription(subscription_id, http_open=http_open)
+    items = sub.get("items", {}).get("data", [])
+    if not items:
+        raise RuntimeError(f"Subscription {subscription_id} has no line items")
+    item_id = items[0]["id"]
+
+    return _stripe_post(
+        f"subscription_items/{item_id}",
+        {
+            "price": price_id,
+            "proration_behavior": proration_behavior,
+        },
+        http_open=http_open,
+    )
+
+
+def cancel_subscription(
+    subscription_id: str,
+    http_open: Optional[Callable] = None,
+    cancel_at_period_end: bool = False,
+) -> Dict[str, Any]:
+    """Cancel a Stripe Subscription.
+
+    If ``cancel_at_period_end`` is True, the subscription runs until the end
+    of the current billing period then cancels. Otherwise it cancels
+    immediately (prorated).
+    """
+    fields: Dict[str, Any] = {}
+    if cancel_at_period_end:
+        fields["cancel_at_period_end"] = "true"
+    return _stripe_post(
+        f"subscriptions/{subscription_id}/cancel",
+        fields,
+        http_open=http_open,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Lightweight stdlib HTTP signup server
 # ---------------------------------------------------------------------------
 
@@ -198,21 +308,36 @@ class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
             self._send_json(
                 200, {"status": "healthy", "service": "orbit-stripe-checkout"}
             )
+        elif path.startswith("/subscription/"):
+            subscription_id = path[len("/subscription/"):]
+            self._serve_subscription(subscription_id)
         else:
             self._send_text(404, "Not found", "text/plain")
 
     def do_POST(self):  # noqa: N802 - http.server override naming
-        if self.path.split("?", 1)[0] != "/create-checkout-session":
+        path = self.path.split("?", 1)[0]
+        if path == "/create-checkout-session":
+            self._handle_create_checkout_session()
+        elif path == "/update-subscription":
+            self._handle_update_subscription()
+        elif path == "/cancel-subscription":
+            self._handle_cancel_subscription()
+        else:
             self._send_text(404, "Not found", "text/plain")
-            return
 
+    def _read_form(self) -> Dict[str, str]:
+        """Read and parse a URL-encoded form body into a dict of str values."""
+        length = int(self.headers.get("Content-Length", 0))
+        raw = self.rfile.read(length)
+        form = urllib.parse.parse_qs(raw.decode("utf-8"))
+        return {k: (v[0] if v else "") for k, v in form.items()}
+
+    def _handle_create_checkout_session(self):
         try:
-            length = int(self.headers.get("Content-Length", 0))
-            raw = self.rfile.read(length)
-            form = urllib.parse.parse_qs(raw.decode("utf-8"))
+            form = self._read_form()
 
             def get(name: str) -> str:
-                return (form.get(name) or [""])[0].strip()
+                return form.get(name, "").strip()
 
             agency_id = get("agency_id") or get("agency_name") or "new-agency"
             agency_name = get("agency_name") or agency_id
@@ -251,6 +376,79 @@ class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
                 "<p><a href='/signup'>Back</a></p>",
                 "text/html",
             )
+
+    def _handle_update_subscription(self):
+        try:
+            form = self._read_form()
+            subscription_id = form.get("subscription_id", "").strip()
+            new_tier_str = form.get("new_tier", "").strip()
+            if not subscription_id:
+                raise RuntimeError("subscription_id is required")
+            try:
+                new_tier = RetainerTier(new_tier_str)
+            except ValueError:
+                raise RuntimeError(f"Invalid tier: {new_tier_str or '(missing)'}")
+
+            result = update_subscription(subscription_id, new_tier)
+            self._send_json(
+                200,
+                {
+                    "status": "UPDATED",
+                    "subscription_id": result.get("id"),
+                    "status_stripe": result.get("status"),
+                    "tier": new_tier.value,
+                },
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Subscription update failed")
+            self._send_json(502, {"status": "ERROR", "message": str(exc)})
+
+    def _handle_cancel_subscription(self):
+        try:
+            form = self._read_form()
+            subscription_id = form.get("subscription_id", "").strip()
+            cancel_at_period_end = form.get("cancel_at_period_end", "").lower() in (
+                "true",
+                "1",
+                "yes",
+            )
+            if not subscription_id:
+                raise RuntimeError("subscription_id is required")
+
+            result = cancel_subscription(
+                subscription_id, cancel_at_period_end=cancel_at_period_end
+            )
+            self._send_json(
+                200,
+                {
+                    "status": "CANCELED",
+                    "subscription_id": result.get("id"),
+                    "status_stripe": result.get("status"),
+                    "cancel_at_period_end": result.get("cancel_at_period_end"),
+                },
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Subscription cancellation failed")
+            self._send_json(502, {"status": "ERROR", "message": str(exc)})
+
+    def _serve_subscription(self, subscription_id: str):
+        try:
+            sub = get_subscription(subscription_id)
+            self._send_json(
+                200,
+                {
+                    "id": sub.get("id"),
+                    "status": sub.get("status"),
+                    "customer": sub.get("customer"),
+                    "current_period_start": sub.get("current_period_start"),
+                    "current_period_end": sub.get("current_period_end"),
+                    "cancel_at_period_end": sub.get("cancel_at_period_end"),
+                    "metadata": sub.get("metadata", {}),
+                },
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Subscription lookup failed")
+            self._send_json(502, {"status": "ERROR", "message": str(exc)})
 
     def _serve_signup_page(self):
         try:
