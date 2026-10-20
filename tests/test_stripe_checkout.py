@@ -9,7 +9,13 @@ Covers the Act II merchant-facing half (complementing tests/test_stripe_webhook.
    wiring: stripe_customer_id, stripe_subscription_id, billing_status="active".
 4. customer.subscription.deleted / .updated -> retainer billing_status
    ("past_due" / "paused" / "active").
-5. Signup HTTP endpoint happy path: form POST creates a Checkout Session and
+5. Subscription lifecycle management: get_subscription, update_subscription
+   (tier change), cancel_subscription (immediate / at period end).
+6. Webhook invoice.payment_succeeded / invoice.payment_failed -> retainer
+   billing_status ("active" / "past_due").
+7. Subscription HTTP endpoints: GET /subscription/<id>,
+   POST /update-subscription, POST /cancel-subscription.
+8. Signup HTTP endpoint happy path: form POST creates a Checkout Session and
    302-redirects to Stripe; /health and /signup page served.
 
 All tests are offline: no live Stripe network calls.
@@ -33,9 +39,12 @@ from orbit_security.stripe_checkout import (
     DEFAULT_PRICE_IDS,
     STRIPE_PRICE_ENV,
     StripeCheckoutRequestHandler,
+    cancel_subscription,
     create_checkout_session,
     get_price_id,
+    get_subscription,
     run_checkout_server,
+    update_subscription,
 )
 from orbit_security.stripe_webhook import (
     SlaCertificateGenerator,
@@ -340,8 +349,244 @@ def test_webhook_subscription_updated_mirrors_billing_status(
 
 
 # ---------------------------------------------------------------------------
-# 5. Signup HTTP endpoint happy path
+# 6. Subscription lifecycle management (mocked Stripe API)
 # ---------------------------------------------------------------------------
+
+
+def test_get_subscription(monkeypatch):
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_12345")
+
+    captured = {}
+
+    def fake_open(req, timeout=30):
+        captured["url"] = req.full_url
+        captured["headers"] = dict(req.header_items())
+        return _FakeResponse(
+            b'{"id": "sub_test_123", "status": "active", "customer": "cus_x", '
+            b'"current_period_start": 1000, "current_period_end": 2000, '
+            b'"cancel_at_period_end": false, "metadata": {}}'
+        )
+
+    sub = get_subscription("sub_test_123", http_open=fake_open)
+
+    assert sub["id"] == "sub_test_123"
+    assert sub["status"] == "active"
+    assert captured["url"] == "https://api.stripe.com/v1/subscriptions/sub_test_123"
+    headers_lc = {k.lower(): v for k, v in captured["headers"].items()}
+    assert headers_lc["authorization"] == "Bearer sk_test_12345"
+
+
+def test_update_subscription_changes_price(monkeypatch):
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_12345")
+    monkeypatch.setenv("STRIPE_PRICE_ENTERPRISE", "price_enterprise_live_999")
+
+    captured = {}
+
+    def fake_open(req, timeout=30):
+        captured.setdefault("calls", []).append(
+            {"url": req.full_url, "method": req.method, "body": req.data}
+        )
+        # First call: GET subscription -> return an item id
+        if "subscriptions/" in req.full_url:
+            return _FakeResponse(
+                b'{"id": "sub_test_123", "items": {"data": [{"id": "si_123"}]}}'
+            )
+        # Second call: POST subscription item update -> return updated sub
+        return _FakeResponse(b'{"id": "sub_test_123", "status": "active"}')
+
+    result = update_subscription("sub_test_123", RetainerTier.ENTERPRISE, http_open=fake_open)
+
+    assert result["id"] == "sub_test_123"
+    assert result["status"] == "active"
+    calls = captured["calls"]
+    assert calls[0]["method"] == "GET"
+    assert calls[0]["url"] == "https://api.stripe.com/v1/subscriptions/sub_test_123"
+    assert calls[1]["method"] == "POST"
+    assert "subscription_items/si_123" in calls[1]["url"]
+    body = urllib.parse.parse_qs(calls[1]["body"].decode("utf-8"))
+    assert body["price"][0] == "price_enterprise_live_999"
+    assert body["proration_behavior"][0] == "create_prorations"
+
+
+def test_cancel_subscription_immediate(monkeypatch):
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_12345")
+
+    captured = {}
+
+    def fake_open(req, timeout=30):
+        captured["url"] = req.full_url
+        captured["body"] = req.data.decode("utf-8") if req.data else ""
+        return _FakeResponse(b'{"id": "sub_test_123", "status": "canceled"}')
+
+    result = cancel_subscription("sub_test_123", http_open=fake_open)
+
+    assert result["id"] == "sub_test_123"
+    assert result["status"] == "canceled"
+    assert captured["url"] == "https://api.stripe.com/v1/subscriptions/sub_test_123/cancel"
+    body = urllib.parse.parse_qs(captured["body"])
+    assert "cancel_at_period_end" not in body
+
+
+def test_cancel_subscription_at_period_end(monkeypatch):
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_12345")
+
+    captured = {}
+
+    def fake_open(req, timeout=30):
+        captured["body"] = req.data.decode("utf-8") if req.data else ""
+        return _FakeResponse(b'{"id": "sub_test_123", "status": "active"}')
+
+    cancel_subscription("sub_test_123", cancel_at_period_end=True, http_open=fake_open)
+    body = urllib.parse.parse_qs(captured["body"])
+    assert body["cancel_at_period_end"][0] == "true"
+
+
+# ---------------------------------------------------------------------------
+# 7. Webhook invoice payment events -> retainer billing_status
+# ---------------------------------------------------------------------------
+
+
+def test_webhook_invoice_payment_succeeded_marks_retainer_active(tmp_path):
+    retainers_file = tmp_path / "agency_retainers.json"
+    manager = AgencyRetainerManager(data_path=retainers_file)
+    agency = manager.register_agency(
+        agency_id="paid-agency", agency_name="Paid Agency", tier=RetainerTier.SCALE
+    )
+    agency.stripe_subscription_id = "sub_paid_1"
+    agency.billing_status = "past_due"
+    manager.save()
+
+    handler = StripeWebhookHandler(retainer_manager=manager)
+
+    event = {
+        "id": "evt_invoice_paid",
+        "type": "invoice.payment_succeeded",
+        "data": {
+            "object": {
+                "subscription": "sub_paid_1",
+                "customer": "cus_paid",
+            }
+        },
+    }
+    res = handler.handle_webhook(json.dumps(event).encode("utf-8"))
+    assert res["status"] == "PAYMENT_SUCCEEDED"
+    assert res["billing_status"] == "active"
+
+    reloaded = AgencyRetainerManager(data_path=retainers_file)
+    assert reloaded.get_agency("paid-agency").billing_status == "active"
+
+
+def test_webhook_invoice_payment_failed_marks_retainer_past_due(tmp_path):
+    retainers_file = tmp_path / "agency_retainers.json"
+    manager = AgencyRetainerManager(data_path=retainers_file)
+    agency = manager.register_agency(
+        agency_id="unpaid-agency", agency_name="Unpaid Agency", tier=RetainerTier.SCALE
+    )
+    agency.stripe_subscription_id = "sub_unpaid_1"
+    agency.billing_status = "active"
+    manager.save()
+
+    handler = StripeWebhookHandler(retainer_manager=manager)
+
+    event = {
+        "id": "evt_invoice_failed",
+        "type": "invoice.payment_failed",
+        "data": {
+            "object": {
+                "subscription": "sub_unpaid_1",
+                "customer": "cus_unpaid",
+            }
+        },
+    }
+    res = handler.handle_webhook(json.dumps(event).encode("utf-8"))
+    assert res["status"] == "PAYMENT_FAILED"
+    assert res["billing_status"] == "past_due"
+
+    reloaded = AgencyRetainerManager(data_path=retainers_file)
+    assert reloaded.get_agency("unpaid-agency").billing_status == "past_due"
+
+
+# ---------------------------------------------------------------------------
+# 8. Subscription HTTP endpoints happy path
+# ---------------------------------------------------------------------------
+
+
+def test_subscription_endpoints(monkeypatch):
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_12345")
+
+    monkeypatch.setattr(
+        "orbit_security.stripe_checkout.get_subscription",
+        lambda sid, http_open=None: {
+            "id": sid,
+            "status": "active",
+            "customer": "cus_x",
+            "current_period_start": 1000,
+            "current_period_end": 2000,
+            "cancel_at_period_end": False,
+            "metadata": {},
+        },
+    )
+    monkeypatch.setattr(
+        "orbit_security.stripe_checkout.update_subscription",
+        lambda sid, tier, http_open=None: {"id": sid, "status": "active"},
+    )
+    monkeypatch.setattr(
+        "orbit_security.stripe_checkout.cancel_subscription",
+        lambda sid, http_open=None, cancel_at_period_end=False: {
+            "id": sid,
+            "status": "canceled",
+            "cancel_at_period_end": cancel_at_period_end,
+        },
+    )
+
+    port = _find_free_port()
+    server = HTTPServer(("127.0.0.1", port), StripeCheckoutRequestHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        conn = HTTPConnection("127.0.0.1", port, timeout=10)
+
+        # GET /subscription/sub_test_123
+        conn.request("GET", "/subscription/sub_test_123")
+        resp = conn.getresponse()
+        assert resp.status == 200
+        data = json.loads(resp.read().decode("utf-8"))
+        assert data["id"] == "sub_test_123"
+        assert data["status"] == "active"
+
+        # POST /update-subscription
+        form = urllib.parse.urlencode(
+            {"subscription_id": "sub_test_123", "new_tier": "Enterprise"}
+        ).encode("utf-8")
+        conn.request(
+            "POST",
+            "/update-subscription",
+            body=form,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        resp = conn.getresponse()
+        assert resp.status == 200
+        data = json.loads(resp.read().decode("utf-8"))
+        assert data["status"] == "UPDATED"
+
+        # POST /cancel-subscription
+        form = urllib.parse.urlencode(
+            {"subscription_id": "sub_test_123", "cancel_at_period_end": "true"}
+        ).encode("utf-8")
+        conn.request(
+            "POST",
+            "/cancel-subscription",
+            body=form,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        resp = conn.getresponse()
+        assert resp.status == 200
+        data = json.loads(resp.read().decode("utf-8"))
+        assert data["status"] == "CANCELED"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
 
 
 def _find_free_port() -> int:

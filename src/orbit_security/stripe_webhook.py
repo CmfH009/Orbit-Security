@@ -488,6 +488,14 @@ class StripeWebhookHandler:
         elif event_type == "customer.subscription.updated":
             return self._handle_subscription_updated(event_data)
 
+        # 6. Handle invoice.payment_succeeded (renewal paid -> active)
+        elif event_type == "invoice.payment_succeeded":
+            return self._handle_invoice_payment_succeeded(event_data)
+
+        # 7. Handle invoice.payment_failed (renewal failed -> past_due)
+        elif event_type == "invoice.payment_failed":
+            return self._handle_invoice_payment_failed(event_data)
+
         return {"status": "IGNORED", "event_type": event_type}
 
     def _handle_checkout_session_completed(self, session: Dict[str, Any]) -> Dict[str, Any]:
@@ -662,6 +670,44 @@ class StripeWebhookHandler:
 
         return {
             "status": "UPDATED",
+            "subscription_id": subscription_id,
+            "billing_status": billing_status,
+        }
+
+    def _handle_invoice_payment_succeeded(
+        self, event_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handles invoice.payment_succeeded (renewal paid -> billing active)."""
+        subscription_id = event_data.get("subscription")
+        customer_id = event_data.get("customer")
+        billing_status = "active"
+
+        if subscription_id:
+            self._mark_retainer_billing_status(subscription_id, billing_status)
+        if customer_id:
+            self.subscriber_mgr.update_status(customer_id, billing_status)
+
+        return {
+            "status": "PAYMENT_SUCCEEDED",
+            "subscription_id": subscription_id,
+            "billing_status": billing_status,
+        }
+
+    def _handle_invoice_payment_failed(
+        self, event_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handles invoice.payment_failed (renewal failed -> past_due)."""
+        subscription_id = event_data.get("subscription")
+        customer_id = event_data.get("customer")
+        billing_status = "past_due"
+
+        if subscription_id:
+            self._mark_retainer_billing_status(subscription_id, billing_status)
+        if customer_id:
+            self.subscriber_mgr.update_status(customer_id, billing_status)
+
+        return {
+            "status": "PAYMENT_FAILED",
             "subscription_id": subscription_id,
             "billing_status": billing_status,
         }
