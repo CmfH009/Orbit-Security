@@ -120,7 +120,11 @@ def query_inbox_pipeline() -> Dict[str, Any]:
         with open(leads_file, "r", encoding="utf-8") as f:
             leads = json.load(f)
         total = len(leads)
-        escalations = sum(1 for v in leads.values() if v.get("escalated") or v.get("intent") in ("READY_TO_BUY", "HIGH_INTENT"))
+        escalations = sum(
+            1 for v in leads.values()
+            if (v.get("escalated") and v.get("intent") in ("READY_TO_BUY", "HIGH_INTENT", "REQUEST_HUMAN"))
+            or v.get("intent") in ("READY_TO_BUY", "HIGH_INTENT", "REQUEST_HUMAN")
+        )
         inquiries = sum(1 for v in leads.values() if "INQUIRY" in str(v.get("intent", "")))
         return {
             "total_threads": total,
