@@ -25,6 +25,57 @@ class LeadIntent(str, Enum):
 
 
 class InboxAgent:
+    VENDOR_AND_SYSTEM_DOMAINS = {
+        "github.com",
+        "google.com",
+        "googlemail.com",
+        "accounts.google.com",
+        "redditmail.com",
+        "reddit.com",
+        "razer.com",
+        "connect.razer.com",
+        "changelly.com",
+        "e.changelly.com",
+        "life360.com",
+        "newsletter.life360.com",
+        "microsoftrewards.com",
+        "customeremail.microsoftrewards.com",
+        "microsoft.com",
+        "ollama.com",
+        "x.com",
+        "twitter.com",
+        "discord.com",
+        "slack.com",
+        "youtube.com",
+        "tigerdata.com",
+        "stripe.com",
+    }
+
+    SYSTEM_SENDER_PATTERNS = [
+        r"^notifications@",
+        r"^noreply@",
+        r"^no-reply@",
+        r"^no\.reply@",
+        r"^donotreply@",
+        r"^system@",
+        r"^alerts?@",
+        r"^billing@",
+        r"^news(letter)?@",
+    ]
+
+    SYSTEM_SUBJECT_PATTERNS = [
+        r"\[.*\/orbit-security\]",
+        r"run (failed|succeeded|cancelled)",
+        r"workflow run",
+        r"security alert",
+        r"payment declined",
+        r"order receipt",
+        r"terms of service",
+        r"subscription suspended",
+        r"account was recovered",
+        r"action required: your gemini api",
+    ]
+
     def __init__(
         self,
         state_file: Optional[str] = None,
@@ -87,6 +138,28 @@ class InboxAgent:
         os.makedirs(os.path.dirname(os.path.abspath(self.state_file)), exist_ok=True)
         with open(self.state_file, "w", encoding="utf-8") as f:
             json.dump(self.state, f, indent=2)
+
+    def is_system_or_vendor_email(self, clean_email: str, subject: str = "") -> bool:
+        """Identifies vendor newsletters, personal accounts, system bots, and CI alerts."""
+        email_lower = clean_email.lower().strip()
+        subj_lower = subject.lower().strip()
+        domain = email_lower.split("@")[-1] if "@" in email_lower else ""
+
+        for v_dom in self.VENDOR_AND_SYSTEM_DOMAINS:
+            if domain == v_dom or domain.endswith("." + v_dom):
+                return True
+
+        is_known_agency = any(agency_dom in domain for agency_dom in self.known_agency_domains)
+        if not is_known_agency:
+            for pat in self.SYSTEM_SENDER_PATTERNS:
+                if re.search(pat, email_lower):
+                    return True
+
+        for sub_pat in self.SYSTEM_SUBJECT_PATTERNS:
+            if re.search(sub_pat, subj_lower):
+                return True
+
+        return False
 
     def classify_intent(self, text: str, subject: str = "") -> LeadIntent:
         lower = text.lower()
@@ -157,6 +230,9 @@ class InboxAgent:
         self, sender_email: str, subject: str, message_body: str
     ) -> Tuple[str, bool]:
         """Processes message body, determines response, and triggers operator escalation if ready to buy or human requested."""
+        if self.is_system_or_vendor_email(sender_email, subject):
+            return "", False
+
         intent = self.classify_intent(message_body, subject=subject)
         needs_escalation = False
         reply_text = ""
@@ -483,19 +559,29 @@ class InboxAgent:
                     self._save_state()
                     continue
 
-                # 2. Strict Filter: Must be from a target agency or explicitly reference AgencySentry outreach
-                is_agency_outreach = (
-                    any(kw in subject.lower() for kw in self.known_keywords)
-                    or any(dom in clean_email.lower() for dom in self.known_agency_domains)
+                # 2. Strict Filter: Discard vendor newsletters, system bots, personal notifications, and CI alerts
+                if self.is_system_or_vendor_email(clean_email, subject):
+                    continue
+
+                # 3. Agency Outreach Match: Must be from a known target agency domain or explicitly reference outreach
+                domain = clean_email.lower().split("@")[-1] if "@" in clean_email else ""
+                is_known_agency_domain = (
+                    any(ad in domain for ad in self.known_agency_domains)
                     or "charle.co.uk" in clean_email.lower()
-                    or any(tick in clean_email.lower() for tick in ["support@", "hello@", "receptie@"])
                 )
 
+                outreach_subject_signals = [
+                    "security notice regarding", "perimeter check", "white-label retainer",
+                    "agencysentry", "agency retainer", "retainer reports for"
+                ]
+                has_outreach_subject = any(sig in subject.lower() for sig in outreach_subject_signals)
+
+                is_agency_outreach = is_known_agency_domain or has_outreach_subject
                 if not is_agency_outreach:
                     # Ignore unrelated personal, newsletter, or billing emails
                     continue
 
-                # 3. Filter out system, ticketing acknowledgements, and automated out-of-office notices
+                # 4. Filter out system, ticketing acknowledgements, and automated out-of-office notices
                 intent = self.classify_intent(body, subject=subject)
                 if intent == LeadIntent.AUTO_REPLY_OR_TICKET:
                     print(f"    [-] Detected ticket system / auto-reply from: {clean_email} ({subject}). Logged, skipping auto-reply.")
@@ -525,7 +611,6 @@ class InboxAgent:
                     self._save_state()
                     continue
 
-
                 if message_key in self.state:
                     # Already handled
                     continue
@@ -548,11 +633,10 @@ class InboxAgent:
                     )
                     print(f"    [✔] Automated response sent to {clean_email}")
 
-
                 self.state[message_key] = {
                     "sender": clean_email,
                     "subject": subject,
-                    "intent": self.classify_intent(body).value,
+                    "intent": intent.value,
                     "escalated": needs_escalation,
                 }
                 self._save_state()

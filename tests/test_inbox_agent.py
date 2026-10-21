@@ -160,3 +160,42 @@ def test_check_stripe_payments():
         if os.path.exists(state_file):
             os.remove(state_file)
 
+
+def test_is_system_or_vendor_email():
+    agent = InboxAgent(state_file=tempfile.mktemp())
+    # System / vendor emails should be identified
+    assert agent.is_system_or_vendor_email("notifications@github.com", "[CmfH009/Orbit-Security] Run failed: Orbit Security Perimeter Sentinel")
+    assert agent.is_system_or_vendor_email("hello@ollama.com", "Pay as you go pricing for Ollama cloud")
+    assert agent.is_system_or_vendor_email("no.reply@connect.razer.com", "Meet the all new Kiyo")
+    assert agent.is_system_or_vendor_email("googleplay-noreply@google.com", "Payment declined for Google Play Pass")
+    assert agent.is_system_or_vendor_email("hello@newsletter.life360.com", "Next up: add your four-legged family")
+    assert agent.is_system_or_vendor_email("no-reply@accounts.google.com", "Security alert")
+
+    # Legitimate agency emails must NOT be classified as system/vendor
+    assert not agent.is_system_or_vendor_email("andre@charle.co.uk", "Re: Security notice regarding candykittens.co.uk")
+    assert not agent.is_system_or_vendor_email("support@cleancanvas.co.uk", "Re: candykittens perimeter check")
+    assert not agent.is_system_or_vendor_email("cto@commandc.com", "Question regarding agency retainers")
+
+
+def test_handle_message_ignores_system_bots():
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        state_file = f.name
+    try:
+        agent = InboxAgent(state_file=state_file)
+        mock_dispatcher = MagicMock()
+        agent.dispatcher = mock_dispatcher
+
+        reply_text, needs_escalation = agent.handle_message(
+            sender_email="notifications@github.com",
+            subject="[CmfH009/Orbit-Security] Run failed: Orbit Security Perimeter Sentinel - main (9c08745)",
+            message_body="Run failed for workflow Orbit Security Perimeter Sentinel. Check logs at https://github.com/..."
+        )
+
+        assert reply_text == ""
+        assert needs_escalation is False
+        mock_dispatcher.send_email.assert_not_called()
+    finally:
+        if os.path.exists(state_file):
+            os.remove(state_file)
+
+
