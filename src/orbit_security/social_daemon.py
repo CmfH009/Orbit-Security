@@ -184,23 +184,43 @@ class SocialDaemon:
         return None
 
     def _check_hardware_governor(self) -> bool:
-        """Verifies host CPU and RAM status before initiating heavy operations."""
+        """Verifies host CPU, RAM, thermal band, and battery state before initiating heavy operations."""
         try:
             import psutil
             for _ in range(5):
                 cpu = psutil.cpu_percent(interval=0.5)
-                if cpu <= 88.0:
+                if cpu <= 75.0:
                     break
                 time.sleep(2.0)
             else:
-                logger.warning(f"Host CPU sustained elevated ({cpu}% > 88.0%). Pacing social daemon.")
+                logger.warning(f"Host CPU sustained elevated ({cpu}% > 75.0%). Pacing social daemon.")
                 return False
 
             vm = psutil.virtual_memory()
             free_mb = vm.available / (1024 * 1024)
-            if free_mb < 600.0:
-                logger.warning(f"Host RAM constrained ({free_mb:.0f}MB < 600MB). Yielding cycle.")
+            if free_mb < 800.0:
+                logger.warning(f"Host RAM constrained ({free_mb:.0f}MB < 800MB). Yielding cycle.")
                 return False
+
+            # Query Orbit Master Supervisor hardware governor telemetry
+            state_file = Path(r"A:\system\state\orbit_daemon_state.json")
+            if state_file.exists():
+                try:
+                    with open(state_file, "r", encoding="utf-8") as f:
+                        st = json.load(f)
+                    t_band = st.get("thermal_band", "green")
+                    cpu_t = st.get("cpu_temp_c")
+                    if t_band == "red" or (cpu_t is not None and cpu_t >= 88.0):
+                        logger.warning(f"Host thermals elevated (Die: {cpu_t}°C, Band: {t_band}). Pacing social daemon for cooling.")
+                        return False
+                    if t_band == "stabilizing":
+                        logger.info("Power transition stabilization active. Pacing social daemon.")
+                        return False
+                    if st.get("on_battery", False) and st.get("battery_percent", 100) < 30:
+                        logger.warning(f"Host running on low battery ({st.get('battery_percent')}% < 30%). Pacing social cycle.")
+                        return False
+                except Exception:
+                    pass
         except Exception:
             pass
         return True

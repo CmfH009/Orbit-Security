@@ -18,6 +18,12 @@ __pycache__/
 .coverage
 htmlcov/
 
+# PyInstaller Build Artifacts
+build/
+dist/
+*.spec
+
+
 # Logs, Campaigns & Private Lead Data
 *.log
 data/leads_state.json
