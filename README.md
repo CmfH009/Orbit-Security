@@ -1,5 +1,11 @@
 # 🛡️ Orbit Security: Attack Surface & Subdomain Hygiene Sentinel
 
+[![Orbit Security Perimeter Sentinel](https://github.com/CmfH009/Orbit-Security/actions/workflows/orbit-perimeter-sentinel.yml/badge.svg)](https://github.com/CmfH009/Orbit-Security/actions/workflows/orbit-perimeter-sentinel.yml)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/CmfH009/Orbit-Security?color=cyan&label=release)](https://github.com/CmfH009/Orbit-Security/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Live Demo & Fleet Center](https://img.shields.io/badge/Fleet%20Center-Live%20Demo-10B981)](https://cmfh009.github.io/Orbit-Security/)
+
 **Orbit Security** is an autonomous external perimeter auditor and attack surface sentinel built for web design, development, and digital marketing agencies. It monitors client domains for dangling CNAME takeovers, email spoofing risks (DMARC/SPF), exposed environment secrets (`.env`, `.git`), and expiring SSL certificates—automatically compiling co-branded, white-label monthly audit PDFs that agencies send to their clients to justify and elevate their recurring monthly maintenance retainers.
 
 ---
