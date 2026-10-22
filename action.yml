@@ -39,7 +39,7 @@ runs:
       shell: bash
       run: |
         python -m pip install --upgrade pip
-        pip install dnspython httpx
+        pip install dnspython httpx pydantic
 
     - name: Execute Orbit Perimeter Sentinel
       shell: bash
@@ -65,7 +65,7 @@ runs:
           cat "$TEMP_MD" >> "$GITHUB_STEP_SUMMARY"
         fi
 
-        if [ -n "${{ inputs.export-markdown }}" ] && [ -f "$TEMP_MD" ]; then
+        if [ -n "${{ inputs.export-markdown }}" ] && [ -f "$TEMP_MD" ] && [ "$(realpath "$TEMP_MD")" != "$(realpath -m "${{ inputs.export-markdown }}")" ]; then
           mkdir -p "$(dirname "${{ inputs.export-markdown }}")"
           cp "$TEMP_MD" "${{ inputs.export-markdown }}"
         fi
