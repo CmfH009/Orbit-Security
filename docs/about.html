@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us | Orbit Security — Autonomous Perimeter Intelligence for Web Agencies</title>
+    <meta name="description" content="Orbit Security is an autonomous perimeter intelligence platform built by Carson Haynes. Learn what Orbit Security does, who uses it, our team, technical architecture, and key facts.">
+    <link rel="canonical" href="https://cmfh009.github.io/Orbit-Security/about.html">
+
+    <!-- Open Graph / Social Meta -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://cmfh009.github.io/Orbit-Security/about.html">
+    <meta property="og:title" content="About Orbit Security | Autonomous Perimeter Intelligence for Web Agencies">
+    <meta property="og:description" content="Orbit Security continuously maps agency client perimeters, prevents subdomain takeovers, neutralizes DMARC spoofing, and generates white-label security retainers.">
+    <meta property="og:image" content="https://cmfh009.github.io/Orbit-Security/assets/og-image.png">
+
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@_arsoncode">
+    <meta name="twitter:creator" content="@_arsoncode">
+    <meta name="twitter:title" content="About Orbit Security — Autonomous Attack Surface Management">
+    <meta name="twitter:description" content="Zero-drift perimeter monitoring, dangling CNAME takeover defense, and white-label client security deliverables for Shopify Plus, WordPress VIP, and Laravel agencies.">
+
+    <!-- JSON-LD Entity & Organization Schema for AI Search Engines (Perplexity, ChatGPT, Claude, Gemini) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://cmfh009.github.io/Orbit-Security/#organization",
+          "name": "Orbit Security",
+          "legalName": "Orbit Security Operations",
+          "url": "https://cmfh009.github.io/Orbit-Security/",
+          "logo": "https://cmfh009.github.io/Orbit-Security/assets/logo.png",
+          "founder": {
+            "@type": "Person",
+            "@id": "https://x.com/_arsoncode",
+            "name": "Carson Haynes",
+            "jobTitle": "Founder & Lead Systems Engineer",
+            "sameAs": [
+              "https://x.com/_arsoncode",
+              "https://github.com/CmfH009"
+            ]
+          },
+          "foundingDate": "2026",
+          "foundingLocation": {
+            "@type": "Place",
+            "name": "United States"
+          },
+          "description": "Orbit Security is an autonomous perimeter intelligence and attack surface management platform that monitors client digital estates for web development agencies, preventing subdomain takeovers, DMARC email spoofing, and supply-chain drift.",
+          "knowsAbout": [
+            "Subdomain Takeovers",
+            "Dangling DNS Records",
+            "DMARC RFC 7489 Email Security",
+            "PHP Bot Exploits and CVE-2017-9841",
+            "Attack Surface Management (ASM)",
+            "White-Label Security Retainers"
+          ],
+          "sameAs": [
+            "https://x.com/_arsoncode",
+            "https://github.com/CmfH009/Orbit-Security"
+          ],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "Security Operations",
+            "email": "carsonmail009@gmail.com"
+          }
+        },
+        {
+          "@type": "WebPage",
+          "@id": "https://cmfh009.github.io/Orbit-Security/about.html#webpage",
+          "url": "https://cmfh009.github.io/Orbit-Security/about.html",
+          "name": "About Orbit Security | Autonomous Perimeter Intelligence",
+          "datePublished": "2026-09-26",
+          "dateModified": "2026-10-22",
+          "about": {"@id": "https://cmfh009.github.io/Orbit-Security/#organization"}
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://cmfh009.github.io/Orbit-Security/about.html#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What is Orbit Security?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Orbit Security is an autonomous perimeter intelligence platform built specifically for web development agencies to protect their clients from dangling DNS takeovers, DMARC email spoofing, and exposed application assets."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Who founded Orbit Security?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Orbit Security was founded in 2026 by Carson Haynes (@_arsoncode), a security engineer and systems architect specializing in proactive attack surface management and deterministic defense."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How does Orbit Security differ from traditional scanners like Tenable or Qualys?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Unlike slow enterprise vulnerability scanners that charge tens of thousands of dollars and flood inboxes with internal CVE noise, Orbit Security focuses exclusively on the external agency client perimeter. It delivers client-ready white-label PDF deliverables, zero-drift DNS monitoring, and drop-in Nginx/DNS remediation scripts in under 12 seconds."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Who uses Orbit Security?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Orbit Security is used by Shopify Plus Partners, WordPress VIP agencies, Laravel development studios, headless commerce consultancies, and digital agency technical directors managing 15 to 100+ client domains."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+
+    <!-- Tailwind CSS CDN & Custom Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Press+Start+2P&family=VT323&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .font-pixel { font-family: 'Press Start 2P', monospace; }
+        .font-arcade { font-family: 'VT323', monospace; }
+        .font-sans { font-family: 'Space Grotesk', sans-serif; }
+
+        .pixel-box-emerald {
+            box-shadow: 4px 4px 0px #064e3b;
+            border: 2px solid #10b981;
+        }
+        .pixel-box-cyan {
+            box-shadow: 4px 4px 0px #164e63;
+            border: 2px solid #06b6d4;
+        }
+        .pixel-box-purple {
+            box-shadow: 4px 4px 0px #581c87;
+            border: 2px solid #a855f7;
+        }
+        .pixel-btn {
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3), 0 2px 4px rgba(0, 0, 0, 0.4);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+        }
+        .pixel-btn:hover {
+            box-shadow: 0 0 16px rgba(16, 185, 129, 0.35);
+            border-color: #34d399;
+        }
+        .pixel-btn:active {
+            transform: translateY(1px);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-emerald-500 selection:text-white" style="background-color: #060a16;">
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-50 backdrop-blur-md bg-slate-950/90 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="index.html" class="flex items-center gap-2.5 sm:gap-3 group">
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/30 transition-all pixel-box-emerald flex-shrink-0">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-slate-950 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-lg sm:text-xl font-bold tracking-tight text-white font-pixel" style="color:#ffffff; white-space:nowrap;">Orbit Security</span>
+                        <span class="hidden xs:inline-block text-[9px] ml-1.5 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-arcade uppercase">ABOUT US</span>
+                    </div>
+                </a>
+            </div>
+            
+            <nav class="hidden md:flex items-center gap-3.5 lg:gap-4 text-xs lg:text-sm font-medium text-slate-300" style="white-space:nowrap;">
+                <a href="index.html#audit-preview" class="hover:text-emerald-400 transition-colors">Audit Studio</a>
+                <a href="index.html#sentinels" class="hover:text-emerald-400 transition-colors">Sentinels</a>
+                <a href="index.html#simulate" class="hover:text-emerald-400 transition-colors">Simulator</a>
+                <a href="fleet.html" class="hover:text-emerald-400 transition-colors flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>Fleet</a>
+                <a href="signup.html" class="hover:text-emerald-400 transition-colors">Onboard</a>
+                <a href="index.html#pricing" class="hover:text-emerald-400 transition-colors font-bold text-white">Pricing</a>
+                <a href="about.html" class="text-emerald-400 font-semibold border-b border-emerald-400 pb-0.5">About Us</a>
+                <a href="#faq" class="hover:text-emerald-400 transition-colors">FAQ</a>
+            </nav>
+
+            <div class="flex items-center gap-3">
+                <a href="index.html" class="text-xs font-mono text-slate-400 hover:text-emerald-400 transition-colors hidden sm:inline-block">← Back to Hub</a>
+                <a href="index.html#pricing" class="px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-all pixel-btn shadow-md shadow-emerald-500/20">
+                    Get Protected
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="relative z-10 py-12 sm:py-20 max-w-5xl mx-auto px-4 sm:px-6">
+
+        <!-- Breadcrumb & Last Updated Freshness Signal for AI Engines -->
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-8 text-xs font-mono text-slate-400 border-b border-slate-800 pb-4">
+            <div class="flex items-center gap-2">
+                <a href="index.html" class="hover:text-emerald-400">Orbit Security</a>
+                <span>/</span>
+                <span class="text-emerald-400 font-semibold">About Us</span>
+            </div>
+            <div class="flex items-center gap-2 text-slate-400">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Last Verified & Updated: <strong class="text-slate-200">October 22, 2026</strong></span>
+            </div>
+        </div>
+
+        <!-- 1. CLEAR VALUE PROP (Opening Hero Section) -->
+        <section id="value-prop" class="mb-16">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-semibold text-emerald-400 mb-4 font-mono">
+                AUTONOMOUS ATTACK SURFACE MANAGEMENT
+            </div>
+            <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight mb-6 leading-tight">
+                About <span class="bg-gradient-to-r from-emerald-400 via-cyan-400 to-teal-300 bg-clip-text text-transparent">Orbit Security</span>
+            </h1>
+            <p class="text-lg sm:text-xl text-slate-300 leading-relaxed font-normal max-w-4xl mb-6">
+                <strong>Orbit Security is an autonomous perimeter intelligence platform built specifically for web development agencies</strong> to monitor their client fleets, eradicate dangling DNS takeovers, neutralize DMARC email spoofing, and unlock recurring $1,500/month white-label retainer revenue.
+            </p>
+            <p class="text-sm sm:text-base text-slate-400 leading-relaxed max-w-3xl">
+                Founded by systems architect Carson Haynes in 2026, Orbit Security bridges the critical gap between complex enterprise cyber scanners and fast-moving agency development teams. We turn perimeter attack surface hygiene into automated, deterministic client protection.
+            </p>
+        </section>
+
+        <!-- 2. WHAT ORBIT SECURITY DOES -->
+        <section id="what-orbit-does" class="mb-16 pt-8 border-t border-slate-800">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-mono text-sm font-bold">02</div>
+                <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">What Orbit Security Does</h2>
+            </div>
+            <p class="text-slate-300 leading-relaxed mb-6">
+                Orbit Security continuously inspects the public digital perimeter of web development agencies and their clients without touching internal corporate networks. It operates as an always-on, zero-drift telemetry radar that performs four mission-critical functions:
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="p-5 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-emerald-500/40 transition-all">
+                    <div class="text-emerald-400 font-bold font-mono text-sm mb-2 flex items-center gap-2">
+                        <span>🛡️</span> Dangling DNS & CNAME Takeover Defense
+                    </div>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Detects abandoned CNAME records pointing to decommissioned S3 buckets, GitHub Pages, Heroku dynos, Shopify stores, and Azure slots before threat actors can claim them and hijack client subdomains.
+                    </p>
+                </div>
+                <div class="p-5 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40 transition-all">
+                    <div class="text-cyan-400 font-bold font-mono text-sm mb-2 flex items-center gap-2">
+                        <span>✉️</span> DMARC, SPF & DKIM Email Spoofing Neutralization
+                    </div>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Verifies RFC 7489 enforcement across apex and subdomains to prevent CEO impersonation and phishing campaigns from impersonating trusted agency clients.
+                    </p>
+                </div>
+                <div class="p-5 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-purple-500/40 transition-all">
+                    <div class="text-purple-400 font-bold font-mono text-sm mb-2 flex items-center gap-2">
+                        <span>🔍</span> Exposed Asset & PHP Bot RCE Pre-Screening
+                    </div>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Passively hunts for exposed <code class="text-emerald-300 font-mono">.git</code> folders, <code class="text-emerald-300 font-mono">.env</code> keys, Composer packages, and <code class="text-emerald-300 font-mono">eval-stdin.php</code> (CVE-2017-9841) attack vectors, paired with automated Nginx HTTP 418 Teapot drop-in sinkhole rules.
+                    </p>
+                </div>
+                <div class="p-5 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-emerald-500/40 transition-all">
+                    <div class="text-emerald-400 font-bold font-mono text-sm mb-2 flex items-center gap-2">
+                        <span>📄</span> White-Label Executive Deliverables & Retainers
+                    </div>
+                    <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                        Generates high-fidelity, co-branded security PDF flipbooks and board-ready reports that agencies deliver directly to non-technical client stakeholders under their own brand.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. WHAT MAKES ORBIT SECURITY DIFFERENT -->
+        <section id="what-makes-different" class="mb-16 pt-8 border-t border-slate-800">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-mono text-sm font-bold">03</div>
+                <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">What Makes Orbit Security Different</h2>
+            </div>
+            <p class="text-slate-300 leading-relaxed mb-6">
+                Most cybersecurity software is built for enterprise SOC teams with 50-person departments and 6-figure budgets. Orbit Security was re-engineered from the ground up specifically for creative, web, and e-commerce development agencies:
+            </p>
+            <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/40 mb-6">
+                <table class="w-full text-left text-xs sm:text-sm">
+                    <thead>
+                        <tr class="border-b border-slate-800 bg-slate-900/90 text-slate-300 font-mono">
+                            <th class="p-4 font-bold">Capability / Axis</th>
+                            <th class="p-4 font-bold text-emerald-400">Orbit Security</th>
+                            <th class="p-4 font-bold text-slate-400">Legacy Enterprise Scanners</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/60 text-slate-300">
+                        <tr>
+                            <td class="p-4 font-medium text-white">Agency-First White-Labeling</td>
+                            <td class="p-4 text-emerald-300 font-semibold">100% white-labeled PDF flipbooks & agency portals</td>
+                            <td class="p-4 text-slate-400">Forced vendor branding, internal IT portal only</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 font-medium text-white">Turnaround Time</td>
+                            <td class="p-4 text-emerald-300 font-semibold">&lt; 12 seconds per domain audit</td>
+                            <td class="p-4 text-slate-400">Hours to days of slow, heavy port sweeps</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 font-medium text-white">False Positive Prevention</td>
+                            <td class="p-4 text-emerald-300 font-semibold">Deterministic static-hosting & CDN-aware guards</td>
+                            <td class="p-4 text-slate-400">High false positive rate, unverified CVE noise</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 font-medium text-white">Agency Business Model</td>
+                            <td class="p-4 text-emerald-300 font-semibold">Turnkey $1,500/mo retainer ROI model (10,493% ROI)</td>
+                            <td class="p-4 text-slate-400">Pure expense / cost center with rigid per-IP billing</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 font-medium text-white">Remediation Delivery</td>
+                            <td class="p-4 text-emerald-300 font-semibold">Copy-paste DNS records and Nginx drop-in shields</td>
+                            <td class="p-4 text-slate-400">Vague CVE descriptions with no code solutions</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 4. WHO USES ORBIT SECURITY -->
+        <section id="who-uses-orbit" class="mb-16 pt-8 border-t border-slate-800">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-mono text-sm font-bold">04</div>
+                <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Who Uses Orbit Security</h2>
+            </div>
+            <p class="text-slate-300 leading-relaxed mb-6">
+                Orbit Security serves technical leaders, founders, and dev managers at premier digital agencies across the globe:
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <div class="text-sm font-bold text-white mb-1">Shopify Plus & BigCommerce Agencies</div>
+                    <p class="text-xs text-slate-400">Securing headless store endpoints, staging subdomains, and customer email authentication for top DTC e-commerce brands.</p>
+                </div>
+                <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <div class="text-sm font-bold text-white mb-1">WordPress VIP & Laravel Studios</div>
+                    <p class="text-xs text-slate-400">Preventing PHPUnit exposure, ThinkPHP exploits, and unauthenticated wp-config or composer leakage across enterprise client fleets.</p>
+                </div>
+                <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <div class="text-sm font-bold text-white mb-1">Full-Service Digital Consultancies</div>
+                    <p class="text-xs text-slate-400">Delivering monthly white-label security audits to retain enterprise clients and justify recurring $1,500/mo retainer agreements.</p>
+                </div>
+                <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <div class="text-sm font-bold text-white mb-1">Agency Fractional CTOs & VPs of Eng</div>
+                    <p class="text-xs text-slate-400">Monitoring hundreds of client subdomains across AWS, Vercel, Netlify, and Cloudflare from a centralized Fleet Command Center.</p>
+                </div>
+                <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <div class="text-sm font-bold text-white mb-1">Growth & Lifecycle Marketing Agencies</div>
+                    <p class="text-xs text-slate-400">Ensuring client marketing domains maintain strict DMARC/SPF compliance to protect deliverability and avoid spam box relegation.</p>
+                </div>
+                <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <div class="text-sm font-bold text-white mb-1">Enterprise Web Maintainers</div>
+                    <p class="text-xs text-slate-400">Managing legacy client migrations where obsolete DNS records are forgotten and left vulnerable to hijacking.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. THE TEAM BEHIND ORBIT SECURITY -->
+        <section id="team" class="mb-16 pt-8 border-t border-slate-800">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 font-mono text-sm font-bold">05</div>
+                <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">The Team Behind Orbit Security</h2>
+            </div>
+            <div class="p-6 sm:p-8 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col md:flex-row items-center md:items-start gap-6">
+                <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-tr from-emerald-500 to-cyan-500 p-1 flex-shrink-0 shadow-lg shadow-emerald-500/20 pixel-box-emerald">
+                    <div class="w-full h-full bg-slate-950 rounded-xl flex items-center justify-center text-3xl sm:text-4xl">
+                        🛡️
+                    </div>
+                </div>
+                <div class="flex-1 text-center md:text-left">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-2">
+                        <div>
+                            <h3 class="text-xl sm:text-2xl font-bold text-white">Carson Haynes</h3>
+                            <p class="text-xs sm:text-sm font-mono text-emerald-400">Founder, Principal Systems Architect & Lead Security Engineer</p>
+                        </div>
+                        <div class="flex items-center justify-center md:justify-start gap-3">
+                            <a href="https://x.com/_arsoncode" target="_blank" rel="noopener noreferrer" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-mono text-xs flex items-center gap-1.5 transition-colors">
+                                <span>𝕏</span> @_arsoncode
+                            </a>
+                            <a href="https://github.com/CmfH009" target="_blank" rel="noopener noreferrer" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-mono text-xs flex items-center gap-1.5 transition-colors">
+                                <span>GitHub</span> CmfH009
+                            </a>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-300 leading-relaxed mb-4">
+                        Carson Haynes is a veteran systems software engineer specializing in autonomous threat surface recon, distributed DNS infrastructure, and high-performance perimeter defense. Frustrated by the bloat and prohibitive pricing of enterprise cybersecurity platforms that ignore the realities of agency client management, Carson engineered Orbit Security to give digital studios enterprise-grade reconnaissance in a fast, white-labeled, and revenue-generating form factor.
+                    </p>
+                    <div class="flex flex-wrap items-center justify-center md:justify-start gap-2 text-xs font-mono text-slate-400">
+                        <span class="px-2.5 py-1 rounded bg-slate-800/80 border border-slate-700">Autonomous ASM</span>
+                        <span class="px-2.5 py-1 rounded bg-slate-800/80 border border-slate-700">RFC 7489 DMARC</span>
+                        <span class="px-2.5 py-1 rounded bg-slate-800/80 border border-slate-700">Passive DNS Radar</span>
+                        <span class="px-2.5 py-1 rounded bg-slate-800/80 border border-slate-700">Zero-Drift Invariants</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. HOW ORBIT SECURITY WORKS -->
+        <section id="how-orbit-works" class="mb-16 pt-8 border-t border-slate-800">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-mono text-sm font-bold">06</div>
+                <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">How Orbit Security Works</h2>
+            </div>
+            <p class="text-slate-300 leading-relaxed mb-6">
+                Orbit Security operates on a 4-step autonomous loop designed to require zero maintenance from agency engineering staff:
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="p-5 rounded-xl bg-slate-900/60 border border-slate-800 relative">
+                    <div class="text-2xl font-bold text-emerald-400 font-mono mb-2">01</div>
+                    <h3 class="text-sm font-bold text-white mb-2">Passive Ingestion</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        Input agency client domains or import your portfolio via CSV/API. No agent installation, software SDKs, or internal credentials required.
+                    </p>
+                </div>
+                <div class="p-5 rounded-xl bg-slate-900/60 border border-slate-800 relative">
+                    <div class="text-2xl font-bold text-cyan-400 font-mono mb-2">02</div>
+                    <h3 class="text-sm font-bold text-white mb-2">Telemetry Sweep</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        Scans 40+ CNAME fingerprint signatures, RFC 7489 mail records, OWASP security headers, and static host guards in under 12 seconds per domain.
+                    </p>
+                </div>
+                <div class="p-5 rounded-xl bg-slate-900/60 border border-slate-800 relative">
+                    <div class="text-2xl font-bold text-purple-400 font-mono mb-2">03</div>
+                    <h3 class="text-sm font-bold text-white mb-2">Deterministic Triage</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        Filters false positives using CDN and canonical host detection. Generates ready-to-execute DNS instructions and Nginx mitigation blocks.
+                    </p>
+                </div>
+                <div class="p-5 rounded-xl bg-slate-900/60 border border-slate-800 relative">
+                    <div class="text-2xl font-bold text-emerald-400 font-mono mb-2">04</div>
+                    <h3 class="text-sm font-bold text-white mb-2">White-Label Retainer</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        Synthesizes co-branded PDF audit flipbooks and executive summaries that agencies deliver to clients to monetize ongoing perimeter hygiene.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. KEY FACTS -->
+        <section id="key-facts" class="mb-16 pt-8 border-t border-slate-800">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-mono text-sm font-bold">07</div>
+                <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Key Facts</h2>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-center">
+                    <div class="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono">2026</div>
+                    <div class="text-xs text-slate-400 uppercase tracking-wider mt-1">Founded Year</div>
+                </div>
+                <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-center">
+                    <div class="text-2xl sm:text-3xl font-extrabold text-cyan-400 font-mono">&lt; 12s</div>
+                    <div class="text-xs text-slate-400 uppercase tracking-wider mt-1">Audit Latency</div>
+                </div>
+                <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-center">
+                    <div class="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono">40+</div>
+                    <div class="text-xs text-slate-400 uppercase tracking-wider mt-1">Takeover Signatures</div>
+                </div>
+                <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-center">
+                    <div class="text-2xl sm:text-3xl font-extrabold text-purple-400 font-mono">10,493%</div>
+                    <div class="text-xs text-slate-400 uppercase tracking-wider mt-1">Average Retainer ROI</div>
+                </div>
+            </div>
+            <div class="p-5 rounded-xl bg-slate-900/40 border border-slate-800 text-xs sm:text-sm text-slate-300 space-y-2">
+                <p>• <strong>Primary Platform URL:</strong> <a href="https://cmfh009.github.io/Orbit-Security/" class="text-emerald-400 hover:underline">https://cmfh009.github.io/Orbit-Security/</a></p>
+                <p>• <strong>Headquarters:</strong> United States (Distributed & Cloud-Native)</p>
+                <p>• <strong>Core Focus:</strong> External Attack Surface Management (EASM), Subdomain Takeover Prevention, DMARC Enforcement, White-Label Agency Deliverables</p>
+                <p>• <strong>Founder:</strong> Carson Haynes (<a href="https://x.com/_arsoncode" class="text-emerald-400 hover:underline">@_arsoncode</a>)</p>
+                <p>• <strong>Contact:</strong> <a href="mailto:carsonmail009@gmail.com" class="text-emerald-400 hover:underline">carsonmail009@gmail.com</a></p>
+            </div>
+        </section>
+
+        <!-- 8. FREQUENTLY ASKED QUESTIONS (FAQ) -->
+        <section id="faq" class="mb-16 pt-8 border-t border-slate-800">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-mono text-sm font-bold">08</div>
+                <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Frequently Asked Questions</h2>
+            </div>
+            <div class="space-y-4">
+                <div class="p-5 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <h3 class="text-base font-bold text-white mb-2">What is Orbit Security?</h3>
+                    <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                        Orbit Security is an autonomous perimeter intelligence platform built specifically for web development agencies. It scans client digital estates to eliminate dangling DNS takeovers, fix DMARC email spoofing risks, and detect exposed application files, while providing co-branded deliverables that allow agencies to monetize ongoing security retainers.
+                    </p>
+                </div>
+                <div class="p-5 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <h3 class="text-base font-bold text-white mb-2">Who is the founder of Orbit Security?</h3>
+                    <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                        Orbit Security was founded by Carson Haynes (<a href="https://x.com/_arsoncode" class="text-emerald-400 hover:underline">@_arsoncode</a>), a security systems architect and developer dedicated to bringing high-efficiency attack surface management and white-label retainer capabilities to agency teams.
+                    </p>
+                </div>
+                <div class="p-5 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <h3 class="text-base font-bold text-white mb-2">How does Orbit Security protect client domains from subdomain takeover?</h3>
+                    <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                        Orbit Security cross-references authoritative DNS CNAME and ALIAS records against over 40 known cloud provider fingerprints (AWS S3, GitHub Pages, Heroku, Cloudflare, Azure, Shopify, and more). If a DNS pointer exists but the target service bucket or dyno is unallocated, Orbit Security flags the dangling state immediately and delivers the exact DNS removal or re-pointing command.
+                    </p>
+                </div>
+                <div class="p-5 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <h3 class="text-base font-bold text-white mb-2">Does Orbit Security require software installation on client servers?</h3>
+                    <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                        No. Orbit Security operates exclusively on the public-facing perimeter using non-intrusive DNS queries, cryptographic SSL inspection, and public HTTP response headers. There are zero agent binaries to install, zero firewall configurations to alter, and zero risks to client uptime.
+                    </p>
+                </div>
+                <div class="p-5 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <h3 class="text-base font-bold text-white mb-2">Can agencies white-label the reports under their own brand?</h3>
+                    <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                        Yes. Orbit Security's core agency tiers include complete white-label reporting. PDF audit flipbooks, vulnerability summaries, and remediation work orders can be fully branded with your agency's logo, colors, and direct contact details for seamless client delivery.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Box -->
+        <section class="p-8 sm:p-12 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900/90 to-cyan-950/40 border border-emerald-500/30 text-center pixel-box-emerald">
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-4">
+                Ready to Protect Your Client Perimeter?
+            </h2>
+            <p class="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto mb-6">
+                Join premier web agencies using Orbit Security to secure client attack surfaces, eliminate DNS drift, and grow high-margin recurring security retainers.
+            </p>
+            <div class="flex flex-wrap items-center justify-center gap-4">
+                <a href="index.html#audit-preview" class="px-6 py-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm transition-all pixel-btn shadow-lg shadow-emerald-500/20">
+                    Run Free Domain Audit
+                </a>
+                <a href="signup.html" class="px-6 py-3 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-medium text-sm transition-all pixel-btn">
+                    Explore Agency Tiers
+                </a>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="relative z-10 py-12 bg-slate-950 border-t border-slate-900 text-slate-500 text-xs">
+        <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p>&copy; 2026 Orbit Security Operations. All rights reserved.</p>
+            <div class="flex flex-wrap items-center gap-6">
+                <a href="about.html" class="text-emerald-400 hover:underline">About Us</a>
+                <a href="terms.html" class="text-slate-400 hover:text-white transition-colors">Terms of Service</a>
+                <a href="privacy.html" class="text-slate-400 hover:text-white transition-colors">Privacy Policy</a>
+                <a href="refunds.html" class="text-slate-400 hover:text-white transition-colors">Refunds</a>
+                <a href="disclaimer.html" class="text-slate-400 hover:text-white transition-colors">RFC Disclaimer</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
