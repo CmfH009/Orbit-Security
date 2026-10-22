@@ -149,7 +149,11 @@ def test_check_stripe_payments():
         }
 
         with patch("httpx.Client.get", return_value=mock_sessions_response):
-            new_payments = agent.check_stripe_payments()
+            # The Stripe poller short-circuits when no API key is configured, so
+            # the test must supply one. Without this the test silently depends on
+            # a developer's local .env and fails in CI.
+            with patch.dict(os.environ, {"STRIPE_API_KEY": "sk_test_hermetic"}):
+                new_payments = agent.check_stripe_payments()
             assert len(new_payments) == 1
             assert new_payments[0]["id"] == "cs_test_123"
             mock_dispatcher.send_email.assert_called_once()

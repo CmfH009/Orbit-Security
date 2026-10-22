@@ -1,0 +1,36 @@
+# Normalise text files to LF in the repository while keeping the platform
+# default on checkout. This stops CRLF churn from producing diffs that look
+# like real changes.
+* text=auto
+
+# Never let git treat a binary as text.
+#
+# This is not theoretical: with core.autocrlf=true and no .gitattributes, git
+# classified sample_audit.pdf as text and rewrote its bytes on commit, so the
+# committed copy stopped matching the working tree and the landing/ and docs/
+# copies drifted apart (CI parity caught it). `binary` sets -text -diff, which
+# stores the file exactly as it is on disk.
+*.pdf    binary
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.webp   binary
+*.ico    binary
+*.bmp    binary
+*.mp4    binary
+*.webm   binary
+*.mov    binary
+*.mp3    binary
+*.wav    binary
+*.zip    binary
+*.gz     binary
+*.7z     binary
+*.ttf    binary
+*.otf    binary
+*.woff   binary
+*.woff2  binary
+*.db     binary
+*.sqlite binary
+*.pkl    binary
+*.pyc    binary

@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from orbit_security.relevance_engine import (
     CURATED_INFOSEC_ACCOUNTS,
@@ -12,7 +14,33 @@ from orbit_security.relevance_engine import (
 
 @pytest.fixture
 def engine():
-    return RelevanceEngine()
+    """Relevance engine backed by a hermetic registry.
+
+    The production registries (data/prospects.json, data/agency_x_profiles.json)
+    are local, gitignored state. A default-constructed engine therefore scores
+    differently on a clean CI checkout than on a developer machine, which makes
+    the scoring tests silently environment-dependent. This fixture builds a
+    minimal registry that contains exactly what the tests assert on.
+    """
+    import tempfile
+    from pathlib import Path
+
+    tmp = tempfile.mkdtemp(prefix="orbit-relevance-")
+    data_dir = Path(tmp) / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    (data_dir / "agency_x_profiles.json").write_text(
+        json.dumps([
+            {
+                "x_handle": "@charleagency",
+                "agency_name": "Charlie Agency",
+                "agency_domain": "charleagency.com",
+                "target_client_domain": "candykittens.co.uk",
+            }
+        ]),
+        encoding="utf-8",
+    )
+    (data_dir / "prospects.json").write_text(json.dumps([]), encoding="utf-8")
+    return RelevanceEngine(project_root=Path(tmp))
 
 
 def test_curated_infosec_accounts_registry():
