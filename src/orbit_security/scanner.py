@@ -821,6 +821,22 @@ class OrbitSecurityScanner:
                 "Directory metadata file left by macOS Finder is accessible, revealing internal file and folder names.",
                 "Remove .DS_Store files and add them to `.gitignore` and web server block lists.",
             ),
+            (
+                "/vendor/composer/installed.json",
+                ['"packages"', '"name":', '"version":', "phpunit/phpunit"],
+                "Exposed PHP Composer Dependency Tree (/vendor/composer/installed.json)",
+                Severity.CRITICAL,
+                "Composer's internal `installed.json` manifest is publicly accessible inside `/vendor`, disclosing exact PHP library versions and enabling automated scanners to target unpatched RCE gadgets.",
+                "Move `/vendor` outside the public web document root (`public/`) or block `/vendor/` in Nginx/Apache.",
+            ),
+            (
+                "/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php",
+                ["php://input", "eval(", "PHPUnit"],
+                "Exposed PHPUnit RCE Gadget (CVE-2017-9841 / eval-stdin.php)",
+                Severity.CRITICAL,
+                "PHPUnit's `eval-stdin.php` test runner is publicly exposed inside `/vendor`, allowing unauthenticated Remote Code Execution (RCE) via raw HTTP request bodies.",
+                "Immediately block web access to `/vendor/`, remove development dependencies (`composer install --no-dev`) in production, and return HTTP 403/418 on `/vendor/` routes.",
+            ),
         ]
 
         should_close = False
@@ -835,7 +851,7 @@ class OrbitSecurityScanner:
             for path, needles, title, severity, desc, remed in checks:
                 # Static hosts (GitHub Pages / Netlify / Vercel / ...) never serve dotfiles,
                 # so /.env and /.git/* exposure checks are N/A and skipped to avoid false positives.
-                if is_static and (path.startswith("/.env") or path.startswith("/.git")):
+                if is_static and (path.startswith("/.env") or path.startswith("/.git") or path.startswith("/vendor/")):
                     continue
                 url = f"{clean_base}{path}"
                 try:
@@ -1065,7 +1081,8 @@ class OrbitSecurityScanner:
                         ),
                         remediation=(
                             "Suppress detailed version numbers in server headers (e.g. 'ServerTokens Prod' in Apache, "
-                            "'server_tokens off;' in Nginx, and disable 'X-Powered-By' in runtime configuration)."
+                            "'server_tokens off;' in Nginx, set 'expose_php = Off' and 'register_argc_argv = Off' in php.ini "
+                            "to neutralize pearcmd LFI/RCE vectors, and disable 'X-Powered-By' in runtime configuration)."
                         ),
                         target=base_url,
                         evidence=" | ".join(disclosures),
@@ -1092,6 +1109,61 @@ class OrbitSecurityScanner:
                 await client.aclose()
 
         return findings
+
+    async def detect_waf_and_bot_mitigation(
+        self, base_url: str, client: Optional[httpx.AsyncClient] = None
+    ) -> Dict[str, Any]:
+        """Detects edge WAF / bot-mitigation layers (Cloudflare, AWS WAF, Fastly, Sucuri, Akamai, or HTTP 418 Teapot sinkholes)."""
+        result: Dict[str, Any] = {
+            "active": False,
+            "providers": [],
+            "teapot_418_defense": False,
+            "status_code": None,
+        }
+        parsed_base = urlparse(base_url)
+        if parsed_base.hostname and not await async_is_safe_host(parsed_base.hostname):
+            return result
+
+        should_close = False
+        if client is None:
+            client = self.create_http_client()
+            should_close = True
+
+        try:
+            resp = await client.get(base_url)
+            status = getattr(resp, "status_code", None)
+            result["status_code"] = status
+            raw_headers = getattr(resp, "headers", {}) or {}
+            headers = {k.lower(): str(v) for k, v in raw_headers.items()}
+
+            providers = []
+            server_val = headers.get("server", "").lower()
+            if "cf-ray" in headers or "cloudflare" in server_val:
+                providers.append("Cloudflare")
+            if "x-sucuri-id" in headers or "sucuri" in server_val:
+                providers.append("Sucuri WAF")
+            if "x-amz-cf-id" in headers or "x-amzn-requestid" in headers:
+                providers.append("AWS CloudFront / WAF")
+            if "x-fastly-request-id" in headers or "fastly" in server_val:
+                providers.append("Fastly Edge")
+            if "x-akamai-transformed" in headers or "akamai" in server_val:
+                providers.append("Akamai Edge")
+            if "x-vercel-id" in headers or "vercel" in server_val:
+                providers.append("Vercel Edge")
+
+            if status == 418:
+                result["teapot_418_defense"] = True
+                providers.append("HTTP 418 Teapot Bot Sinkhole")
+
+            result["providers"] = providers
+            result["active"] = bool(providers)
+        except Exception:
+            pass
+        finally:
+            if should_close and client:
+                await client.aclose()
+
+        return result
 
     def audit_ssl(self, domain: str, port: int = 443) -> Optional[Finding]:
         if not is_safe_host(domain):

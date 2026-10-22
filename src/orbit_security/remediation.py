@@ -236,3 +236,34 @@ class DnsRemediationGenerator:
             f"Policy: {policy}",
         ]
         return "\n".join(lines) + "\n"
+
+    @staticmethod
+    def generate_nginx_php_teapot_shield(domain: str = "example.com") -> str:
+        """Generates Nginx HTTP 418 'I'm a teapot' sinkhole rules & php.ini hardening for PHP bot scanners.
+
+        Neutralizes:
+        1. Exposed Composer / PHPUnit RCE (`eval-stdin.php` / CVE-2017-9841)
+        2. ThinkPHP `invokefunction` / `call_user_func_array` RCE probes
+        3. PEAR `pearcmd.php` Local File Inclusion (LFI) / RCE (`register_argc_argv`)
+        """
+        return f"""# Orbit Security: Nginx HTTP 418 ("I'm a teapot") PHP Bot Sinkhole & Perimeter Shield
+# Target Domain: {domain}
+
+# 1. Block public access to Composer /vendor/, PHPUnit eval-stdin.php (CVE-2017-9841), and dotfiles
+location ~* (?:/vendor/|eval-stdin\\.php|/\\.(?:env|git|DS_Store)|wp-config\\.php\\.(?:bak|old)|phpinfo\\.php) {{
+    access_log /var/log/nginx/orbit_teapot_sinkhole.log;
+    return 418;
+}}
+
+# 2. Sinkhole ThinkPHP invokefunction RCE & pearcmd.php LFI/RCE query-string probes with HTTP 418
+if ($query_string ~* "(?:invokefunction|call_user_func_array|pearcmd|\\+config-create\\+|\\.\\./\\.\\./)") {{
+    return 418;
+}}
+
+# 3. php.ini Runtime Hardening (neutralizes pearcmd CLI argument injection & X-Powered-By fingerprinting)
+# Add to /etc/php/php.ini:
+# expose_php = Off
+# register_argc_argv = Off
+# allow_url_include = Off
+"""
+

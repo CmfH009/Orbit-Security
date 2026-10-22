@@ -60,6 +60,8 @@ SENSITIVE_PATHS = [
     ("/wp-config.php.old", "DB_NAME"),
     ("/phpinfo.php", "phpinfo()"),
     ("/.DS_Store", "\x00\x00\x00\x01Bud1"),
+    ("/vendor/composer/installed.json", '"packages"'),
+    ("/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php", "php://input"),
 ]
 
 SECURITY_HEADERS = [
