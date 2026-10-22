@@ -214,11 +214,19 @@
     "agency_name": "BVAccel",
     "date": "Sun, 04 Oct 2026 14:50:45 -0700 (PDT)"
   },
+  "zehnergroup.com": {
+    "bounced_email": "hello@zehnergroup.com",
+    "agency_name": "Zehner",
+    "date": "Wed, 21 Oct 2026 19:52:18 -0700 (PDT)"
+  },
+  "superco.net": {
+    "bounced_email": "hello@superco.net",
+    "agency_name": "Superco",
+    "date": "Wed, 21 Oct 2026 19:53:10 -0700 (PDT)"
+  },
   "metacake.com": {
+    "bounced_email": "hello@metacake.com",
     "agency_name": "Metacake",
-    "contact_email": "hello@metacake.com",
-    "bounced_at": "2026-10-20 16:07:08",
-    "bounce_reason": "Address not found / 550 Mailbox unavailable",
-    "cohort": 6
+    "date": "Tue, 20 Oct 2026 15:07:07 -0700 (PDT)"
   }
 }

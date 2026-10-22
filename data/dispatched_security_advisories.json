@@ -20,5 +20,170 @@
     "sent_at": "2026-10-22T03:58:27.859130+00:00",
     "bundle_name": "khealth_mail_spoofing_hhc247_org_bundle",
     "status": "DISPATCHED"
+  },
+  "edition.in": {
+    "program_id": "eternal",
+    "program_name": "Eternal",
+    "recipient": "security@edition.in",
+    "subject": "[SECURITY ADVISORY] Responsible Disclosure: Mail Spoofing on edition.in",
+    "severity": "HIGH",
+    "cvss_score": 5.3,
+    "sent_at": "2026-10-22T04:51:01.012923+00:00",
+    "bundle_name": "eternal_mail_spoofing_edition_in_bundle",
+    "status": "DISPATCHED"
+  },
+  "tktnew.com": {
+    "program_id": "eternal",
+    "program_name": "Eternal",
+    "recipient": "security@tktnew.com",
+    "subject": "[SECURITY ADVISORY] Responsible Disclosure: Mail Spoofing on tktnew.com",
+    "severity": "HIGH",
+    "cvss_score": 5.3,
+    "sent_at": "2026-10-22T04:51:04.896482+00:00",
+    "bundle_name": "eternal_mail_spoofing_tktnew_com_bundle",
+    "status": "DISPATCHED"
+  },
+  "zdev.net": {
+    "program_id": "eternal",
+    "program_name": "Eternal",
+    "recipient": "security@zdev.net",
+    "subject": "[SECURITY ADVISORY] Responsible Disclosure: Mail Spoofing on zdev.net",
+    "severity": "HIGH",
+    "cvss_score": 5.3,
+    "sent_at": "2026-10-22T04:51:08.607147+00:00",
+    "bundle_name": "eternal_mail_spoofing_zdev_net_bundle",
+    "status": "DISPATCHED"
+  },
+  "bookabach.co.nz": {
+    "program_id": "expediagroup_bbp",
+    "program_name": "Expedia Group Bug Bounty",
+    "recipient": "security@bookabach.co.nz",
+    "subject": "[SECURITY ADVISORY] Responsible Disclosure: Mail Spoofing on bookabach.co.nz",
+    "severity": "HIGH",
+    "cvss_score": 5.3,
+    "sent_at": "2026-10-22T04:51:13.561341+00:00",
+    "bundle_name": "expediagroup_bbp_mail_spoofing_bookabach_co_nz_bundle",
+    "status": "DISPATCHED"
+  },
+  "expedia-aarp.com": {
+    "program_id": "expediagroup_bbp",
+    "program_name": "Expedia Group Bug Bounty",
+    "recipient": "security@expedia-aarp.com",
+    "subject": "[SECURITY ADVISORY] Responsible Disclosure: Mail Spoofing on expedia-aarp.com",
+    "severity": "HIGH",
+    "cvss_score": 5.3,
+    "sent_at": "2026-10-22T04:51:17.942869+00:00",
+    "bundle_name": "expediagroup_bbp_mail_spoofing_expedia-aarp_com_bundle",
+    "status": "DISPATCHED"
+  },
+  "flights.com": {
+    "program_id": "expediagroup_bbp",
+    "program_name": "Expedia Group Bug Bounty",
+    "recipient": "security@flights.com",
+    "subject": "[SECURITY ADVISORY] Responsible Disclosure: Mail Spoofing on flights.com",
+    "severity": "HIGH",
+    "cvss_score": 5.3,
+    "sent_at": "2026-10-22T04:51:21.632422+00:00",
+    "bundle_name": "expediagroup_bbp_mail_spoofing_flights_com_bundle",
+    "status": "DISPATCHED"
+  },
+  "lastminute.co.nz": {
+    "program_id": "expediagroup_bbp",
+    "program_name": "Expedia Group Bug Bounty",
+    "recipient": "security@lastminute.co.nz",
+    "subject": "[SECURITY ADVISORY] Responsible Disclosure: Mail Spoofing on lastminute.co.nz",
+    "severity": "HIGH",
+    "cvss_score": 5.3,
+    "sent_at": "2026-10-22T04:51:25.157327+00:00",
+    "bundle_name": "expediagroup_bbp_mail_spoofing_lastminute_co_nz_bundle",
+    "status": "DISPATCHED"
+  },
+  "platformservices.io": {
+    "program_id": "flutteruki",
+    "program_name": "Flutter UK&I",
+    "recipient": "security@platformservices.io",
+    "subject": "[SECURITY ADVISORY] Responsible Disclosure: Mail Spoofing on platformservices.io",
+    "severity": "HIGH",
+    "cvss_score": 5.3,
+    "sent_at": "2026-10-22T04:51:31.179346+00:00",
+    "bundle_name": "flutteruki_mail_spoofing_platformservices_io_bundle",
+    "status": "DISPATCHED"
+  },
+  "furycloud.io": {
+    "program_id": "mercadolibre",
+    "program_name": "MercadoLibre",
+    "recipient": "security@furycloud.io",
+    "subject": "[SECURITY ADVISORY] Responsible Disclosure: Mail Spoofing on furycloud.io",
+    "severity": "HIGH",
+    "cvss_score": 5.3,
+    "sent_at": "2026-10-22T04:51:35.094207+00:00",
+    "bundle_name": "mercadolibre_mail_spoofing_furycloud_io_bundle",
+    "status": "DISPATCHED"
+  },
+  "mlstatic.com": {
+    "program_id": "mercadolibre",
+    "program_name": "MercadoLibre",
+    "recipient": "security@mlstatic.com",
+    "subject": "[SECURITY ADVISORY] Responsible Disclosure: Mail Spoofing on mlstatic.com",
+    "severity": "HIGH",
+    "cvss_score": 5.3,
+    "sent_at": "2026-10-22T04:51:38.853311+00:00",
+    "bundle_name": "mercadolibre_mail_spoofing_mlstatic_com_bundle",
+    "status": "DISPATCHED"
+  },
+  "mpago.la": {
+    "program_id": "mercadolibre",
+    "program_name": "MercadoLibre",
+    "recipient": "security@mpago.la",
+    "subject": "[SECURITY ADVISORY] Responsible Disclosure: Mail Spoofing on mpago.la",
+    "severity": "HIGH",
+    "cvss_score": 5.3,
+    "sent_at": "2026-10-22T04:51:42.544288+00:00",
+    "bundle_name": "mercadolibre_mail_spoofing_mpago_la_bundle",
+    "status": "DISPATCHED"
+  },
+  "bestfiends.com": {
+    "program_id": "playtika",
+    "program_name": "Playtika",
+    "recipient": "security@bestfiends.com",
+    "subject": "[SECURITY ADVISORY] Responsible Disclosure: Mail Spoofing on bestfiends.com",
+    "severity": "HIGH",
+    "cvss_score": 5.3,
+    "sent_at": "2026-10-22T04:51:51.337578+00:00",
+    "bundle_name": "playtika_mail_spoofing_bestfiends_com_bundle",
+    "status": "DISPATCHED"
+  },
+  "duokan.com": {
+    "program_id": "xiaomi",
+    "program_name": "Xiaomi",
+    "recipient": "security@duokan.com",
+    "subject": "[SECURITY ADVISORY] Responsible Disclosure: Mail Spoofing on duokan.com",
+    "severity": "HIGH",
+    "cvss_score": 5.3,
+    "sent_at": "2026-10-22T04:51:54.985671+00:00",
+    "bundle_name": "xiaomi_mail_spoofing_duokan_com_bundle",
+    "status": "DISPATCHED"
+  },
+  "miui.com": {
+    "program_id": "xiaomi",
+    "program_name": "Xiaomi",
+    "recipient": "security@miui.com",
+    "subject": "[SECURITY ADVISORY] Responsible Disclosure: Mail Spoofing on miui.com",
+    "severity": "HIGH",
+    "cvss_score": 5.3,
+    "sent_at": "2026-10-22T04:51:58.969110+00:00",
+    "bundle_name": "xiaomi_mail_spoofing_miui_com_bundle",
+    "status": "DISPATCHED"
+  },
+  "wali.com": {
+    "program_id": "xiaomi",
+    "program_name": "Xiaomi",
+    "recipient": "security@wali.com",
+    "subject": "[SECURITY ADVISORY] Responsible Disclosure: Mail Spoofing on wali.com",
+    "severity": "HIGH",
+    "cvss_score": 5.3,
+    "sent_at": "2026-10-22T04:52:02.573427+00:00",
+    "bundle_name": "xiaomi_mail_spoofing_wali_com_bundle",
+    "status": "DISPATCHED"
   }
 }

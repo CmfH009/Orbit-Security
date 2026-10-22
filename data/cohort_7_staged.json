@@ -2,7 +2,7 @@
   {
     "agency_name": "Astound Commerce",
     "agency_domain": "astoundcommerce.com",
-    "contact_email": "contact@astoundcommerce.com",
+    "contact_email": "privacy@astounddigital.com",
     "client_domain": "underarmour.com",
     "score": 35,
     "grade": "F",
@@ -10,12 +10,13 @@
     "critical_high_count": 1,
     "pdf_path": "C:\\AgyHut\\projects\\orbit-security\\data\\generated_audits\\astound-commerce\\underarmour.com_audit.pdf",
     "eml_path": "C:\\AgyHut\\projects\\orbit-security\\outbound_campaigns\\astound-commerce\\underarmour.com_pitch_email.eml",
-    "staged_at": "2026-10-21 20:58:07"
+    "staged_at": "2026-10-21 20:58:07",
+    "status": "SENT"
   },
   {
     "agency_name": "Scandiweb",
     "agency_domain": "scandiweb.com",
-    "contact_email": "hello@scandiweb.com",
+    "contact_email": "info@scandiweb.com",
     "client_domain": "puma.com",
     "score": 50,
     "grade": "D",
@@ -23,7 +24,8 @@
     "critical_high_count": 0,
     "pdf_path": "C:\\AgyHut\\projects\\orbit-security\\data\\generated_audits\\scandiweb\\puma.com_audit.pdf",
     "eml_path": "C:\\AgyHut\\projects\\orbit-security\\outbound_campaigns\\scandiweb\\puma.com_pitch_email.eml",
-    "staged_at": "2026-10-21 20:58:27"
+    "staged_at": "2026-10-21 20:58:27",
+    "status": "SENT"
   },
   {
     "agency_name": "MindArc",
@@ -80,7 +82,7 @@
   {
     "agency_name": "BORN Group",
     "agency_domain": "borngroup.com",
-    "contact_email": "info@borngroup.com",
+    "contact_email": "privacy@borngroup.com",
     "client_domain": "dita.com",
     "score": 75,
     "grade": "B",
@@ -88,7 +90,8 @@
     "critical_high_count": 0,
     "pdf_path": "C:\\AgyHut\\projects\\orbit-security\\data\\generated_audits\\born-group\\dita.com_audit.pdf",
     "eml_path": "C:\\AgyHut\\projects\\orbit-security\\outbound_campaigns\\born-group\\dita.com_pitch_email.eml",
-    "staged_at": "2026-10-21 21:01:12"
+    "staged_at": "2026-10-21 21:01:12",
+    "status": "SENT"
   },
   {
     "agency_name": "Bluestone98",
@@ -119,7 +122,7 @@
   {
     "agency_name": "The Stable",
     "agency_domain": "thestable.com",
-    "contact_email": "hello@thestable.com",
+    "contact_email": "info@thestable.com",
     "client_domain": "ring.com",
     "score": 5,
     "grade": "F",
@@ -127,6 +130,7 @@
     "critical_high_count": 2,
     "pdf_path": "C:\\AgyHut\\projects\\orbit-security\\data\\generated_audits\\the-stable\\ring.com_audit.pdf",
     "eml_path": "C:\\AgyHut\\projects\\orbit-security\\outbound_campaigns\\the-stable\\ring.com_pitch_email.eml",
-    "staged_at": "2026-10-21 21:05:40"
+    "staged_at": "2026-10-21 21:05:40",
+    "status": "SENT"
   }
 ]
