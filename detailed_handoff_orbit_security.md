@@ -573,17 +573,54 @@ cd A:\projects\orbit-security
 
 **Timing:** the last successful publish was 2026-10-22 03:07:39Z, so the 8 h spacing clears at **11:07:39Z** (1 of 2 daily posts used).
 
-### 8.5 What this cycle already changed
+### 8.5 What this cycle shipped (all committed, pushed, deployed)
 
-- `ROADMAP.md` created — 5 phases, owners, exit gates, risk register, cadence, 14-day view.
-- `scripts/outreach_metrics.py` — outreach/bounce/reply/cohort-quality metrics with PASS/FAIL gates.
-- `data/roast_f_grades_posts.json` — the roast copy (7 publishable posts, all ≤ 280 weighted chars, plus one held variant that names third-party domains and is hard-blocked from publishing).
-- `scripts/validate_x_post_lengths.py` + `scripts/post_x_roast_f_grades.py` — length validator and a **dry-run-by-default** publishing harness with an 8 h spacing guard and hard "held variants never publish" enforcement.
-- System-level quota mitigations: Drive `--tpslimit 8 --tpslimit-burst 1 --max-backlog 10` on both rclone paths, 403/429 → `QUOTA_DEFERRED`, and a stale-status reconcile that recovered **2 pinned `RUNNING` backup entries** (202 h and 185 h old) that had been lying on the board since 2026-10-14.
-- **8/8 public pages now carry valid Schema.org structured data** with a shared `Organization @id`, so the whole site resolves as one entity graph instead of eight disconnected documents. `scripts/apply_page_schema.py` (idempotent) applied the four missing pages (fleet, signup, ghostdns, portals).
-- `scripts/verify_release.py` — a one-command release gate: landing↔docs parity, JSON-LD parse + cross-page `@id` resolution, required-asset presence, and an optional live HEAD sweep. **Currently: PASS.**
-- `scripts/outreach_metrics.py` — outreach/revenue/cohort-quality metrics with PASS/FAIL gates.
-- `scripts/build_trust_assets.py` — deterministic, re-runnable generator for the brand assets.
+| # | Commit | Outcome |
+|---|---|---|
+| 1 | `0c72116` `feat(site)` | Trust assets + crawl directives + **structured data on all 8 public pages**. Live-verified: every previously-404 URL now 200. |
+| 2 | `ad970d2` `fix(scoring)` | **An F grade now requires real exploit risk.** 52 audits re-scored: 18 failing → 5, 13 rescued, 0 newly failing, average +28.1. |
+| 3 | `876696e` `feat(ci)` | Release gate, parity CI, live-asset sweep, clock-injected test, X publish harness. |
+| 4 | `397f499` `docs` | This roadmap + handoff; `edge-tts`/`pillow`/`pywin32` declared; `uv.lock` refreshed. |
+| 5 | `9a01133` `ci` | Deployed public surface promoted from warn-only to **blocking** CI gate. |
+
+**Verification after deploy (live, 2026-10-22 04:58 MST):**
+`scripts/verify_release.py --live` → **RELEASE GATE PASSED**, 14/14 public URLs HTTP 200, landing↔docs parity clean, JSON-LD parses on every page with all `@id` references resolving.
+Live `about.html` serves 6 entity types including the standalone `Person`, `og:image`/`twitter:image` resolving to the shipped card, 154-char description, visible freshness stamp, canonical.
+
+**Test suite:** `570 passed, 0 failed` (was 513 + 1 hour-dependent failure). The disclose off-peak test is now clock-injected and green at any hour; the DNS cache latency test now measures best-of-5 warmed samples, removing a pre-existing CI flake.
+
+**Scoring behaviour, independently verified against the new engine:**
+
+| Input | New | Old |
+|---|---|---|
+| 7 best-practice items only (the false-F pattern) | **100 / A+** | 35 / F |
+| The real `kff.org` pattern | **80 / B** | 35 / F |
+| 20× the same LOW finding | **100 / A+** | 0 / F |
+| 1 real dangling-CNAME takeover (CRITICAL) | **59 / D** | 65 / C |
+
+### 8.6 What this cycle changed in the system layer
+
+- Drive rclone paths now throttle to **8 transactions/second** (`--tpslimit 8 --tpslimit-burst 1 --max-backlog 10`); a 403/429 is classified `QUOTA_DEFERRED` instead of `FAILED`.
+- A stale-status reconcile recovered **2 backup entries pinned `RUNNING`** for 202 h and 185 h — the backup board had been lying since 2026-10-14.
+- The X publish path is unified into one ledger rule (8 h spacing + 2/day read from the real `QuotaBudget`), dry-run by default.
+
+---
+
+
+New operational surface created this cycle:
+
+| Artifact | Purpose |
+|---|---|
+| `ROADMAP.md` | 5 phases, owners, exit gates, risk register, cadence, 14-day view |
+| `scripts/outreach_metrics.py` | outreach / bounce / reply / cohort-quality metrics with PASS-FAIL gates |
+| `scripts/verify_release.py` | one-command release gate: parity, JSON-LD, assets, live sweep — **PASS** |
+| `scripts/apply_page_schema.py` | idempotent structured-data application for public pages |
+| `scripts/build_trust_assets.py` | deterministic, re-runnable brand asset generator |
+| `scripts/sync_landing_to_docs.py` | landing/ → docs/ drift detector with `--apply` |
+| `scripts/validate_x_post_lengths.py` | X length + third-party-domain + held-variant validator |
+| `scripts/post_x_roast_f_grades.py` | dry-run-by-default X publisher with 8 h spacing guard |
+| `scripts/rescore_audit_evidence.py` | re-scores all 52 delivered audits, legacy vs new model |
+| `data/roast_f_grades_posts.json` | the roast copy: 7 publishable posts (all ≤ 280 weighted chars) + 1 held variant that names third-party domains and is hard-blocked |
 
 ---
 
