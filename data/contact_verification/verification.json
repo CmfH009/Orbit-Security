@@ -1,0 +1,900 @@
+{
+  "generated_utc": "2026-10-22T12:22:16.164863+00:00",
+  "checked": 43,
+  "classification_counts": {
+    "REFUTED": 16,
+    "UNKNOWN": 21,
+    "CONFIRMED": 3,
+    "NO_MX": 3
+  },
+  "method": {
+    "mx_check": "DNS MX lookup; a domain with no exchanger cannot receive mail",
+    "address_mining": "public pages of the agency's own site; emails extracted from text and mailto links",
+    "request_rate": "1.0/s per domain, max 4 pages per domain",
+    "pages": [
+      "",
+      "/contact",
+      "/contact-us",
+      "/about"
+    ]
+  },
+  "results": [
+    {
+      "agency_domain": "swankyagency.com",
+      "agency_name": "Swanky",
+      "contact_email": "hello@swankyagency.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "REFUTED",
+      "published_addresses": [
+        "cat@swankyagency.com",
+        "humans@swankyagency.com",
+        "marketing@swanky.fr"
+      ],
+      "replacement_addresses": [
+        "cat@swankyagency.com",
+        "humans@swankyagency.com"
+      ],
+      "pages_read": [
+        "https://swankyagency.com/ [200]",
+        "https://swankyagency.com/contact [200]",
+        "https://swankyagency.com/contact-us [200]",
+        "https://swankyagency.com/about [200]"
+      ],
+      "mx_hosts": [
+        "alt1.aspmx.l.google.com",
+        "alt2.aspmx.l.google.com",
+        "aspmx.l.google.com"
+      ]
+    },
+    {
+      "agency_domain": "anatta.io",
+      "agency_name": "Anatta",
+      "contact_email": "hello@anatta.io",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://anatta.io/ [200]",
+        "https://anatta.io/contact [200]",
+        "https://anatta.io/contact-us [200]",
+        "https://anatta.io/about [200]"
+      ]
+    },
+    {
+      "agency_domain": "fostr.online",
+      "agency_name": "Fostr",
+      "contact_email": "hello@fostr.online",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://fostr.online/ [200]",
+        "https://fostr.online/contact [200]",
+        "https://fostr.online/contact-us [200]",
+        "https://fostr.online/about [200]"
+      ]
+    },
+    {
+      "agency_domain": "guidance.com",
+      "agency_name": "Guidance",
+      "contact_email": "info@guidance.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "REFUTED",
+      "published_addresses": [
+        "avery-frame-15@3x-1.jpg"
+      ],
+      "replacement_addresses": [],
+      "pages_read": [
+        "https://guidance.com/ [200]",
+        "https://guidance.com/contact [200]",
+        "https://guidance.com/contact-us [200]",
+        "https://guidance.com/about [200]"
+      ],
+      "mx_hosts": [
+        "guidance-com.mail.protection.outlook.com"
+      ]
+    },
+    {
+      "agency_domain": "bva.com",
+      "agency_name": "BVA Agency",
+      "contact_email": "info@bva.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "CONFIRMED",
+      "published_addresses": [
+        "2062d0a4929b45348643784b5cb39c36@sentry.wixpress.com",
+        "460ff4620fa44cba8df530afde949785@sentry.wixpress.com",
+        "605a7baede844d278b89dc95ae0a9123@sentry-next.wixpress.com",
+        "88170cb0c9d64f94b5821ca7fd2d55a4@sentry-next.wixpress.com",
+        "8eb368c655b84e029ed79ad7a5c1718e@sentry.wixpress.com",
+        "9a65e97ebe8141fca0c4fd686f70996b@sentry.wixpress.com",
+        "ed436f5053144538958ad06a5005e99a@sentry.wixpress.com",
+        "info@bva.com"
+      ],
+      "replacement_addresses": [
+        "info@bva.com"
+      ],
+      "pages_read": [
+        "https://bva.com/ [200]",
+        "https://bva.com/contact [404]",
+        "https://bva.com/contact-us [200]",
+        "https://bva.com/about [404]"
+      ],
+      "mx_hosts": [
+        "alt1.aspmx.l.google.com",
+        "alt2.aspmx.l.google.com",
+        "aspmx.l.google.com"
+      ]
+    },
+    {
+      "agency_domain": "fuelmade.com",
+      "agency_name": "Fuel Made",
+      "contact_email": "hello@fuelmade.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "REFUTED",
+      "published_addresses": [
+        "you@yourstore.com"
+      ],
+      "replacement_addresses": [],
+      "pages_read": [
+        "https://fuelmade.com/ [200]",
+        "https://fuelmade.com/contact [200]",
+        "https://fuelmade.com/contact-us [200]",
+        "https://fuelmade.com/about [404]"
+      ],
+      "mx_hosts": [
+        "alt1.aspmx.l.google.com",
+        "alt2.aspmx.l.google.com",
+        "aspmx.l.google.com"
+      ]
+    },
+    {
+      "agency_domain": "pointercreative.com",
+      "agency_name": "Pointer Creative",
+      "contact_email": "hello@pointercreative.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://pointercreative.com/ [200]",
+        "https://pointercreative.com/contact [200]",
+        "https://pointercreative.com/contact-us [404]",
+        "https://pointercreative.com/about [200]"
+      ]
+    },
+    {
+      "agency_domain": "avexdesigns.com",
+      "agency_name": "Avex Designs",
+      "contact_email": "hello@avexdesigns.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "REFUTED",
+      "published_addresses": [
+        "newbusiness@avexdesigns.com"
+      ],
+      "replacement_addresses": [
+        "newbusiness@avexdesigns.com"
+      ],
+      "pages_read": [
+        "https://avexdesigns.com/ [200]",
+        "https://avexdesigns.com/contact [200]",
+        "https://avexdesigns.com/contact-us [404]",
+        "https://avexdesigns.com/about [200]"
+      ],
+      "mx_hosts": [
+        "alt1.aspmx.l.google.com",
+        "alt2.aspmx.l.google.com",
+        "alt3.aspmx.l.google.com"
+      ]
+    },
+    {
+      "agency_domain": "scoutside.com",
+      "agency_name": "Scoutside",
+      "contact_email": "hello@scoutside.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "CONFIRMED",
+      "published_addresses": [
+        "friends@scoutside.com",
+        "hello@scoutside.com"
+      ],
+      "replacement_addresses": [
+        "friends@scoutside.com",
+        "hello@scoutside.com"
+      ],
+      "pages_read": [
+        "https://scoutside.com/ [200]",
+        "https://scoutside.com/contact [200]",
+        "https://scoutside.com/contact-us [404]",
+        "https://scoutside.com/about [404]"
+      ],
+      "mx_hosts": [
+        "alt1.aspmx.l.google.com",
+        "alt2.aspmx.l.google.com",
+        "aspmx.l.google.com"
+      ]
+    },
+    {
+      "agency_domain": "electricenjin.com",
+      "agency_name": "Electric Enjin",
+      "contact_email": "hello@electricenjin.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "CONFIRMED",
+      "published_addresses": [
+        "hello@electricenjin.com"
+      ],
+      "replacement_addresses": [
+        "hello@electricenjin.com"
+      ],
+      "pages_read": [
+        "https://electricenjin.com/ [200]",
+        "https://electricenjin.com/contact [200]",
+        "https://electricenjin.com/contact-us [200]",
+        "https://electricenjin.com/about [200]"
+      ],
+      "mx_hosts": [
+        "alt1.aspmx.l.google.com",
+        "alt2.aspmx.l.google.com",
+        "alt3.aspmx.l.google.com"
+      ]
+    },
+    {
+      "agency_domain": "askphill.com",
+      "agency_name": "Ask Phill",
+      "contact_email": "hello@askphill.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "REFUTED",
+      "published_addresses": [
+        "phill@askphill.com",
+        "sales@askphill.com"
+      ],
+      "replacement_addresses": [
+        "phill@askphill.com",
+        "sales@askphill.com"
+      ],
+      "pages_read": [
+        "https://askphill.com/ [200]",
+        "https://askphill.com/contact [200]",
+        "https://askphill.com/contact-us [404]",
+        "https://askphill.com/about [404]"
+      ],
+      "mx_hosts": [
+        "alt1.aspmx.l.google.com",
+        "alt2.aspmx.l.google.com",
+        "aspmx.l.google.com"
+      ]
+    },
+    {
+      "agency_domain": "woolman.io",
+      "agency_name": "Woolman",
+      "contact_email": "hello@woolman.io",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://woolman.io/ [200]",
+        "https://woolman.io/contact [200]",
+        "https://woolman.io/contact-us [200]",
+        "https://woolman.io/about [200]"
+      ]
+    },
+    {
+      "agency_domain": "chromatichq.com",
+      "agency_name": "Chromatic",
+      "contact_email": "hello@chromatichq.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "REFUTED",
+      "published_addresses": [
+        "29cd5b16d3904c17b113c6971c90230f@o71799.ingest.sentry.io",
+        "info@chromatichq.com"
+      ],
+      "replacement_addresses": [
+        "info@chromatichq.com"
+      ],
+      "pages_read": [
+        "https://chromatichq.com/ [200]",
+        "https://chromatichq.com/contact [200]",
+        "https://chromatichq.com/contact-us [200]",
+        "https://chromatichq.com/about [200]"
+      ],
+      "mx_hosts": [
+        "alt1.aspmx.l.google.com",
+        "alt2.aspmx.l.google.com",
+        "alt3.aspmx.l.google.com"
+      ]
+    },
+    {
+      "agency_domain": "ffw.com",
+      "agency_name": "FFW Agency",
+      "contact_email": "hello@ffw.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "REFUTED",
+      "published_addresses": [
+        "corporate.comm@jakala.com",
+        "sacbr@jakala.com"
+      ],
+      "replacement_addresses": [],
+      "pages_read": [
+        "https://ffw.com/ [200]",
+        "https://ffw.com/contact [200]",
+        "https://ffw.com/contact-us [200]",
+        "https://ffw.com/about [200]"
+      ],
+      "mx_hosts": [
+        "ffw-com.mail.protection.outlook.com"
+      ]
+    },
+    {
+      "agency_domain": "bounteous.com",
+      "agency_name": "Bounteous",
+      "contact_email": "info@bounteous.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://bounteous.com/ [200]",
+        "https://bounteous.com/contact [200]",
+        "https://bounteous.com/contact-us [200]",
+        "https://bounteous.com/about [200]"
+      ]
+    },
+    {
+      "agency_domain": "vml.com",
+      "agency_name": "VML Commerce",
+      "contact_email": "contact@vml.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "REFUTED",
+      "published_addresses": [
+        "youremail@domain.com"
+      ],
+      "replacement_addresses": [],
+      "pages_read": [
+        "https://vml.com/ [200]",
+        "https://vml.com/contact [403]",
+        "https://vml.com/contact-us [200]",
+        "https://vml.com/about [200]"
+      ],
+      "mx_hosts": [
+        "mx0a-0059cf01.pphosted.com",
+        "mx0b-0059cf01.pphosted.com",
+        "mxa-0059cf01.gslb.pphosted.com"
+      ]
+    },
+    {
+      "agency_domain": "digitas.com",
+      "agency_name": "Digitas",
+      "contact_email": "info@digitas.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "REFUTED",
+      "published_addresses": [
+        "amsterdam@digitas.com",
+        "argentina@digitas.com",
+        "auckland@digitas.com",
+        "baltics@digitas.com",
+        "bangkok@digitas.com",
+        "bogota@digitas.com",
+        "brussels@digitas.com",
+        "communications@digitas.com",
+        "dubai@digitas.com",
+        "greece@digitas.com",
+        "guatemala@digitas.com",
+        "hablemos@digitas.com",
+        "hello@digitz-digitas.com",
+        "hellosg@digitas.com",
+        "hola@digitas.com",
+        "info@digitaspixelpark.com",
+        "info@liquorice.co.za",
+        "infohk@digitas.com",
+        "ininfo@digitas.com",
+        "istanbul@digitas.com"
+      ],
+      "replacement_addresses": [
+        "amsterdam@digitas.com",
+        "argentina@digitas.com",
+        "auckland@digitas.com",
+        "baltics@digitas.com",
+        "bangkok@digitas.com"
+      ],
+      "pages_read": [
+        "https://digitas.com/ [200]",
+        "https://digitas.com/contact [404]",
+        "https://digitas.com/contact-us [200]",
+        "https://digitas.com/about [403]"
+      ],
+      "mx_hosts": [
+        "digitas-com.mail.protection.outlook.com"
+      ]
+    },
+    {
+      "agency_domain": "rga.com",
+      "agency_name": "R/GA",
+      "contact_email": "info@rga.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "REFUTED",
+      "published_addresses": [
+        "argentina@rga.com",
+        "australia@rga.com",
+        "bethany.steffen@rga.com",
+        "brazil@rga.com",
+        "emea@rga.com",
+        "george.griffiths@rga.com",
+        "indonesia@rga.com",
+        "japan@rga.com",
+        "singapore@rga.com",
+        "us@rga.com"
+      ],
+      "replacement_addresses": [
+        "argentina@rga.com",
+        "australia@rga.com",
+        "bethany.steffen@rga.com",
+        "brazil@rga.com",
+        "emea@rga.com"
+      ],
+      "pages_read": [
+        "https://rga.com/ [200]",
+        "https://rga.com/contact [404]",
+        "https://rga.com/contact-us [200]",
+        "https://rga.com/about [200]"
+      ],
+      "mx_hosts": [
+        "usb-smtp-inbound-1.mimecast.com",
+        "usb-smtp-inbound-2.mimecast.com"
+      ]
+    },
+    {
+      "agency_domain": "codeandtheory.com",
+      "agency_name": "Code and Theory",
+      "contact_email": "hello@codeandtheory.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://codeandtheory.com/ [429]",
+        "https://codeandtheory.com/contact [429]",
+        "https://codeandtheory.com/contact-us [429]",
+        "https://codeandtheory.com/about [429]"
+      ]
+    },
+    {
+      "agency_domain": "work.co",
+      "agency_name": "Work & Co",
+      "contact_email": "hello@work.co",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "REFUTED",
+      "published_addresses": [
+        "careers@work.co",
+        "footer-careers@work.co",
+        "footer-newbiz@work.co",
+        "footer-press@work.co",
+        "newbiz@work.co",
+        "press@work.co",
+        "techcareer@work.co"
+      ],
+      "replacement_addresses": [
+        "careers@work.co",
+        "footer-careers@work.co",
+        "footer-newbiz@work.co",
+        "footer-press@work.co",
+        "newbiz@work.co"
+      ],
+      "pages_read": [
+        "https://work.co/ [200]",
+        "https://work.co/contact [200]",
+        "https://work.co/contact-us [200]",
+        "https://work.co/about [200]"
+      ],
+      "mx_hosts": [
+        "mx0a-001dcc01.pphosted.com",
+        "mx0b-001dcc01.pphosted.com"
+      ]
+    },
+    {
+      "agency_domain": "fantasy.co",
+      "agency_name": "Fantasy Interactive",
+      "contact_email": "hello@fantasy.co",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://fantasy.co/ [200]",
+        "https://fantasy.co/contact [200]",
+        "https://fantasy.co/contact-us [404]",
+        "https://fantasy.co/about [200]"
+      ]
+    },
+    {
+      "agency_domain": "basicagency.com",
+      "agency_name": "BASIC/DEPT",
+      "contact_email": "hello@basicagency.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "REFUTED",
+      "published_addresses": [
+        "applied-gen-z-1@2x.jpg",
+        "biz@basicagency.com",
+        "press@basicagency.com",
+        "recruitment@basicagency.com"
+      ],
+      "replacement_addresses": [
+        "biz@basicagency.com",
+        "press@basicagency.com",
+        "recruitment@basicagency.com"
+      ],
+      "pages_read": [
+        "https://basicagency.com/ [200]",
+        "https://basicagency.com/contact [200]",
+        "https://basicagency.com/contact-us [404]",
+        "https://basicagency.com/about [200]"
+      ],
+      "mx_hosts": [
+        "alt1.aspmx.l.google.com",
+        "alt2.aspmx.l.google.com",
+        "alt3.aspmx.l.google.com"
+      ]
+    },
+    {
+      "agency_domain": "area17.com",
+      "agency_name": "AREA 17",
+      "contact_email": "info@area17.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://area17.com/ [200]",
+        "https://area17.com/contact [200]",
+        "https://area17.com/contact-us [404]",
+        "https://area17.com/about [200]"
+      ]
+    },
+    {
+      "agency_domain": "ideo.com",
+      "agency_name": "Ideo",
+      "contact_email": "info@ideo.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://ideo.com/ [200]",
+        "https://ideo.com/contact [200]",
+        "https://ideo.com/contact-us [404]",
+        "https://ideo.com/about [200]"
+      ]
+    },
+    {
+      "agency_domain": "dockyard.com",
+      "agency_name": "DockYard",
+      "contact_email": "inquiries@dockyard.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://dockyard.com/ [200]",
+        "https://dockyard.com/contact [200]",
+        "https://dockyard.com/contact-us [500]",
+        "https://dockyard.com/about [500]"
+      ]
+    },
+    {
+      "agency_domain": "ironpaper.com",
+      "agency_name": "Ironpaper",
+      "contact_email": "inquiry@ironpaper.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://ironpaper.com/ [200]",
+        "https://ironpaper.com/contact [200]",
+        "https://ironpaper.com/contact-us [404]",
+        "https://ironpaper.com/about [404]"
+      ]
+    },
+    {
+      "agency_domain": "majortom.com",
+      "agency_name": "Major Tom",
+      "contact_email": "info@majortom.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "REFUTED",
+      "published_addresses": [
+        "hello@majortom.com",
+        "ny@majortom.com",
+        "to@majortom.com",
+        "van@majortom.com"
+      ],
+      "replacement_addresses": [
+        "hello@majortom.com",
+        "ny@majortom.com",
+        "to@majortom.com",
+        "van@majortom.com"
+      ],
+      "pages_read": [
+        "https://majortom.com/ [200]",
+        "https://majortom.com/contact [200]",
+        "https://majortom.com/contact-us [200]",
+        "https://majortom.com/about [200]"
+      ],
+      "mx_hosts": [
+        "alt1.aspmx.l.google.com",
+        "alt2.aspmx.l.google.com",
+        "alt3.aspmx.l.google.com"
+      ]
+    },
+    {
+      "agency_domain": "heco.design",
+      "agency_name": "Heco Studio",
+      "contact_email": "hello@heco.design",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "NO_MX",
+      "published_addresses": [],
+      "pages_read": []
+    },
+    {
+      "agency_domain": "immersive-g.com",
+      "agency_name": "Immersive Garden",
+      "contact_email": "contact@immersive-g.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "REFUTED",
+      "published_addresses": [
+        "inquiries@immersive-g.com"
+      ],
+      "replacement_addresses": [
+        "inquiries@immersive-g.com"
+      ],
+      "pages_read": [
+        "https://immersive-g.com/ [200]",
+        "https://immersive-g.com/contact [404]",
+        "https://immersive-g.com/contact-us [404]",
+        "https://immersive-g.com/about [404]"
+      ],
+      "mx_hosts": [
+        "alt1.aspmx.l.google.com",
+        "alt2.aspmx.l.google.com",
+        "alt3.aspmx.l.google.com"
+      ]
+    },
+    {
+      "agency_domain": "activetheory.net",
+      "agency_name": "Active Theory",
+      "contact_email": "contact@activetheory.net",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://activetheory.net/ [200]",
+        "https://activetheory.net/contact [200]",
+        "https://activetheory.net/contact-us [200]",
+        "https://activetheory.net/about [200]"
+      ]
+    },
+    {
+      "agency_domain": "b-reel.com",
+      "agency_name": "B-Reel",
+      "contact_email": "hello@b-reel.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "REFUTED",
+      "published_addresses": [
+        "newbiz@b-reel.com"
+      ],
+      "replacement_addresses": [
+        "newbiz@b-reel.com"
+      ],
+      "pages_read": [
+        "https://b-reel.com/ [200]",
+        "https://b-reel.com/contact [404]",
+        "https://b-reel.com/contact-us [404]",
+        "https://b-reel.com/about [404]"
+      ],
+      "mx_hosts": [
+        "alt1.aspmx.l.google.com",
+        "alt2.aspmx.l.google.com",
+        "alt3.aspmx.l.google.com"
+      ]
+    },
+    {
+      "agency_domain": "goodface.agency",
+      "agency_name": "Goodface Agency",
+      "contact_email": "hello@goodface.agency",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "REFUTED",
+      "published_addresses": [
+        "hi@goodface.agency"
+      ],
+      "replacement_addresses": [
+        "hi@goodface.agency"
+      ],
+      "pages_read": [
+        "https://goodface.agency/ [200]",
+        "https://goodface.agency/contact [404]",
+        "https://goodface.agency/contact-us [404]",
+        "https://goodface.agency/about [200]"
+      ],
+      "mx_hosts": [
+        "alt1.aspmx.l.google.com",
+        "alt2.aspmx.l.google.com",
+        "alt3.aspmx.l.google.com"
+      ]
+    },
+    {
+      "agency_domain": "juno-ecommerce.co.uk",
+      "agency_name": "Juno E-Commerce",
+      "contact_email": "hello@juno-ecommerce.co.uk",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "NO_MX",
+      "published_addresses": [],
+      "pages_read": []
+    },
+    {
+      "agency_domain": "thedylanagency.com",
+      "agency_name": "The Dylan Agency",
+      "contact_email": "hello@thedylanagency.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "NO_MX",
+      "published_addresses": [],
+      "pages_read": []
+    },
+    {
+      "agency_domain": "danmall.com",
+      "agency_name": "Dan Mall Studio",
+      "contact_email": "hello@danmall.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://danmall.com/ [200]",
+        "https://danmall.com/contact [404]",
+        "https://danmall.com/contact-us [404]",
+        "https://danmall.com/about [200]"
+      ]
+    },
+    {
+      "agency_domain": "eightshapes.com",
+      "agency_name": "EightShapes",
+      "contact_email": "info@eightshapes.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://eightshapes.com/ [0]",
+        "https://eightshapes.com/contact [0]",
+        "https://eightshapes.com/contact-us [0]",
+        "https://eightshapes.com/about [0]"
+      ]
+    },
+    {
+      "agency_domain": "paravelinc.com",
+      "agency_name": "Paravel",
+      "contact_email": "hello@paravelinc.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://paravelinc.com/ [200]",
+        "https://paravelinc.com/contact [200]",
+        "https://paravelinc.com/contact-us [404]",
+        "https://paravelinc.com/about [200]"
+      ]
+    },
+    {
+      "agency_domain": "diffagency.com",
+      "agency_name": "Diff Agency",
+      "contact_email": "info@diffagency.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://diffagency.com/ [200]",
+        "https://diffagency.com/contact [200]",
+        "https://diffagency.com/contact-us [404]",
+        "https://diffagency.com/about [404]"
+      ]
+    },
+    {
+      "agency_domain": "thepapayagroup.com",
+      "agency_name": "The Papaya Group",
+      "contact_email": "hello@thepapayagroup.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://thepapayagroup.com/ [200]",
+        "https://thepapayagroup.com/contact [404]",
+        "https://thepapayagroup.com/contact-us [404]",
+        "https://thepapayagroup.com/about [404]"
+      ]
+    },
+    {
+      "agency_domain": "hook42.com",
+      "agency_name": "Hook 42",
+      "contact_email": "info@hook42.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://hook42.com/ [200]",
+        "https://hook42.com/contact [200]",
+        "https://hook42.com/contact-us [404]",
+        "https://hook42.com/about [404]"
+      ]
+    },
+    {
+      "agency_domain": "gorillagroup.com",
+      "agency_name": "Gorilla Group",
+      "contact_email": "info@gorillagroup.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://gorillagroup.com/ [200]",
+        "https://gorillagroup.com/contact [200]",
+        "https://gorillagroup.com/contact-us [403]",
+        "https://gorillagroup.com/about [200]"
+      ]
+    },
+    {
+      "agency_domain": "bvaccel.com",
+      "agency_name": "BVAccel",
+      "contact_email": "hello@bvaccel.com",
+      "status": "BOUNCED",
+      "client_domain": "",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://bvaccel.com/ [200]",
+        "https://bvaccel.com/contact [200]",
+        "https://bvaccel.com/contact-us [200]",
+        "https://bvaccel.com/about [200]"
+      ]
+    },
+    {
+      "agency_domain": "metacake.com",
+      "agency_name": "Metacake",
+      "contact_email": "hello@metacake.com",
+      "status": "BOUNCED",
+      "client_domain": "groovelife.com",
+      "classification": "UNKNOWN",
+      "published_addresses": [],
+      "pages_read": [
+        "https://metacake.com/ [200]",
+        "https://metacake.com/contact [200]",
+        "https://metacake.com/contact-us [200]",
+        "https://metacake.com/about [200]"
+      ]
+    }
+  ]
+}

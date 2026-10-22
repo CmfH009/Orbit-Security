@@ -14,7 +14,7 @@
 | Structured data | 1 of 8 pages has JSON-LD | 8 of 8, one merged entity graph |
 | AI-search readiness | no robots.txt, no sitemap, no GSC property | indexed + AI-feature eligible |
 | Audit credibility | 4 of 10 dispatched audits graded **F with zero critical findings** | F means exploitable; mean ≥ 60 |
-| Revenue | $0 balance, 0 retainers, 178 campaigns sent, 46 hard bounces | ≥ 3 active retainers |
+| Revenue | $0 balance, 0 retainers, 178 campaigns dispatched, 43 hard bounces (24.2 %) | ≥ 3 active retainers |
 | Delivery | 145–178 agencies dispatched, 90 % delivery, 0 high-intent replies | ≥ 8 % reply rate, ≤ 3 % bounce |
 | Automation | 15 of 16 daemons green; social agent stopped; Drive backup stale | 16 of 16, no stale states |
 | Engineering | 513 tests green, 1 time-dependent failure, no unit-test CI | green at any hour, CI-enforced |
@@ -28,7 +28,7 @@ Measured on 2026-10-22 with `scripts/outreach_metrics.py` (new):
 | Finding | Evidence | Consequence |
 |---|---|---|
 | **The F-grade bug is systemic, not a Cohort 10 accident.** Every cohort contains F grades, and two audits scored **0/100** and **5/100**. | cohort_8 min=0, cohort_7 min=5, cohort_10 F×4, cohort_9 F×1, cohort_7 F×2, cohort_8 F×2, cohort_6 F×1 | Agencies received audits scoring zero. The scoring fix (Phase 1) is therefore a **customer-facing remediation**, not a nicety — cohorts 7–10 must be re-scored and re-sent. |
-| **The cold-email channel is not working.** 135 campaigns sent → **34.07 % hard bounces (46 addresses)**, and of 34 tracked threads: **11 explicit rejections, 8 out-of-office, 5 ticket acks, 4 unclear, 3 newsletters, 3 bounces → 0 meaningful conversations, 0 high-intent.** | `data/dispatched_campaigns.json`, `data/bounced_agencies.json`, `data/leads_state.json` | A 34 % bounce rate is a sender-reputation emergency (the domain will be throttled/blocked), and 11 rejections against 0 conversations means the pitch or the targeting is wrong. **Cadence discipline cannot fix this — the channel itself needs triage.** |
+| **The cold-email channel is not working.** 178 campaigns dispatched → **43 hard bounces (24.2 %)**, and of 34 tracked threads: **11 explicit rejections, 8 out-of-office, 5 ticket acks, 4 unclear, 3 newsletters, 3 bounces → 0 meaningful conversations, 0 high-intent.** | `data/dispatched_campaigns.json` (status `BOUNCED`), `data/bounced_agencies.json`, `data/leads_state.json` | The root cause is now measured, and it is **not** the sending infrastructure: **43 of the 46 bounced domains publish valid MX records**, and their mail-provider mix (Google 65 %, MS365 7 %) is statistically identical to the delivered set (Google 76 %, MS365 10 %). We were **guessing mailboxes that do not exist**. 11 rejections against 0 conversations means the pitch or the targeting is also wrong. **Cadence discipline cannot fix this — the channel needs triage.** |
 
 ---
 
@@ -86,7 +86,7 @@ Measured on 2026-10-22 with `scripts/outreach_metrics.py` (new):
 | W2.1b **Audit remediation** | re-score Cohorts 7–10 under the new model; re-send corrected grades to every agency that received an F, D, 0/100 or 5/100 audit, with a short, non-apologetic note ("your score was wrong; here is the corrected report") | Sentinel + Operator | Every F/D recipient has a corrected audit |
 | W2.2 Cohort quality | Cohort 11 with mean ≥ 60 and ≥ 7/10 at grade C+, under the fixed scorer | Sentinel | Cohort 11 matrix meets the floor |
 | W2.3 Bump cadence | 24–36 h gestation honoured; the 46 suppressed addresses re-verified before any re-send; every agency carries a disposition | Nova | 0 un-dispositioned agencies across Cohorts 7–11 |
-| W2.4 **Channel triage (new)** | bounce root cause (list hygiene, role-based inboxes, pre-send validation, suppression freshness); subject-line + opening-line A/B with a 30 % holdout on the next 3 cohorts; review the 11 rejection replies for the real objection | Operator + Nova | Bounce ≤ 3 %, and a measured reply-rate lift or a documented pivot |
+| W2.4 **Channel triage (new)** | **Root cause measured: we guessed mailboxes.** `scripts/verify_contacts.py` checks the exact address (MX + the agency's own published contact page) instead of the domain. Result on the 43 bounced agencies: **16 REFUTED** (domain accepts mail, our address does not exist), **12 with a published replacement address found**, **3 NO_MX** (cannot receive mail at all), **3 CONFIRMED** (address is published; the bounce was mailbox-level). Next: review the 11 rejections for the real objection, and A/B the subject + opening line with a 30 % holdout across the next 3 cohorts. | Operator + Nova | Bounce ≤ 3 %, and a measured reply-rate lift or a documented pivot |
 | W2.5 Deliverability | Postmaster Tools reputation ≥ 0.9 daily watch; cohort size cap 10; ≥ 24 h spacing; **pause sending until the bounce rate is under 10 %** | Nova | Hard bounce ≤ 3 % per cohort |
 | W2.6 First case study | one real engagement documented end-to-end (with the agency's permission) — the first non-commodity, first-hand content asset the business owns | Operator | 1 published case study + 1 inbound reference |
 

@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orbit Security Audit Benchmark | Reproducible Latency, Signature Coverage &amp; Scoring Data</title>
+    <meta name="description" content="An open, reproducible benchmark of Orbit Security: measured per-domain audit latency, takeover signature coverage, false-positive guard behaviour and grading stability over 52 real client audits.">
+    <meta name="author" content="Carson Haynes | Founder, Orbit Security">
+    <meta name="keywords" content="security benchmark, audit latency, subdomain takeover signatures, false positive prevention, security grading, reproducible benchmark, Orbit Security">
+    <link rel="canonical" href="https://cmfh009.github.io/Orbit-Security/benchmark/index.html">
+
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://cmfh009.github.io/Orbit-Security/benchmark/index.html">
+    <meta property="og:title" content="Orbit Security Audit Benchmark | Reproducible Perimeter Data">
+    <meta property="og:description" content="Measured audit latency, takeover signature coverage and grading stability - with the exact command, the date and the limits, published as open data.">
+    <meta property="og:image" content="https://cmfh009.github.io/Orbit-Security/assets/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Orbit Security Audit Benchmark | Reproducible Perimeter Data">
+    <meta name="twitter:description" content="Measured audit latency, takeover signature coverage and grading stability - with the exact command, the date and the limits.">
+    <meta name="twitter:image" content="https://cmfh009.github.io/Orbit-Security/assets/og-image.png">
+    <link rel="icon" href="../favicon.ico">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'><path d='M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z'/></svg>">
+
+    <!-- Structured data: the benchmark as a machine-readable Dataset + FAQPage -->
+    <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://cmfh009.github.io/Orbit-Security/benchmark/index.html#webpage",
+      "url": "https://cmfh009.github.io/Orbit-Security/benchmark/index.html",
+      "name": "Orbit Security Audit Benchmark | Reproducible Latency, Signature Coverage & Scoring Data",
+      "datePublished": "2026-10-22",
+      "dateModified": "2026-10-22",
+      "inLanguage": "en",
+      "isPartOf": {
+        "@id": "https://cmfh009.github.io/Orbit-Security/#website"
+      },
+      "about": {
+        "@id": "https://cmfh009.github.io/Orbit-Security/#organization"
+      },
+      "mainEntity": {
+        "@id": "https://cmfh009.github.io/Orbit-Security/benchmark/index.html#dataset"
+      }
+    },
+    {
+      "@type": "Dataset",
+      "@id": "https://cmfh009.github.io/Orbit-Security/benchmark/index.html#dataset",
+      "name": "Orbit Security Perimeter Audit Benchmark",
+      "description": "Reproducible measurements of the Orbit Security perimeter scanner: per-domain audit latency, takeover signature coverage, false-positive guard behaviour and the grade distribution of the exploitability-aware scoring engine across stored client audits.",
+      "creator": {
+        "@id": "https://cmfh009.github.io/Orbit-Security/#organization"
+      },
+      "publisher": {
+        "@id": "https://cmfh009.github.io/Orbit-Security/#organization"
+      },
+      "datePublished": "2026-10-22",
+      "dateModified": "2026-10-22",
+      "temporalCoverage": "2026-10-22/2026-10-22",
+      "distribution": {
+        "@type": "DataDownload",
+        "encodingFormat": "application/json",
+        "contentUrl": "https://cmfh009.github.io/Orbit-Security/benchmark/benchmark_results.json"
+      },
+      "license": "https://github.com/CmfH009/Orbit-Security/blob/main/LICENSE",
+      "isAccessibleForFree": true,
+      "variableMeasured": [
+        "Per-domain audit latency in milliseconds (wall clock and active)",
+        "Number of takeover provider signatures",
+        "Number of distinct provider fingerprints",
+        "Number of distinct dangling hostname classes",
+        "Number of static hosting and CDN false-positive guard suffixes",
+        "Number of parked-page fingerprints",
+        "Security grade distribution across stored client audits",
+        "Number of findings scored as risk versus reported as hygiene"
+      ],
+      "measurementTechnique": "In-process wall-clock instrumentation of orbit_security.recon (dnspython + httpx) with a hard 1 request per second per host politeness limit; nearest-rank percentiles; scoring engine replayed over stored audit deliverables.",
+      "sampleSize": "25 audits across 5 public domains and 52 stored client audits",
+      "version": "1.0.0",
+      "keywords": [
+        "security benchmark",
+        "audit latency",
+        "subdomain takeover signatures",
+        "false positive prevention",
+        "security grading",
+        "DNS hygiene"
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://cmfh009.github.io/Orbit-Security/benchmark/index.html#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How long does one Orbit Security domain audit actually take?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The median audit on the published run took 4,063 ms of active time - scanner plus network, with the artificial throttle sleeps removed - and 19,194 ms of wall clock while the harness limited itself to 1 request per second per host. The audit covers DNS and mail-record resolution, HTTP header inspection, ten exposed-file probes and the scoring pass."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How many takeover signatures can Orbit Security detect?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "52 provider signatures carrying 76 distinct provider fingerprints and 69 distinct dangling hostname classes, with 3 providers additionally verified by NXDOMAIN. A takeover is only reported when the CNAME pattern matches and the provider fingerprint is confirmed."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does Orbit Security avoid false positives?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "With deterministic guards: 13 static hosting and CDN suffixes plus the bare github.io host are recognised so provider-owned headers are never scored against the client, 8 parked-page fingerprints keep parked domains out of the estate, RFC 2606 reserved names are skipped, and every resolution and HTTP probe passes through an SSRF block for loopback, private and cloud-metadata addresses. The benchmark exercises all of them with a 21-case self-test of which 21 passed."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is the security grading stable?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Re-running the current grading engine over the 52 stored client audits reproduces every published grade deterministically, and the parser reproduces the score printed in every delivered document. Across the live runs the grade was identical on every repeat for 5 of 5 domains. Absolute correctness of the grades was not tested, because this dataset contains no human-graded ground truth."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I reproduce this benchmark on my own infrastructure?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Clone the repository, install the dependencies and run scripts/run_benchmark.py. Point it at a target file to audit an estate you are authorised to scan. The harness enforces a 1 request per second per host limit that cannot be configured lower, writes the same JSON structure, and writes null with a reason for any measurement it could not take."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does this benchmark prove Orbit Security finds every vulnerability?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. It measures what the scanner knows, how its false-positive guards behave and how consistently its grader scores the same evidence. It does not measure a true-positive rate against a ground truth, it does not claim the scanned domains were vulnerability-free, and it does not cover the retainer ROI figure."
+          }
+        }
+      ]
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://cmfh009.github.io/Orbit-Security/benchmark/index.html#breadcrumb",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": {
+            "@id": "https://cmfh009.github.io/Orbit-Security/#website"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Benchmark",
+          "item": {
+            "@id": "https://cmfh009.github.io/Orbit-Security/benchmark/index.html#webpage"
+          }
+        }
+      ]
+    }
+  ]
+}
+    </script>
+
+    <link rel="stylesheet" href="../assets/styles.min.css">
+    <style>
+        .font-mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+        .font-pixel { font-family: 'Silkscreen', monospace; }
+        .font-arcade { font-family: 'Press Start 2P', monospace; }
+        .pixel-box-emerald {
+            box-shadow: 4px 4px 0px #064e3b;
+            border: 2px solid #10b981;
+        }
+        .pixel-box-cyan {
+            box-shadow: 4px 4px 0px #164e63;
+            border: 2px solid #06b6d4;
+        }
+        .pixel-btn {
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3), 0 2px 4px rgba(0, 0, 0, 0.4);
+            transition: box-shadow 0.15s ease, border-color 0.15s ease;
+        }
+        .pixel-btn:hover {
+            box-shadow: 0 0 16px rgba(16, 185, 129, 0.35);
+            border-color: #34d399;
+        }
+        .scanlines {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.18) 50%);
+            background-size: 100% 4px;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-emerald-500 selection:text-white" style="background-color: #060a16;">
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-50 backdrop-blur-md bg-slate-950/90 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
+            <div class="flex items-center gap-2.5 sm:gap-3 group">
+                <a href="../index.html" class="flex items-center gap-2.5 sm:gap-3 group">
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/30 transition-all pixel-box-emerald flex-shrink-0">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-slate-950 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-lg sm:text-xl font-bold tracking-tight text-white font-pixel" style="color:#ffffff; white-space:nowrap;">Orbit Security</span>
+                        <span class="hidden sm:inline-block text-[9px] ml-1.5 px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-arcade uppercase">BENCHMARK</span>
+                    </div>
+                </a>
+            </div>
+
+            <nav class="hidden md:flex items-center gap-3.5 gap-4 text-xs font-medium text-slate-300" style="white-space:nowrap;">
+                <a href="../index.html#audit-preview" class="hover:text-emerald-400 transition-colors">Audit Studio</a>
+                <a href="../fleet.html" class="hover:text-emerald-400 transition-colors flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>Fleet</a>
+                <a href="../index.html#pricing" class="hover:text-emerald-400 transition-colors">Pricing</a>
+                <a href="../about.html" class="hover:text-emerald-400 transition-colors">About Us</a>
+                <a href="./index.html" class="text-cyan-400 font-semibold border-b border-cyan-400 pb-1">Benchmark</a>
+            </nav>
+
+            <div class="flex items-center gap-3">
+                <a href="../index.html" class="text-xs font-mono text-slate-400 hover:text-emerald-400 transition-colors hidden sm:inline-block">&larr; Back to Hub</a>
+                <a href="../index.html#pricing" class="px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-all pixel-btn shadow-md shadow-emerald-500/20">
+                    Get Protected
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 w-full">
+        <!-- Methodology hero -->
+        <section class="relative overflow-hidden border-b border-slate-800/80 bg-slate-950/60">
+            <div class="absolute inset-0 scanlines pointer-events-none" style="opacity:0.22"></div>
+            <div class="relative max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-12">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] sm:text-xs font-arcade text-cyan-300 bg-slate-950/80 border border-cyan-500/30 mb-6">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                    OPEN METHODOLOGY - MEASURED 2026-10-22
+                </div>
+                <h1 class="text-2xl sm:text-4xl font-extrabold text-white tracking-tight max-w-4xl leading-tight font-pixel">
+                    Orbit Security Audit Benchmark
+                </h1>
+                <p class="mt-5 text-sm sm:text-base text-slate-400 max-w-3xl leading-relaxed">
+                    Every number Orbit Security publishes about its own speed and coverage is measured here by a script anyone can run, on a dated sample, with the limits stated up front. If a measurement could not be taken, this page says so instead of estimating.
+                </p>
+
+                <div class="mt-8 grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+<div class="p-4 sm:p-5 rounded-xl bg-slate-900/60 border border-slate-800"><div class="text-xl sm:text-xl font-extrabold text-cyan-400 font-mono">4,063 ms</div><div class="text-[10px] sm:text-xs text-slate-400 uppercase tracking-wider mt-1.5">Median audit latency (active)</div></div><div class="p-4 sm:p-5 rounded-xl bg-slate-900/60 border border-slate-800"><div class="text-xl sm:text-xl font-extrabold text-emerald-400 font-mono">5,907 ms</div><div class="text-[10px] sm:text-xs text-slate-400 uppercase tracking-wider mt-1.5">p95 audit latency (active)</div></div><div class="p-4 sm:p-5 rounded-xl bg-slate-900/60 border border-slate-800"><div class="text-xl sm:text-xl font-extrabold text-purple-400 font-mono">19,194 ms</div><div class="text-[10px] sm:text-xs text-slate-400 uppercase tracking-wider mt-1.5">Median wall clock at 1 req/s</div></div><div class="p-4 sm:p-5 rounded-xl bg-slate-900/60 border border-slate-800"><div class="text-xl sm:text-xl font-extrabold text-amber-400 font-mono">52</div><div class="text-[10px] sm:text-xs text-slate-400 uppercase tracking-wider mt-1.5">Takeover provider signatures</div></div><div class="p-4 sm:p-5 rounded-xl bg-slate-900/60 border border-slate-800"><div class="text-xl sm:text-xl font-extrabold text-cyan-400 font-mono">76</div><div class="text-[10px] sm:text-xs text-slate-400 uppercase tracking-wider mt-1.5">Distinct provider fingerprints</div></div><div class="p-4 sm:p-5 rounded-xl bg-slate-900/60 border border-slate-800"><div class="text-xl sm:text-xl font-extrabold text-emerald-400 font-mono">52</div><div class="text-[10px] sm:text-xs text-slate-400 uppercase tracking-wider mt-1.5">Stored audits re-scored</div></div>
+                </div>
+
+                <div class="mt-8 p-4 sm:p-5 rounded-xl bg-slate-950/80 border border-slate-800">
+                    <div class="text-[10px] uppercase tracking-wider text-slate-500 font-mono mb-2">Exact command that produced this page</div>
+                    <pre class="text-xs sm:text-xs text-cyan-300 font-mono overflow-x-auto whitespace-pre-wrap">A:\projects\orbit-security\.venv\Scripts\python.exe scripts/run_benchmark.py --repeat 5 --out docs\benchmark\benchmark_results.json</pre>
+                </div>
+
+                <div class="mt-6 flex flex-wrap gap-3">
+                    <a href="./benchmark_results.json" class="px-4 py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-500 text-slate-950 font-bold text-xs transition-all pixel-btn shadow-lg shadow-cyan-500/20">Download the raw JSON</a>
+                    <a href="../about.html" class="px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-medium text-xs transition-all pixel-btn">See the claims this tests</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Body, rendered from docs/benchmark/BENCHMARK.md -->
+        <article class="max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-12">
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed"><em>Published 2026-10-22 (UTC) - every number on this page comes from a single run of a single command, and the raw output is published beside it as <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">benchmark_results.json</code>.</em></p>
+<h2 class="text-2xl sm:text-xl font-bold text-white tracking-tight mt-12 mb-5">Why this page exists</h2>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">Most security marketing is asserted rather than measured. The Orbit Security <a href="../about.html" class="text-emerald-400 hover:underline">About page</a> claims a per-domain turnaround time and a takeover signature count, and until now neither claim carried a date, a sample size or a method.</p>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">This page fixes that. It publishes four things:</p>
+<ol class="mt-4 mb-4 space-y-2  pl-6 text-sm sm:text-base text-slate-300 leading-relaxed" style="list-style-type: decimal"><li><strong>What is measured</strong> and why.</li><li><strong>The exact command</strong> that produced the numbers, so you can run it yourself.</li><li><strong>The numbers</strong>, as measured, on a stated date.</li><li><strong>The limits</strong> - what the sample size, the date and the network conditions do and do not allow these numbers to prove.</li></ol>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">The harness is the same code path that produces a client audit: it calls <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">orbit_security.recon.resolve_dns()</code>, <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">orbit_security.recon.check_headers_and_exposures()</code>, <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">orbit_security.recon.calculate_score()</code> and <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">orbit_security.recon.calculate_grade()</code>. If a measurement cannot be taken, the harness writes <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">null</code> together with the reason. Nothing on this page is estimated, extrapolated or copied from a marketing claim.</p>
+<h2 class="text-2xl sm:text-xl font-bold text-white tracking-tight mt-12 mb-5">What is measured</h2>
+<div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/40 mt-6 mb-6"><table class="w-full text-left"><thead class="bg-slate-900/90 border-b border-slate-800"><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Measurement</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Question it answers</th></thead><tbody class="divide-y divide-slate-800/60"><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Per-domain audit latency</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">How long does one full Orbit audit of one domain take?</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Takeover signature coverage</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">How many providers, fingerprints and dangling hostname classes can the scanner recognise?</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">False-positive guards</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">How does Orbit avoid flagging static hosts, parked pages and reserved domains?</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Scoring stability</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Does the grader give the same verdict on the same input, and does it separate exploitable risk from hygiene?</td></tr></tbody></table></div>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">One thing this benchmark deliberately does <strong>not</strong> measure is the retainer ROI figure printed on the About page. That is a business-model projection rather than a technical measurement, and mixing it into a measurement page would be dishonest.</p>
+<h2 class="text-2xl sm:text-xl font-bold text-white tracking-tight mt-12 mb-5">Reproduce it</h2>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">The harness and this page both live in the public repository:</p>
+<pre class="mt-5 mb-5 p-4 rounded-xl bg-slate-950/90 border border-slate-800 overflow-x-auto text-xs sm:text-xs leading-relaxed"><code class="font-mono text-cyan-300">git clone https://github.com/CmfH009/Orbit-Security.git
+cd Orbit-Security
+.venv\Scripts\python.exe scripts\run_benchmark.py --repeat 5 --out docs\benchmark\benchmark_results.json</code></pre>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">On macOS or Linux, use <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">python3</code> in place of <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">.venv\Scripts\python.exe</code>. The command that produced <em>this</em> page was:</p>
+<pre class="mt-5 mb-5 p-4 rounded-xl bg-slate-950/90 border border-slate-800 overflow-x-auto text-xs sm:text-xs leading-relaxed"><code class="font-mono text-cyan-300">A:\projects\orbit-security\.venv\Scripts\python.exe scripts/run_benchmark.py --repeat 5 --out docs\benchmark\benchmark_results.json</code></pre>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">The harness is deterministic and read-only with respect to the scanner source, the tests and the stored audits. It only writes the JSON file, and it writes <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">null</code> plus a reason for anything it could not measure. To benchmark a client estate you are authorised to scan, pass a target file - one domain per line, <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">#</code> comments allowed:</p>
+<pre class="mt-5 mb-5 p-4 rounded-xl bg-slate-950/90 border border-slate-800 overflow-x-auto text-xs sm:text-xs leading-relaxed"><code class="font-mono text-cyan-300">.venv\Scripts\python.exe scripts\run_benchmark.py --targets my_clients.txt --repeat 3</code></pre>
+<h2 class="text-2xl sm:text-xl font-bold text-white tracking-tight mt-12 mb-5">Results</h2>
+<h3 class="text-lg font-bold text-cyan-400 mt-8 mb-3 tracking-wide">1. Per-domain audit latency</h3>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">One &quot;audit&quot; is the complete per-domain sequence the <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">orbit-recon</code> CLI runs: DNS resolution (CNAME, A, MX, DMARC, BIMI, MTA-STS, CAA), HTTP header inspection plus the exposed-file probes, then scoring and grading.</p>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">Two numbers are reported for every audit:</p>
+<ul class="mt-4 mb-4 space-y-2 list-disc pl-6 text-sm sm:text-base text-slate-300 leading-relaxed"><li><strong>Wall clock</strong> - what an operator waits, with the 1 request/second politeness limit enforced. The limit is not optional in the harness: it cannot be configured below 1.0 seconds.</li><li><strong>Active time</strong> - the same audit with the deliberate throttle sleeps removed. This is the scanner plus network cost, and it is the number to compare against a per-domain turnaround claim.</li></ul>
+<div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/40 mt-6 mb-6"><table class="w-full text-left"><thead class="bg-slate-900/90 border-b border-slate-800"><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Statistic</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Wall clock (1 req/s enforced)</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Active time (throttle sleeps removed)</th></thead><tbody class="divide-y divide-slate-800/60"><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Minimum</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">18,227 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">1,470 ms</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Median (p50)</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">19,194 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">4,063 ms</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">p90</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">20,477 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">5,693 ms</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">p95</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">20,531 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">5,907 ms</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">p99</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">20,566 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">6,189 ms</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Maximum</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">20,566 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">6,189 ms</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Mean</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">19,393 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">3,802 ms</td></tr></tbody></table></div>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">Sample: 25 audits of 5 domains (example.com, github.com, python.org, wikipedia.org, mozilla.org), repeated 5 times each - 275 HTTP requests and 310 DNS operations in total. Percentiles use the nearest-rank method with no interpolation, so every reported percentile is an observed value.</p>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed"><strong>Per-domain breakdown</strong></p>
+<div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/40 mt-6 mb-6"><table class="w-full text-left"><thead class="bg-slate-900/90 border-b border-slate-800"><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Domain</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Grade(s) observed</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Score(s)</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Median active time</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Fastest</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Slowest</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">DNS queries</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">OS resolver lookups</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">HTTP requests</th></thead><tbody class="divide-y divide-slate-800/60"><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">example.com</code></td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">A</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">90</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">1,996 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">1,470 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">5,090 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">7</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">3</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">11</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">github.com</code></td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">A+</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">100</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">4,063 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">3,243 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">5,513 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">7</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">3</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">11</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">python.org</code></td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">A+</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">100</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">5,672 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">4,466 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">6,189 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">7</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">14</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">11</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">wikipedia.org</code></td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">A</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">90</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">2,071 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">1,942 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">2,396 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">7</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">3</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">11</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300"><code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">mozilla.org</code></td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">A+</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">100</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">4,381 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">3,788 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">5,907 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">7</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">4</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">11</td></tr></tbody></table></div>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed"><strong>Where the time goes</strong> (median per audit, wall clock - these phase figures include the politeness sleeps)</p>
+<div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/40 mt-6 mb-6"><table class="w-full text-left"><thead class="bg-slate-900/90 border-b border-slate-800"><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Phase</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Median wall clock</th></thead><tbody class="divide-y divide-slate-800/60"><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">DNS resolution and mail-record checks</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">7,001 ms</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">HTTP header inspection and exposed-file probes</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">12,108 ms</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Scoring and grading</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">0.1 ms</td></tr></tbody></table></div>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">Of the 19,194 ms median wall clock, 15,375 ms was spent deliberately sleeping to respect the 1 request/second limit. The real work - the network time above minus those sleeps - was 4,063 ms in the median. Scoring and grading is effectively free at 0.1 ms: all of the time is spent on the network, not on the model. (Phase figures and the throttle figure are independent medians of the same sample, so they are not expected to sum exactly.)</p>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed"><strong>Cold versus warm DNS cache</strong></p>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">Orbit ships a local DNS cache daemon, and it was running on this machine during the run, so the first repeat of each domain paid the cache-fill cost and later repeats were answered from cache. Both passes are reported rather than blended:</p>
+<div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/40 mt-6 mb-6"><table class="w-full text-left"><thead class="bg-slate-900/90 border-b border-slate-800"><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Pass</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Samples</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Median DNS phase</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Median active time</th></thead><tbody class="divide-y divide-slate-800/60"><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Repeat 1 (cold cache)</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">5</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">7,003 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">4,184 ms</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Repeats 2+ (warm cache)</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">20</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">7,001 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">3,794 ms</td></tr></tbody></table></div>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">The difference between the two passes is small, and the reason matters: the DNS phase is bounded by the 1 request/second politeness limit, not by cache misses. A warm cache saves milliseconds of real work and seconds of waiting.</p>
+<h3 class="text-lg font-bold text-cyan-400 mt-8 mb-3 tracking-wide">1a. How this compares with the published claim</h3>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">The About page advertises &quot;&lt; 12 seconds per domain audit&quot;. The honest comparison has to name which number is being compared, so here it is in full:</p>
+<div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/40 mt-6 mb-6"><table class="w-full text-left"><thead class="bg-slate-900/90 border-b border-slate-800"><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Reading of &quot;&lt; 12 seconds per domain audit&quot;</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Measured</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Verdict</th></thead><tbody class="divide-y divide-slate-800/60"><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Scanner plus network work per domain, throttle sleeps removed (median)</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">4,063 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">holds</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Worst observed audit on this run, throttle sleeps removed (p95)</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">5,907 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">holds</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Wall clock per domain while the harness caps itself at 1 request/second</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">19,194 ms</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">does not hold</td></tr></tbody></table></div>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">The third row is not a defect: an audit issues 11 HTTP requests and about 10 DNS operations to a handful of hosts, so a hard 1 request/second cap makes a sub-12-second wall clock arithmetically impossible. The claim is defensible for the scanner's own cost and indefensible for a throttled wall clock, and this page states which one it is. The original marketing copy does not make that distinction, which is exactly the gap this benchmark exists to close.</p>
+<h3 class="text-lg font-bold text-cyan-400 mt-8 mb-3 tracking-wide">2. Takeover signature coverage</h3>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">Counted directly from the live signature table the scanner uses, not from a hand-maintained list on this page.</p>
+<div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/40 mt-6 mb-6"><table class="w-full text-left"><thead class="bg-slate-900/90 border-b border-slate-800"><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Metric</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Measured</th></thead><tbody class="divide-y divide-slate-800/60"><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Provider signatures</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">52</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Fingerprint entries (one provider can carry several)</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">80</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Distinct provider fingerprints</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">76</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Distinct dangling hostname classes (CNAME targets)</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">69</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Providers that additionally verify NXDOMAIN</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">3</td></tr></tbody></table></div>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">The About page advertises &quot;40+ takeover signatures&quot;. The measured value is 52 provider signatures carrying 76 distinct provider fingerprints and 69 distinct dangling hostname classes, so the marketing floor is met and then some.</p>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">A provider is only reported as a takeover when its CNAME pattern matches <strong>and</strong> the provider fingerprint (or an NXDOMAIN response) is confirmed. A CNAME alone is never treated as a finding.</p>
+<h3 class="text-lg font-bold text-cyan-400 mt-8 mb-3 tracking-wide">3. False-positive guards</h3>
+<div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/40 mt-6 mb-6"><table class="w-full text-left"><thead class="bg-slate-900/90 border-b border-slate-800"><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Guard</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">What it prevents</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Measured</th></thead><tbody class="divide-y divide-slate-800/60"><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Static hosting / CDN suffixes</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Header findings on hosts whose edge owns the headers</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">13 guarded suffixes plus the bare <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">github.io</code> host</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Parked-page fingerprints</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Scoring a parked domain as a broken deployment</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">8 HTML fingerprints</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">RFC 2606 reserved domains</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Auditing <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">example.com</code> or a <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">.test</code> host as a client</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">6 reserved names and 4 reserved TLDs</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">SSRF block</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Auditing loopback, private or cloud-metadata addresses</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Enforced on every resolution and every HTTP probe</td></tr></tbody></table></div>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">The benchmark exercises these guards with a self-test of 21 cases; 21 of them behaved exactly as the code specifies. The full case list is in the <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">guard_self_test</code> block of the raw JSON.</p>
+<h3 class="text-lg font-bold text-cyan-400 mt-8 mb-3 tracking-wide">4. Scoring stability</h3>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">The current grading engine (<code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">orbit_security.scoring.score_findings</code>) was replayed over every stored client audit in the repository - 52 delivered audits containing 514 findings. The audit files were read only; nothing was rewritten.</p>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed"><strong>Grade distribution</strong></p>
+<div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/40 mt-6 mb-6"><table class="w-full text-left"><thead class="bg-slate-900/90 border-b border-slate-800"><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Grade</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Legacy flat-penalty model</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Current exploitability-aware engine</th></thead><tbody class="divide-y divide-slate-800/60"><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">A+</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">1</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">22</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">A</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">0</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">12</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">B</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">16</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">11</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">C</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">17</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">2</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">D</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">8</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">2</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">F</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">10</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">3</td></tr></tbody></table></div>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">Under the current engine 18 audits used to fail (D or F) and 5 do; 13 were rescued and 0 newly failed. 47 of 52 grades changed, with a mean score change of 28.1 points.</p>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">The reason is visible in the findings themselves:</p>
+<div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/40 mt-6 mb-6"><table class="w-full text-left"><thead class="bg-slate-900/90 border-b border-slate-800"><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Finding class</th><th class="p-3 sm:p-4 font-bold text-cyan-300 font-mono text-[11px] sm:text-xs uppercase tracking-wider whitespace-nowrap">Count</th></thead><tbody class="divide-y divide-slate-800/60"><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Scored as risk (CRITICAL / HIGH / MEDIUM / LOW)</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">67</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Reported as hygiene - never scored (missing BIMI, MTA-STS, CAA, CSP, X-Frame-Options, ...)</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">447</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Audits containing at least one CRITICAL or HIGH finding</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">8</td></tr><tr class="border-t border-slate-800/80 hover:bg-slate-900/80"><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">Audits with no CRITICAL and no HIGH finding</td><td class="p-3 sm:p-4 text-xs sm:text-sm text-slate-300">44</td></tr></tbody></table></div>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">The parser that reads the delivered audits was also validated against the legacy model: it reproduces the score printed in every one of the 52 documents, so the comparison above is a comparison of two scoring models and not of two parsers.</p>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed"><strong>Run-to-run stability</strong>: each of the 5 domains was audited 5 times. The grade was identical across every repeat for 5 of 5 domains (100%).</p>
+<h2 class="text-2xl sm:text-xl font-bold text-white tracking-tight mt-12 mb-5">Limits - what these numbers do not claim</h2>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">This section is the point of the page. If you only read one part, read this one.</p>
+<ul class="mt-4 mb-4 space-y-2 list-disc pl-6 text-sm sm:text-base text-slate-300 leading-relaxed"><li><strong>Sample size.</strong> 25 audits of 5 domains from one workstation on one day. That is enough to show the scanner's order of magnitude and to prove the numbers are reproducible. It is not a statistical study of the global Internet.</li><li><strong>One date, one machine, one network.</strong> The run happened on 2026-10-22 on Windows / Python 3.13.13 (8 logical CPUs). Latency depends on the network path to the target and on the machine. A different day, a different machine or a different upstream resolver will produce different numbers.</li><li><strong>The wall-clock figure is dominated by politeness, not by the scanner.</strong> The harness caps every host at 1 request per second, so an audit that issues 11 HTTP requests cannot finish faster than about 11 seconds. The wall-clock column measures the politeness policy; the active column measures the scanner. Both are published because quoting only one of them would be misleading.</li><li><strong>The active time is dominated by the OS resolver, not by Orbit's own logic.</strong> Every audit runs the SSRF guard, which resolves the target through the operating system resolver before any request is allowed. In this run that produced between 3 and 14 OS lookups per audit, and the target with the most lookups was also the slowest one. That is a real cost of a real guard, and it is the largest single component of the active time.</li><li><strong>The phase figures include the politeness sleeps.</strong> The per-phase medians above are wall clock, so the DNS and HTTP rows are dominated by the rate limiter rather than by work. Only the &quot;active time&quot; column excludes it.</li><li><strong>Small percentiles on a small sample.</strong> With 25 samples the nearest-rank p95 and p99 land on or next to the maximum observation. Read them as &quot;the slowest audit we saw&quot;, not as a tail estimate.</li><li><strong>DNS cache effects.</strong> Orbit's local DNS cache daemon was running during this run (yes), so repeats reuse cached answers. The cold and warm passes are reported separately for that reason.</li><li><strong>The target set is not a typical client estate.</strong> The five public domains used here are large, mature, well-run organisations. A small agency client on shared hosting will produce different findings, different grades and different latencies. These numbers describe the scanner, not the targets.</li><li><strong>Coverage is not accuracy.</strong> This benchmark measures how many signatures the scanner knows, how the guards behave and how the grader is consistent. It does <strong>not</strong> measure a true-positive rate against a ground truth, because no such ground truth was available for this run. Treat &quot;we can recognise N provider fingerprints&quot; as exactly that and not as &quot;we detect N takeovers&quot;.</li><li><strong>The grader was not validated against human reviewers.</strong> The comparison here is between the previous flat-penalty model and the current exploitability-aware model on the same documents. That shows the model changed deliberately and reproducibly; it does not prove the new grades are the correct ones.</li><li><strong>The ROI figure is not covered.</strong> The retainer ROI number on the About page is a business projection and is not part of this dataset.</li><li><strong>Single run, single operator.</strong> One execution on one machine. It has not been repeated across a fleet of vantage points.</li></ul>
+<h2 class="text-2xl sm:text-xl font-bold text-white tracking-tight mt-12 mb-5">How to challenge this</h2>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">The point of publishing the raw JSON is that you do not have to trust the prose.</p>
+<ol class="mt-4 mb-4 space-y-2  pl-6 text-sm sm:text-base text-slate-300 leading-relaxed" style="list-style-type: decimal"><li><strong>Re-run it.</strong> The command above reproduces the whole dataset from scratch in a few minutes. Compare your <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">benchmark_results.json</code> against ours.</li><li><strong>Disagree with a number?</strong> Open an issue with your JSON attached. If the median active latency on your network is 3x ours, the page should say so.</li><li><strong>Found a missing signature?</strong> The signature table lives in <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">src/orbit_security/signatures.py</code>. A pull request with the provider, the CNAME pattern and the fingerprint is a direct contribution to the table these numbers count.</li><li><strong>Think the limits section is too generous - or too harsh?</strong> Tell us which limit you think is wrong. We would rather publish a smaller claim than a bigger one we cannot defend.</li><li><strong>Found a measurement that looks wrong?</strong> The harness records <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">null</code> and a reason for anything it could not measure. If you can make it produce a number we could not, that is a bug in the harness and we want it.</li></ol>
+<h2 class="text-2xl sm:text-xl font-bold text-white tracking-tight mt-12 mb-5">Frequently asked questions</h2>
+<h3 class="text-lg font-bold text-cyan-400 mt-8 mb-3 tracking-wide">How long does one Orbit Security domain audit actually take?</h3>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">The median audit on this run took 4,063 ms of active time - scanner plus network, with the artificial throttle sleeps removed - and 19,194 ms of wall clock while the harness deliberately limited itself to 1 request per second per host. The audit covers DNS resolution and mail-record checks, HTTP header inspection, ten exposed-file probes and the scoring pass. The 1 request/second limit is the harness's own politeness rule, not a technical limit of the scanner.</p>
+<h3 class="text-lg font-bold text-cyan-400 mt-8 mb-3 tracking-wide">How many takeover signatures can Orbit Security detect?</h3>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">52 provider signatures, carrying 76 distinct provider fingerprints and 69 distinct dangling hostname classes, with 3 providers verified by NXDOMAIN as well. A takeover is only reported when the CNAME pattern matches and the provider fingerprint is confirmed, so the count is of recognised provider responses rather than of URLs we flag.</p>
+<h3 class="text-lg font-bold text-cyan-400 mt-8 mb-3 tracking-wide">How does Orbit Security avoid false positives?</h3>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">With deterministic guards rather than heuristics: 13 static hosting and CDN suffixes plus the bare <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">github.io</code> host are recognised so that headers owned by a provider edge are never scored against the client, 8 parked-page fingerprints keep parked domains out of the estate, RFC 2606 reserved names are skipped, and every resolution and HTTP probe passes through an SSRF block for loopback, private and cloud-metadata addresses. The benchmark exercises all of them with a 21-case self-test, of which 21 passed.</p>
+<h3 class="text-lg font-bold text-cyan-400 mt-8 mb-3 tracking-wide">Is the security grading stable?</h3>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">Yes, in the two senses that can be measured. Re-running the current engine over the 52 stored client audits reproduces every published grade deterministically, and the parser that reads those documents reproduces the score printed in every one of them. Across the live runs, the grade was identical on every repeat for 5 of 5 domains. What this does not prove is that the grades are correct in an absolute sense - that would need a human-graded ground truth, which this dataset does not contain.</p>
+<h3 class="text-lg font-bold text-cyan-400 mt-8 mb-3 tracking-wide">Can I reproduce this benchmark on my own infrastructure?</h3>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">Yes. Clone the repository, install the dependencies and run <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">scripts/run_benchmark.py</code>. Point it at your own target file to audit an estate you are authorised to scan. The harness enforces a 1 request/second per host limit that cannot be configured lower, writes the same JSON structure, and writes <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">null</code> with a reason for any measurement it could not take, so your output is directly comparable with ours.</p>
+<h3 class="text-lg font-bold text-cyan-400 mt-8 mb-3 tracking-wide">Does this benchmark prove Orbit Security finds every vulnerability?</h3>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">No, and no benchmark of this shape could. It measures what the scanner knows (the signature table), how its guards behave, and how consistently its grader scores the same evidence. It does not measure detection accuracy against a ground truth, it does not claim the scanned domains were free of vulnerabilities, and it does not cover the retainer ROI figure. The honest summary is: this is a reproducible measurement of the scanner's speed, coverage and consistency - not a certification of its completeness.</p>
+<h2 class="text-2xl sm:text-xl font-bold text-white tracking-tight mt-12 mb-5">Structured data</h2>
+<p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">The block below is injected verbatim into this page as <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">&lt;script type=&quot;application/ld+json&quot;&gt;</code> and describes the benchmark as a machine-readable dataset.</p>
+<details class="mt-5 rounded-xl border border-slate-800 bg-slate-950/70"><summary class="cursor-pointer px-4 py-3 text-xs font-mono uppercase tracking-wider text-cyan-400 transition-colors">Copy-paste ready JSON-LD (Dataset + FAQPage)</summary><pre class="px-4 pb-4 text-[11px] sm:text-xs leading-relaxed overflow-x-auto text-slate-300 font-mono whitespace-pre">{
+  &quot;@context&quot;: &quot;https://schema.org&quot;,
+  &quot;@graph&quot;: [
+    {
+      &quot;@type&quot;: &quot;WebPage&quot;,
+      &quot;@id&quot;: &quot;https://cmfh009.github.io/Orbit-Security/benchmark/index.html#webpage&quot;,
+      &quot;url&quot;: &quot;https://cmfh009.github.io/Orbit-Security/benchmark/index.html&quot;,
+      &quot;name&quot;: &quot;Orbit Security Audit Benchmark | Reproducible Latency, Signature Coverage &amp; Scoring Data&quot;,
+      &quot;datePublished&quot;: &quot;2026-10-22&quot;,
+      &quot;dateModified&quot;: &quot;2026-10-22&quot;,
+      &quot;inLanguage&quot;: &quot;en&quot;,
+      &quot;isPartOf&quot;: {
+        &quot;@id&quot;: &quot;https://cmfh009.github.io/Orbit-Security/#website&quot;
+      },
+      &quot;about&quot;: {
+        &quot;@id&quot;: &quot;https://cmfh009.github.io/Orbit-Security/#organization&quot;
+      },
+      &quot;mainEntity&quot;: {
+        &quot;@id&quot;: &quot;https://cmfh009.github.io/Orbit-Security/benchmark/index.html#dataset&quot;
+      }
+    },
+    {
+      &quot;@type&quot;: &quot;Dataset&quot;,
+      &quot;@id&quot;: &quot;https://cmfh009.github.io/Orbit-Security/benchmark/index.html#dataset&quot;,
+      &quot;name&quot;: &quot;Orbit Security Perimeter Audit Benchmark&quot;,
+      &quot;description&quot;: &quot;Reproducible measurements of the Orbit Security perimeter scanner: per-domain audit latency, takeover signature coverage, false-positive guard behaviour and the grade distribution of the exploitability-aware scoring engine across stored client audits.&quot;,
+      &quot;creator&quot;: {
+        &quot;@id&quot;: &quot;https://cmfh009.github.io/Orbit-Security/#organization&quot;
+      },
+      &quot;publisher&quot;: {
+        &quot;@id&quot;: &quot;https://cmfh009.github.io/Orbit-Security/#organization&quot;
+      },
+      &quot;datePublished&quot;: &quot;2026-10-22&quot;,
+      &quot;dateModified&quot;: &quot;2026-10-22&quot;,
+      &quot;temporalCoverage&quot;: &quot;2026-10-22/2026-10-22&quot;,
+      &quot;distribution&quot;: {
+        &quot;@type&quot;: &quot;DataDownload&quot;,
+        &quot;encodingFormat&quot;: &quot;application/json&quot;,
+        &quot;contentUrl&quot;: &quot;https://cmfh009.github.io/Orbit-Security/benchmark/benchmark_results.json&quot;
+      },
+      &quot;license&quot;: &quot;https://github.com/CmfH009/Orbit-Security/blob/main/LICENSE&quot;,
+      &quot;isAccessibleForFree&quot;: true,
+      &quot;variableMeasured&quot;: [
+        &quot;Per-domain audit latency in milliseconds (wall clock and active)&quot;,
+        &quot;Number of takeover provider signatures&quot;,
+        &quot;Number of distinct provider fingerprints&quot;,
+        &quot;Number of distinct dangling hostname classes&quot;,
+        &quot;Number of static hosting and CDN false-positive guard suffixes&quot;,
+        &quot;Number of parked-page fingerprints&quot;,
+        &quot;Security grade distribution across stored client audits&quot;,
+        &quot;Number of findings scored as risk versus reported as hygiene&quot;
+      ],
+      &quot;measurementTechnique&quot;: &quot;In-process wall-clock instrumentation of orbit_security.recon (dnspython + httpx) with a hard 1 request per second per host politeness limit; nearest-rank percentiles; scoring engine replayed over stored audit deliverables.&quot;,
+      &quot;sampleSize&quot;: &quot;25 audits across 5 public domains and 52 stored client audits&quot;,
+      &quot;version&quot;: &quot;1.0.0&quot;,
+      &quot;keywords&quot;: [
+        &quot;security benchmark&quot;,
+        &quot;audit latency&quot;,
+        &quot;subdomain takeover signatures&quot;,
+        &quot;false positive prevention&quot;,
+        &quot;security grading&quot;,
+        &quot;DNS hygiene&quot;
+      ]
+    },
+    {
+      &quot;@type&quot;: &quot;FAQPage&quot;,
+      &quot;@id&quot;: &quot;https://cmfh009.github.io/Orbit-Security/benchmark/index.html#faq&quot;,
+      &quot;mainEntity&quot;: [
+        {
+          &quot;@type&quot;: &quot;Question&quot;,
+          &quot;name&quot;: &quot;How long does one Orbit Security domain audit actually take?&quot;,
+          &quot;acceptedAnswer&quot;: {
+            &quot;@type&quot;: &quot;Answer&quot;,
+            &quot;text&quot;: &quot;The median audit on the published run took 4,063 ms of active time - scanner plus network, with the artificial throttle sleeps removed - and 19,194 ms of wall clock while the harness limited itself to 1 request per second per host. The audit covers DNS and mail-record resolution, HTTP header inspection, ten exposed-file probes and the scoring pass.&quot;
+          }
+        },
+        {
+          &quot;@type&quot;: &quot;Question&quot;,
+          &quot;name&quot;: &quot;How many takeover signatures can Orbit Security detect?&quot;,
+          &quot;acceptedAnswer&quot;: {
+            &quot;@type&quot;: &quot;Answer&quot;,
+            &quot;text&quot;: &quot;52 provider signatures carrying 76 distinct provider fingerprints and 69 distinct dangling hostname classes, with 3 providers additionally verified by NXDOMAIN. A takeover is only reported when the CNAME pattern matches and the provider fingerprint is confirmed.&quot;
+          }
+        },
+        {
+          &quot;@type&quot;: &quot;Question&quot;,
+          &quot;name&quot;: &quot;How does Orbit Security avoid false positives?&quot;,
+          &quot;acceptedAnswer&quot;: {
+            &quot;@type&quot;: &quot;Answer&quot;,
+            &quot;text&quot;: &quot;With deterministic guards: 13 static hosting and CDN suffixes plus the bare github.io host are recognised so provider-owned headers are never scored against the client, 8 parked-page fingerprints keep parked domains out of the estate, RFC 2606 reserved names are skipped, and every resolution and HTTP probe passes through an SSRF block for loopback, private and cloud-metadata addresses. The benchmark exercises all of them with a 21-case self-test of which 21 passed.&quot;
+          }
+        },
+        {
+          &quot;@type&quot;: &quot;Question&quot;,
+          &quot;name&quot;: &quot;Is the security grading stable?&quot;,
+          &quot;acceptedAnswer&quot;: {
+            &quot;@type&quot;: &quot;Answer&quot;,
+            &quot;text&quot;: &quot;Re-running the current grading engine over the 52 stored client audits reproduces every published grade deterministically, and the parser reproduces the score printed in every delivered document. Across the live runs the grade was identical on every repeat for 5 of 5 domains. Absolute correctness of the grades was not tested, because this dataset contains no human-graded ground truth.&quot;
+          }
+        },
+        {
+          &quot;@type&quot;: &quot;Question&quot;,
+          &quot;name&quot;: &quot;Can I reproduce this benchmark on my own infrastructure?&quot;,
+          &quot;acceptedAnswer&quot;: {
+            &quot;@type&quot;: &quot;Answer&quot;,
+            &quot;text&quot;: &quot;Yes. Clone the repository, install the dependencies and run scripts/run_benchmark.py. Point it at a target file to audit an estate you are authorised to scan. The harness enforces a 1 request per second per host limit that cannot be configured lower, writes the same JSON structure, and writes null with a reason for any measurement it could not take.&quot;
+          }
+        },
+        {
+          &quot;@type&quot;: &quot;Question&quot;,
+          &quot;name&quot;: &quot;Does this benchmark prove Orbit Security finds every vulnerability?&quot;,
+          &quot;acceptedAnswer&quot;: {
+            &quot;@type&quot;: &quot;Answer&quot;,
+            &quot;text&quot;: &quot;No. It measures what the scanner knows, how its false-positive guards behave and how consistently its grader scores the same evidence. It does not measure a true-positive rate against a ground truth, it does not claim the scanned domains were vulnerability-free, and it does not cover the retainer ROI figure.&quot;
+          }
+        }
+      ]
+    },
+    {
+      &quot;@type&quot;: &quot;BreadcrumbList&quot;,
+      &quot;@id&quot;: &quot;https://cmfh009.github.io/Orbit-Security/benchmark/index.html#breadcrumb&quot;,
+      &quot;itemListElement&quot;: [
+        {
+          &quot;@type&quot;: &quot;ListItem&quot;,
+          &quot;position&quot;: 1,
+          &quot;name&quot;: &quot;Home&quot;,
+          &quot;item&quot;: {
+            &quot;@id&quot;: &quot;https://cmfh009.github.io/Orbit-Security/#website&quot;
+          }
+        },
+        {
+          &quot;@type&quot;: &quot;ListItem&quot;,
+          &quot;position&quot;: 2,
+          &quot;name&quot;: &quot;Benchmark&quot;,
+          &quot;item&quot;: {
+            &quot;@id&quot;: &quot;https://cmfh009.github.io/Orbit-Security/benchmark/index.html#webpage&quot;
+          }
+        }
+      ]
+    }
+  ]
+}</pre></details>
+        </article>
+
+        <!-- CTA -->
+        <section class="max-w-4xl mx-auto px-4 sm:px-6 pb-20">
+            <div class="p-6 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900 to-cyan-500 border border-emerald-500/30 text-center pixel-box-emerald">
+                <h2 class="text-2xl font-extrabold text-white mb-3">Want the same measurements on your own estate?</h2>
+                <p class="text-slate-300 text-sm max-w-2xl mx-auto mb-6">
+                    Run the identical harness against a client list you are authorised to scan. Same code path, same rate limit, same output format.
+                </p>
+                <div class="flex flex-wrap items-center justify-center gap-4">
+                    <a href="../index.html#audit-preview" class="px-6 py-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm transition-all pixel-btn shadow-lg shadow-emerald-500/20">Run Free Domain Audit</a>
+                    <a href="../signup.html" class="px-6 py-3 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-medium text-sm transition-all pixel-btn">Explore Agency Tiers</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="relative z-10 py-12 bg-slate-950 border-t border-slate-900 text-slate-500 text-xs">
+        <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p>&copy; 2026 Orbit Security Operations. All rights reserved.</p>
+            <div class="flex flex-wrap items-center gap-6">
+                <a href="../about.html" class="text-emerald-400 hover:underline">About Us</a>
+                <a href="../terms.html" class="text-slate-400 hover:text-white transition-colors">Terms of Service</a>
+                <a href="../privacy.html" class="text-slate-400 hover:text-white transition-colors">Privacy Policy</a>
+                <a href="../disclaimer.html" class="text-slate-400 hover:text-white transition-colors">RFC Disclaimer</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

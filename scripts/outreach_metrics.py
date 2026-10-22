@@ -107,6 +107,10 @@ def compute() -> dict:
     leads = collect_leads()
 
     sent = [c for c in campaigns if str(c.get("status", "")).upper() == "SENT"]
+    # Campaigns the registry marked BOUNCED are hard bounces. The denominator
+    # is every dispatched campaign, not just the ones marked SENT: a bounce is
+    # still an attempt that reached the sending infrastructure.
+    bounced_campaigns = [c for c in campaigns if str(c.get("status", "")).upper() == "BOUNCED"]
     bounced_domains = {b.get("agency_domain") or b.get("agency_name") for b in bounces}
 
     # A bounce only counts against the registry if we actually dispatched to that
@@ -150,15 +154,19 @@ def compute() -> dict:
     )
     rejections = sum(v for k, v in intents.items() if k in REJECTION)
 
-    total_sent = len(sent) or len(campaigns)
-    bounce_rate = round(100.0 * len(attributed_bounces) / total_sent, 2) if total_sent else 0.0
+    total_sent = len(campaigns)
+    bounce_rate = round(100.0 * len(bounced_campaigns) / total_sent, 2) if total_sent else 0.0
     reply_rate = round(100.0 * meaningful / total_sent, 2) if total_sent else 0.0
+    # A reply rate measured against every dispatched campaign is the honest
+    # denominator: a bounce is an attempt that produced no conversation.
 
     return {
         "generated_utc": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
         "outreach": {
             "campaigns_registered": len(campaigns),
-            "campaigns_sent": total_sent,
+            "campaigns_sent": len(sent),
+            "campaigns_dispatched": total_sent,
+            "campaigns_bounced": len(bounced_campaigns),
             "followups_sent": len(followups),
             "hard_bounces": len(bounced_domains),
             "hard_bounces_attributed": len(attributed_bounces),
@@ -197,7 +205,9 @@ def render(snapshot: dict) -> str:
     o = snapshot["outreach"]
     out.append("\nOUTREACH")
     out.append(f"  campaigns registered      : {o['campaigns_registered']}")
-    out.append(f"  campaigns sent            : {o['campaigns_sent']}")
+    out.append(f"  campaigns dispatched      : {o['campaigns_dispatched']}")
+    out.append(f"  campaigns sent (no bounce): {o['campaigns_sent']}")
+    out.append(f"  campaigns hard-bounced    : {o['campaigns_bounced']}")
     out.append(f"  follow-ups sent           : {o['followups_sent']}")
     out.append(f"  hard bounces              : {o['hard_bounces']}"
                f"  ({o['hard_bounces_attributed']} attributed to registry,"

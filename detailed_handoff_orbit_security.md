@@ -520,8 +520,10 @@ A roadmap kickoff cycle ran one coordinator + six parallel agents with exclusive
 
 | Metric | Value | Gate | Status |
 |---|---|---|---|
-| Campaigns sent | 135 (178 registered) | — | — |
-| **Hard bounce rate** | **34.07 %** (46 addresses, all registry-attributed) | ≤ 3 % | ❌ |
+| Campaigns dispatched | 178 (135 delivered, 43 hard-bounced) | — | — |
+| **Hard bounce rate** | **24.16 %** (43 of 178; the suppression list holds 46 addresses, 3 predating the registry) | ≤ 3 % | ❌ |
+| **Bounce root cause** | **not infrastructure — guessed mailboxes.** 43 of the 46 bounced domains publish valid MX records, and their provider mix (Google 65 %, MS365 7 %) is statistically identical to the delivered set (Google 76 %, MS366 10 %). | — | ✅ diagnosed |
+| Contact verification of the 43 bounced agencies | 16 REFUTED (address does not exist) · 12 with a **published replacement address found** · 3 NO_MX (cannot receive mail) · 3 CONFIRMED (address is published; bounce was mailbox-level) · 21 inconclusive | — | ✅ |
 | Tracked inbound threads | 34 | — | — |
 | **Meaningful conversations** | **0** | ≥ 8 % reply rate | ❌ |
 | Intent mix | 11 NOT_INTERESTED · 8 OUT_OF_OFFICE · 5 TICKET_ACKNOWLEDGED · 4 UNCLEAR · 3 MARKETING_NEWSLETTER · 3 BOUNCE | — | — |
@@ -543,9 +545,13 @@ A roadmap kickoff cycle ran one coordinator + six parallel agents with exclusive
 
 | ID | Task | Owner | Priority | Steps |
 |---|---|---|---|---|
-| **T32** | Cold-email channel triage | Operator + Nova | **P0** | Root-cause the 34 % bounce rate (list hygiene, role-based inboxes, stale suppression, pre-send validation). Review the 11 rejection replies for the actual objection. Run a subject/opening A/B with a 30 % holdout across the next 3 cohorts. **Suspend new sends until bounce < 10 %.** |
+| **T32** | Cold-email channel triage | Operator + Nova | **P0** | **Root cause measured — we guessed mailboxes, not a sending problem.** 43 of 46 bounced domains have valid MX and their provider mix matches the delivered set. `scripts/verify_contacts.py` now verifies the exact address (MX + the agency's own published contact page): 16 REFUTED, **12 with a published replacement address**, 3 NO_MX, 3 CONFIRMED. `scripts/build_deliverability_plan.py` turns that into `data/contact_verification/recovery_plan.md` (12 re-target, 7 suppress). Wire the verifier into the cohort launcher as a pre-flight gate; review the 11 rejections for the real objection; A/B the subject + opening line with a 30 % holdout. |
 | **T33** | Audit remediation for cohorts 7–10 | Sentinel + Operator | **P0** | Re-score every stored audit under the fixed model; re-send corrected grades to every agency that received an F, D, 0/100 or 5/100 audit with a short, non-apologetic correction note. |
 | **T34** | Roadmap + gate instrumentation | Coordinator | P1 | `ROADMAP.md` + `scripts/outreach_metrics.py` (done) — every Phase 2 gate is now computed from real data rather than asserted. |
+| **T35** | Publish the benchmark as the primary authority asset | Operator | P1 | **DONE**: `docs/benchmark/` publishes the measured latency, 52 provider signatures / 76 fingerprints / 69 hostname classes, the false-positive guard self-test and the scoring replay — every number bound to `benchmark_results.json` at build time, with the limits stated. It also **audits our own claims**: "40+ signatures" holds (52); "< 12 s" holds for active time (4,063 ms median / 5,907 ms p95) but **not** for wall clock under the 1 req/s cap (19,194 ms), and the page says so; the 10,493 % ROI figure is explicitly excluded as a business projection. |
+| **T36** | Add a `Dataset` node + benchmark URL to the crawl surface | Operator | P1 | **DONE**: the benchmark page carries `Dataset` + `FAQPage` JSON-LD, and the URL was added to `sitemap.xml` and `llms.txt` in both trees. |
+| **T37** | Publish the package to PyPI | Operator | P1 | `uv build` produces a valid wheel and sdist; `pip install "orbit-security @ git+https://github.com/CmfH009/Orbit-Security.git"` is verified working from a clean environment and is what all published copy now uses. A PyPI release needs a token the operator holds. |
+| **T38** | Decide the lead-data exposure of a public repo | Operator | P1 | This repository is public and now contains prospect contact data: `data/bounced_agencies.json` (46 addresses, pre-existing), `data/cohort_*.json` (pre-existing), and now `data/remediation/` (13 agencies with addresses + correction notes) and `data/contact_verification/` (43 agencies with guessed, published and replacement addresses). Every one of those addresses is published by the agency on its own website, so the sensitivity is low — but the pattern is wrong, and a lead list in a public repo is a real risk if the repo is ever transferred, forked or indexed. Options: make the repo private, move the lead data to a gitignored path, or purge history. Decide deliberately rather than by accumulation. |
 
 ### 8.4 Publish runbook — the roast thread
 
@@ -636,6 +642,9 @@ New operational surface created this cycle:
 | `scripts/validate_x_post_lengths.py` | X length + third-party-domain + held-variant validator |
 | `scripts/post_x_roast_f_grades.py` | dry-run-by-default X publisher with 8 h spacing guard |
 | `scripts/rescore_audit_evidence.py` | re-scores all 52 delivered audits, legacy vs new model |
+| **`docs/benchmark/`** | the publishable, reproducible benchmark: measured latency, 52 provider signatures / 76 fingerprints / 69 hostname classes, false-positive guard self-test, scoring replay. Every number is bound to `benchmark_results.json` at build time and the limits are stated. |
+| **`data/remediation/`** | 13 correction notes + 13 staged `.eml` files for the agencies whose published grade was wrong, plus the manifest, summary and generator. The 5 that still fail do so for genuine exploit risk and get no note. |
+| **`data/contact_verification/`** | per-agency contact verification of the 43 bounced campaigns + `recovery_plan.md` (12 re-target candidates with published replacement addresses, 7 suppress). |
 | `data/roast_f_grades_posts.json` | the roast copy: 7 publishable posts (all ≤ 280 weighted chars) + 1 held variant that names third-party domains and is hard-blocked |
 
 ---

@@ -1,0 +1,401 @@
+{
+  "generated_utc": "2026-10-22T12:22:55.596497+00:00",
+  "source": "data\\contact_verification\\verification.json",
+  "checked": 43,
+  "action_counts": {
+    "RETARGET": 12,
+    "UNKNOWN": 21,
+    "SUPPRESS_REFUTED": 4,
+    "NO_ACTION": 3,
+    "SUPPRESS_NO_MX": 3
+  },
+  "rows": [
+    {
+      "agency_domain": "swankyagency.com",
+      "agency_name": "Swanky",
+      "guessed_email": "hello@swankyagency.com",
+      "classification": "REFUTED",
+      "action": "RETARGET",
+      "replacement_email": "cat@swankyagency.com",
+      "reason": "guessed address absent; agency publishes cat@swankyagency.com"
+    },
+    {
+      "agency_domain": "anatta.io",
+      "agency_name": "Anatta",
+      "guessed_email": "hello@anatta.io",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "fostr.online",
+      "agency_name": "Fostr",
+      "guessed_email": "hello@fostr.online",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "guidance.com",
+      "agency_name": "Guidance",
+      "guessed_email": "info@guidance.com",
+      "classification": "REFUTED",
+      "action": "SUPPRESS_REFUTED",
+      "replacement_email": null,
+      "reason": "agency publishes mail, but not the address we guessed"
+    },
+    {
+      "agency_domain": "bva.com",
+      "agency_name": "BVA Agency",
+      "guessed_email": "info@bva.com",
+      "classification": "CONFIRMED",
+      "action": "NO_ACTION",
+      "replacement_email": null,
+      "reason": "guessed address is published; bounce was mailbox-level"
+    },
+    {
+      "agency_domain": "fuelmade.com",
+      "agency_name": "Fuel Made",
+      "guessed_email": "hello@fuelmade.com",
+      "classification": "REFUTED",
+      "action": "SUPPRESS_REFUTED",
+      "replacement_email": null,
+      "reason": "agency publishes mail, but not the address we guessed"
+    },
+    {
+      "agency_domain": "pointercreative.com",
+      "agency_name": "Pointer Creative",
+      "guessed_email": "hello@pointercreative.com",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "avexdesigns.com",
+      "agency_name": "Avex Designs",
+      "guessed_email": "hello@avexdesigns.com",
+      "classification": "REFUTED",
+      "action": "RETARGET",
+      "replacement_email": "newbusiness@avexdesigns.com",
+      "reason": "guessed address absent; agency publishes newbusiness@avexdesigns.com"
+    },
+    {
+      "agency_domain": "scoutside.com",
+      "agency_name": "Scoutside",
+      "guessed_email": "hello@scoutside.com",
+      "classification": "CONFIRMED",
+      "action": "NO_ACTION",
+      "replacement_email": null,
+      "reason": "guessed address is published; bounce was mailbox-level"
+    },
+    {
+      "agency_domain": "electricenjin.com",
+      "agency_name": "Electric Enjin",
+      "guessed_email": "hello@electricenjin.com",
+      "classification": "CONFIRMED",
+      "action": "NO_ACTION",
+      "replacement_email": null,
+      "reason": "guessed address is published; bounce was mailbox-level"
+    },
+    {
+      "agency_domain": "askphill.com",
+      "agency_name": "Ask Phill",
+      "guessed_email": "hello@askphill.com",
+      "classification": "REFUTED",
+      "action": "RETARGET",
+      "replacement_email": "sales@askphill.com",
+      "reason": "guessed address absent; agency publishes sales@askphill.com"
+    },
+    {
+      "agency_domain": "woolman.io",
+      "agency_name": "Woolman",
+      "guessed_email": "hello@woolman.io",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "chromatichq.com",
+      "agency_name": "Chromatic",
+      "guessed_email": "hello@chromatichq.com",
+      "classification": "REFUTED",
+      "action": "RETARGET",
+      "replacement_email": "info@chromatichq.com",
+      "reason": "guessed address absent; agency publishes info@chromatichq.com"
+    },
+    {
+      "agency_domain": "ffw.com",
+      "agency_name": "FFW Agency",
+      "guessed_email": "hello@ffw.com",
+      "classification": "REFUTED",
+      "action": "SUPPRESS_REFUTED",
+      "replacement_email": null,
+      "reason": "agency publishes mail, but not the address we guessed"
+    },
+    {
+      "agency_domain": "bounteous.com",
+      "agency_name": "Bounteous",
+      "guessed_email": "info@bounteous.com",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "vml.com",
+      "agency_name": "VML Commerce",
+      "guessed_email": "contact@vml.com",
+      "classification": "REFUTED",
+      "action": "SUPPRESS_REFUTED",
+      "replacement_email": null,
+      "reason": "agency publishes mail, but not the address we guessed"
+    },
+    {
+      "agency_domain": "digitas.com",
+      "agency_name": "Digitas",
+      "guessed_email": "info@digitas.com",
+      "classification": "REFUTED",
+      "action": "RETARGET",
+      "replacement_email": "amsterdam@digitas.com",
+      "reason": "guessed address absent; agency publishes amsterdam@digitas.com"
+    },
+    {
+      "agency_domain": "rga.com",
+      "agency_name": "R/GA",
+      "guessed_email": "info@rga.com",
+      "classification": "REFUTED",
+      "action": "RETARGET",
+      "replacement_email": "argentina@rga.com",
+      "reason": "guessed address absent; agency publishes argentina@rga.com"
+    },
+    {
+      "agency_domain": "codeandtheory.com",
+      "agency_name": "Code and Theory",
+      "guessed_email": "hello@codeandtheory.com",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "work.co",
+      "agency_name": "Work & Co",
+      "guessed_email": "hello@work.co",
+      "classification": "REFUTED",
+      "action": "RETARGET",
+      "replacement_email": "newbiz@work.co",
+      "reason": "guessed address absent; agency publishes newbiz@work.co"
+    },
+    {
+      "agency_domain": "fantasy.co",
+      "agency_name": "Fantasy Interactive",
+      "guessed_email": "hello@fantasy.co",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "basicagency.com",
+      "agency_name": "BASIC/DEPT",
+      "guessed_email": "hello@basicagency.com",
+      "classification": "REFUTED",
+      "action": "RETARGET",
+      "replacement_email": "biz@basicagency.com",
+      "reason": "guessed address absent; agency publishes biz@basicagency.com"
+    },
+    {
+      "agency_domain": "area17.com",
+      "agency_name": "AREA 17",
+      "guessed_email": "info@area17.com",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "ideo.com",
+      "agency_name": "Ideo",
+      "guessed_email": "info@ideo.com",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "dockyard.com",
+      "agency_name": "DockYard",
+      "guessed_email": "inquiries@dockyard.com",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "ironpaper.com",
+      "agency_name": "Ironpaper",
+      "guessed_email": "inquiry@ironpaper.com",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "majortom.com",
+      "agency_name": "Major Tom",
+      "guessed_email": "info@majortom.com",
+      "classification": "REFUTED",
+      "action": "RETARGET",
+      "replacement_email": "hello@majortom.com",
+      "reason": "guessed address absent; agency publishes hello@majortom.com"
+    },
+    {
+      "agency_domain": "heco.design",
+      "agency_name": "Heco Studio",
+      "guessed_email": "hello@heco.design",
+      "classification": "NO_MX",
+      "action": "SUPPRESS_NO_MX",
+      "replacement_email": null,
+      "reason": "domain publishes no mail exchanger"
+    },
+    {
+      "agency_domain": "immersive-g.com",
+      "agency_name": "Immersive Garden",
+      "guessed_email": "contact@immersive-g.com",
+      "classification": "REFUTED",
+      "action": "RETARGET",
+      "replacement_email": "inquiries@immersive-g.com",
+      "reason": "guessed address absent; agency publishes inquiries@immersive-g.com"
+    },
+    {
+      "agency_domain": "activetheory.net",
+      "agency_name": "Active Theory",
+      "guessed_email": "contact@activetheory.net",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "b-reel.com",
+      "agency_name": "B-Reel",
+      "guessed_email": "hello@b-reel.com",
+      "classification": "REFUTED",
+      "action": "RETARGET",
+      "replacement_email": "newbiz@b-reel.com",
+      "reason": "guessed address absent; agency publishes newbiz@b-reel.com"
+    },
+    {
+      "agency_domain": "goodface.agency",
+      "agency_name": "Goodface Agency",
+      "guessed_email": "hello@goodface.agency",
+      "classification": "REFUTED",
+      "action": "RETARGET",
+      "replacement_email": "hi@goodface.agency",
+      "reason": "guessed address absent; agency publishes hi@goodface.agency"
+    },
+    {
+      "agency_domain": "juno-ecommerce.co.uk",
+      "agency_name": "Juno E-Commerce",
+      "guessed_email": "hello@juno-ecommerce.co.uk",
+      "classification": "NO_MX",
+      "action": "SUPPRESS_NO_MX",
+      "replacement_email": null,
+      "reason": "domain publishes no mail exchanger"
+    },
+    {
+      "agency_domain": "thedylanagency.com",
+      "agency_name": "The Dylan Agency",
+      "guessed_email": "hello@thedylanagency.com",
+      "classification": "NO_MX",
+      "action": "SUPPRESS_NO_MX",
+      "replacement_email": null,
+      "reason": "domain publishes no mail exchanger"
+    },
+    {
+      "agency_domain": "danmall.com",
+      "agency_name": "Dan Mall Studio",
+      "guessed_email": "hello@danmall.com",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "eightshapes.com",
+      "agency_name": "EightShapes",
+      "guessed_email": "info@eightshapes.com",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "paravelinc.com",
+      "agency_name": "Paravel",
+      "guessed_email": "hello@paravelinc.com",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "diffagency.com",
+      "agency_name": "Diff Agency",
+      "guessed_email": "info@diffagency.com",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "thepapayagroup.com",
+      "agency_name": "The Papaya Group",
+      "guessed_email": "hello@thepapayagroup.com",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "hook42.com",
+      "agency_name": "Hook 42",
+      "guessed_email": "info@hook42.com",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "gorillagroup.com",
+      "agency_name": "Gorilla Group",
+      "guessed_email": "info@gorillagroup.com",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "bvaccel.com",
+      "agency_name": "BVAccel",
+      "guessed_email": "hello@bvaccel.com",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    },
+    {
+      "agency_domain": "metacake.com",
+      "agency_name": "Metacake",
+      "guessed_email": "hello@metacake.com",
+      "classification": "UNKNOWN",
+      "action": "UNKNOWN",
+      "replacement_email": null,
+      "reason": "no published address found; inconclusive"
+    }
+  ]
+}

@@ -25,6 +25,19 @@ Orbit Security is an autonomous perimeter intelligence and attack surface manage
 
 https://cmfh009.github.io/Orbit-Security/about.html
 
+## Open benchmark (reproducible dataset)
+
+https://cmfh009.github.io/Orbit-Security/benchmark/index.html
+
+Orbit Security publishes its own measurements rather than asserting them. The benchmark page reports, for a dated sample produced by one command anyone can re-run (`scripts/run_benchmark.py`):
+
+- Per-domain audit latency in milliseconds, both wall clock under a 1 request/second per host limit and "active" time with the throttle sleeps removed (nearest-rank p50/p90/p95/p99).
+- Takeover signature coverage counted from the live signature table: provider signatures, distinct provider fingerprints and distinct dangling hostname classes.
+- False-positive guard behaviour (static hosting and CDN suffixes, parked-page fingerprints, RFC 2606 reserved domains, SSRF blocking) with a self-test.
+- The security grade distribution produced by the current scoring engine when it is replayed over every stored client audit, with the limits of that measurement stated explicitly.
+
+Raw measurements: https://cmfh009.github.io/Orbit-Security/benchmark/benchmark_results.json
+
 ## Contact
 
 - Security disclosures and general enquiries: carsonmail009@gmail.com

@@ -1,0 +1,1712 @@
+{
+  "schema_version": "1.0.0",
+  "benchmark": "Orbit Security perimeter audit benchmark",
+  "generated_utc": "2026-10-22T12:15:51Z",
+  "started_utc": "2026-10-22T12:07:46Z",
+  "duration_s": 484.86,
+  "command_line": "A:\\projects\\orbit-security\\.venv\\Scripts\\python.exe scripts/run_benchmark.py --repeat 5 --out docs\\benchmark\\benchmark_results.json",
+  "argv": [
+    "scripts\\run_benchmark.py",
+    "--repeat",
+    "5",
+    "--out",
+    "docs\\benchmark\\benchmark_results.json"
+  ],
+  "repo_commit": "966858a93f09309a2c821feae9e762e0384afe58",
+  "methodology": {
+    "audit_definition": "One domain audit = orbit_security.recon.resolve_dns() + orbit_security.recon.check_headers_and_exposures() + orbit_security.recon.calculate_score() + orbit_security.recon.calculate_grade() - the exact sequence the orbit-recon CLI runs for a single target.",
+    "clock": "time.perf_counter() (monotonic, highest available resolution)",
+    "percentile_method": "nearest-rank, no interpolation",
+    "rate_limit_per_host_per_second": 1.0,
+    "rate_limit_enforcement": "httpx.Client.send and dns.resolver.Resolver.resolve are wrapped in-process; every outbound request sleeps so that no host receives more than one request per second.",
+    "targets": [
+      "example.com",
+      "github.com",
+      "python.org",
+      "wikipedia.org",
+      "mozilla.org"
+    ],
+    "target_source": "built-in default public set",
+    "repeat": 5,
+    "network_enabled": true,
+    "claims_under_test": {
+      "< 12 seconds per domain audit": 12.0,
+      "40+ takeover signatures": 40
+    },
+    "claims_note": "The claim values are recorded only so the published page can compare a real measurement against them. They are never used as, or mixed into, a measured number."
+  },
+  "environment": {
+    "os": "Windows",
+    "os_release": "11",
+    "platform": "Windows-11-10.0.26300-SP0",
+    "machine": "AMD64",
+    "processor": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "cpu_count": 8,
+    "python_version": "3.13.13",
+    "python_implementation": "CPython",
+    "python_executable": "A:\\projects\\orbit-security\\.venv\\Scripts\\python.exe",
+    "httpx_version": "0.28.1",
+    "dnspython_version": "2.8.0",
+    "dns_resolvers": [
+      "1.1.1.1",
+      "1.0.0.0",
+      "8.8.8.8",
+      "8.8.4.4"
+    ],
+    "local_dns_cache_daemon_running": true,
+    "local_dns_cache_endpoint": "127.0.0.1:53",
+    "dns_resolver_note": "Orbit resolves through orbit_security.dns_cache. When the local cache daemon is running, its 127.0.0.1:53 socket is queried first and the public recursive resolvers are only used by that daemon on a cache miss. Repeat audits of the same domain therefore reuse cached answers - see the cold/warm split in the latency measurement."
+  },
+  "measurements": {
+    "audit_latency": {
+      "status": "measured",
+      "not_measured_reason": null,
+      "unit": "milliseconds",
+      "targets": [
+        "example.com",
+        "github.com",
+        "python.org",
+        "wikipedia.org",
+        "mozilla.org"
+      ],
+      "repeat": 5,
+      "samples_total": 25,
+      "samples_usable": 25,
+      "samples_failed": 0,
+      "wall_ms": {
+        "count": 25,
+        "min": 18226.83,
+        "p50": 19193.75,
+        "p90": 20477.38,
+        "p95": 20531.12,
+        "p99": 20566.17,
+        "max": 20566.17,
+        "mean": 19393.27
+      },
+      "active_ms": {
+        "count": 25,
+        "min": 1469.56,
+        "p50": 4062.97,
+        "p90": 5692.71,
+        "p95": 5907.13,
+        "p99": 6189.35,
+        "max": 6189.35,
+        "mean": 3802.31
+      },
+      "active_ms_definition": "wall-clock time of the audit minus the time deliberately spent sleeping to respect the 1 request/second per host limit. It is the scanner plus network cost of one domain audit.",
+      "wall_ms_definition": "wall-clock time of one domain audit as an operator experiences it while the 1 request/second politeness limit is enforced.",
+      "percentile_method": "nearest-rank (index = ceil(p/100 * n) - 1), no interpolation",
+      "phase_breakdown": {
+        "dns_ms": {
+          "count": 25,
+          "min": 7000.29,
+          "p50": 7000.8,
+          "p90": 7522.96,
+          "p95": 7637.26,
+          "p99": 7734.34,
+          "max": 7734.34,
+          "mean": 7124.11
+        },
+        "http_ms": {
+          "count": 25,
+          "min": 11197.65,
+          "p50": 12108.44,
+          "p90": 13476.31,
+          "p95": 13528.93,
+          "p99": 13565.31,
+          "max": 13565.31,
+          "mean": 12269.02
+        },
+        "scoring_ms": {
+          "count": 25,
+          "min": 0.04,
+          "p50": 0.15,
+          "p90": 0.22,
+          "p95": 0.25,
+          "p99": 0.26,
+          "max": 0.26,
+          "mean": 0.14
+        },
+        "throttle_sleep_ms": {
+          "count": 25,
+          "min": 13890.15,
+          "p50": 15374.79,
+          "p90": 17003.32,
+          "p95": 17015.43,
+          "p99": 17051.45,
+          "max": 17051.45,
+          "mean": 15590.95
+        }
+      },
+      "dns_cache_split": {
+        "note": "Repeat 1 populates Orbit's DNS cache; repeats 2+ are answered from cache. Both are reported so the cold-cache number is never hidden behind the warm one.",
+        "cold_repeat_1": {
+          "samples": 5,
+          "active_ms": {
+            "count": 5,
+            "min": 1947.01,
+            "p50": 4183.51,
+            "p90": 5692.71,
+            "p95": 5692.71,
+            "p99": 5692.71,
+            "max": 5692.71,
+            "mean": 3946.38
+          },
+          "dns_ms": {
+            "count": 5,
+            "min": 7001.87,
+            "p50": 7003.48,
+            "p90": 7471.28,
+            "p95": 7471.28,
+            "p99": 7471.28,
+            "max": 7471.28,
+            "mean": 7096.69
+          },
+          "wall_ms": {
+            "count": 5,
+            "min": 18510.65,
+            "p50": 19685.35,
+            "p90": 20531.12,
+            "p95": 20531.12,
+            "p99": 20531.12,
+            "max": 20531.12,
+            "mean": 19664.32
+          }
+        },
+        "warm_repeats_2_plus": {
+          "samples": 20,
+          "active_ms": {
+            "count": 20,
+            "min": 1469.56,
+            "p50": 3794.15,
+            "p90": 5672.41,
+            "p95": 5907.13,
+            "p99": 6189.35,
+            "max": 6189.35,
+            "mean": 3766.3
+          },
+          "dns_ms": {
+            "count": 20,
+            "min": 7000.29,
+            "p50": 7000.72,
+            "p90": 7522.96,
+            "p95": 7637.26,
+            "p99": 7734.34,
+            "max": 7734.34,
+            "mean": 7130.96
+          },
+          "wall_ms": {
+            "count": 20,
+            "min": 18226.83,
+            "p50": 19108.79,
+            "p90": 20363.23,
+            "p95": 20477.38,
+            "p99": 20566.17,
+            "max": 20566.17,
+            "mean": 19325.5
+          }
+        }
+      },
+      "grade_stability": {
+        "domains_compared": 5,
+        "domains_with_identical_grade_across_repeats": 5,
+        "grade_stability_rate": 1.0
+      },
+      "per_domain": {
+        "example.com": {
+          "domain": "example.com",
+          "samples": 5,
+          "ok_samples": 5,
+          "grades_observed": [
+            "A"
+          ],
+          "grade_stable": true,
+          "scores_observed": [
+            90
+          ],
+          "wall_ms": {
+            "count": 5,
+            "min": 18226.83,
+            "p50": 18478.39,
+            "p90": 19689.35,
+            "p95": 19689.35,
+            "p99": 19689.35,
+            "max": 19689.35,
+            "mean": 18670.29
+          },
+          "active_ms": {
+            "count": 5,
+            "min": 1469.56,
+            "p50": 1996.47,
+            "p90": 5090.42,
+            "p95": 5090.42,
+            "p99": 5090.42,
+            "max": 5090.42,
+            "mean": 2721.41
+          },
+          "dns_ms": {
+            "count": 5,
+            "min": 7000.62,
+            "p50": 7000.77,
+            "p90": 7280.57,
+            "p95": 7280.57,
+            "p99": 7280.57,
+            "max": 7280.57,
+            "mean": 7056.91
+          },
+          "http_ms": {
+            "count": 5,
+            "min": 11197.65,
+            "p50": 11445.4,
+            "p90": 12688.44,
+            "p95": 12688.44,
+            "p99": 12688.44,
+            "max": 12688.44,
+            "mean": 11613.18
+          },
+          "scoring_ms": {
+            "count": 5,
+            "min": 0.17,
+            "p50": 0.19,
+            "p90": 0.25,
+            "p95": 0.25,
+            "p99": 0.25,
+            "max": 0.25,
+            "mean": 0.2
+          },
+          "dns_queries": 7,
+          "http_requests": 11,
+          "dangling_risk_observed": false,
+          "exposures_observed": 0,
+          "status": "ok"
+        },
+        "github.com": {
+          "domain": "github.com",
+          "samples": 5,
+          "ok_samples": 5,
+          "grades_observed": [
+            "A+"
+          ],
+          "grade_stable": true,
+          "scores_observed": [
+            100
+          ],
+          "wall_ms": {
+            "count": 5,
+            "min": 18653.81,
+            "p50": 18733.57,
+            "p90": 20400.74,
+            "p95": 20400.74,
+            "p99": 20400.74,
+            "max": 20400.74,
+            "mean": 19123.04
+          },
+          "active_ms": {
+            "count": 5,
+            "min": 3242.71,
+            "p50": 4062.97,
+            "p90": 5513.08,
+            "p95": 5513.08,
+            "p99": 5513.08,
+            "max": 5513.08,
+            "mean": 4139.91
+          },
+          "dns_ms": {
+            "count": 5,
+            "min": 7000.29,
+            "p50": 7000.49,
+            "p90": 7004.79,
+            "p95": 7004.79,
+            "p99": 7004.79,
+            "max": 7004.79,
+            "mean": 7001.34
+          },
+          "http_ms": {
+            "count": 5,
+            "min": 11653.01,
+            "p50": 11733.1,
+            "p90": 13395.84,
+            "p95": 13395.84,
+            "p99": 13395.84,
+            "max": 13395.84,
+            "mean": 12121.61
+          },
+          "scoring_ms": {
+            "count": 5,
+            "min": 0.06,
+            "p50": 0.06,
+            "p90": 0.11,
+            "p95": 0.11,
+            "p99": 0.11,
+            "max": 0.11,
+            "mean": 0.08
+          },
+          "dns_queries": 7,
+          "http_requests": 11,
+          "dangling_risk_observed": false,
+          "exposures_observed": 0,
+          "status": "ok"
+        },
+        "python.org": {
+          "domain": "python.org",
+          "samples": 5,
+          "ok_samples": 5,
+          "grades_observed": [
+            "A+"
+          ],
+          "grade_stable": true,
+          "scores_observed": [
+            100
+          ],
+          "wall_ms": {
+            "count": 5,
+            "min": 20266.3,
+            "p50": 20477.38,
+            "p90": 20566.17,
+            "p95": 20566.17,
+            "p99": 20566.17,
+            "max": 20566.17,
+            "mean": 20440.84
+          },
+          "active_ms": {
+            "count": 5,
+            "min": 4466.28,
+            "p50": 5672.41,
+            "p90": 6189.35,
+            "p95": 6189.35,
+            "p99": 6189.35,
+            "max": 6189.35,
+            "mean": 5464.1
+          },
+          "dns_ms": {
+            "count": 5,
+            "min": 7000.51,
+            "p50": 7000.85,
+            "p90": 7002.01,
+            "p95": 7002.01,
+            "p99": 7002.01,
+            "max": 7002.01,
+            "mean": 7001.0
+          },
+          "http_ms": {
+            "count": 5,
+            "min": 13265.65,
+            "p50": 13476.31,
+            "p90": 13565.31,
+            "p95": 13565.31,
+            "p99": 13565.31,
+            "max": 13565.31,
+            "mean": 13439.69
+          },
+          "scoring_ms": {
+            "count": 5,
+            "min": 0.13,
+            "p50": 0.15,
+            "p90": 0.17,
+            "p95": 0.17,
+            "p99": 0.17,
+            "max": 0.17,
+            "mean": 0.15
+          },
+          "dns_queries": 7,
+          "http_requests": 11,
+          "dangling_risk_observed": false,
+          "exposures_observed": 0,
+          "status": "ok"
+        },
+        "wikipedia.org": {
+          "domain": "wikipedia.org",
+          "samples": 5,
+          "ok_samples": 5,
+          "grades_observed": [
+            "A"
+          ],
+          "grade_stable": true,
+          "scores_observed": [
+            90
+          ],
+          "wall_ms": {
+            "count": 5,
+            "min": 18879.55,
+            "p50": 19019.87,
+            "p90": 19193.75,
+            "p95": 19193.75,
+            "p99": 19193.75,
+            "max": 19193.75,
+            "mean": 19037.05
+          },
+          "active_ms": {
+            "count": 5,
+            "min": 1941.68,
+            "p50": 2070.57,
+            "p90": 2395.57,
+            "p95": 2395.57,
+            "p99": 2395.57,
+            "max": 2395.57,
+            "mean": 2101.57
+          },
+          "dns_ms": {
+            "count": 5,
+            "min": 7434.73,
+            "p50": 7522.96,
+            "p90": 7734.34,
+            "p95": 7734.34,
+            "p99": 7734.34,
+            "max": 7734.34,
+            "mean": 7560.11
+          },
+          "http_ms": {
+            "count": 5,
+            "min": 11382.42,
+            "p50": 11433.97,
+            "p90": 11722.28,
+            "p95": 11722.28,
+            "p99": 11722.28,
+            "max": 11722.28,
+            "mean": 11476.73
+          },
+          "scoring_ms": {
+            "count": 5,
+            "min": 0.18,
+            "p50": 0.19,
+            "p90": 0.26,
+            "p95": 0.26,
+            "p99": 0.26,
+            "max": 0.26,
+            "mean": 0.2
+          },
+          "dns_queries": 7,
+          "http_requests": 11,
+          "dangling_risk_observed": false,
+          "exposures_observed": 0,
+          "status": "ok"
+        },
+        "mozilla.org": {
+          "domain": "mozilla.org",
+          "samples": 5,
+          "ok_samples": 5,
+          "grades_observed": [
+            "A+"
+          ],
+          "grade_stable": true,
+          "scores_observed": [
+            100
+          ],
+          "wall_ms": {
+            "count": 5,
+            "min": 19646.8,
+            "p50": 19685.35,
+            "p90": 19797.28,
+            "p95": 19797.28,
+            "p99": 19797.28,
+            "max": 19797.28,
+            "mean": 19695.12
+          },
+          "active_ms": {
+            "count": 5,
+            "min": 3787.82,
+            "p50": 4380.63,
+            "p90": 5907.13,
+            "p95": 5907.13,
+            "p99": 5907.13,
+            "max": 5907.13,
+            "mean": 4584.58
+          },
+          "dns_ms": {
+            "count": 5,
+            "min": 7000.48,
+            "p50": 7000.52,
+            "p90": 7003.48,
+            "p95": 7003.48,
+            "p99": 7003.48,
+            "max": 7003.48,
+            "mean": 7001.16
+          },
+          "http_ms": {
+            "count": 5,
+            "min": 12646.26,
+            "p50": 12681.79,
+            "p90": 12796.4,
+            "p95": 12796.4,
+            "p99": 12796.4,
+            "max": 12796.4,
+            "mean": 12693.89
+          },
+          "scoring_ms": {
+            "count": 5,
+            "min": 0.04,
+            "p50": 0.06,
+            "p90": 0.08,
+            "p95": 0.08,
+            "p99": 0.08,
+            "max": 0.08,
+            "mean": 0.06
+          },
+          "dns_queries": 7,
+          "http_requests": 11,
+          "dangling_risk_observed": false,
+          "exposures_observed": 0,
+          "status": "ok"
+        }
+      },
+      "samples": [
+        {
+          "domain": "example.com",
+          "wall_ms": 18510.65,
+          "active_ms": 1947.01,
+          "dns_ms": 7001.87,
+          "http_ms": 11508.53,
+          "scoring_ms": 0.25,
+          "throttle_sleep_ms": 16563.64,
+          "dns_queries": 7,
+          "os_dns_lookups": 3,
+          "http_requests": 11,
+          "score": 90,
+          "grade": "A",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 1,
+            "caa_records": 0
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 0,
+            "missing_headers": 7,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": true,
+            "error": null
+          },
+          "repeat": 1
+        },
+        {
+          "domain": "github.com",
+          "wall_ms": 20400.74,
+          "active_ms": 5513.08,
+          "dns_ms": 7004.79,
+          "http_ms": 13395.84,
+          "scoring_ms": 0.11,
+          "throttle_sleep_ms": 14887.66,
+          "dns_queries": 7,
+          "os_dns_lookups": 3,
+          "http_requests": 11,
+          "score": 100,
+          "grade": "A+",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 1,
+            "caa_records": 7
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 5,
+            "missing_headers": 2,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 1
+        },
+        {
+          "domain": "python.org",
+          "wall_ms": 20531.12,
+          "active_ms": 5692.71,
+          "dns_ms": 7002.01,
+          "http_ms": 13528.93,
+          "scoring_ms": 0.17,
+          "throttle_sleep_ms": 14838.41,
+          "dns_queries": 7,
+          "os_dns_lookups": 14,
+          "http_requests": 11,
+          "score": 100,
+          "grade": "A+",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 1,
+            "caa_records": 0
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 2,
+            "missing_headers": 5,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 1
+        },
+        {
+          "domain": "wikipedia.org",
+          "wall_ms": 19193.75,
+          "active_ms": 2395.57,
+          "dns_ms": 7471.28,
+          "http_ms": 11722.28,
+          "scoring_ms": 0.19,
+          "throttle_sleep_ms": 16798.18,
+          "dns_queries": 7,
+          "os_dns_lookups": 3,
+          "http_requests": 11,
+          "score": 90,
+          "grade": "A",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 2,
+            "caa_records": 3
+          },
+          "web": {
+            "status_code": 403,
+            "headers_found": 0,
+            "missing_headers": 7,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 1
+        },
+        {
+          "domain": "mozilla.org",
+          "wall_ms": 19685.35,
+          "active_ms": 4183.51,
+          "dns_ms": 7003.48,
+          "http_ms": 12681.79,
+          "scoring_ms": 0.08,
+          "throttle_sleep_ms": 15501.84,
+          "dns_queries": 7,
+          "os_dns_lookups": 4,
+          "http_requests": 11,
+          "score": 100,
+          "grade": "A+",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 4,
+            "caa_records": 11
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 6,
+            "missing_headers": 1,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 1
+        },
+        {
+          "domain": "example.com",
+          "wall_ms": 18478.39,
+          "active_ms": 3103.6,
+          "dns_ms": 7280.57,
+          "http_ms": 11197.65,
+          "scoring_ms": 0.17,
+          "throttle_sleep_ms": 15374.79,
+          "dns_queries": 7,
+          "os_dns_lookups": 3,
+          "http_requests": 11,
+          "score": 90,
+          "grade": "A",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 1,
+            "caa_records": 0
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 0,
+            "missing_headers": 7,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": true,
+            "error": null
+          },
+          "repeat": 2
+        },
+        {
+          "domain": "github.com",
+          "wall_ms": 19108.79,
+          "active_ms": 4062.97,
+          "dns_ms": 7000.29,
+          "http_ms": 12108.44,
+          "scoring_ms": 0.06,
+          "throttle_sleep_ms": 15045.82,
+          "dns_queries": 7,
+          "os_dns_lookups": 3,
+          "http_requests": 11,
+          "score": 100,
+          "grade": "A+",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 1,
+            "caa_records": 7
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 5,
+            "missing_headers": 2,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 2
+        },
+        {
+          "domain": "python.org",
+          "wall_ms": 20566.17,
+          "active_ms": 5299.73,
+          "dns_ms": 7000.72,
+          "http_ms": 13565.31,
+          "scoring_ms": 0.15,
+          "throttle_sleep_ms": 15266.44,
+          "dns_queries": 7,
+          "os_dns_lookups": 14,
+          "http_requests": 11,
+          "score": 100,
+          "grade": "A+",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 1,
+            "caa_records": 0
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 2,
+            "missing_headers": 5,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 2
+        },
+        {
+          "domain": "wikipedia.org",
+          "wall_ms": 18879.55,
+          "active_ms": 2070.57,
+          "dns_ms": 7434.73,
+          "http_ms": 11444.62,
+          "scoring_ms": 0.2,
+          "throttle_sleep_ms": 16808.98,
+          "dns_queries": 7,
+          "os_dns_lookups": 3,
+          "http_requests": 11,
+          "score": 90,
+          "grade": "A",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 2,
+            "caa_records": 3
+          },
+          "web": {
+            "status_code": 403,
+            "headers_found": 0,
+            "missing_headers": 7,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 2
+        },
+        {
+          "domain": "mozilla.org",
+          "wall_ms": 19695.69,
+          "active_ms": 4380.63,
+          "dns_ms": 7000.52,
+          "http_ms": 12695.12,
+          "scoring_ms": 0.04,
+          "throttle_sleep_ms": 15315.06,
+          "dns_queries": 7,
+          "os_dns_lookups": 4,
+          "http_requests": 11,
+          "score": 100,
+          "grade": "A+",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 4,
+            "caa_records": 11
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 6,
+            "missing_headers": 1,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 2
+        },
+        {
+          "domain": "example.com",
+          "wall_ms": 19689.35,
+          "active_ms": 5090.42,
+          "dns_ms": 7000.72,
+          "http_ms": 12688.44,
+          "scoring_ms": 0.19,
+          "throttle_sleep_ms": 14598.93,
+          "dns_queries": 7,
+          "os_dns_lookups": 3,
+          "http_requests": 11,
+          "score": 90,
+          "grade": "A",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 1,
+            "caa_records": 0
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 0,
+            "missing_headers": 7,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": true,
+            "error": null
+          },
+          "repeat": 3
+        },
+        {
+          "domain": "github.com",
+          "wall_ms": 18718.27,
+          "active_ms": 3242.71,
+          "dns_ms": 7000.49,
+          "http_ms": 11717.68,
+          "scoring_ms": 0.1,
+          "throttle_sleep_ms": 15475.57,
+          "dns_queries": 7,
+          "os_dns_lookups": 3,
+          "http_requests": 11,
+          "score": 100,
+          "grade": "A+",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 1,
+            "caa_records": 7
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 5,
+            "missing_headers": 2,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 3
+        },
+        {
+          "domain": "python.org",
+          "wall_ms": 20477.38,
+          "active_ms": 6189.35,
+          "dns_ms": 7000.93,
+          "http_ms": 13476.31,
+          "scoring_ms": 0.14,
+          "throttle_sleep_ms": 14288.04,
+          "dns_queries": 7,
+          "os_dns_lookups": 14,
+          "http_requests": 11,
+          "score": 100,
+          "grade": "A+",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 1,
+            "caa_records": 0
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 2,
+            "missing_headers": 5,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 3
+        },
+        {
+          "domain": "wikipedia.org",
+          "wall_ms": 18957.11,
+          "active_ms": 1941.68,
+          "dns_ms": 7522.96,
+          "http_ms": 11433.97,
+          "scoring_ms": 0.18,
+          "throttle_sleep_ms": 17015.43,
+          "dns_queries": 7,
+          "os_dns_lookups": 3,
+          "http_requests": 11,
+          "score": 90,
+          "grade": "A",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 2,
+            "caa_records": 3
+          },
+          "web": {
+            "status_code": 403,
+            "headers_found": 0,
+            "missing_headers": 7,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 3
+        },
+        {
+          "domain": "mozilla.org",
+          "wall_ms": 19646.8,
+          "active_ms": 4663.81,
+          "dns_ms": 7000.48,
+          "http_ms": 12646.26,
+          "scoring_ms": 0.06,
+          "throttle_sleep_ms": 14982.99,
+          "dns_queries": 7,
+          "os_dns_lookups": 4,
+          "http_requests": 11,
+          "score": 100,
+          "grade": "A+",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 4,
+            "caa_records": 11
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 6,
+            "missing_headers": 1,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 3
+        },
+        {
+          "domain": "example.com",
+          "wall_ms": 18226.83,
+          "active_ms": 1469.56,
+          "dns_ms": 7000.77,
+          "http_ms": 11225.88,
+          "scoring_ms": 0.18,
+          "throttle_sleep_ms": 16757.27,
+          "dns_queries": 7,
+          "os_dns_lookups": 3,
+          "http_requests": 11,
+          "score": 90,
+          "grade": "A",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 1,
+            "caa_records": 0
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 0,
+            "missing_headers": 7,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": true,
+            "error": null
+          },
+          "repeat": 4
+        },
+        {
+          "domain": "github.com",
+          "wall_ms": 18653.81,
+          "active_ms": 4086.62,
+          "dns_ms": 7000.73,
+          "http_ms": 11653.01,
+          "scoring_ms": 0.06,
+          "throttle_sleep_ms": 14567.19,
+          "dns_queries": 7,
+          "os_dns_lookups": 3,
+          "http_requests": 11,
+          "score": 100,
+          "grade": "A+",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 1,
+            "caa_records": 7
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 5,
+            "missing_headers": 2,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 4
+        },
+        {
+          "domain": "python.org",
+          "wall_ms": 20266.3,
+          "active_ms": 4466.28,
+          "dns_ms": 7000.51,
+          "http_ms": 13265.65,
+          "scoring_ms": 0.15,
+          "throttle_sleep_ms": 15800.02,
+          "dns_queries": 7,
+          "os_dns_lookups": 14,
+          "http_requests": 11,
+          "score": 100,
+          "grade": "A+",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 1,
+            "caa_records": 0
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 2,
+            "missing_headers": 5,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 4
+        },
+        {
+          "domain": "wikipedia.org",
+          "wall_ms": 19134.95,
+          "active_ms": 2131.63,
+          "dns_ms": 7734.34,
+          "http_ms": 11400.36,
+          "scoring_ms": 0.26,
+          "throttle_sleep_ms": 17003.32,
+          "dns_queries": 7,
+          "os_dns_lookups": 3,
+          "http_requests": 11,
+          "score": 90,
+          "grade": "A",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 2,
+            "caa_records": 3
+          },
+          "web": {
+            "status_code": 403,
+            "headers_found": 0,
+            "missing_headers": 7,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 4
+        },
+        {
+          "domain": "mozilla.org",
+          "wall_ms": 19797.28,
+          "active_ms": 5907.13,
+          "dns_ms": 7000.8,
+          "http_ms": 12796.4,
+          "scoring_ms": 0.07,
+          "throttle_sleep_ms": 13890.15,
+          "dns_queries": 7,
+          "os_dns_lookups": 4,
+          "http_requests": 11,
+          "score": 100,
+          "grade": "A+",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 4,
+            "caa_records": 11
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 6,
+            "missing_headers": 1,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 4
+        },
+        {
+          "domain": "example.com",
+          "wall_ms": 18446.24,
+          "active_ms": 1996.47,
+          "dns_ms": 7000.62,
+          "http_ms": 11445.4,
+          "scoring_ms": 0.22,
+          "throttle_sleep_ms": 16449.76,
+          "dns_queries": 7,
+          "os_dns_lookups": 3,
+          "http_requests": 11,
+          "score": 90,
+          "grade": "A",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 1,
+            "caa_records": 0
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 0,
+            "missing_headers": 7,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": true,
+            "error": null
+          },
+          "repeat": 5
+        },
+        {
+          "domain": "github.com",
+          "wall_ms": 18733.57,
+          "active_ms": 3794.15,
+          "dns_ms": 7000.42,
+          "http_ms": 11733.1,
+          "scoring_ms": 0.06,
+          "throttle_sleep_ms": 14939.43,
+          "dns_queries": 7,
+          "os_dns_lookups": 3,
+          "http_requests": 11,
+          "score": 100,
+          "grade": "A+",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 1,
+            "caa_records": 7
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 5,
+            "missing_headers": 2,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 5
+        },
+        {
+          "domain": "python.org",
+          "wall_ms": 20363.23,
+          "active_ms": 5672.41,
+          "dns_ms": 7000.85,
+          "http_ms": 13362.24,
+          "scoring_ms": 0.13,
+          "throttle_sleep_ms": 14690.81,
+          "dns_queries": 7,
+          "os_dns_lookups": 14,
+          "http_requests": 11,
+          "score": 100,
+          "grade": "A+",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 1,
+            "caa_records": 0
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 2,
+            "missing_headers": 5,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 5
+        },
+        {
+          "domain": "wikipedia.org",
+          "wall_ms": 19019.87,
+          "active_ms": 1968.42,
+          "dns_ms": 7637.26,
+          "http_ms": 11382.42,
+          "scoring_ms": 0.19,
+          "throttle_sleep_ms": 17051.45,
+          "dns_queries": 7,
+          "os_dns_lookups": 3,
+          "http_requests": 11,
+          "score": 90,
+          "grade": "A",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 2,
+            "caa_records": 3
+          },
+          "web": {
+            "status_code": 403,
+            "headers_found": 0,
+            "missing_headers": 7,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 5
+        },
+        {
+          "domain": "mozilla.org",
+          "wall_ms": 19650.46,
+          "active_ms": 3787.82,
+          "dns_ms": 7000.52,
+          "http_ms": 12649.88,
+          "scoring_ms": 0.06,
+          "throttle_sleep_ms": 15862.64,
+          "dns_queries": 7,
+          "os_dns_lookups": 4,
+          "http_requests": 11,
+          "score": 100,
+          "grade": "A+",
+          "status": "ok",
+          "issues": [],
+          "dns": {
+            "cname": null,
+            "matched_service": null,
+            "dangling_risk": false,
+            "dmarc_present": true,
+            "mx_records": 4,
+            "caa_records": 11
+          },
+          "web": {
+            "status_code": 200,
+            "headers_found": 6,
+            "missing_headers": 1,
+            "exposures": 0,
+            "static_host_guard_applied": false,
+            "reserved_domain_guard_applied": false,
+            "error": null
+          },
+          "repeat": 5
+        }
+      ],
+      "throttle": {
+        "http": {
+          "min_interval_s": 1.0,
+          "requests_through_limiter": 275,
+          "throttle_sleep_events": 210,
+          "throttle_sleep_total_s": 150.583
+        },
+        "dns": {
+          "min_interval_s": 1.0,
+          "requests_through_limiter": 310,
+          "throttle_sleep_events": 290,
+          "throttle_sleep_total_s": 239.191
+        }
+      }
+    },
+    "signature_coverage": {
+      "status": "measured",
+      "source_module": "orbit_security.signatures.SAAS_TAKEOVER_SIGNATURES",
+      "provider_signatures": 52,
+      "fingerprint_entries": 80,
+      "distinct_provider_fingerprints": 76,
+      "cname_pattern_entries": 69,
+      "distinct_dangling_hostname_classes": 69,
+      "providers_using_nxdomain_verification": 3,
+      "providers_with_remediation_guidance": 52,
+      "note": "A provider is only reported as a takeover when its CNAME pattern matches AND the provider fingerprint (or NXDOMAIN) is confirmed. The fingerprint count is therefore the number of distinct provider-specific 'this resource is unclaimed' responses Orbit knows how to recognise.",
+      "providers": [
+        "Unbounce",
+        "GitHub Pages",
+        "AWS S3",
+        "AWS CloudFront",
+        "AWS Elastic Beanstalk",
+        "Heroku",
+        "Shopify",
+        "Webflow",
+        "Zendesk",
+        "Pantheon",
+        "Netlify",
+        "Surge.sh",
+        "Fly.io",
+        "HubSpot",
+        "Ghost",
+        "Readme.io",
+        "UserVoice",
+        "WordPress.com",
+        "Bitbucket",
+        "Microsoft Azure",
+        "Fastly",
+        "Agile CRM",
+        "Anima",
+        "Campaign Monitor",
+        "Cargo Collective",
+        "Discourse",
+        "Gemfury",
+        "GetResponse",
+        "HatenaBlog",
+        "Help Juice",
+        "Help Scout",
+        "Intercom",
+        "JetBrains",
+        "Kinsta",
+        "LaunchRock",
+        "Leadpages",
+        "Ngrok",
+        "SmartJobBoard",
+        "Strikingly",
+        "SurveySparrow",
+        "Uberflip",
+        "UptimeRobot",
+        "Wishpond",
+        "Wufoo",
+        "Worksites",
+        "Vercel",
+        "Supabase",
+        "Render",
+        "Cloudflare Pages",
+        "Firebase Hosting",
+        "BigCommerce",
+        "Notion"
+      ]
+    },
+    "false_positive_guards": {
+      "status": "measured",
+      "static_host_suffixes_guarded": 13,
+      "static_host_suffixes": [
+        ".github.io",
+        ".pages.dev",
+        ".vercel.app",
+        ".netlify.app",
+        ".gitlab.io",
+        ".azurewebsites.net",
+        ".render.com",
+        ".onrender.com",
+        ".fly.dev",
+        ".webflow.io",
+        ".surge.sh",
+        ".firebaseapp.com",
+        ".web.app"
+      ],
+      "static_host_guard_extra_exact_hosts": [
+        "github.io"
+      ],
+      "parked_page_fingerprints": 8,
+      "rfc2606_reserved_domains": 6,
+      "rfc2606_reserved_tlds": 4,
+      "guard_self_test": {
+        "cases": 21,
+        "passed": 21,
+        "failed": 0,
+        "all_passed": true,
+        "details": [
+          {
+            "guard": "static_hosting_domain",
+            "case": "project.github.io",
+            "expected": true,
+            "actual": true,
+            "pass": true
+          },
+          {
+            "guard": "static_hosting_domain",
+            "case": "site.pages.dev",
+            "expected": true,
+            "actual": true,
+            "pass": true
+          },
+          {
+            "guard": "static_hosting_domain",
+            "case": "app.vercel.app",
+            "expected": true,
+            "actual": true,
+            "pass": true
+          },
+          {
+            "guard": "static_hosting_domain",
+            "case": "site.netlify.app",
+            "expected": true,
+            "actual": true,
+            "pass": true
+          },
+          {
+            "guard": "static_hosting_domain",
+            "case": "site.webflow.io",
+            "expected": true,
+            "actual": true,
+            "pass": true
+          },
+          {
+            "guard": "static_hosting_domain",
+            "case": "site.surge.sh",
+            "expected": true,
+            "actual": true,
+            "pass": true
+          },
+          {
+            "guard": "static_hosting_domain",
+            "case": "app.firebaseapp.com",
+            "expected": true,
+            "actual": true,
+            "pass": true
+          },
+          {
+            "guard": "static_hosting_domain",
+            "case": "site.web.app",
+            "expected": true,
+            "actual": true,
+            "pass": true
+          },
+          {
+            "guard": "static_hosting_domain",
+            "case": "repo.gitlab.io",
+            "expected": true,
+            "actual": true,
+            "pass": true
+          },
+          {
+            "guard": "static_hosting_domain",
+            "case": "example.com",
+            "expected": false,
+            "actual": false,
+            "pass": true
+          },
+          {
+            "guard": "static_hosting_domain",
+            "case": "notgithub.io.example.com",
+            "expected": false,
+            "actual": false,
+            "pass": true
+          },
+          {
+            "guard": "static_hosting_domain",
+            "case": "gitlab.io",
+            "expected": false,
+            "actual": false,
+            "pass": true
+          },
+          {
+            "guard": "missing_header_severity",
+            "case": "Strict-Transport-Security @ client-agency.com",
+            "expected": "MEDIUM",
+            "actual": "MEDIUM",
+            "pass": true
+          },
+          {
+            "guard": "missing_header_severity",
+            "case": "Strict-Transport-Security @ client.github.io",
+            "expected": "INFO",
+            "actual": "INFO",
+            "pass": true
+          },
+          {
+            "guard": "missing_header_severity",
+            "case": "Content-Security-Policy @ client-agency.com",
+            "expected": "INFO",
+            "actual": "INFO",
+            "pass": true
+          },
+          {
+            "guard": "missing_header_severity",
+            "case": "X-Frame-Options @ client-agency.com",
+            "expected": "INFO",
+            "actual": "INFO",
+            "pass": true
+          },
+          {
+            "guard": "reserved_domain_rfc2606",
+            "case": "example.com",
+            "expected": true,
+            "actual": true,
+            "pass": true
+          },
+          {
+            "guard": "reserved_domain_rfc2606",
+            "case": "example.org",
+            "expected": true,
+            "actual": true,
+            "pass": true
+          },
+          {
+            "guard": "reserved_domain_rfc2606",
+            "case": "client.test",
+            "expected": true,
+            "actual": true,
+            "pass": true
+          },
+          {
+            "guard": "reserved_domain_rfc2606",
+            "case": "client.invalid",
+            "expected": true,
+            "actual": true,
+            "pass": true
+          },
+          {
+            "guard": "reserved_domain_rfc2606",
+            "case": "client-agency.com",
+            "expected": false,
+            "actual": false,
+            "pass": true
+          }
+        ]
+      },
+      "static_guard_applied_to_measured_domains": []
+    },
+    "scoring_stability": {
+      "status": "measured",
+      "source": "data/generated_audits",
+      "audits_parsed": 52,
+      "findings_parsed": 514,
+      "findings_by_severity": {
+        "CRITICAL": 21,
+        "HIGH": 7,
+        "MEDIUM": 30,
+        "LOW": 296,
+        "INFO": 160
+      },
+      "findings_scored_as_risk": 67,
+      "findings_reported_as_hygiene": 447,
+      "audits_with_critical_or_high": 8,
+      "audits_without_critical_or_high": 44,
+      "scoring_engine": "orbit_security.scoring.score_findings",
+      "grade_distribution": {
+        "A+": 22,
+        "A": 12,
+        "B": 11,
+        "C": 2,
+        "D": 2,
+        "F": 3
+      },
+      "legacy_grade_distribution": {
+        "A+": 1,
+        "B": 16,
+        "C": 17,
+        "D": 8,
+        "F": 10
+      },
+      "audits_whose_grade_changed": 47,
+      "failing_before_d_or_f": 18,
+      "failing_after_d_or_f": 5,
+      "rescued_from_d_or_f": 13,
+      "newly_failing": 0,
+      "exploitability_floor_applied": 0,
+      "mean_score_delta": 28.06,
+      "min_score_delta": 0,
+      "max_score_delta": 50,
+      "parser_fidelity_mismatches": [],
+      "parser_fidelity_ok": true,
+      "parser_fidelity_note": "The legacy flat-penalty model is replayed against every audit and compared with the score printed in the delivered document. A mismatch would mean the parser no longer understands the deliverable format."
+    }
+  }
+}
