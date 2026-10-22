@@ -59,10 +59,21 @@
                 grid-template-columns: repeat(3, minmax(0, 1fr));
             }
         }
+        .form-grid2 {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        @media (min-width: 640px) {
+            .form-grid2 {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+        }
+        .col-full { grid-column: 1 / -1 !important; }
         .tier-tile {
             border: 1px solid #1e293b;
             border-radius: 12px;
-            padding: 16px 12px;
+            padding: 22px 14px 16px 14px;
             cursor: pointer;
             background: #090e17;
             transition: all 0.2s ease;
@@ -91,7 +102,7 @@
                     </svg>
                 </div>
                 <div>
-                    <span class="text-lg sm:text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent font-pixel">Orbit Security</span>
+                    <span class="text-lg sm:text-xl font-bold tracking-tight text-white font-pixel" style="color:#ffffff;">Orbit Security</span>
                     <span class="text-[9px] block text-emerald-400 font-arcade uppercase">ONBOARDING // 16-BIT B2B</span>
                 </div>
             </a>
@@ -127,7 +138,7 @@
         <!-- Signup Form Container -->
         <div class="card-glass p-6 sm:p-8 rounded-2xl border border-slate-800">
             <form id="signupForm" action="/create-checkout-session" method="POST">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
+                <div class="form-grid2 mb-6">
                     <div class="flex flex-col gap-1.5">
                         <label for="agency_id" class="text-xs font-mono font-bold uppercase text-slate-400">Agency Slug / ID</label>
                         <input id="agency_id" name="agency_id" type="text" placeholder="eastside-co" required value="eastside-co"
@@ -142,20 +153,20 @@
                         <span class="text-[11px] text-slate-500 font-mono">Appears on client audit PDFs</span>
                     </div>
 
-                    <div class="flex flex-col gap-1.5 sm:col-span-2">
+                    <div class="flex flex-col gap-1.5 sm:col-span-2 col-full">
                         <label for="contact_email" class="text-xs font-mono font-bold uppercase text-slate-400">Billing &amp; Contact Email</label>
                         <input id="contact_email" name="contact_email" type="email" placeholder="ops@agency.com" required value="ops@eastsideco.com"
                                class="w-full min-h-[48px] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-sans">
                     </div>
 
-                    <div class="flex flex-col gap-1.5 sm:col-span-2">
+                    <div class="flex flex-col gap-1.5 sm:col-span-2 col-full">
                         <label for="website" class="text-xs font-mono font-bold uppercase text-slate-400">Agency Website</label>
                         <input id="website" name="website" type="url" placeholder="https://eastsideco.com" required value="https://eastsideco.com"
                                class="w-full min-h-[48px] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-sans">
                     </div>
 
                     <!-- Retainer Tier Select Grid -->
-                    <div class="flex flex-col gap-2 sm:col-span-2 pt-2">
+                    <div class="flex flex-col gap-2 sm:col-span-2 col-full pt-2">
                         <label class="text-xs font-mono font-bold uppercase text-slate-300">Select Retainer Tier</label>
                         <div class="tier-grid">
                             <!-- Starter Tier ($29/mo) -->
@@ -201,7 +212,7 @@
                                class="w-full min-h-[48px] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-sans">
                     </div>
 
-                    <div class="flex flex-col gap-1.5 sm:col-span-2">
+                    <div class="flex flex-col gap-1.5 sm:col-span-2 col-full">
                         <label for="tagline" class="text-xs font-mono font-bold uppercase text-slate-400">Agency Tagline / Subtitle</label>
                         <input id="tagline" name="tagline" type="text" placeholder="Enterprise Shopify Plus Technical Solutions" value="Enterprise Shopify Plus Technical Solutions"
                                class="w-full min-h-[48px] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-sans">
