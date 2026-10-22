@@ -165,6 +165,39 @@ def test_window_discovery_not_found():
     assert "No authenticated X Chrome window found" in reason
 
 
+def test_window_discovery_ignores_our_own_website_window():
+    """A Chrome tab showing the Orbit Security site must never be treated as X.
+
+    The marketing site is literally titled "Orbit Security | ... - Google
+    Chrome". When that tab was in the pattern list, find_x_window() happily
+    returned it, and the posting automation would have driven the wrong tab.
+    """
+    site_only = [
+        {
+            "hwnd": 7,
+            "title": "Orbit Security | Attack Surface & Subdomain Hygiene for Web Agencies - Google Chrome",
+            "process": "chrome.exe",
+        },
+    ]
+    mock_engine = MockAutomationEngine(windows=site_only)
+    driver = DesktopAutomationDriver(automation_module=mock_engine)
+    assert driver.find_x_window() is None
+
+    # ... but the real X tab still wins when both are open.
+    mixed = site_only + [
+        {
+            "hwnd": 8,
+            "title": "Carson Haynes Orbit Security (@_arsoncode) / X - Google Chrome",
+            "process": "chrome.exe",
+        },
+    ]
+    mock_engine = MockAutomationEngine(windows=mixed)
+    driver = DesktopAutomationDriver(automation_module=mock_engine)
+    win = driver.find_x_window()
+    assert win is not None
+    assert win["hwnd"] == 8
+
+
 def test_live_window_discovery():
     """Empirical test against the host system's real windows."""
     driver = DesktopAutomationDriver()

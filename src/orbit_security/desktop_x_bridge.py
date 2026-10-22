@@ -64,7 +64,6 @@ class DesktopDriverConfig:
         default_factory=lambda: [
             "Carson Haynes",
             "@_arsoncode",
-            "Orbit Security",
             "Twitter",
             " / X - Google Chrome",
             "/ X",
