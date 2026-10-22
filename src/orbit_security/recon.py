@@ -33,6 +33,17 @@ except ImportError:
 from orbit_security.scanner import is_safe_host
 from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES
 from orbit_security.remediation import DnsRemediationGenerator
+from orbit_security.scoring import (
+    MISSING_HEADER_TITLES,
+    TAKEOVER_CLASS_KEY,
+    TAKEOVER_TITLE,
+    ScoreItem,
+    Severity,
+    exposure_severity,
+    is_static_hosting_domain,
+    missing_header_severity,
+    score_findings,
+)
 
 CYAN = "\033[96m"
 GREEN = "\033[92m"
@@ -128,7 +139,7 @@ def resolve_dns(domain: str) -> Dict[str, Any]:
         labels = domain.split(".")
         is_sub = len(labels) > 2
         org_domain = ".".join(labels[-2:]) if is_sub else domain
-        is_static = any(domain.endswith(s) for s in [".github.io", ".pages.dev", ".vercel.app", ".netlify.app", ".gitlab.io"])
+        is_static = is_static_hosting_domain(domain)
 
         if not res.get("dmarc_record") and is_sub:
             try:
@@ -258,21 +269,74 @@ def check_headers_and_exposures(domain: str) -> Dict[str, Any]:
     return report
 
 
-def calculate_score(dns_data: Dict[str, Any], web_data: Dict[str, Any], domain: str = "") -> int:
-    score = 100
+def build_score_items(
+    dns_data: Dict[str, Any], web_data: Dict[str, Any], domain: str = ""
+) -> List[ScoreItem]:
+    """Translate a raw recon posture into the shared scoring vocabulary.
+
+    The Recon CLI and the audit deliverable must agree, so the same titles,
+    severities and class keys that `orbit_security.scanner` produces are used
+    here (see `orbit_security.scoring`).
+    """
+    items: List[ScoreItem] = []
+
+    # Dangling CNAME / subdomain takeover -> CRITICAL, one shared class so
+    # dozens of dangling hosts cannot compound into a false "F".
     if dns_data.get("dangling_risk"):
-        score -= 40
-    if web_data.get("exposures"):
-        score -= 30 * len(web_data["exposures"])
+        items.append(
+            ScoreItem(
+                title=TAKEOVER_TITLE,
+                severity=Severity.CRITICAL,
+                category="Subdomain & DNS",
+                class_key=TAKEOVER_CLASS_KEY,
+            )
+        )
 
-    is_static = any(domain.endswith(s) for s in [".github.io", ".pages.dev", ".vercel.app", ".netlify.app", ".gitlab.io"])
-    missing_count = len(web_data.get("missing_headers", []))
-    if is_static:
-        score -= min(missing_count * 1, 5)
-    else:
-        score -= missing_count * 8
+    # Publicly reachable secret files keep their true severity.
+    for exposure in web_data.get("exposures") or []:
+        path = str(exposure.get("path", "")) if isinstance(exposure, dict) else str(exposure)
+        items.append(
+            ScoreItem(
+                title=f"Exposed Sensitive Asset ({path})",
+                severity=exposure_severity(path),
+                category="Exposed Assets",
+                class_key=f"exposed-asset:{path}",
+            )
+        )
 
-    return max(0, min(100, score))
+    # Missing HTTP security headers: only a missing HSTS is a scored risk
+    # (MEDIUM); every other header is a best-practice hygiene item (INFO).
+    for header in web_data.get("missing_headers") or []:
+        name = str(header.get("header", "")) if isinstance(header, dict) else str(header)
+        items.append(
+            ScoreItem(
+                title=MISSING_HEADER_TITLES.get(name, f"Missing {name} Header"),
+                severity=missing_header_severity(name, domain),
+                category="Application Security",
+            )
+        )
+
+    return items
+
+
+def calculate_score(dns_data: Dict[str, Any], web_data: Dict[str, Any], domain: str = "") -> int:
+    """Score a raw recon posture with the shared exploitability model.
+
+    Scoring rules live in `orbit_security.scoring` and are identical to the
+    ones used by `DomainAuditResult.calculate_grade_and_score()`:
+
+    * a dangling CNAME is CRITICAL, exposed secrets keep their real severity;
+    * missing best-practice headers (CSP, X-Frame-Options, ...) are hygiene
+      and never cost score - only a missing HSTS does (MEDIUM);
+    * repeats of the same finding class are discounted and capped;
+    * zero CRITICAL and zero HIGH findings never scores below 60 (grade C).
+    """
+    return score_findings(build_score_items(dns_data, web_data, domain=domain)).score
+
+
+def calculate_grade(dns_data: Dict[str, Any], web_data: Dict[str, Any], domain: str = "") -> str:
+    """Grade letter for a raw recon posture (same ladder as the deliverable)."""
+    return score_findings(build_score_items(dns_data, web_data, domain=domain)).grade
 
 
 def build_remediation_plan(domain: str, dns_res: Dict[str, Any], web_res: Dict[str, Any]) -> Dict[str, Any]:
@@ -353,10 +417,12 @@ def run_recon(target: str, json_output: bool = False, remediate: bool = False) -
     dns_res = resolve_dns(domain)
     web_res = check_headers_and_exposures(domain)
     score = calculate_score(dns_res, web_res, domain=domain)
+    grade = calculate_grade(dns_res, web_res, domain=domain)
 
     results = {
         "target": domain,
         "score": score,
+        "grade": grade,
         "dns": dns_res,
         "perimeter": web_res,
     }
@@ -372,7 +438,10 @@ def run_recon(target: str, json_output: bool = False, remediate: bool = False) -
     print(f"{BOLD}Target:{RESET} {domain}")
 
     score_color = GREEN if score >= 85 else (YELLOW if score >= 60 else RED)
-    print(f"{BOLD}Hygiene Score:{RESET} {score_color}{score}/100{RESET}\n")
+    print(
+        f"{BOLD}Hygiene Score:{RESET} {score_color}{score}/100{RESET} "
+        f"{BOLD}Grade:{RESET} {score_color}{grade}{RESET}\n"
+    )
 
     print(f"{CYAN}{BOLD}--- [1] DNS & Perimeter Routing ---{RESET}")
     print(f"  A Records   : {', '.join(dns_res['a_records']) or 'None detected'}")
@@ -392,7 +461,7 @@ def run_recon(target: str, json_output: bool = False, remediate: bool = False) -
     else:
         print(f"  CAA Policy  : {YELLOW}[WARN]{RESET} Missing DNS CAA record (RFC 8659)")
 
-    is_static = any(domain.endswith(s) for s in [".github.io", ".pages.dev", ".vercel.app", ".netlify.app", ".gitlab.io"])
+    is_static = is_static_hosting_domain(domain)
     print(f"\n{CYAN}{BOLD}--- [2] Email & Phishing Defense ---{RESET}")
     dmarc_str = f"{GREEN}[PASS]{RESET} {dns_res['dmarc_record'][:35]}..." if dns_res.get("dmarc_record") else f"{RED}[FAIL]{RESET} Missing DMARC"
     bimi_str = (
@@ -475,6 +544,7 @@ def run_bulk_recon(
         dns_res = resolve_dns(domain)
         web_res = check_headers_and_exposures(domain)
         score = calculate_score(dns_res, web_res, domain=domain)
+        grade = calculate_grade(dns_res, web_res, domain=domain)
 
         has_takeover = bool(dns_res.get("dangling_risk"))
         has_exposure = bool(web_res.get("exposures"))
@@ -484,6 +554,7 @@ def run_bulk_recon(
         res = {
             "target": domain,
             "score": score,
+            "grade": grade,
             "dns": dns_res,
             "perimeter": web_res,
             "has_takeover": has_takeover,
@@ -496,14 +567,17 @@ def run_bulk_recon(
         if not json_output:
             score_color = GREEN if score >= 85 else (YELLOW if score >= 60 else RED)
             crit_badge = f" {RED}{BOLD}[CRITICAL DRIFT]{RESET}" if (has_takeover or has_exposure) else ""
-            print(f"  • {BOLD}{domain:30}{RESET} Score: {score_color}{score:3}/100{RESET}{crit_badge}")
+            print(
+                f"  • {BOLD}{domain:30}{RESET} Score: {score_color}{score:3}/100{RESET} "
+                f"({score_color}{grade}{RESET}){crit_badge}"
+            )
 
     if markdown_path:
         md_lines = [
             "# Orbit Security: Bulk Perimeter Audit Matrix",
             f"**Audit Timestamp:** {socket.gethostname()} | **Total Targets:** {len(results)}\n",
-            "| Target Domain | Score | Routing / CNAME | Security Headers | Critical Exposures |",
-            "| :--- | :--- | :--- | :--- | :--- |",
+            "| Target Domain | Score | Grade | Routing / CNAME | Security Headers | Critical Exposures |",
+            "| :--- | :--- | :--- | :--- | :--- | :--- |",
         ]
         for r in results:
             cname = r["dns"].get("cname") or "Apex Direct"
@@ -511,7 +585,9 @@ def run_bulk_recon(
                 cname = f"🚨 **Dangling CNAME ({r['dns'].get('matched_service', 'SaaS')})**"
             h_count = f"{len(r['perimeter'].get('headers_found', {}))}/{len(SECURITY_HEADERS)}"
             exp_text = f"🚨 {len(r['perimeter']['exposures'])} exposed" if r["has_exposure"] else "Clean"
-            md_lines.append(f"| `{r['target']}` | **{r['score']}/100** | {cname} | {h_count} | {exp_text} |")
+            md_lines.append(
+                f"| `{r['target']}` | **{r['score']}/100** | **{r['grade']}** | {cname} | {h_count} | {exp_text} |"
+            )
 
         md_content = "\n".join(md_lines) + "\n"
         with open(markdown_path, "w", encoding="utf-8") as f:

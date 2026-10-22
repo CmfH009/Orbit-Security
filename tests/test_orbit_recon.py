@@ -60,13 +60,18 @@ def test_orbit_recon_deterministic_mocks():
     }
 
     score = calculate_score(mock_dns_data, mock_web_data)
-    # 100 - 40 (dangling_risk) - 30 (1 exposure) - (2 missing headers * 8 = 16) = 14
-    assert score == 14
+    # Shared exploitability model (2026-10-22 rewrite):
+    #   100 - 35 (dangling CNAME -> CRITICAL) - 35 (exposed /.env -> CRITICAL)
+    #        - 0  (missing CSP / X-Frame-Options are best-practice hygiene)
+    #        = 30
+    # Missing best-practice headers no longer cost score, and a dangling CNAME
+    # plus an exposed .env is still a genuine F.
+    assert score == 30
 
     with patch("orbit_security.recon.resolve_dns", return_value=mock_dns_data):
         with patch("orbit_security.recon.check_headers_and_exposures", return_value=mock_web_data):
             results = run_recon("acme-test.com", json_output=False)
-            assert results["score"] == 14
+            assert results["score"] == 30
             assert results["dns"]["matched_service"] == "Unbounce"
             assert results["dns"]["dangling_risk"] is True
             assert len(results["perimeter"]["exposures"]) == 1

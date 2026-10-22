@@ -17,23 +17,7 @@ from orbit_security.models import AgencyBranding, DomainAuditResult, Finding, Se
 from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES
 from orbit_security.dns_cache import get_orbit_async_resolver
 from orbit_security.network_bonding import create_bonded_http_client
-
-
-STATIC_HOST_SUFFIXES = (
-    ".github.io",
-    ".pages.dev",
-    ".vercel.app",
-    ".netlify.app",
-    ".gitlab.io",
-    ".azurewebsites.net",
-    ".render.com",
-    ".onrender.com",
-    ".fly.dev",
-    ".webflow.io",
-    ".surge.sh",
-    ".firebaseapp.com",
-    ".web.app",
-)
+from orbit_security.scoring import STATIC_HOST_SUFFIXES
 
 
 def is_static_hosting_domain(domain: str) -> bool:
@@ -453,7 +437,7 @@ class OrbitSecurityScanner:
             if not bimi_record:
                 return Finding(
                     title="Missing BIMI Brand Indicator (RFC 8617)",
-                    severity=Severity.LOW,
+                    severity=Severity.INFO,
                     category="Email Authentication",
                     description=(
                         f"Domain {domain} does not have a BIMI record configured at `{target}`. "
@@ -470,7 +454,7 @@ class OrbitSecurityScanner:
         except Exception:
             return Finding(
                 title="Missing BIMI Brand Indicator (RFC 8617)",
-                severity=Severity.LOW,
+                severity=Severity.INFO,
                 category="Email Authentication",
                 description=(
                     f"No BIMI record discovered at `{target}`. Implementing BIMI authenticates brand logos "
@@ -497,7 +481,7 @@ class OrbitSecurityScanner:
             if not sts_record:
                 return Finding(
                     title="Missing MTA-STS Transport Security (RFC 8461)",
-                    severity=Severity.LOW,
+                    severity=Severity.INFO,
                     category="Email Authentication",
                     description=(
                         f"Domain {domain} lacks an MTA-STS policy at `{target}`. Mail transfer agents can be manipulated "
@@ -516,7 +500,7 @@ class OrbitSecurityScanner:
         except Exception:
             return Finding(
                 title="Missing MTA-STS Transport Security (RFC 8461)",
-                severity=Severity.LOW,
+                severity=Severity.INFO,
                 category="Email Authentication",
                 description=(
                     f"Domain {domain} has no MTA-STS DNS record. Inbound emails remain vulnerable "
@@ -576,7 +560,7 @@ class OrbitSecurityScanner:
             if not records:
                 return Finding(
                     title="Missing DNS CAA Policy (RFC 8659)",
-                    severity=Severity.LOW,
+                    severity=Severity.INFO,
                     category="Transport Security",
                     description=(
                         f"Domain {domain} does not publish a Certification Authority Authorization (CAA) record. "
@@ -596,7 +580,7 @@ class OrbitSecurityScanner:
         except Exception as e:
             return Finding(
                 title="Missing DNS CAA Policy (RFC 8659)",
-                severity=Severity.LOW,
+                severity=Severity.INFO,
                 category="Transport Security",
                 description=(
                     f"Domain {domain} has no DNS CAA policy configured. "
@@ -640,10 +624,9 @@ class OrbitSecurityScanner:
                     continue
 
             if not found_txt:
-                is_static = is_static_hosting_domain(domain)
                 return Finding(
                     title="Missing RFC 9116 Security Disclosure (security.txt)",
-                    severity=Severity.INFO if is_static else Severity.LOW,
+                    severity=Severity.INFO,
                     category="Application Security",
                     description=(
                         f"Domain {domain} does not publish a standardized vulnerability disclosure policy "
@@ -970,7 +953,7 @@ class OrbitSecurityScanner:
                     findings.append(
                         Finding(
                             title="Missing Content Security Policy (CSP)",
-                            severity=Severity.LOW,
+                            severity=Severity.INFO,
                             category="Application Security",
                             description="CSP header is absent. Restricting sources of scripts, images, and frames prevents cross-site scripting (XSS) and data injection.",
                             remediation="Define a baseline `Content-Security-Policy` header allowing only trusted asset origins.",
@@ -985,7 +968,7 @@ class OrbitSecurityScanner:
                     findings.append(
                         Finding(
                             title="Missing X-Frame-Options (Clickjacking Protection)",
-                            severity=Severity.LOW,
+                            severity=Severity.INFO,
                             category="Application Security",
                             description="Missing clickjacking protection. Third-party sites can embed this application inside an iframe to hijack user interactions.",
                             remediation="Set `X-Frame-Options: SAMEORIGIN` or `DENY`.",
@@ -998,7 +981,7 @@ class OrbitSecurityScanner:
                 findings.append(
                     Finding(
                         title="Missing X-Content-Type-Options (MIME Sniffing Defense)",
-                        severity=Severity.INFO if is_static else Severity.LOW,
+                        severity=Severity.INFO,
                         category="Application Security",
                         description=(
                             "The `X-Content-Type-Options: nosniff` header is missing. "
@@ -1016,7 +999,7 @@ class OrbitSecurityScanner:
                     findings.append(
                         Finding(
                             title="Missing Referrer-Policy Header",
-                            severity=Severity.LOW,
+                            severity=Severity.INFO,
                             category="Application Security",
                             description=(
                                 "No Referrer-Policy header is defined. Browsers may leak confidential URLs "

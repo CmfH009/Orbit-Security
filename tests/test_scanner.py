@@ -23,8 +23,11 @@ def test_score_and_grade_calculation():
         )
     )
     grade, score = audit.calculate_grade_and_score()
-    assert score == 65
-    assert grade == "C"
+    # 2026-10-22 scoring rewrite: one CRITICAL finding caps the audit at
+    # grade D (59) - an actively exploitable issue is never presented as an
+    # "acceptable" (C or better) posture.
+    assert score == 59
+    assert grade == "D"
 
     audit.findings.append(
         Finding(

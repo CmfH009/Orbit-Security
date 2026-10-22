@@ -24,7 +24,9 @@ async def test_audit_bimi_missing():
     with patch.object(scanner.resolver, "resolve", side_effect=Exception("NXDOMAIN")):
         finding = await scanner.audit_bimi("example.com")
         assert finding is not None
-        assert finding.severity == Severity.LOW
+        # BIMI is a best-practice-only item: it is still reported, but it is
+        # INFO and never costs score (2026-10-22 scoring rewrite).
+        assert finding.severity == Severity.INFO
         assert "BIMI" in finding.title
         assert "default._bimi.example.com" in finding.target
 
@@ -46,7 +48,9 @@ async def test_audit_mta_sts_missing():
     with patch.object(scanner.resolver, "resolve", side_effect=Exception("No answer")):
         finding = await scanner.audit_mta_sts("example.com")
         assert finding is not None
-        assert finding.severity == Severity.LOW
+        # MTA-STS is a best-practice-only item: reported, but INFO / no score
+        # impact (2026-10-22 scoring rewrite).
+        assert finding.severity == Severity.INFO
         assert "MTA-STS" in finding.title
         assert "_mta-sts.example.com" in finding.target
 

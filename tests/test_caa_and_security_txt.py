@@ -25,7 +25,9 @@ async def test_audit_caa_missing():
     with patch.object(scanner.resolver, "resolve", side_effect=Exception("NoAnswer")):
         finding = await scanner.audit_caa("example.com")
         assert finding is not None
-        assert finding.severity == Severity.LOW
+        # CAA is a best-practice-only item: still reported, but INFO and it
+        # never costs score (2026-10-22 scoring rewrite).
+        assert finding.severity == Severity.INFO
         assert "CAA" in finding.title
         assert "RFC 8659" in finding.title
         assert finding.target == "example.com"
@@ -57,7 +59,9 @@ async def test_audit_security_txt_missing():
 
     finding = await scanner.audit_security_txt("https://example.com", client=mock_client)
     assert finding is not None
-    assert finding.severity == Severity.LOW
+    # security.txt is a best-practice-only item: still reported, but INFO and
+    # it never costs score (2026-10-22 scoring rewrite).
+    assert finding.severity == Severity.INFO
     assert "security.txt" in finding.title
     assert "RFC 9116" in finding.title
 
