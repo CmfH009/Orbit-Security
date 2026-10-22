@@ -7,6 +7,7 @@ Verifies:
 4. Metadata persistence: media_type and media_path recorded in SQLite state.
 """
 
+import shutil
 import os
 from pathlib import Path
 import tempfile
@@ -148,6 +149,10 @@ def test_anti_repetition_dynamic_generation(temp_env):
     assert Path(next_post["media_path"]).exists()
 
 
+@pytest.mark.skipif(
+    shutil.which("ffmpeg") is None,
+    reason="the alternation cycle produces video media, which needs ffmpeg on PATH",
+)
 def test_social_daemon_dry_run_cycle_alternation(temp_env):
     sm = temp_env["state_manager"]
     daemon = SocialDaemon(

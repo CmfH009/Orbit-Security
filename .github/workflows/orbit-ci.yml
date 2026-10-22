@@ -40,6 +40,15 @@ jobs:
           # as belt-and-braces so CI never depends on the lock resolving them.
           python -m pip install edge-tts pywin32 pillow
 
+      - name: Install ffmpeg
+        shell: bash
+        run: |
+          # The video muxing and voice DSP paths shell out to ffmpeg. The
+          # Windows runner image does not ship it, so the video, DSP and media
+          # alternation tests would skip instead of running.
+          choco install ffmpeg --no-progress -y --limit-output
+          ffmpeg -version | head -n 1
+
       - name: Run pytest
         run: python -m pytest -q --junitxml=report/junit.xml
 

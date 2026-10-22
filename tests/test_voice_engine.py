@@ -2,6 +2,7 @@
 
 import json
 import os
+import shutil
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -49,6 +50,10 @@ def test_cat_voice_engine_initialization():
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    shutil.which("ffmpeg") is None,
+    reason="ffmpeg is not on PATH; the DSP pipeline shells out to it",
+)
 async def test_dsp_filter_pipeline(tmp_path):
     # Create a 0.5s dummy sine audio wav using ffmpeg
     dummy_wav = tmp_path / "dummy.wav"
