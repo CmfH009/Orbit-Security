@@ -23,6 +23,22 @@ dependencies = [
     "edge-tts>=7.0.0",
     "pillow>=11.0.0",
     "pywin32>=306; sys_platform == 'win32'",
+    # Runtime dependencies that were previously imported behind a try/except and
+    # therefore silently degraded instead of failing loudly:
+    #   psutil     -> core_affinity / network_bonding / social_daemon governor
+    #                (without it the process silently loses CPU affinity and
+    #                priority control)
+    #   pyperclip  -> draft_manager clipboard staging
+    "psutil>=5.9.0",
+    "pyperclip>=1.8.2",
+]
+
+[project.optional-dependencies]
+# Stealth browser stack for the X driver. Kept optional because the package
+# must install cleanly on a machine that does not drive a browser.
+browser = [
+    "patchright>=1.49.0",
+    "rookiepy>=0.1.0",
 ]
 
 [build-system]

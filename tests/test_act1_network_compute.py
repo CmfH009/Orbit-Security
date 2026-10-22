@@ -33,6 +33,7 @@ import dns.rdataclass
 import httpx
 
 from orbit_security.core_affinity import (
+    HAS_PSUTIL,
     apply_affinity_and_priority,
     apply_performance_affinity,
     apply_worker_affinity,
@@ -75,6 +76,11 @@ def test_core_affinity_topology():
         assert set(topo["p_cores"]).isdisjoint(set(topo["e_cores"]))
 
 
+@pytest.mark.skipif(
+    not HAS_PSUTIL,
+    reason="psutil is required to set CPU affinity/priority; it is a runtime dependency, "
+           "so this only skips on an incomplete environment rather than a code defect",
+)
 def test_apply_core_affinity_roles():
     """Verifies applying performance and worker affinity masks on current process."""
     # Worker affinity (E-cores + BelowNormal)
