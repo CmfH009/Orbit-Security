@@ -82,25 +82,28 @@ jobs:
 
           BASE = "https://cmfh009.github.io/Orbit-Security"
 
-          # Blocking: these three core pages must always answer HTTP 200.
+          # Blocking: every URL that the site declares and depends on must be
+          # HTTP 200. These are now deployed, so a regression here is a real
+          # regression, not a pending workstream.
           REQUIRED = [
               "/",
               "/about.html",
               "/fleet.html",
-          ]
-
-          # Non-blocking: robots.txt, sitemap.xml, the OG/logo images and
-          # .well-known/security.txt are being produced by another workstream
-          # and legitimately 404 until that lands, so they only WARN here.
-          # /signup.html is reported on the same tier and can be promoted to
-          # REQUIRED once the team treats it as a core page.
-          PENDING = [
               "/signup.html",
+              "/ghostdns/index.html",
+              "/portals/index.html",
               "/robots.txt",
               "/sitemap.xml",
               "/assets/og-image.png",
               "/assets/logo.png",
               "/.well-known/security.txt",
+          ]
+
+          # Non-blocking: optional convenience files and cosmetic assets.
+          # A failure here degrades convenience, not correctness.
+          PENDING = [
+              "/llms.txt",
+              "/favicon.ico",
           ]
 
           def head(url):
