@@ -1,112 +1,72 @@
 """Orbit Security: Autonomous external perimeter hygiene, subdomain takeover sentinel, and white-label client security auditing."""
 
-from orbit_security.models import AgencyBranding, DomainAuditResult, Finding, Severity
-from orbit_security.scanner import OrbitSecurityScanner, AgencySentryScanner
-from orbit_security.reporter import ReportGenerator
-from orbit_security.mailer import EmailDispatcher
-from orbit_security.inbox_agent import InboxAgent, LeadIntent
-from orbit_security.voice_model import VoiceProfile, CatVoiceEngine
-from orbit_security.relevance_engine import (
-    RelevanceEngine,
-    DiscoveredPost,
-    RelevanceScore,
-    ActionDecision,
-    ActionType,
-    DiscoveryVector,
-)
+from __future__ import annotations
 
-from orbit_security.ground_truth_gate import GroundTruthGate, GateVerdict
-from orbit_security.feed_harvester import FeedHarvester
-from orbit_security.desktop_x_bridge import (
-    DesktopAutomationDriver,
-    DesktopDriverConfig,
-    DesktopXBridge,
-)
-from orbit_security.recon_harvester import (
-    CertificateTransparencyStreamer,
-    ArchiveHarvester,
-    JsRouteExtractor,
-)
-from orbit_security.cloud_sentinels import (
-    CloudBucketTakeoverSentinel,
-    GraphQLIntrospectionSentinel,
-    CorsMisconfigurationSentinel,
-)
-from orbit_security.bounty_graph import BountyAttackGraph
-from orbit_security.bounty_triage_copilot import GemmaTriageCopilot, TriageDecision
-from orbit_security.smuggling_sentinel import (
-    HttpRequestSmugglingSentinel,
-    SmugglingFinding,
-    SmugglingFlawType,
-)
-from orbit_security.oauth_sentinel import (
-    OAuthFlowSentinel,
-    OAuthFinding,
-    OAuthFlawType,
-)
-from orbit_security.dependency_sentinel import (
-    DependencyConfusionSentinel,
-    DependencyFinding,
-    DependencyStatus,
-)
-from orbit_security.exploit_sandbox import (
-    OperatorExploitSandbox,
-    ScriptGenerator,
-    SandboxExecutionHarness,
-    EvidenceComparator,
-    SandboxVerificationReport,
-)
+import importlib
+from typing import Any
 
-__all__ = [
-    "AgencyBranding",
-    "DomainAuditResult",
-    "Finding",
-    "Severity",
-    "OrbitSecurityScanner",
-    "AgencySentryScanner",
-    "ReportGenerator",
-    "EmailDispatcher",
-    "InboxAgent",
-    "LeadIntent",
-    "VoiceProfile",
-    "CatVoiceEngine",
-    "RelevanceEngine",
-    "DiscoveredPost",
-    "RelevanceScore",
-    "ActionDecision",
-    "ActionType",
-    "DiscoveryVector",
-    "GroundTruthGate",
-    "GateVerdict",
-    "FeedHarvester",
-    "DesktopAutomationDriver",
-    "DesktopDriverConfig",
-    "DesktopXBridge",
-    "CertificateTransparencyStreamer",
-    "ArchiveHarvester",
-    "JsRouteExtractor",
-    "CloudBucketTakeoverSentinel",
-    "GraphQLIntrospectionSentinel",
-    "CorsMisconfigurationSentinel",
-    "BountyAttackGraph",
-    "GemmaTriageCopilot",
-    "TriageDecision",
-    "HttpRequestSmugglingSentinel",
-    "SmugglingFinding",
-    "SmugglingFlawType",
-    "OAuthFlowSentinel",
-    "OAuthFinding",
-    "OAuthFlawType",
-    "DependencyConfusionSentinel",
-    "DependencyFinding",
-    "DependencyStatus",
-    "OperatorExploitSandbox",
-    "ScriptGenerator",
-    "SandboxExecutionHarness",
-    "EvidenceComparator",
-    "SandboxVerificationReport",
-    "hello",
-]
+_LAZY_IMPORTS = {
+    "AgencyBranding": ("orbit_security.models", "AgencyBranding"),
+    "DomainAuditResult": ("orbit_security.models", "DomainAuditResult"),
+    "Finding": ("orbit_security.models", "Finding"),
+    "Severity": ("orbit_security.models", "Severity"),
+    "OrbitSecurityScanner": ("orbit_security.scanner", "OrbitSecurityScanner"),
+    "AgencySentryScanner": ("orbit_security.scanner", "AgencySentryScanner"),
+    "ReportGenerator": ("orbit_security.reporter", "ReportGenerator"),
+    "EmailDispatcher": ("orbit_security.mailer", "EmailDispatcher"),
+    "InboxAgent": ("orbit_security.inbox_agent", "InboxAgent"),
+    "LeadIntent": ("orbit_security.inbox_agent", "LeadIntent"),
+    "VoiceProfile": ("orbit_security.voice_model", "VoiceProfile"),
+    "CatVoiceEngine": ("orbit_security.voice_model", "CatVoiceEngine"),
+    "RelevanceEngine": ("orbit_security.relevance_engine", "RelevanceEngine"),
+    "DiscoveredPost": ("orbit_security.relevance_engine", "DiscoveredPost"),
+    "RelevanceScore": ("orbit_security.relevance_engine", "RelevanceScore"),
+    "ActionDecision": ("orbit_security.relevance_engine", "ActionDecision"),
+    "ActionType": ("orbit_security.relevance_engine", "ActionType"),
+    "DiscoveryVector": ("orbit_security.relevance_engine", "DiscoveryVector"),
+    "GroundTruthGate": ("orbit_security.ground_truth_gate", "GroundTruthGate"),
+    "GateVerdict": ("orbit_security.ground_truth_gate", "GateVerdict"),
+    "FeedHarvester": ("orbit_security.feed_harvester", "FeedHarvester"),
+    "DesktopAutomationDriver": ("orbit_security.desktop_x_bridge", "DesktopAutomationDriver"),
+    "DesktopDriverConfig": ("orbit_security.desktop_x_bridge", "DesktopDriverConfig"),
+    "DesktopXBridge": ("orbit_security.desktop_x_bridge", "DesktopXBridge"),
+    "CertificateTransparencyStreamer": ("orbit_security.recon_harvester", "CertificateTransparencyStreamer"),
+    "ArchiveHarvester": ("orbit_security.recon_harvester", "ArchiveHarvester"),
+    "JsRouteExtractor": ("orbit_security.recon_harvester", "JsRouteExtractor"),
+    "CloudBucketTakeoverSentinel": ("orbit_security.cloud_sentinels", "CloudBucketTakeoverSentinel"),
+    "GraphQLIntrospectionSentinel": ("orbit_security.cloud_sentinels", "GraphQLIntrospectionSentinel"),
+    "CorsMisconfigurationSentinel": ("orbit_security.cloud_sentinels", "CorsMisconfigurationSentinel"),
+    "BountyAttackGraph": ("orbit_security.bounty_graph", "BountyAttackGraph"),
+    "GemmaTriageCopilot": ("orbit_security.bounty_triage_copilot", "GemmaTriageCopilot"),
+    "TriageDecision": ("orbit_security.bounty_triage_copilot", "TriageDecision"),
+    "HttpRequestSmugglingSentinel": ("orbit_security.smuggling_sentinel", "HttpRequestSmugglingSentinel"),
+    "SmugglingFinding": ("orbit_security.smuggling_sentinel", "SmugglingFinding"),
+    "SmugglingFlawType": ("orbit_security.smuggling_sentinel", "SmugglingFlawType"),
+    "OAuthFlowSentinel": ("orbit_security.oauth_sentinel", "OAuthFlowSentinel"),
+    "OAuthFinding": ("orbit_security.oauth_sentinel", "OAuthFinding"),
+    "OAuthFlawType": ("orbit_security.oauth_sentinel", "OAuthFlawType"),
+    "DependencyConfusionSentinel": ("orbit_security.dependency_sentinel", "DependencyConfusionSentinel"),
+    "DependencyFinding": ("orbit_security.dependency_sentinel", "DependencyFinding"),
+    "DependencyStatus": ("orbit_security.dependency_sentinel", "DependencyStatus"),
+    "OperatorExploitSandbox": ("orbit_security.exploit_sandbox", "OperatorExploitSandbox"),
+    "ScriptGenerator": ("orbit_security.exploit_sandbox", "ScriptGenerator"),
+    "SandboxExecutionHarness": ("orbit_security.exploit_sandbox", "SandboxExecutionHarness"),
+    "EvidenceComparator": ("orbit_security.exploit_sandbox", "EvidenceComparator"),
+    "SandboxVerificationReport": ("orbit_security.exploit_sandbox", "SandboxVerificationReport"),
+}
+
+__all__ = list(_LAZY_IMPORTS.keys()) + ["hello"]
+
+
+def __getattr__(name: str) -> Any:
+    if name in _LAZY_IMPORTS:
+        module_name, attr_name = _LAZY_IMPORTS[name]
+        module = importlib.import_module(module_name)
+        val = getattr(module, attr_name)
+        globals()[name] = val
+        return val
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 def hello() -> str:
     return "Hello from orbit-security!"
