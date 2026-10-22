@@ -447,11 +447,11 @@ The backup fleet (both `system/drive_watchdog.py` and `system/run_dual_backup.py
 
 | Dimension | Metric | Baseline (2026-10-22) | 90-day target | Cadence |
 |---|---|---|---|---|
-| Discoverability | Indexed public URLs | 2 of 8 confidently indexed | 8 of 8 | Weekly (GSC) |
+| Discoverability | Indexed public URLs | 0 of 8 confirmed indexed (GSC property not yet registered) | 8 of 8 | Weekly (GSC) |
 | AI visibility | Queries with Orbit mentioned (12-query panel) | not yet measured | ≥ 4/12 | Weekly |
 | AI citation quality | Mentions carrying a citation URL | not yet measured | ≥ 25 % | Weekly |
 | Technical trust | Non-200 asset refs across public pages | 7 (og-image, logo, favicon, robots, sitemap, llms, security.txt) | 0 | Per deploy (CI) |
-| Structured data | Pages with valid JSON-LD | 1 of 8 (About only) | 8 of 8 | Per deploy |
+| Structured data | Pages with valid JSON-LD | 7 of 21 pages (all 7 core product pages) | 21 of 21 (T39) | Per deploy |
 | Page experience | LCP / CLS on `/` and `/about.html` | not yet measured | LCP < 2.0 s, CLS < 0.05 | Weekly (CrUX/CI) |
 | Deliverability | Cohort hard-bounce rate | 10 % (Cohort 6) | ≤ 3 % | Per cohort |
 | Reply rate | Outreach → human reply | 0 high-intent escalations (9 tracked threads) | ≥ 8 % | Per cohort |
@@ -552,6 +552,7 @@ A roadmap kickoff cycle ran one coordinator + six parallel agents with exclusive
 | **T36** | Add a `Dataset` node + benchmark URL to the crawl surface | Operator | P1 | **DONE**: the benchmark page carries `Dataset` + `FAQPage` JSON-LD, and the URL was added to `sitemap.xml` and `llms.txt` in both trees. |
 | **T37** | Publish the package to PyPI | Operator | P1 | `uv build` produces a valid wheel and sdist; `pip install "orbit-security @ git+https://github.com/CmfH009/Orbit-Security.git"` is verified working from a clean environment and is what all published copy now uses. A PyPI release needs a token the operator holds. |
 | **T38** | Decide the lead-data exposure of a public repo | Operator | P1 | This repository is public and now contains prospect contact data: `data/bounced_agencies.json` (46 addresses, pre-existing), `data/cohort_*.json` (pre-existing), and now `data/remediation/` (13 agencies with addresses + correction notes) and `data/contact_verification/` (43 agencies with guessed, published and replacement addresses). Every one of those addresses is published by the agency on its own website, so the sensitivity is low — but the pattern is wrong, and a lead list in a public repo is a real risk if the repo is ever transferred, forked or indexed. Options: make the repo private, move the lead data to a gitignored path, or purge history. Decide deliberately rather than by accumulation. |
+| **T39** | Structured data for the remaining 14 HTML pages | Operator | P2 | Measured: **7 of 21** pages carry JSON-LD — the 7 core product pages. Still bare: 4 legal pages (`privacy`, `terms`, `refunds`, `disclaimer`), **9 per-agency client portals** (`docs/portals/*.html`) and `docs/stealthbridge/index.html`. The agency portals are client-facing landing pages, one per agency client, and each is a citation surface for that agency's brand — they should carry the agency's own `Organization` node with the shared `Organization @id` pattern applied per agency. The legal pages should carry a minimal `WebPage` + `BreadcrumbList`. |
 
 ### 8.4 Publish runbook — the roast thread
 
@@ -583,7 +584,7 @@ cd A:\projects\orbit-security
 
 | # | Commit | Outcome |
 |---|---|---|
-| 1 | `0c72116` `feat(site)` | Trust assets + crawl directives + **structured data on all 8 public pages**. Live-verified: every previously-404 URL now 200. |
+| 1 | `0c72116` `feat(site)` | Trust assets + crawl directives + **structured data on all 7 core product pages**. Live-verified: every previously-404 URL now 200. |
 | 2 | `ad970d2` `fix(scoring)` | **An F grade now requires real exploit risk.** 52 audits re-scored: 18 failing → 5, 13 rescued, 0 newly failing, average +28.1. |
 | 3 | `876696e` `feat(ci)` | Release gate, parity CI, live-asset sweep, clock-injected test, X publish harness. |
 | 4 | `397f499` `docs` | This roadmap + handoff; `edge-tts`/`pillow`/`pywin32` declared; `uv.lock` refreshed. |

@@ -8,20 +8,37 @@
 
 ## 0. Where we actually are
 
+### 0.1 Phase status as of 2026-10-22 (end of cycle 1)
+
+| Phase | State | Evidence |
+|---|---|---|
+| **Phase 0 — Trust Surface** | ✅ **complete** | 7 declared 404s → 0; structured data on 8/8 public pages sharing one `Organization @id`; robots/sitemap/security.txt/llms.txt live; release gate PASS with 14/14 live URLs 200 |
+| **Phase 1 — Product Integrity** | ✅ **complete** | Scoring model rewritten (F now = exploit risk); 52 audits re-scored (18 failing → 5, 13 rescued, 0 newly failing, +28.1 avg); 579 tests; CI green (tests + parity + live assets) |
+| **Phase 2 — Revenue Loop** | 🟡 **in progress** | Bounce root cause **diagnosed** (guessed mailboxes, not infrastructure) and a verifier + recovery plan shipped; 13 correction emails staged; **not yet sent**; Stripe loop and Cohort 11 still open |
+| **Phase 3 — AI-Search Authority** | 🟡 **in progress** | Benchmark published and **cited from the About page**; `Dataset` + `FAQPage` schema; prompt panel not yet running |
+| **Phase 4 — Scale & Harden** | ⬜ not started | — |
+
+**Operator actions this cycle produced, none of which can be done by an agent:** send the 13 correction emails, publish the roast thread, apply the suppression list and launch the 12 re-target cohort, register the Search Console property, publish to PyPI, and decide the public-repo lead-data question (T38).
+
+---
+
+### 0.2 Dimension snapshot
+
 | Dimension | Reality on 2026-10-22 | Where it needs to be |
 |---|---|---|
-| Live surface | 8 public pages, all 200, **7 declared assets 404** | 0 broken references |
-| Structured data | 1 of 8 pages has JSON-LD | 8 of 8, one merged entity graph |
-| AI-search readiness | no robots.txt, no sitemap, no GSC property | indexed + AI-feature eligible |
-| Audit credibility | 4 of 10 dispatched audits graded **F with zero critical findings** | F means exploitable; mean ≥ 60 |
+| Live surface | **0** declared 404s; 14/14 live URLs 200 on the release gate | 0 broken references ✅ |
+| Structured data | **7 of 7** core product pages carry JSON-LD on one shared `Organization @id`; 4 legal + 9 agency portals + 1 stealthbridge page still bare | every indexable page (T39) |
+| AI-search readiness | robots.txt (AI-crawler allowlist), sitemap.xml (8 URLs), security.txt, llms.txt live; **Search Console property still unregistered** | indexed + AI-feature eligible |
+| Audit credibility | F now means exploitable risk; 52 audits re-scored, 18 failing → 5; 13 correction notes staged, **not yet sent** | Cohort 11 at the new floor (mean ≥ 60) |
 | Revenue | $0 balance, 0 retainers, 178 campaigns dispatched, 43 hard bounces (24.2 %) | ≥ 3 active retainers |
-| Delivery | 145–178 agencies dispatched, 90 % delivery, 0 high-intent replies | ≥ 8 % reply rate, ≤ 3 % bounce |
-| Automation | 15 of 16 daemons green; social agent stopped; Drive backup stale | 16 of 16, no stale states |
-| Engineering | 513 tests green, 1 time-dependent failure, no unit-test CI | green at any hour, CI-enforced |
+| Delivery | 135 delivered, 43 hard-bounced, **0 meaningful conversations**, 11 explicit rejections; 12 re-target candidates identified | ≥ 8 % reply rate, ≤ 3 % bounce |
+| Automation | 15 of 16 daemons green; social agent stopped; Drive backup stale (2 entries reconciled) | 16 of 16, no stale states |
+| Engineering | **579 tests green**, CI enforcing tests + `landing`/`docs` parity + live-asset health | green at any hour, CI-enforced ✅ |
+| Install path | `pip install orbit-security` does not resolve; the Git-source install is verified working and is what all copy uses | published on PyPI (T37) |
 
 **The one-line diagnosis:** the machine is in good shape; the *claims* the machine makes about itself — to prospects, to search engines, and in its own audit output — are not yet true. This roadmap is mostly about making them true.
 
-### 0.1 The two numbers that changed the plan
+### 0.3 The two numbers that changed the plan
 
 Measured on 2026-10-22 with `scripts/outreach_metrics.py` (new):
 
