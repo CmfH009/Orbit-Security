@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import importlib.util
 import re
+import sys
 from pathlib import Path
 
 import pytest
@@ -82,3 +83,33 @@ def test_thread_install_command_actually_resolves(module_name, var):
     bodies = "\n".join(item[1] for item in tweets)
     assert "pip install \"orbit-security @ git+https://github.com/CmfH009/Orbit-Security.git\"" in bodies
     assert "pip install orbit-security`" not in bodies
+
+
+@pytest.mark.parametrize("module_name,var", THREAD_MODULES)
+def test_thread_module_imports_without_the_windows_helper(module_name, var, monkeypatch):
+    """The scripts must import on any machine, including CI.
+
+    desktop_automation is a Windows-only helper from the sibling AgyHut repo.
+    When it is absent the script must still import, so the tweet copy and its
+    length guard stay verifiable off the operator's machine.
+    """
+    import builtins
+    import importlib
+
+    real_import = builtins.__import__
+
+    def _blocked(name, *args, **kwargs):
+        if name == "desktop_automation":
+            raise ImportError("No module named 'desktop_automation'")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", _blocked)
+    monkeypatch.delitem(sys.modules, "desktop_automation", raising=False)
+
+    path = SCRIPTS / f"{module_name}.py"
+    spec = importlib.util.spec_from_file_location(f"{module_name}_ci", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert getattr(module, "HAS_DESKTOP_AUTOMATION", True) is False
+    assert getattr(module, var)
+
