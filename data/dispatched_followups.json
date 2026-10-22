@@ -774,5 +774,245 @@
     "followup_dispatched_at": "2026-10-21 20:52:44",
     "bump_number": 1,
     "status": "SENT"
+  },
+  "astoundcommerce.com": {
+    "agency_name": "Astound Commerce",
+    "contact_email": "privacy@astounddigital.com",
+    "client_domain": "underarmour.com",
+    "followup_dispatched_at": "2026-10-22 03:16:51",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "scandiweb.com": {
+    "agency_name": "Scandiweb",
+    "contact_email": "info@scandiweb.com",
+    "client_domain": "puma.com",
+    "followup_dispatched_at": "2026-10-22 03:16:55",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "mindarc.com.au": {
+    "agency_name": "MindArc",
+    "contact_email": "hello@mindarc.com.au",
+    "client_domain": "stylerunner.com",
+    "followup_dispatched_at": "2026-10-22 03:16:59",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "redstage.com": {
+    "agency_name": "Redstage",
+    "contact_email": "info@redstage.com",
+    "client_domain": "citgo.com",
+    "followup_dispatched_at": "2026-10-22 03:17:04",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "praella.com": {
+    "agency_name": "Praella",
+    "contact_email": "hello@praella.com",
+    "client_domain": "aloyoga.com",
+    "followup_dispatched_at": "2026-10-22 03:17:08",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "pixafy.com": {
+    "agency_name": "Pixafy",
+    "contact_email": "info@pixafy.com",
+    "client_domain": "yamaha.com",
+    "followup_dispatched_at": "2026-10-22 03:17:11",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "borngroup.com": {
+    "agency_name": "BORN Group",
+    "contact_email": "privacy@borngroup.com",
+    "client_domain": "dita.com",
+    "followup_dispatched_at": "2026-10-22 03:17:15",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "bluestone98.com": {
+    "agency_name": "Bluestone98",
+    "contact_email": "hello@bluestone98.com",
+    "client_domain": "superdry.com",
+    "followup_dispatched_at": "2026-10-22 03:17:19",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "bemeir.com": {
+    "agency_name": "BeMeir",
+    "contact_email": "info@bemeir.com",
+    "client_domain": "nestle.com",
+    "followup_dispatched_at": "2026-10-22 03:17:23",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "thestable.com": {
+    "agency_name": "The Stable",
+    "contact_email": "info@thestable.com",
+    "client_domain": "ring.com",
+    "followup_dispatched_at": "2026-10-22 03:17:27",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "tryzens.com": {
+    "agency_name": "Tryzens",
+    "contact_email": "hello@tryzens.com",
+    "client_domain": "sweatybetty.com",
+    "followup_dispatched_at": "2026-10-22 03:19:13",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "kensium.com": {
+    "agency_name": "Kensium",
+    "contact_email": "info@kensium.com",
+    "client_domain": "backcountry.com",
+    "followup_dispatched_at": "2026-10-22 03:19:17",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "ziffity.com": {
+    "agency_name": "Ziffity",
+    "contact_email": "contactus@ziffity.com",
+    "client_domain": "bergdorfgoodman.com",
+    "followup_dispatched_at": "2026-10-22 03:19:20",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "serieseight.com": {
+    "agency_name": "Series Eight",
+    "contact_email": "info@serieseight.com",
+    "client_domain": "oatly.com",
+    "followup_dispatched_at": "2026-10-22 03:19:23",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "kubixmedia.co.uk": {
+    "agency_name": "Kubix Media",
+    "contact_email": "hello@kubixmedia.co.uk",
+    "client_domain": "simbasleep.com",
+    "followup_dispatched_at": "2026-10-22 03:19:27",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "mote.agency": {
+    "agency_name": "Mote",
+    "contact_email": "hello@mote.agency",
+    "client_domain": "skims.com",
+    "followup_dispatched_at": "2026-10-22 03:19:31",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "byassociationonly.com": {
+    "agency_name": "By Association Only",
+    "contact_email": "enquiries@bao.agency",
+    "client_domain": "astridandmiyu.com",
+    "followup_dispatched_at": "2026-10-22 03:19:34",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "latori.com": {
+    "agency_name": "Latori",
+    "contact_email": "info@latori.com",
+    "client_domain": "sennheiser.com",
+    "followup_dispatched_at": "2026-10-22 03:19:38",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "247commerce.co.uk": {
+    "agency_name": "247 Commerce",
+    "contact_email": "hello@247commerce.co.uk",
+    "client_domain": "whittard.co.uk",
+    "followup_dispatched_at": "2026-10-22 03:19:41",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "elogic.co": {
+    "agency_name": "Elogic Commerce",
+    "contact_email": "office@elogic.co",
+    "client_domain": "whirlpool.com",
+    "followup_dispatched_at": "2026-10-22 03:19:45",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "rainycityagency.com": {
+    "agency_name": "Rainy City Agency",
+    "contact_email": "hello@rainycityagency.com",
+    "client_domain": "dartscorner.co.uk",
+    "followup_dispatched_at": "2026-10-22 03:19:48",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "dyode.com": {
+    "agency_name": "DYODE",
+    "contact_email": "hello@dyode.com",
+    "client_domain": "agjeans.com",
+    "followup_dispatched_at": "2026-10-22 03:19:51",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "codal.com": {
+    "agency_name": "Codal",
+    "contact_email": "go@codal.com",
+    "client_domain": "thermos.com",
+    "followup_dispatched_at": "2026-10-22 03:19:55",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "grebban.com": {
+    "agency_name": "Grebban",
+    "contact_email": "hello@grebban.com",
+    "client_domain": "bjornborg.com",
+    "followup_dispatched_at": "2026-10-22 03:19:59",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "processcreative.com.au": {
+    "agency_name": "Process Creative",
+    "contact_email": "enquiries@processcreative.com.au",
+    "client_domain": "bondisands.com.au",
+    "followup_dispatched_at": "2026-10-22 03:20:02",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "convertdigital.com.au": {
+    "agency_name": "Convert Digital",
+    "contact_email": "enquiries@convertdigital.com.au",
+    "client_domain": "2xu.com",
+    "followup_dispatched_at": "2026-10-22 03:20:05",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "aligent.com.au": {
+    "agency_name": "Aligent",
+    "contact_email": "contact@aligent.com.au",
+    "client_domain": "theathletesfoot.com.au",
+    "followup_dispatched_at": "2026-10-22 03:20:08",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "studioforty9.com": {
+    "agency_name": "StudioForty9",
+    "contact_email": "info@studioforty9.com",
+    "client_domain": "elverys.ie",
+    "followup_dispatched_at": "2026-10-22 03:20:12",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "wondersauce.com": {
+    "agency_name": "Wondersauce",
+    "contact_email": "hello@wondersauce.com",
+    "client_domain": "crunchlabs.com",
+    "followup_dispatched_at": "2026-10-22 03:20:15",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "fluidcommerce.co.uk": {
+    "agency_name": "Fluid Commerce",
+    "contact_email": "hello@fluidcommerce.co.uk",
+    "client_domain": "augustinusbader.com",
+    "followup_dispatched_at": "2026-10-22 03:20:18",
+    "bump_number": 1,
+    "status": "SENT"
   }
 }

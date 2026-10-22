@@ -2853,41 +2853,133 @@ Apex Digital Studio</pre>
 
     <!-- Interactive Growth Engine Controllers (Attack Simulator, Pitch Drawer, ROI Calculator, PDF Flipbook) -->
     <script>
-        // 1. Interactive Attack Simulator in Radar Terminal
-        function simulateTakeoverAttack() {
+        // 1. Interactive 4-Scenario Attack Simulator in Radar Terminal
+        const SIMULATOR_SCENARIOS = {
+            cname: {
+                domain: 'promo.clientbrand.com',
+                headerTitle: 'LIVE EXPLOIT SIMULATION // CNAME HIJACK SEQUENCE',
+                badge: 'CRITICAL RISK',
+                steps: [
+                    { t: '[T+0.0s]', color: 'text-emerald-400', border: 'border-slate-800', bg: 'bg-slate-950/80', html: 'RFC-8484 DoH Query: <strong class="text-white">promo.clientbrand.com</strong> resolves to <code class="text-amber-300">CNAME unbouncepages.com</code>.' },
+                    { t: '[T+0.4s]', color: 'text-red-400', border: 'border-red-500/40', bg: 'bg-slate-950/80', html: 'Fingerprint Match: Target SaaS endpoint returns <code class="text-red-300">HTTP 404: The requested URL was not found on this server</code> (Abandoned campaign).' },
+                    { t: '[T+0.8s]', color: 'text-red-300', border: 'border-red-500/50', bg: 'bg-red-950/60', html: '<strong>Hostile Takeover Path:</strong> Threat actor registers <code class="text-white">promo.clientbrand.com</code> on Unbounce in 45 seconds, inherits parent <code class="text-red-300">.clientbrand.com</code> cookies, and launches a fake customer checkout under your client\'s genuine SSL padlock.' },
+                    { t: '[ORBIT SHIELD]', color: 'text-emerald-400', border: 'border-emerald-500/50', bg: 'bg-emerald-950/70', html: '<strong>Autonomous Interception:</strong> Orbit Sentinel-01 detects the dangling pointer within 60 seconds of campaign expiration, fires an urgent Slack/Email alert to your agency, and generates a client remediation ticket worth <strong class="text-emerald-300">$250/mo in retainer value</strong>.' }
+                ],
+                snippetTitle: 'Cloudflare / Route53 Remediation Command',
+                snippetCode: '# Delete dangling CNAME immediately or reclaim SaaS endpoint:\norbit-recon promo.clientbrand.com --remediate'
+            },
+            dmarc: {
+                domain: 'clientbrand.com',
+                headerTitle: 'LIVE EXPLOIT SIMULATION // DMARC p=none EXECUTIVE SPOOFING',
+                badge: 'HIGH SPOOF RISK',
+                steps: [
+                    { t: '[T+0.0s]', color: 'text-emerald-400', border: 'border-slate-800', bg: 'bg-slate-950/80', html: 'RFC-8484 TXT Lookup: <strong class="text-white">_dmarc.clientbrand.com</strong> returns <code class="text-amber-300">v=DMARC1; p=none;</code> (Monitoring only — zero enforcement).' },
+                    { t: '[T+0.3s]', color: 'text-red-400', border: 'border-red-500/40', bg: 'bg-slate-950/80', html: 'SPF Evaluation: Softfail <code class="text-red-300">~all</code> detected without strict DKIM alignment (<code class="text-amber-300">adkim=r</code>).' },
+                    { t: '[T+0.7s]', color: 'text-red-300', border: 'border-red-500/50', bg: 'bg-red-950/60', html: '<strong>Invoice Wire Fraud Path:</strong> Attacker dispatches spoofed wire-transfer instructions from <code class="text-white">ceo@clientbrand.com</code>. Because <code class="text-red-300">p=none</code> instructs Gmail/M365 to deliver unauthenticated mail, the fake invoice lands directly in the VIP inbox.' },
+                    { t: '[ORBIT SHIELD]', color: 'text-emerald-400', border: 'border-emerald-500/50', bg: 'bg-emerald-950/70', html: '<strong>Autonomous Interception:</strong> Orbit generates copy-paste Cloudflare & Route53 TXT records upgrading the domain to <code class="text-emerald-300">p=reject; sp=reject; adkim=s; aspf=s;</code> + MTA-STS TLS enforcement.' }
+                ],
+                snippetTitle: 'Hardened DMARC TXT Record',
+                snippetCode: '_dmarc.clientbrand.com. 300 IN TXT "v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s; rua=mailto:dmarc@clientbrand.com;"'
+            },
+            dotenv: {
+                domain: 'shop.clientbrand.com',
+                headerTitle: 'LIVE EXPLOIT SIMULATION // EXPOSED .ENV & .GIT SECRETS HARVEST',
+                badge: 'CRITICAL LEAK',
+                steps: [
+                    { t: '[T+0.0s]', color: 'text-emerald-400', border: 'border-slate-800', bg: 'bg-slate-950/80', html: 'Perimeter Probe: <strong class="text-white">https://shop.clientbrand.com/.env</strong> and <strong class="text-white">/.git/config</strong>.' },
+                    { t: '[T+0.4s]', color: 'text-red-400', border: 'border-red-500/40', bg: 'bg-slate-950/80', html: 'Misconfigured Web Root: Server returns <code class="text-red-300">HTTP 200 OK (text/plain)</code> instead of <code class="text-emerald-300">403/404</code>, leaking <code class="text-amber-300">STRIPE_LIVE_SECRET_KEY</code> and <code class="text-amber-300">AWS_SECRET_ACCESS_KEY</code>.' },
+                    { t: '[T+0.9s]', color: 'text-red-300', border: 'border-red-500/50', bg: 'bg-red-950/60', html: '<strong>Automated Secret Exploitation:</strong> Botnet exfiltrates production database credentials and Stripe API keys within 90 seconds of an agency staging deployment.' },
+                    { t: '[ORBIT SHIELD]', color: 'text-emerald-400', border: 'border-emerald-500/50', bg: 'bg-emerald-950/70', html: '<strong>Autonomous Interception:</strong> Orbit\'s SPA-aware stream scanner verifies dotfile and backup (<code class="text-emerald-300">wp-config.php.bak</code>) isolation after every deploy with zero false positives.' }
+                ],
+                snippetTitle: 'Nginx Dotfile & Backup Lockdown',
+                snippetCode: 'location ~ /\.(?!well-known).* { deny all; access_log off; log_not_found off; }'
+            },
+            php418: {
+                domain: 'cms.clientbrand.com',
+                headerTitle: 'LIVE EXPLOIT SIMULATION // PHP BOT RCE vs. HTTP 418 TEAPOT SHIELD',
+                badge: 'CVE-2017-9841 + PEARCMD',
+                steps: [
+                    { t: '[T+0.0s]', color: 'text-red-400', border: 'border-red-500/40', bg: 'bg-slate-950/80', html: 'Bot Scanner (<code class="text-amber-300">103.46.186.148</code>) sweeps <code class="text-white">/api</code>, <code class="text-white">/cms</code>, <code class="text-white">/workspace/drupal</code>, and <code class="text-white">/app</code> for <code class="text-red-300">/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php</code>.' },
+                    { t: '[T+0.4s]', color: 'text-red-400', border: 'border-red-500/40', bg: 'bg-slate-950/80', html: 'ThinkPHP & PEAR LFI Chain: Bot fires <code class="text-amber-300">?s=/index/\\think\\app/invokefunction</code> followed by <code class="text-red-300">?lang=../../../../usr/local/lib/php/pearcmd&+config-create+/&lt;?echo(md5("hi"));?&gt;+/tmp/index1.php</code>.' },
+                    { t: '[T+0.8s]', color: 'text-emerald-400', border: 'border-emerald-500/50', bg: 'bg-emerald-950/70', html: '<strong>HTTP 418 Teapot Sinkhole Active:</strong> Hardened perimeter drops all 16 exploit probes with <code class="text-emerald-300">HTTP/1.1 418 I\'m a teapot (194 bytes)</code> while <code class="text-emerald-300">register_argc_argv = Off</code> neutralizes <code class="text-white">pearcmd.php</code> CLI injection.' },
+                    { t: '[ORBIT SHIELD]', color: 'text-cyan-300', border: 'border-cyan-500/50', bg: 'bg-slate-900/90', html: '<strong>Pre-Exploit Agency Audit:</strong> Orbit pre-screens client domains for exposed <code class="text-white">/vendor/composer/installed.json</code>, <code class="text-white">eval-stdin.php</code>, and <code class="text-white">X-Powered-By: PHP</code> banners, and exports the ready-to-deploy Nginx <code class="text-emerald-300">return 418;</code> sinkhole block below.' }
+                ],
+                snippetTitle: 'Nginx HTTP 418 ("I\'m a teapot") PHP Bot Sinkhole + php.ini Shield',
+                snippetCode: `location ~* (?:/vendor/|eval-stdin\\.php|/\\.(?:env|git|DS_Store)|wp-config\\.php\\.(?:bak|old)|phpinfo\\.php) {
+    return 418; # HTTP 418 I'm a teapot sinkhole
+}
+if ($query_string ~* "(?:invokefunction|call_user_func_array|pearcmd|\\+config-create\\+|\\.\\./\\.\\./)") {
+    return 418;
+}
+# php.ini: expose_php = Off | register_argc_argv = Off`
+            }
+        };
+
+        function copySimSnippet(key) {
+            const sc = SIMULATOR_SCENARIOS[key] || SIMULATOR_SCENARIOS.cname;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(sc.snippetCode);
+            }
+            const btn = document.getElementById('copySimSnippetBtn');
+            if (btn) {
+                const orig = btn.textContent;
+                btn.textContent = '✓ Copied Shield Config!';
+                setTimeout(() => { btn.textContent = orig; }, 2000);
+            }
+        }
+
+        function simulateTakeoverAttack(scenarioKey = 'cname') {
             if (window.SimpleCat && SimpleCat.playPowerUp) SimpleCat.playPowerUp();
             const hud = document.getElementById('auditHUD');
+            const sc = SIMULATOR_SCENARIOS[scenarioKey] || SIMULATOR_SCENARIOS.cname;
             const input = document.getElementById('targetDomain');
-            if (input) input.value = 'promo.clientbrand.com';
+            if (input) input.value = sc.domain;
             if (!hud) return;
+
+            const tabButtons = [
+                { id: 'cname', label: '1. Dangling CNAME' },
+                { id: 'dmarc', label: '2. DMARC Spoof' },
+                { id: 'dotenv', label: '3. Exposed .env/.git' },
+                { id: 'php418', label: '4. PHP Bot & 418 Teapot 🫖' }
+            ].map(tab => {
+                const active = tab.id === scenarioKey;
+                const cls = active
+                    ? 'px-2.5 py-1.5 rounded-lg bg-red-500 text-slate-950 font-bold text-[11px] cursor-pointer shadow-sm whitespace-nowrap'
+                    : 'px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 font-semibold text-[11px] cursor-pointer whitespace-nowrap';
+                return `<button type="button" id="simTab-${tab.id}" onclick="simulateTakeoverAttack('${tab.id}')" class="${cls}">${tab.label}</button>`;
+            }).join('');
+
+            const stepsHtml = sc.steps.map(st => `
+                <div class="p-2.5 rounded-lg ${st.bg} border ${st.border} flex items-start gap-2.5">
+                    <span class="${st.color} font-bold shrink-0">${st.t}</span>
+                    <span>${st.html}</span>
+                </div>
+            `).join('');
 
             hud.classList.remove('hidden');
             hud.innerHTML = `
                 <div class="p-4 sm:p-5 rounded-xl bg-red-950/40 border-2 border-red-500/60 space-y-4 font-mono text-xs">
-                    <div class="flex items-center justify-between border-b border-red-500/30 pb-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-red-500/30 pb-3">
                         <div class="flex items-center gap-2">
                             <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
-                            <span class="font-arcade text-[10px] text-red-300 uppercase">LIVE EXPLOIT SIMULATION // CNAME HIJACK SEQUENCE</span>
+                            <span class="font-arcade text-[10px] text-red-300 uppercase">${sc.headerTitle}</span>
                         </div>
-                        <span class="px-2 py-0.5 rounded bg-red-500/20 text-red-300 text-[10px] font-bold border border-red-500/40">CRITICAL RISK</span>
+                        <span class="px-2 py-0.5 rounded bg-red-500/20 text-red-300 text-[10px] font-bold border border-red-500/40">${sc.badge}</span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-1">
+                        ${tabButtons}
                     </div>
                     <div class="space-y-2.5 text-slate-200">
-                        <div class="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 flex items-start gap-2.5">
-                            <span class="text-emerald-400 font-bold">[T+0.0s]</span>
-                            <span>RFC-8484 DoH Query: <strong class="text-white">promo.clientbrand.com</strong> resolves to <code class="text-amber-300">CNAME unbouncepages.com</code>.</span>
+                        ${stepsHtml}
+                    </div>
+                    <div class="p-3 rounded-lg bg-slate-950/90 border border-emerald-500/40 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] font-bold text-emerald-400 uppercase">${sc.snippetTitle}</span>
+                            <button type="button" id="copySimSnippetBtn" onclick="copySimSnippet('${scenarioKey}')" class="px-2.5 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-300 text-[10px] font-bold cursor-pointer">
+                                Copy Config
+                            </button>
                         </div>
-                        <div class="p-2.5 rounded-lg bg-slate-950/80 border border-red-500/40 flex items-start gap-2.5">
-                            <span class="text-red-400 font-bold">[T+0.4s]</span>
-                            <span>Fingerprint Match: Target SaaS endpoint returns <code class="text-red-300">HTTP 404: The requested URL was not found on this server</code> (Abandoned campaign).</span>
-                        </div>
-                        <div class="p-2.5 rounded-lg bg-red-950/60 border border-red-500/50 flex items-start gap-2.5">
-                            <span class="text-red-300 font-bold">[T+0.8s]</span>
-                            <span><strong>Hostile Takeover Path:</strong> Threat actor registers <code class="text-white">promo.clientbrand.com</code> on Unbounce in 45 seconds, inherits parent <code class="text-red-300">.clientbrand.com</code> cookies, and launches a fake customer checkout under your client's genuine SSL padlock.</span>
-                        </div>
-                        <div class="p-3 rounded-lg bg-emerald-950/70 border border-emerald-500/50 flex items-start gap-2.5">
-                            <span class="text-emerald-400 font-bold">[ORBIT SHIELD]</span>
-                            <span><strong>Autonomous Interception:</strong> Orbit Sentinel-01 detects the dangling pointer within 60 seconds of campaign expiration, fires an urgent Slack/Email alert to your agency, and generates a client remediation ticket worth <strong class="text-emerald-300">$250/mo in retainer value</strong>.</span>
-                        </div>
+                        <pre class="text-[11px] text-slate-300 overflow-x-auto whitespace-pre-wrap leading-relaxed">${sc.snippetCode}</pre>
                     </div>
                     <div class="pt-2 flex flex-wrap items-center justify-between gap-2">
                         <button type="button" onclick="if(window.SimpleCat) SimpleCat.explain('cname')" class="px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 font-pixel text-[11px] cursor-pointer">
@@ -2899,7 +2991,7 @@ Apex Digital Studio</pre>
                     </div>
                 </div>
             `;
-            hud.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            (document.getElementById('audit-terminal') || hud).scrollIntoView({ behavior: 'instant', block: 'start' });
         }
 
         // 2. "Steal Our Client Pitch" Copy-Paste Email Drawer
@@ -3092,7 +3184,10 @@ ${body}`;
             const h = window.location.hash;
             if (h === '#simulate') {
                 closePdfFlipbookModal();
-                simulateTakeoverAttack();
+                simulateTakeoverAttack('cname');
+            } else if (h === '#simulate-php418' || h === '#teapot') {
+                closePdfFlipbookModal();
+                simulateTakeoverAttack('php418');
             } else if (h === '#flipbook') {
                 openPdfFlipbookModal();
             } else if (h === '#roi-calculator' || h === '#pricing') {
