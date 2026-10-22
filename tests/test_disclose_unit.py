@@ -2,16 +2,26 @@
 
 Covers:
 - --dry-run preview (with/without --now, with nonexistent program)
+- --dry-run off-peak window gating, driven by an injected clock (deterministic
+  at any hour of the day)
 - --list / --json delegation to triage_bounties (empty disclosures dir)
 - --view not-found returns exit code 1
 - --dry-run takes precedence over sweep (no run_sweep call)
 """
 
+import datetime
 from argparse import Namespace
 from unittest.mock import patch
 import pytest
 
 from orbit_security.cli import run_disclose
+
+
+# The off-peak window is 2:00 AM - 5:00 AM MST (UTC-7), i.e. 09:00-12:00 UTC.
+# Both instants below are therefore fully deterministic regardless of when the
+# suite happens to run.
+INSIDE_WINDOW_UTC = datetime.datetime(2026, 1, 15, 11, 0, tzinfo=datetime.timezone.utc)
+OUTSIDE_WINDOW_UTC = datetime.datetime(2026, 1, 15, 12, 0, tzinfo=datetime.timezone.utc)
 
 
 def make_args(**kwargs):
@@ -39,7 +49,8 @@ def make_args(**kwargs):
 async def test_disclose_dry_run_preview_with_now(capsys):
     """--dry-run --now shows preview and says sweep would execute."""
     args = make_args(dry_run=True, program="shopify", now=True)
-    result = await run_disclose(args)
+    # Inject an outside-window clock so the result depends only on --now.
+    result = await run_disclose(args, now_utc=OUTSIDE_WINDOW_UTC)
     assert result == 0
     out = capsys.readouterr().out
     assert "DRY-RUN — no external targets will be probed" in out
@@ -51,12 +62,50 @@ async def test_disclose_dry_run_preview_with_now(capsys):
 async def test_disclose_dry_run_outside_window(capsys):
     """--dry-run without --now outside off-peak says sweep blocked."""
     args = make_args(dry_run=True, now=False)
+    result = await run_disclose(args, now_utc=OUTSIDE_WINDOW_UTC)
+    assert result == 0
+    out = capsys.readouterr().out
+    assert "DRY-RUN — no external targets will be probed" in out
+    assert "OUTSIDE WINDOW" in out
+    assert "would NOT execute" in out
+    assert "add --now to force" in out
+
+
+@pytest.mark.asyncio
+async def test_disclose_dry_run_inside_window(capsys):
+    """--dry-run without --now inside off-peak says the sweep would execute."""
+    args = make_args(dry_run=True, now=False)
+    result = await run_disclose(args, now_utc=INSIDE_WINDOW_UTC)
+    assert result == 0
+    out = capsys.readouterr().out
+    assert "DRY-RUN — no external targets will be probed" in out
+    assert "IN WINDOW" in out
+    assert "Sweep would execute" in out
+    assert "would NOT execute" not in out
+
+
+@pytest.mark.asyncio
+async def test_disclose_dry_run_now_forces_execution_outside_window(capsys):
+    """--now overrides the off-peak gate even when the clock is outside it."""
+    args = make_args(dry_run=True, now=True)
+    result = await run_disclose(args, now_utc=OUTSIDE_WINDOW_UTC)
+    assert result == 0
+    out = capsys.readouterr().out
+    assert "OUTSIDE WINDOW" in out
+    assert "--now would bypass" in out
+    assert "Sweep would execute" in out
+    assert "would NOT execute" not in out
+
+
+@pytest.mark.asyncio
+async def test_disclose_dry_run_uses_real_clock_when_not_injected(capsys):
+    """No injected clock => the live UTC clock drives the window decision."""
+    args = make_args(dry_run=True, now=False)
     result = await run_disclose(args)
     assert result == 0
     out = capsys.readouterr().out
     assert "DRY-RUN — no external targets will be probed" in out
-    assert "would NOT execute" in out
-    assert "add --now to force" in out
+    assert ("would NOT execute" in out) != ("Sweep would execute" in out)
 
 
 @pytest.mark.asyncio

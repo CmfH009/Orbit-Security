@@ -1,0 +1,137 @@
+name: "Orbit Security CI"
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# Least privilege: the CI only ever reads the repository.
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests
+    # The runtime stack is Windows-native (pyautogui, pywinauto, pywin32 and the
+    # Windows clipboard assertions in tests/test_desktop_x_bridge.py), so the
+    # suite runs on a Windows runner.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          # PEP 735 dependency group `dev` (pytest / pytest-asyncio / pyyaml).
+          # Older pip releases do not understand --group, hence the fallback.
+          python -m pip install --group dev || python -m pip install "pytest>=9.1.1" "pytest-asyncio>=1.4.0" "pyyaml>=6.0.3"
+          # Runtime imports exercised by the suite that are imported at module
+          # level but are Windows/network specific:
+          #   edge-tts -> src/orbit_security/voice_model.py
+          #   pywin32  -> src/orbit_security/desktop_x_bridge.py (Windows clipboard)
+          # Both are now declared in pyproject.toml; installed explicitly here
+          # as belt-and-braces so CI never depends on the lock resolving them.
+          python -m pip install edge-tts pywin32 pillow
+
+      - name: Run pytest
+        run: python -m pytest -q --junitxml=report/junit.xml
+
+      - name: Upload JUnit report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-report
+          path: report/junit.xml
+
+  parity:
+    name: Landing / Docs Parity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Check landing/ -> docs/ parity
+        run: python scripts/sync_landing_to_docs.py --check
+
+  post-assets:
+    name: Public Asset Availability
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: HEAD-check public URLs
+        run: |
+          python - <<'PY'
+          import sys
+          import urllib.error
+          import urllib.request
+
+          BASE = "https://cmfh009.github.io/Orbit-Security"
+
+          # Blocking: these three core pages must always answer HTTP 200.
+          REQUIRED = [
+              "/",
+              "/about.html",
+              "/fleet.html",
+          ]
+
+          # Non-blocking: robots.txt, sitemap.xml, the OG/logo images and
+          # .well-known/security.txt are being produced by another workstream
+          # and legitimately 404 until that lands, so they only WARN here.
+          # /signup.html is reported on the same tier and can be promoted to
+          # REQUIRED once the team treats it as a core page.
+          PENDING = [
+              "/signup.html",
+              "/robots.txt",
+              "/sitemap.xml",
+              "/assets/og-image.png",
+              "/assets/logo.png",
+              "/.well-known/security.txt",
+          ]
+
+          def head(url):
+              req = urllib.request.Request(
+                  url, method="HEAD", headers={"User-Agent": "orbit-ci-parity"}
+              )
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as resp:
+                      return resp.status, ""
+              except urllib.error.HTTPError as exc:
+                  return exc.code, str(exc.reason)
+              except Exception as exc:  # DNS / TLS / connection errors
+                  return 0, str(exc)
+
+          failures = []
+
+          for path in REQUIRED:
+              status, reason = head(BASE + path)
+              ok = status == 200
+              print(f"[{'PASS' if ok else 'FAIL'}] {BASE + path} -> {status} {reason}".rstrip())
+              if not ok:
+                  failures.append(path)
+
+          for path in PENDING:
+              status, reason = head(BASE + path)
+              ok = status == 200
+              print(f"[{'PASS' if ok else 'WARN'}] {BASE + path} -> {status} {reason}".rstrip())
+
+          if failures:
+              print(f"FAIL: {len(failures)} required URL(s) are not HTTP 200: {failures}")
+              sys.exit(1)
+
+          print("All required public URLs returned HTTP 200.")
+          PY

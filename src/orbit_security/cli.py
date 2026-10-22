@@ -117,12 +117,18 @@ async def run_scan(args):
         console.print(f"[bold green]✔ Markdown audit generated:[/bold green] [underline]{os.path.abspath(args.output_md)}[/underline]")
 
 
-async def run_disclose(args):
+async def run_disclose(args, now_utc: datetime.datetime | None = None):
     """Automated bounty-radar -> disclosure pipeline.
 
     Sweeps enrolled bug bounty programs for subdomain takeover / mail-spoofing
     findings, generates HackerOne-compliant disclosure reports, and dispatches
     HIGH_CONFIDENCE alerts via Discord/Slack webhooks.
+
+    Args:
+        args: Parsed CLI namespace for the ``disclose`` subcommand.
+        now_utc: Optional injectable clock (timezone-aware UTC). Defaults to
+            ``datetime.now(timezone.utc)``. Injecting it keeps the off-peak
+            window decision deterministic for tests and dry-run previews.
     """
     from orbit_security.bounty_radar import (
         BountyScopeIngester,
@@ -223,7 +229,7 @@ async def run_disclose(args):
 
     # --- Dry-run preview (no external probing) ---------------------------------
     if args.dry_run:
-        now_utc = datetime.datetime.now(datetime.timezone.utc)
+        now_utc = now_utc or datetime.datetime.now(datetime.timezone.utc)
         in_window = OffPeakWindow.is_off_peak(now_utc)
         would_bypass = args.now or in_window
 
