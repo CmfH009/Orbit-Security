@@ -1,0 +1,110 @@
+[
+  {
+    "agency_name": "Roswell NYC",
+    "agency_domain": "roswellnyc.com",
+    "contact_email": "contact@roswellnyc.com",
+    "client_domain": "ruggable.com",
+    "dispatched_at": "2026-10-20 16:04:48",
+    "elapsed_hours": 28.6,
+    "eml_file": "bump1_roswellnyc.com.eml",
+    "eml_exists": true,
+    "status": "STAGED_READY",
+    "suggested_send_window": "T+36h to T+48h (Tomorrow morning 04:00 - 10:00 MST)"
+  },
+  {
+    "agency_name": "Zehner",
+    "agency_domain": "zehnergroup.com",
+    "contact_email": "hello@zehnergroup.com",
+    "client_domain": "stampd.com",
+    "dispatched_at": "2026-10-20 16:05:21",
+    "elapsed_hours": 28.6,
+    "eml_file": "bump1_zehnergroup.com.eml",
+    "eml_exists": true,
+    "status": "STAGED_READY",
+    "suggested_send_window": "T+36h to T+48h (Tomorrow morning 04:00 - 10:00 MST)"
+  },
+  {
+    "agency_name": "Vervaunt",
+    "agency_domain": "vervaunt.com",
+    "contact_email": "hello@vervaunt.com",
+    "client_domain": "gymshark.com",
+    "dispatched_at": "2026-10-20 16:05:33",
+    "elapsed_hours": 28.6,
+    "eml_file": "bump1_vervaunt.com.eml",
+    "eml_exists": true,
+    "status": "STAGED_READY",
+    "suggested_send_window": "T+36h to T+48h (Tomorrow morning 04:00 - 10:00 MST)"
+  },
+  {
+    "agency_name": "Velstar",
+    "agency_domain": "velstar.co.uk",
+    "contact_email": "hello@velstar.co.uk",
+    "client_domain": "castore.com",
+    "dispatched_at": "2026-10-20 16:05:44",
+    "elapsed_hours": 28.6,
+    "eml_file": "bump1_velstar.co.uk.eml",
+    "eml_exists": true,
+    "status": "STAGED_READY",
+    "suggested_send_window": "T+36h to T+48h (Tomorrow morning 04:00 - 10:00 MST)"
+  },
+  {
+    "agency_name": "Superco",
+    "agency_domain": "superco.net",
+    "contact_email": "hello@superco.net",
+    "client_domain": "sohohome.com",
+    "dispatched_at": "2026-10-20 16:05:56",
+    "elapsed_hours": 28.5,
+    "eml_file": "bump1_superco.net.eml",
+    "eml_exists": true,
+    "status": "STAGED_READY",
+    "suggested_send_window": "T+36h to T+48h (Tomorrow morning 04:00 - 10:00 MST)"
+  },
+  {
+    "agency_name": "Novatize",
+    "agency_domain": "novatize.com",
+    "contact_email": "info@novatize.com",
+    "client_domain": "kanuk.com",
+    "dispatched_at": "2026-10-20 16:06:06",
+    "elapsed_hours": 28.5,
+    "eml_file": "bump1_novatize.com.eml",
+    "eml_exists": true,
+    "status": "STAGED_READY",
+    "suggested_send_window": "T+36h to T+48h (Tomorrow morning 04:00 - 10:00 MST)"
+  },
+  {
+    "agency_name": "Ether Creative",
+    "agency_domain": "ethercreative.co.uk",
+    "contact_email": "hello@ethercreative.co.uk",
+    "client_domain": "churchs.com",
+    "dispatched_at": "2026-10-20 16:06:21",
+    "elapsed_hours": 28.5,
+    "eml_file": "bump1_ethercreative.co.uk.eml",
+    "eml_exists": true,
+    "status": "STAGED_READY",
+    "suggested_send_window": "T+36h to T+48h (Tomorrow morning 04:00 - 10:00 MST)"
+  },
+  {
+    "agency_name": "Pinpoint",
+    "agency_domain": "pinpointdesigns.co.uk",
+    "contact_email": "hello@pinpointdesigns.co.uk",
+    "client_domain": "bramblecrest.com",
+    "dispatched_at": "2026-10-20 16:06:35",
+    "elapsed_hours": 28.5,
+    "eml_file": "bump1_pinpointdesigns.co.uk.eml",
+    "eml_exists": true,
+    "status": "STAGED_READY",
+    "suggested_send_window": "T+36h to T+48h (Tomorrow morning 04:00 - 10:00 MST)"
+  },
+  {
+    "agency_name": "Blue Thirst",
+    "agency_domain": "bluethirst.co.uk",
+    "contact_email": "info@bluethirst.co.uk",
+    "client_domain": "bathstore.com",
+    "dispatched_at": "2026-10-20 16:07:11",
+    "elapsed_hours": 28.5,
+    "eml_file": "bump1_bluethirst.co.uk.eml",
+    "eml_exists": true,
+    "status": "STAGED_READY",
+    "suggested_send_window": "T+36h to T+48h (Tomorrow morning 04:00 - 10:00 MST)"
+  }
+]

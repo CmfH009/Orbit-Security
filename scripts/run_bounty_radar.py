@@ -50,6 +50,8 @@ def main():
     parser.add_argument("--ingest-h1", type=str, help="Path to HackerOne JSON scope export to ingest")
     parser.add_argument("--ingest-bugcrowd", type=str, help="Path to Bugcrowd JSON scope export to ingest")
     parser.add_argument("--passive-ct", action="store_true", help="Passively query Certificate Transparency (crt.sh) logs for real subdomains")
+    parser.add_argument("--crypto-bundle", action="store_true", default=True, help="Export cryptographic evidence zip bundle with SHA-256 integrity manifest")
+    parser.add_argument("--max-programs", type=int, default=50, help="Max programs to sweep (default: 50)")
     parser.add_argument("--output-dir", type=str, help="Directory to save generated HackerOne Markdown disclosures")
     parser.add_argument("--status", action="store_true", help="Display radar telemetry, programs, and recent findings")
 
@@ -114,6 +116,8 @@ def main():
         max_domains_per_program=args.max_targets,
         use_passive_ct=args.passive_ct,
         output_dir=Path(args.output_dir) if args.output_dir else None,
+        max_programs=args.max_programs,
+        package_crypto_bundle=args.crypto_bundle,
     )
 
     if res.get("status") == "SKIPPED_OUTSIDE_WINDOW":
@@ -132,6 +136,15 @@ def main():
             print(f"  - {f}")
     else:
         print("  • No new takeover or spoofing vulnerabilities detected in scanned scopes.")
+
+    crypto_bundles = res.get("crypto_bundles", [])
+    if crypto_bundles:
+        print(f"\n🔐 Cryptographic Bundles Packaged ({len(crypto_bundles)}):")
+        for b in crypto_bundles:
+            print(f"  • Target: {b['target']} [{b['flaw_type']}]")
+            print(f"    - Zip:    {b['zip_path']}")
+            print(f"    - SHA256: {b['zip_sha256']}")
+            print(f"    - Files:  {b['total_files']} files + SHA-256 manifest")
 
     print("\n" + "=" * 70 + "\n")
 

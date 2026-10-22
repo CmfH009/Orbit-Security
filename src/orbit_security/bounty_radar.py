@@ -507,7 +507,7 @@ class BountyTakeoverSweeper:
         self.prefixes = custom_prefixes or HIGH_FREQUENCY_PREFIXES
 
     def fetch_crtsh_subdomains(
-        self, apex_domain: str, timeout: float = 4.0, max_results: int = 50
+        self, apex_domain: str, timeout: float = 2.0, max_results: int = 50
     ) -> List[str]:
         """Passively queries Certificate Transparency logs (crt.sh) for known subdomains.
 
@@ -1576,8 +1576,7 @@ Submitted via Orbit Security Automated Perimeter Sentinel. Research strictly adh
     def generate_security_txt_email(vuln: BountyVulnerability, program: Optional[BountyProgram] = None) -> str:
         prog_name = program.name if program else vuln.program_name
         target = vuln.target_domain
-        parts = target.split(".")
-        apex = parts[-2] + "." + parts[-1] if len(parts) >= 2 else target
+        apex = BountyTakeoverSweeper.get_organizational_domain(target)
 
         return f"""Subject: [SECURITY ADVISORY] Responsible Disclosure: {vuln.flaw_type.replace('_', ' ').title()} on {target}
 To: security@{apex}, security-team@{apex}
@@ -1667,12 +1666,13 @@ Orbit Security Coordinated Disclosure Team
         (bundle_dir / "security_txt_advisory.txt").write_text(email_content, encoding="utf-8")
 
         # 2. Write raw technical proof file
+        sev_val = vuln.severity.value if hasattr(vuln.severity, "value") else str(vuln.severity)
         evidence_content = (
             f"TARGET DOMAIN: {vuln.target_domain}\n"
             f"VULNERABILITY: {vuln.flaw_type}\n"
             f"CNAME TARGET: {vuln.cname_target or 'N/A'}\n"
             f"PROVIDER: {vuln.provider or 'N/A'}\n"
-            f"SEVERITY: {vuln.severity.value}\n"
+            f"SEVERITY: {sev_val}\n"
             f"CVSS v3.1: {vuln.cvss_score} ({vuln.cvss_vector})\n"
             f"CWE: {vuln.cwe_id}\n"
             f"TIMESTAMP UTC: {vuln.timestamp}\n"
@@ -1692,7 +1692,7 @@ Orbit Security Coordinated Disclosure Team
             "cname_target": vuln.cname_target,
             "flaw_type": vuln.flaw_type,
             "provider": vuln.provider,
-            "severity": vuln.severity.value,
+            "severity": sev_val,
             "cvss_score": vuln.cvss_score,
             "cvss_vector": vuln.cvss_vector,
             "cwe_id": vuln.cwe_id,
@@ -1868,7 +1868,8 @@ class BountyRadarSupervisor:
         save_disclosures: bool = True,
         sync_attack_graph: bool = True,
         output_dir: Optional[Path] = None,
-        max_programs: int = 25,
+        max_programs: int = 50,
+        package_crypto_bundle: bool = True,
     ) -> Dict[str, Any]:
         """Runs radar sweep across target programs if off-peak or force_now is set."""
         now_utc = datetime.datetime.now(datetime.timezone.utc)
@@ -1889,6 +1890,7 @@ class BountyRadarSupervisor:
 
         total_findings: List[BountyVulnerability] = []
         disclosed_files: List[str] = []
+        crypto_bundles: List[Dict[str, Any]] = []
 
         for prog in programs:
             logger.info(f"Running bounty sweep for {prog.name} ({len(prog.in_scope)} wildcard patterns)...")
@@ -1910,6 +1912,21 @@ class BountyRadarSupervisor:
                 if save_disclosures:
                     p = HackerOneDisclosureGenerator.save_disclosure(v, prog, output_dir=output_dir)
                     disclosed_files.append(str(p))
+
+                    if package_crypto_bundle:
+                        try:
+                            bundle_info = ResponsibleDisclosureDrafter.export_cryptographic_bundle(
+                                v, prog, output_dir=output_dir
+                            )
+                            crypto_bundles.append({
+                                "target": v.target_domain,
+                                "flaw_type": v.flaw_type,
+                                "zip_path": str(bundle_info["zip_path"]),
+                                "zip_sha256": bundle_info["zip_sha256"],
+                                "total_files": bundle_info["total_files"],
+                            })
+                        except Exception as bundle_err:
+                            logger.warning(f"Failed to export cryptographic bundle for {v.target_domain}: {bundle_err}")
 
                 # Real-Time Cash Bounty Alerting for HIGH_CONFIDENCE findings
                 if v.bounty_viability == "HIGH_CONFIDENCE":
@@ -1946,5 +1963,6 @@ class BountyRadarSupervisor:
             "vulnerabilities_found": len(total_findings),
             "vulnerabilities": [asdict(v) for v in total_findings],
             "disclosed_files": disclosed_files,
+            "crypto_bundles": crypto_bundles,
         }
 
