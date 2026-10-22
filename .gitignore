@@ -56,6 +56,9 @@ data/generated_videos/
 data/generated_audits/
 data/briefings/
 data/disclosures/*.md
+data/disclosures/*.zip
+data/disclosures/*_bundle/
+data/disclosures/staged_advisories_eml/
 !data/disclosures/.gitkeep
 src/data/
 FREEBUFF_AUDIT_PROMPT.md

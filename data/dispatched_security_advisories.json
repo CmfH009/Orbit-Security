@@ -1,0 +1,24 @@
+{
+  "khealth.com": {
+    "program_id": "khealth",
+    "program_name": "KHealth",
+    "recipient": "security@khealth.com",
+    "subject": "[SECURITY ADVISORY] Responsible Disclosure: Mail Spoofing on khealth.com",
+    "severity": "MEDIUM",
+    "cvss_score": 5.3,
+    "sent_at": "2026-10-22T02:46:11.702508+00:00",
+    "bundle_name": "khealth_mail_spoofing_khealth_com_bundle",
+    "status": "DISPATCHED"
+  },
+  "hhc247.org": {
+    "program_id": "khealth",
+    "program_name": "KHealth",
+    "recipient": "security@hhc247.org",
+    "subject": "[SECURITY ADVISORY] Responsible Disclosure: Mail Spoofing on hhc247.org",
+    "severity": "MEDIUM",
+    "cvss_score": 5.3,
+    "sent_at": "2026-10-22T03:58:27.859130+00:00",
+    "bundle_name": "khealth_mail_spoofing_hhc247_org_bundle",
+    "status": "DISPATCHED"
+  }
+}

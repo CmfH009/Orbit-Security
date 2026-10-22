@@ -1,0 +1,2453 @@
+{
+  "generated_at": "2026-10-22T02:43:35.926174+00:00",
+  "total_bundles": 121,
+  "total_programs": 14,
+  "bundles": [
+    {
+      "bundle_name": "deptofdefense_mail_spoofing_assets_mil_bundle",
+      "program_id": "deptofdefense",
+      "program_name": "U.S. Dept of Defense",
+      "target_domain": "assets.mil",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:33:26.532964+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@assets.mil",
+        "security-team@assets.mil"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\deptofdefense_mail_spoofing_assets_mil_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "deptofdefense_mail_spoofing_cdn1_mil_bundle",
+      "program_id": "deptofdefense",
+      "program_name": "U.S. Dept of Defense",
+      "target_domain": "cdn1.mil",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:33:28.709912+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@cdn1.mil",
+        "security-team@cdn1.mil"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\deptofdefense_mail_spoofing_cdn1_mil_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "deptofdefense_mail_spoofing_cdn2_mil_bundle",
+      "program_id": "deptofdefense",
+      "program_name": "U.S. Dept of Defense",
+      "target_domain": "cdn2.mil",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:33:29.043350+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@cdn2.mil",
+        "security-team@cdn2.mil"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\deptofdefense_mail_spoofing_cdn2_mil_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "deptofdefense_mail_spoofing_static_mil_bundle",
+      "program_id": "deptofdefense",
+      "program_name": "U.S. Dept of Defense",
+      "target_domain": "static.mil",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:33:29.278047+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@static.mil",
+        "security-team@static.mil"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\deptofdefense_mail_spoofing_static_mil_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "elastic_mail_spoofing_ela_st_bundle",
+      "program_id": "elastic",
+      "program_name": "Elastic",
+      "target_domain": "ela.st",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:38:38.633077+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@ela.st",
+        "security-team@ela.st"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\elastic_mail_spoofing_ela_st_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "elastic_mail_spoofing_elastic_dev_bundle",
+      "program_id": "elastic",
+      "program_name": "Elastic",
+      "target_domain": "elastic.dev",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:38:40.843385+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@elastic.dev",
+        "security-team@elastic.dev"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\elastic_mail_spoofing_elastic_dev_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "elastic_mail_spoofing_elasticacademy_com_bundle",
+      "program_id": "elastic",
+      "program_name": "Elastic",
+      "target_domain": "elasticacademy.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:38:48.365062+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@elasticacademy.com",
+        "security-team@elasticacademy.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\elastic_mail_spoofing_elasticacademy_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "elastic_mail_spoofing_elasticapm_co_bundle",
+      "program_id": "elastic",
+      "program_name": "Elastic",
+      "target_domain": "elasticapm.co",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:38:56.421747+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@elasticapm.co",
+        "security-team@elasticapm.co"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\elastic_mail_spoofing_elasticapm_co_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "elastic_mail_spoofing_elasticpartneracademy_com_bundle",
+      "program_id": "elastic",
+      "program_name": "Elastic",
+      "target_domain": "elasticpartneracademy.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:39:06.481123+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@elasticpartneracademy.com",
+        "security-team@elasticpartneracademy.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\elastic_mail_spoofing_elasticpartneracademy_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "elastic_mail_spoofing_elasticps_co_bundle",
+      "program_id": "elastic",
+      "program_name": "Elastic",
+      "target_domain": "elasticps.co",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:39:07.310516+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@elasticps.co",
+        "security-team@elasticps.co"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\elastic_mail_spoofing_elasticps_co_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "elastic_mail_spoofing_elasticsearch_com_bundle",
+      "program_id": "elastic",
+      "program_name": "Elastic",
+      "target_domain": "elasticsearch.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:39:08.134051+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@elasticsearch.com",
+        "security-team@elasticsearch.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\elastic_mail_spoofing_elasticsearch_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "elastic_mail_spoofing_elasticsearch_fr_bundle",
+      "program_id": "elastic",
+      "program_name": "Elastic",
+      "target_domain": "elasticsearch.fr",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:39:08.964483+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@elasticsearch.fr",
+        "security-team@elasticsearch.fr"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\elastic_mail_spoofing_elasticsearch_fr_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "elastic_mail_spoofing_elasticsearch_org_bundle",
+      "program_id": "elastic",
+      "program_name": "Elastic",
+      "target_domain": "elasticsearch.org",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:39:10.692665+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@elasticsearch.org",
+        "security-team@elasticsearch.org"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\elastic_mail_spoofing_elasticsearch_org_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "elastic_mail_spoofing_elstc_co_bundle",
+      "program_id": "elastic",
+      "program_name": "Elastic",
+      "target_domain": "elstc.co",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:39:12.176210+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@elstc.co",
+        "security-team@elstc.co"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\elastic_mail_spoofing_elstc_co_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "elastic_mail_spoofing_eops_nl_bundle",
+      "program_id": "elastic",
+      "program_name": "Elastic",
+      "target_domain": "eops.nl",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:39:12.763287+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@eops.nl",
+        "security-team@eops.nl"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\elastic_mail_spoofing_eops_nl_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "elastic_mail_spoofing_estccdn_com_bundle",
+      "program_id": "elastic",
+      "program_name": "Elastic",
+      "target_domain": "estccdn.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:39:13.777235+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@estccdn.com",
+        "security-team@estccdn.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\elastic_mail_spoofing_estccdn_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "elastic_mail_spoofing_found_io_bundle",
+      "program_id": "elastic",
+      "program_name": "Elastic",
+      "target_domain": "found.io",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:39:14.726101+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@found.io",
+        "security-team@found.io"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\elastic_mail_spoofing_found_io_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "elastic_mail_spoofing_insight_io_bundle",
+      "program_id": "elastic",
+      "program_name": "Elastic",
+      "target_domain": "insight.io",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:39:15.219120+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@insight.io",
+        "security-team@insight.io"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\elastic_mail_spoofing_insight_io_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "elastic_mail_spoofing_logstash_net_bundle",
+      "program_id": "elastic",
+      "program_name": "Elastic",
+      "target_domain": "logstash.net",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:39:17.676792+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@logstash.net",
+        "security-team@logstash.net"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\elastic_mail_spoofing_logstash_net_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "elastic_mail_spoofing_prelert_com_bundle",
+      "program_id": "elastic",
+      "program_name": "Elastic",
+      "target_domain": "prelert.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:39:19.853994+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@prelert.com",
+        "security-team@prelert.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\elastic_mail_spoofing_prelert_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "elastic_mail_spoofing_theelasticast_com_bundle",
+      "program_id": "elastic",
+      "program_name": "Elastic",
+      "target_domain": "theelasticast.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:39:20.618250+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@theelasticast.com",
+        "security-team@theelasticast.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\elastic_mail_spoofing_theelasticast_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "eternal_mail_spoofing_edition_in_bundle",
+      "program_id": "eternal",
+      "program_name": "Eternal",
+      "target_domain": "edition.in",
+      "flaw_type": "mail_spoofing",
+      "severity": "HIGH",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:43:35.839781+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@edition.in",
+        "security-team@edition.in"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\eternal_mail_spoofing_edition_in_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "eternal_mail_spoofing_eternal_com_bundle",
+      "program_id": "eternal",
+      "program_name": "Eternal",
+      "target_domain": "eternal.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:43:36.628910+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@eternal.com",
+        "security-team@eternal.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\eternal_mail_spoofing_eternal_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "eternal_mail_spoofing_grofer_io_bundle",
+      "program_id": "eternal",
+      "program_name": "Eternal",
+      "target_domain": "grofer.io",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:43:59.883711+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@grofer.io",
+        "security-team@grofer.io"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\eternal_mail_spoofing_grofer_io_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "eternal_mail_spoofing_insider_in_bundle",
+      "program_id": "eternal",
+      "program_name": "Eternal",
+      "target_domain": "insider.in",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:43:38.088166+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@insider.in",
+        "security-team@insider.in"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\eternal_mail_spoofing_insider_in_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "eternal_mail_spoofing_runnr_in_bundle",
+      "program_id": "eternal",
+      "program_name": "Eternal",
+      "target_domain": "runnr.in",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:43:38.766085+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@runnr.in",
+        "security-team@runnr.in"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\eternal_mail_spoofing_runnr_in_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "eternal_mail_spoofing_tktnew_com_bundle",
+      "program_id": "eternal",
+      "program_name": "Eternal",
+      "target_domain": "tktnew.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "HIGH",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:43:51.991008+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@tktnew.com",
+        "security-team@tktnew.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\eternal_mail_spoofing_tktnew_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "eternal_mail_spoofing_zdev_net_bundle",
+      "program_id": "eternal",
+      "program_name": "Eternal",
+      "target_domain": "zdev.net",
+      "flaw_type": "mail_spoofing",
+      "severity": "HIGH",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:43:53.217804+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@zdev.net",
+        "security-team@zdev.net"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\eternal_mail_spoofing_zdev_net_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "eternal_mail_spoofing_zomans_com_bundle",
+      "program_id": "eternal",
+      "program_name": "Eternal",
+      "target_domain": "zomans.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:43:58.066366+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@zomans.com",
+        "security-team@zomans.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\eternal_mail_spoofing_zomans_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "expediagroup_bbp_mail_spoofing_bookabach_co_nz_bundle",
+      "program_id": "expediagroup_bbp",
+      "program_name": "Expedia Group Bug Bounty",
+      "target_domain": "bookabach.co.nz",
+      "flaw_type": "mail_spoofing",
+      "severity": "HIGH",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:39:55.708559+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@bookabach.co.nz",
+        "security-team@bookabach.co.nz"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\expediagroup_bbp_mail_spoofing_bookabach_co_nz_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "expediagroup_bbp_mail_spoofing_expedia-aarp_com_bundle",
+      "program_id": "expediagroup_bbp",
+      "program_name": "Expedia Group Bug Bounty",
+      "target_domain": "expedia-aarp.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "HIGH",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:39:59.180458+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@expedia-aarp.com",
+        "security-team@expedia-aarp.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\expediagroup_bbp_mail_spoofing_expedia-aarp_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "expediagroup_bbp_mail_spoofing_expediaagents_com_bundle",
+      "program_id": "expediagroup_bbp",
+      "program_name": "Expedia Group Bug Bounty",
+      "target_domain": "expediaagents.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:40:00.870605+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@expediaagents.com",
+        "security-team@expediaagents.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\expediagroup_bbp_mail_spoofing_expediaagents_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "expediagroup_bbp_mail_spoofing_expediataaprewards_com_bundle",
+      "program_id": "expediagroup_bbp",
+      "program_name": "Expedia Group Bug Bounty",
+      "target_domain": "expediataaprewards.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:40:05.047899+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@expediataaprewards.com",
+        "security-team@expediataaprewards.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\expediagroup_bbp_mail_spoofing_expediataaprewards_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "expediagroup_bbp_mail_spoofing_flights_com_bundle",
+      "program_id": "expediagroup_bbp",
+      "program_name": "Expedia Group Bug Bounty",
+      "target_domain": "flights.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "HIGH",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:40:11.083016+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@flights.com",
+        "security-team@flights.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\expediagroup_bbp_mail_spoofing_flights_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "expediagroup_bbp_mail_spoofing_hotwirepartnercentral_com_bundle",
+      "program_id": "expediagroup_bbp",
+      "program_name": "Expedia Group Bug Bounty",
+      "target_domain": "hotwirepartnercentral.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:40:12.993149+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@hotwirepartnercentral.com",
+        "security-team@hotwirepartnercentral.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\expediagroup_bbp_mail_spoofing_hotwirepartnercentral_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "expediagroup_bbp_mail_spoofing_lastminute_co_nz_bundle",
+      "program_id": "expediagroup_bbp",
+      "program_name": "Expedia Group Bug Bounty",
+      "target_domain": "lastminute.co.nz",
+      "flaw_type": "mail_spoofing",
+      "severity": "HIGH",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:40:13.579502+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@lastminute.co.nz",
+        "security-team@lastminute.co.nz"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\expediagroup_bbp_mail_spoofing_lastminute_co_nz_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "expediagroup_bbp_mail_spoofing_travelocity_ca_bundle",
+      "program_id": "expediagroup_bbp",
+      "program_name": "Expedia Group Bug Bounty",
+      "target_domain": "travelocity.ca",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:40:17.328053+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@travelocity.ca",
+        "security-team@travelocity.ca"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\expediagroup_bbp_mail_spoofing_travelocity_ca_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "flutteruki_mail_spoofing_betsharedservices_io_bundle",
+      "program_id": "flutteruki",
+      "program_name": "Flutter UK&I",
+      "target_domain": "betsharedservices.io",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:37:11.253048+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@betsharedservices.io",
+        "security-team@betsharedservices.io"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\flutteruki_mail_spoofing_betsharedservices_io_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "flutteruki_mail_spoofing_metrocompetitions_com_bundle",
+      "program_id": "flutteruki",
+      "program_name": "Flutter UK&I",
+      "target_domain": "metrocompetitions.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:37:56.574465+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@metrocompetitions.com",
+        "security-team@metrocompetitions.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\flutteruki_mail_spoofing_metrocompetitions_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "flutteruki_mail_spoofing_msgsvc_io_bundle",
+      "program_id": "flutteruki",
+      "program_name": "Flutter UK&I",
+      "target_domain": "msgsvc.io",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:37:20.996209+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@msgsvc.io",
+        "security-team@msgsvc.io"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\flutteruki_mail_spoofing_msgsvc_io_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "flutteruki_mail_spoofing_platformservices_io_bundle",
+      "program_id": "flutteruki",
+      "program_name": "Flutter UK&I",
+      "target_domain": "platformservices.io",
+      "flaw_type": "mail_spoofing",
+      "severity": "HIGH",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:37:33.234273+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@platformservices.io",
+        "security-team@platformservices.io"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\flutteruki_mail_spoofing_platformservices_io_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "flutteruki_mail_spoofing_ppb_com_bundle",
+      "program_id": "flutteruki",
+      "program_name": "Flutter UK&I",
+      "target_domain": "ppb.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:37:34.417237+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@ppb.com",
+        "security-team@ppb.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\flutteruki_mail_spoofing_ppb_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "flutteruki_mail_spoofing_ppbdev_com_bundle",
+      "program_id": "flutteruki",
+      "program_name": "Flutter UK&I",
+      "target_domain": "ppbdev.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:37:35.029306+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@ppbdev.com",
+        "security-team@ppbdev.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\flutteruki_mail_spoofing_ppbdev_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "flutteruki_mail_spoofing_rafflee_co_uk_bundle",
+      "program_id": "flutteruki",
+      "program_name": "Flutter UK&I",
+      "target_domain": "rafflee.co.uk",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:37:56.893274+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@rafflee.co.uk",
+        "security-team@rafflee.co.uk"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\flutteruki_mail_spoofing_rafflee_co_uk_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "flutteruki_mail_spoofing_securityservices_io_bundle",
+      "program_id": "flutteruki",
+      "program_name": "Flutter UK&I",
+      "target_domain": "securityservices.io",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:37:42.144220+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@securityservices.io",
+        "security-team@securityservices.io"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\flutteruki_mail_spoofing_securityservices_io_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "khealth_mail_spoofing_hhc247_org_bundle",
+      "program_id": "khealth",
+      "program_name": "KHealth",
+      "target_domain": "hhc247.org",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:44:41.648688+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@hhc247.org",
+        "security-team@hhc247.org"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\khealth_mail_spoofing_hhc247_org_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "khealth_mail_spoofing_khealth_com_bundle",
+      "program_id": "khealth",
+      "program_name": "KHealth",
+      "target_domain": "khealth.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:44:47.177971+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@khealth.com",
+        "security-team@khealth.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\khealth_mail_spoofing_khealth_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "khealth_mail_spoofing_mgbcareconnect_org_bundle",
+      "program_id": "khealth",
+      "program_name": "KHealth",
+      "target_domain": "mgbcareconnect.org",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:44:43.744566+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@mgbcareconnect.org",
+        "security-team@mgbcareconnect.org"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\khealth_mail_spoofing_mgbcareconnect_org_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "khealth_mail_spoofing_northwellprimarycarenow_com_bundle",
+      "program_id": "khealth",
+      "program_name": "KHealth",
+      "target_domain": "northwellprimarycarenow.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:44:44.384493+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@northwellprimarycarenow.com",
+        "security-team@northwellprimarycarenow.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\khealth_mail_spoofing_northwellprimarycarenow_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "khealth_mail_spoofing_novanthealthvirtualprimarycare_org_bundle",
+      "program_id": "khealth",
+      "program_name": "KHealth",
+      "target_domain": "novanthealthvirtualprimarycare.org",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:44:45.070254+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@novanthealthvirtualprimarycare.org",
+        "security-team@novanthealthvirtualprimarycare.org"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\khealth_mail_spoofing_novanthealthvirtualprimarycare_org_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_adminml_com_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "adminml.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:45.963754+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@adminml.com",
+        "security-team@adminml.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_adminml_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_biolibre_ar_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "biolibre.ar",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:50.647119+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@biolibre.ar",
+        "security-team@biolibre.ar"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_biolibre_ar_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_biolibre_cl_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "biolibre.cl",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:51.144069+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@biolibre.cl",
+        "security-team@biolibre.cl"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_biolibre_cl_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_biolibre_co_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "biolibre.co",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:51.422380+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@biolibre.co",
+        "security-team@biolibre.co"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_biolibre_co_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_biolibre_mx_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "biolibre.mx",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:51.691302+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@biolibre.mx",
+        "security-team@biolibre.mx"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_biolibre_mx_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_biolivre_com_br_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "biolivre.com.br",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:52.159955+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@biolivre.com.br",
+        "security-team@biolivre.com.br"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_biolivre_com_br_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_furycloud_io_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "furycloud.io",
+      "flaw_type": "mail_spoofing",
+      "severity": "HIGH",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:52.473554+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@furycloud.io",
+        "security-team@furycloud.io"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_furycloud_io_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_furydocs_io_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "furydocs.io",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:52.709020+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@furydocs.io",
+        "security-team@furydocs.io"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_furydocs_io_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_mercadolibre_cl_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "mercadolibre.cl",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:45.971338+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@mercadolibre.cl",
+        "security-team@mercadolibre.cl"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_mercadolibre_cl_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_mercadolibre_com_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "mercadolibre.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:45.978865+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@mercadolibre.com",
+        "security-team@mercadolibre.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_mercadolibre_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_mercadolibre_com_mx_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "mercadolibre.com.mx",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:45.997147+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@mercadolibre.com.mx",
+        "security-team@mercadolibre.com.mx"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_mercadolibre_com_mx_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_mercadolivre_com_br_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "mercadolivre.com.br",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:46.016036+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@mercadolivre.com.br",
+        "security-team@mercadolivre.com.br"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_mercadolivre_com_br_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_mercadopago_cl_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "mercadopago.cl",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:46.026926+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@mercadopago.cl",
+        "security-team@mercadopago.cl"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_mercadopago_cl_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_mercadopago_com_br_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "mercadopago.com.br",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:46.046849+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@mercadopago.com.br",
+        "security-team@mercadopago.com.br"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_mercadopago_com_br_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_mercadopago_com_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "mercadopago.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:46.034594+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@mercadopago.com",
+        "security-team@mercadopago.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_mercadopago_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_mercadopago_com_mx_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "mercadopago.com.mx",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:46.071584+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@mercadopago.com.mx",
+        "security-team@mercadopago.com.mx"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_mercadopago_com_mx_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_mlstatic_com_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "mlstatic.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "HIGH",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:49.703736+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@mlstatic.com",
+        "security-team@mlstatic.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_mlstatic_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_mpago_la_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "mpago.la",
+      "flaw_type": "mail_spoofing",
+      "severity": "HIGH",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:56.708520+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@mpago.la",
+        "security-team@mpago.la"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_mpago_la_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_mpago_li_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "mpago.li",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:57.102585+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@mpago.li",
+        "security-team@mpago.li"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_mpago_li_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_portalinmobiliario_cl_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "portalinmobiliario.cl",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:57.463085+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@portalinmobiliario.cl",
+        "security-team@portalinmobiliario.cl"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_portalinmobiliario_cl_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_portalinmobiliario_com_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "portalinmobiliario.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:57.932267+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@portalinmobiliario.com",
+        "security-team@portalinmobiliario.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_portalinmobiliario_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_sustentabilidadmercadolibre_com_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "sustentabilidadmercadolibre.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:58.249292+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@sustentabilidadmercadolibre.com",
+        "security-team@sustentabilidadmercadolibre.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_sustentabilidadmercadolibre_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "mercadolibre_mail_spoofing_tucarro_com_bundle",
+      "program_id": "mercadolibre",
+      "program_name": "MercadoLibre",
+      "target_domain": "tucarro.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:41:58.624379+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@tucarro.com",
+        "security-team@tucarro.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\mercadolibre_mail_spoofing_tucarro_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "playtika_mail_spoofing_bestfiends_com_bundle",
+      "program_id": "playtika",
+      "program_name": "Playtika",
+      "target_domain": "bestfiends.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "HIGH",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:43:22.775497+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@bestfiends.com",
+        "security-team@bestfiends.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\playtika_mail_spoofing_bestfiends_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "playtika_mail_spoofing_houseoffun_com_bundle",
+      "program_id": "playtika",
+      "program_name": "Playtika",
+      "target_domain": "houseoffun.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:43:16.187879+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@houseoffun.com",
+        "security-team@houseoffun.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\playtika_mail_spoofing_houseoffun_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "playtika_mail_spoofing_serious_li_bundle",
+      "program_id": "playtika",
+      "program_name": "Playtika",
+      "target_domain": "serious.li",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:43:20.200114+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@serious.li",
+        "security-team@serious.li"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\playtika_mail_spoofing_serious_li_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "slack_mail_spoofing_slack-core_com_bundle",
+      "program_id": "slack",
+      "program_name": "Slack",
+      "target_domain": "slack-core.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:34:07.408470+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@slack-core.com",
+        "security-team@slack-core.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\slack_mail_spoofing_slack-core_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "spotify_mail_spoofing_byspotify_com_bundle",
+      "program_id": "spotify",
+      "program_name": "Spotify",
+      "target_domain": "byspotify.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:45:01.316194+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@byspotify.com",
+        "security-team@byspotify.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\spotify_mail_spoofing_byspotify_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "spotify_mail_spoofing_spotify_net_bundle",
+      "program_id": "spotify",
+      "program_name": "Spotify",
+      "target_domain": "spotify.net",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:45:05.284433+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@spotify.net",
+        "security-team@spotify.net"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\spotify_mail_spoofing_spotify_net_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "starbucks_mail_spoofing_starbucksreserve_com_bundle",
+      "program_id": "starbucks",
+      "program_name": "Starbucks",
+      "target_domain": "starbucksreserve.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:32:30.100070+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@starbucksreserve.com",
+        "security-team@starbucksreserve.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\starbucks_mail_spoofing_starbucksreserve_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "superbet_mail_spoofing_happening_dev_bundle",
+      "program_id": "superbet",
+      "program_name": "Superbet",
+      "target_domain": "happening.dev",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:42:44.994824+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@happening.dev",
+        "security-team@happening.dev"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\superbet_mail_spoofing_happening_dev_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "superbet_mail_spoofing_luckydays_ca_bundle",
+      "program_id": "superbet",
+      "program_name": "Superbet",
+      "target_domain": "luckydays.ca",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:42:46.206704+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@luckydays.ca",
+        "security-team@luckydays.ca"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\superbet_mail_spoofing_luckydays_ca_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "superbet_mail_spoofing_luckydays_com_bundle",
+      "program_id": "superbet",
+      "program_name": "Superbet",
+      "target_domain": "luckydays.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:42:46.967347+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@luckydays.com",
+        "security-team@luckydays.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\superbet_mail_spoofing_luckydays_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "superbet_mail_spoofing_spinaway_com_bundle",
+      "program_id": "superbet",
+      "program_name": "Superbet",
+      "target_domain": "spinaway.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:42:52.452533+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@spinaway.com",
+        "security-team@spinaway.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\superbet_mail_spoofing_spinaway_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "superbet_mail_spoofing_superbet_gr_bundle",
+      "program_id": "superbet",
+      "program_name": "Superbet",
+      "target_domain": "superbet.gr",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:42:55.380938+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@superbet.gr",
+        "security-team@superbet.gr"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\superbet_mail_spoofing_superbet_gr_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "superbet_mail_spoofing_superbet_pl_bundle",
+      "program_id": "superbet",
+      "program_name": "Superbet",
+      "target_domain": "superbet.pl",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:42:56.144078+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@superbet.pl",
+        "security-team@superbet.pl"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\superbet_mail_spoofing_superbet_pl_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "superbet_mail_spoofing_superbet_ro_bundle",
+      "program_id": "superbet",
+      "program_name": "Superbet",
+      "target_domain": "superbet.ro",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:42:56.843883+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@superbet.ro",
+        "security-team@superbet.ro"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\superbet_mail_spoofing_superbet_ro_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "trip_com_mail_spoofing_travix_io_bundle",
+      "program_id": "trip_com",
+      "program_name": "Trip.com",
+      "target_domain": "travix.io",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:44:20.301249+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@travix.io",
+        "security-team@travix.io"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\trip_com_mail_spoofing_travix_io_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "trip_com_mail_spoofing_tyo-masters_co_jp_bundle",
+      "program_id": "trip_com",
+      "program_name": "Trip.com",
+      "target_domain": "tyo-masters.co.jp",
+      "flaw_type": "mail_spoofing",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:44:27.055459+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@tyo-masters.co.jp",
+        "security-team@tyo-masters.co.jp"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\trip_com_mail_spoofing_tyo-masters_co_jp_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_airstar-finance_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "airstar-finance.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:01.533946+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@airstar-finance.com",
+        "security-team@airstar-finance.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_airstar-finance_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_airstar_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "airstar.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:02.715427+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@airstar.com",
+        "security-team@airstar.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_airstar_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_airstarfinance_net_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "airstarfinance.net",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:03.572663+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@airstarfinance.net",
+        "security-team@airstarfinance.net"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_airstarfinance_net_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_aleenote_cn_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "aleenote.cn",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:05.547764+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@aleenote.cn",
+        "security-team@aleenote.cn"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_aleenote_cn_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_aleenote_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "aleenote.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:07.900171+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@aleenote.com",
+        "security-team@aleenote.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_aleenote_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_baoliyun_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "baoliyun.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:09.029451+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@baoliyun.com",
+        "security-team@baoliyun.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_baoliyun_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_duokan_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "duokan.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "HIGH",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:10.028543+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@duokan.com",
+        "security-team@duokan.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_duokan_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_hongyuanib_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "hongyuanib.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:11.291275+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@hongyuanib.com",
+        "security-team@hongyuanib.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_hongyuanib_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_migames_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "migames.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:18.810572+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@migames.com",
+        "security-team@migames.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_migames_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_miinsurtech_cn_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "miinsurtech.cn",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:21.622290+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@miinsurtech.cn",
+        "security-team@miinsurtech.cn"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_miinsurtech_cn_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_miinsurtech_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "miinsurtech.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:24.557089+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@miinsurtech.com",
+        "security-team@miinsurtech.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_miinsurtech_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_miinsurtech_net_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "miinsurtech.net",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:25.598953+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@miinsurtech.net",
+        "security-team@miinsurtech.net"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_miinsurtech_net_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_mios_cn_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "mios.cn",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:32.275040+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@mios.cn",
+        "security-team@mios.cn"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_mios_cn_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_miot-spec_org_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "miot-spec.org",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:36.071737+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@miot-spec.org",
+        "security-team@miot-spec.org"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_miot-spec_org_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_miui_cn_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "miui.cn",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:42.626806+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@miui.cn",
+        "security-team@miui.cn"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_miui_cn_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_miui_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "miui.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "HIGH",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:46.471413+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@miui.com",
+        "security-team@miui.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_miui_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_miwifi_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "miwifi.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:47.568545+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@miwifi.com",
+        "security-team@miwifi.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_miwifi_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_oktukids_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "oktukids.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:48.322568+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@oktukids.com",
+        "security-team@oktukids.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_oktukids_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_openvela_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "openvela.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:49.639727+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@openvela.com",
+        "security-team@openvela.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_openvela_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_wali_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "wali.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "HIGH",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:50.465619+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@wali.com",
+        "security-team@wali.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_wali_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_xiangkankeji_cn_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "xiangkankeji.cn",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:51.929260+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@xiangkankeji.cn",
+        "security-team@xiangkankeji.cn"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_xiangkankeji_cn_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_xiangkankeji_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "xiangkankeji.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:55.039973+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@xiangkankeji.com",
+        "security-team@xiangkankeji.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_xiangkankeji_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_xiangkannews_cn_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "xiangkannews.cn",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:35:58.469722+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@xiangkannews.cn",
+        "security-team@xiangkannews.cn"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_xiangkannews_cn_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_xiaomi_net_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "xiaomi.net",
+      "flaw_type": "mail_spoofing",
+      "severity": "HIGH",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:36:01.651482+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@xiaomi.net",
+        "security-team@xiaomi.net"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_xiaomi_net_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_xiaomiev_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "xiaomiev.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:36:03.758651+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@xiaomiev.com",
+        "security-team@xiaomiev.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_xiaomiev_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_xiaomimimo_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "xiaomimimo.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:36:04.600000+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@xiaomimimo.com",
+        "security-team@xiaomimimo.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_xiaomimimo_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_xiaomimobile_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "xiaomimobile.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:36:05.739289+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@xiaomimobile.com",
+        "security-team@xiaomimobile.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_xiaomimobile_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_xiaomiprint_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "xiaomiprint.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:36:06.830817+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@xiaomiprint.com",
+        "security-team@xiaomiprint.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_xiaomiprint_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_xunkid_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "xunkid.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:36:10.513082+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@xunkid.com",
+        "security-team@xunkid.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_xunkid_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_xunkids_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "xunkids.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "HIGH",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:36:11.721440+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@xunkids.com",
+        "security-team@xunkids.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_xunkids_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_youpin_cn_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "youpin.cn",
+      "flaw_type": "mail_spoofing",
+      "severity": "LOW",
+      "cvss_score": 4.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:36:13.214464+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@youpin.cn",
+        "security-team@youpin.cn"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_youpin_cn_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    },
+    {
+      "bundle_name": "xiaomi_mail_spoofing_zmifi_com_bundle",
+      "program_id": "xiaomi",
+      "program_name": "Xiaomi",
+      "target_domain": "zmifi.com",
+      "flaw_type": "mail_spoofing",
+      "severity": "HIGH",
+      "cvss_score": 5.3,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+      "cwe_id": "CWE-290: Authentication Bypass by Spoofing",
+      "timestamp": "2026-10-22T01:36:15.145900+00:00",
+      "cname_target": null,
+      "contacts": [
+        "security@zmifi.com",
+        "security-team@zmifi.com"
+      ],
+      "zip_path": "C:\\AgyHut\\projects\\orbit-security\\data\\disclosures\\xiaomi_mail_spoofing_zmifi_com_bundle.zip",
+      "has_advisory": true,
+      "has_manifest": true
+    }
+  ],
+  "summary": {
+    "by_severity": {
+      "LOW": 78,
+      "MEDIUM": 25,
+      "HIGH": 18
+    },
+    "by_flaw": {
+      "mail_spoofing": 121
+    },
+    "by_program": {
+      "U.S. Dept of Defense": 4,
+      "Elastic": 17,
+      "Eternal": 8,
+      "Expedia Group Bug Bounty": 8,
+      "Flutter UK&I": 8,
+      "KHealth": 5,
+      "MercadoLibre": 23,
+      "Playtika": 3,
+      "Slack": 1,
+      "Spotify": 2,
+      "Starbucks": 1,
+      "Superbet": 7,
+      "Trip.com": 2,
+      "Xiaomi": 32
+    }
+  }
+}

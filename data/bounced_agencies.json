@@ -213,5 +213,12 @@
     "bounced_email": "hello@bvaccel.com",
     "agency_name": "BVAccel",
     "date": "Sun, 04 Oct 2026 14:50:45 -0700 (PDT)"
+  },
+  "metacake.com": {
+    "agency_name": "Metacake",
+    "contact_email": "hello@metacake.com",
+    "bounced_at": "2026-10-20 16:07:08",
+    "bounce_reason": "Address not found / 550 Mailbox unavailable",
+    "cohort": 6
   }
 }

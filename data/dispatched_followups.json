@@ -702,5 +702,77 @@
     "followup_dispatched_at": "2026-10-20 15:44:00",
     "bump_number": 1,
     "status": "SENT"
+  },
+  "roswellnyc.com": {
+    "agency_name": "Roswell NYC",
+    "contact_email": "contact@roswellnyc.com",
+    "client_domain": "ruggable.com",
+    "followup_dispatched_at": "2026-10-21 20:52:12",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "zehnergroup.com": {
+    "agency_name": "Zehner",
+    "contact_email": "hello@zehnergroup.com",
+    "client_domain": "stampd.com",
+    "followup_dispatched_at": "2026-10-21 20:52:16",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "vervaunt.com": {
+    "agency_name": "Vervaunt",
+    "contact_email": "hello@vervaunt.com",
+    "client_domain": "gymshark.com",
+    "followup_dispatched_at": "2026-10-21 20:52:19",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "velstar.co.uk": {
+    "agency_name": "Velstar",
+    "contact_email": "hello@velstar.co.uk",
+    "client_domain": "castore.com",
+    "followup_dispatched_at": "2026-10-21 20:52:24",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "superco.net": {
+    "agency_name": "Superco",
+    "contact_email": "hello@superco.net",
+    "client_domain": "sohohome.com",
+    "followup_dispatched_at": "2026-10-21 20:52:28",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "novatize.com": {
+    "agency_name": "Novatize",
+    "contact_email": "info@novatize.com",
+    "client_domain": "kanuk.com",
+    "followup_dispatched_at": "2026-10-21 20:52:31",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "ethercreative.co.uk": {
+    "agency_name": "Ether Creative",
+    "contact_email": "hello@ethercreative.co.uk",
+    "client_domain": "churchs.com",
+    "followup_dispatched_at": "2026-10-21 20:52:35",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "pinpointdesigns.co.uk": {
+    "agency_name": "Pinpoint",
+    "contact_email": "hello@pinpointdesigns.co.uk",
+    "client_domain": "bramblecrest.com",
+    "followup_dispatched_at": "2026-10-21 20:52:40",
+    "bump_number": 1,
+    "status": "SENT"
+  },
+  "bluethirst.co.uk": {
+    "agency_name": "Blue Thirst",
+    "contact_email": "info@bluethirst.co.uk",
+    "client_domain": "bathstore.com",
+    "followup_dispatched_at": "2026-10-21 20:52:44",
+    "bump_number": 1,
+    "status": "SENT"
   }
 }

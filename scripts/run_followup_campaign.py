@@ -119,13 +119,18 @@ def get_eligible_followups(
 
         # Cohort filtering if requested
         if cohort_index is not None:
-            try:
-                idx = prospect_order.index(agency_domain)
-                item_cohort = (idx // 10) + 1 if idx < 30 else 5
-                if item_cohort != cohort_index:
+            explicit_cohort = info.get("cohort")
+            if explicit_cohort is not None:
+                if explicit_cohort != cohort_index:
                     continue
-            except ValueError:
-                pass
+            else:
+                try:
+                    idx = prospect_order.index(agency_domain)
+                    item_cohort = (idx // 10) + 1 if idx < 30 else 5
+                    if item_cohort != cohort_index:
+                        continue
+                except ValueError:
+                    pass
 
         # Parse dispatch time
         disp_time_str = info.get("dispatched_at")
@@ -139,7 +144,7 @@ def get_eligible_followups(
             elapsed_hours = 999.0
 
         if elapsed_hours >= min_hours:
-            client_domain = get_client_domain_for_agency(agency_domain, prospects)
+            client_domain = info.get("client_domain") or get_client_domain_for_agency(agency_domain, prospects)
             copy = generate_bump_copy(info.get("agency_name", "Agency"), client_domain)
             eligible.append({
                 "agency_domain": agency_domain,
@@ -157,7 +162,7 @@ def get_eligible_followups(
 
 def main():
     parser = argparse.ArgumentParser(description="Orbit Security: 48-Hour Bump Follow-Up Engine")
-    parser.add_argument("--cohort", type=int, help="Filter by cohort number (1 to 5)")
+    parser.add_argument("--cohort", type=int, help="Filter by cohort number (1 to 6)")
     parser.add_argument("--min-hours", type=float, default=30.0, help="Minimum elapsed hours since initial dispatch (default: 30.0)")
     parser.add_argument("--limit", type=int, default=10, help="Max follow-up emails to process")
     parser.add_argument("--send", action="store_true", help="Dispatch live emails via SMTP")
