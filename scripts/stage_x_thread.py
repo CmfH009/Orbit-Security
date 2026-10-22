@@ -113,7 +113,7 @@ Suddenly, they gain:
 
 Orbit packages detection heuristics into an open-source CLI:
 
-`pip install orbit-security`
+`pip install "orbit-security @ git+https://github.com/CmfH009/Orbit-Security.git"`
 `orbit-recon clientbrand.com --remediate`
 
 Resolves DNS pointers, audits RFC 7489 DMARC, and checks 30+ SaaS takeover signatures."""

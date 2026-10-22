@@ -1,0 +1,52 @@
+From: "Carson | Founder", Orbit Security <carsonmail009@gmail.com>
+To: enquiries@processcreative.com.au
+Subject:
+ Correction: revised audit score for bondisands.com.au - grade A (90/100)
+Reply-To: carsonmail009@gmail.com
+Date: Thu, 22 Oct 2026 12:08:46 +0000
+Message-ID:
+ <orbit-correction.process-creative.f14b7653a876c59b@cmfh009.github.io>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+Hi Process Creative team,
+
+We sent you a client security audit for bondisands.com.au with a published gr=
+ade of D (55/100). That grade was wrong. Our scoring model at the time penali=
+sed every finding flatly and counted best-practice configuration items as vul=
+nerabilities. Re-scoring the same scan under the corrected model gives A (90/=
+100).
+
+Three finding classes drove the wrong grade: the missing HSTS header (HTTP St=
+rict Transport Security), the missing HTTP response hardening headers (CSP, X=
+-Frame-Options, Referrer-Policy, Permissions-Policy, COOP) and the missing ma=
+il security records (BIMI, MTA-STS, TLS-RPT).
+
+That scan returned no critical or high finding, so the published failure did =
+not describe exploit risk.
+
+The rule now: best-practice items are reported but never scored, a scan with =
+no critical or high finding cannot score below 60, and repeated findings of t=
+he same class are charged at a reduced rate under a per-class cap.
+
+Next step: reply to this note and we will re-issue the bondisands.com.au audi=
+t with the corrected grade and score. No change to the client's configuration=
+ is required to correct the score.
+
+Best regards,
+Carson Haynes
+Founder, Orbit Security
+carsonmail009@gmail.com
+https://cmfh009.github.io/Orbit-Security/
+
+What changed:
+
+- Best-practice items (BIMI, MTA-STS, TLS-RPT, CAA, CSP, X-Frame-Options, Ref=
+errer-Policy, Permissions-Policy, COOP, security.txt) are still detected and =
+still reported, but they are no longer scored as vulnerabilities.
+- A scan with no critical and no high finding cannot score below 60 (grade C)=
+, so a failing grade always means exploitable risk.
+- Repeated findings of the same class are charged at a reduced rate and each =
+class is capped, so a large estate is not punished for being large.
+- Grade bands are unchanged: A+ 95, A 88, B 75, C 60, D 45, F below 45.

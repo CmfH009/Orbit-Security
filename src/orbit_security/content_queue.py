@@ -162,7 +162,7 @@ class ContentQueue:
                 (
                     "You don't need a $20k enterprise audit to stop this.\n\n"
                     "Orbit packages detection heuristics into an open-source CLI:\n\n"
-                    "`pip install orbit-security`\n"
+            "`pip install \"orbit-security @ git+https://github.com/CmfH009/Orbit-Security.git\"`\n"
                     "`orbit-recon clientbrand.com --remediate`\n\n"
                     "Resolves DNS pointers, audits RFC 7489 DMARC, and checks 30+ SaaS takeover signatures.\n"
                     "https://cmfh009.github.io/Orbit-Security/"

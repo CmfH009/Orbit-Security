@@ -10,51 +10,92 @@ from pathlib import Path
 import sys
 import time
 
-# Attach desktop automation tools
+# Attach desktop automation tools. Imported defensively so the tweet copy and
+# its length guard stay importable (and testable) on any machine, including CI.
 sys.path.insert(0, r"C:\AgyHut\system\tools")
-import desktop_automation as da
+try:
+    import desktop_automation as da
+    HAS_DESKTOP_AUTOMATION = True
+except ImportError:  # pragma: no cover - Windows-only dependency
+    da = None
+    HAS_DESKTOP_AUTOMATION = False
 
 # Thread continuation tweets (2 through 5)
 REMAINING_TWEETS = [
+# X limits every tweet to 280 weighted characters (a URL counts as 23).
+# Lengths are asserted at import time, so an over-long tweet can never ship.
+    (
+        1,
+        (
+            "1/5 The wave of perimeter exposures isn't random.\n"
+            "Cloud infra moves fast: microservices spin up, SaaS trials get hooked to apex domains, dependencies drift.\n"
+            "The biggest risk to a high-traffic brand isn't its core code. It's the perimeter nobody remembers. 🧵\n"
+        ),
+    ),
     (
         2,
         (
-            "2/5 The #1 recurring vulnerability pattern we see across top D2C, eCommerce, and SaaS ecosystems:\n\n"
-            "• Marketing launches a campaign ➔ CNAME points to unbouncepages / webflow / heroku / S3\n"
-            "• Campaign concludes ➔ SaaS account cancelled\n"
-            "• DNS pointer remains live\n\n"
-            "Edge returns 404. Attackers claim the orphaned SaaS resource in 60s and get full HTTPS on your domain."
+            "2/5 The #1 pattern across top D2C/eCommerce/SaaS:\n"
+            "• Campaign launches ➔ CNAME points to unbouncepages / webflow / heroku / S3\n• Campaign ends ➔ SaaS account cancelled\n• DNS pointer stays live\n"
+            "Edge 404s. Attackers claim the orphan in 60s — with HTTPS on your domain.\n"
         ),
     ),
     (
         3,
         (
-            "3/5 Email spoofing & DMARC decay is the second critical exposure vector.\n\n"
-            "Even with Google and Yahoo strictly enforcing bulk sender protections, dozens of brand subdomains still lack RFC 7489 policies or sit on permissive `+all` SPF records.\n\n"
-            "Fraudsters don't need to breach your database if they can send authenticated phishing emails directly from your brand's domain."
+            "3/5 #2 exposure: DMARC decay.\n"
+            "Google and Yahoo enforce bulk-sender rules, yet dozens of brand subdomains still lack RFC 7489 policy or sit on a permissive `+all` SPF.\n"
+            "Fraudsters don't need your database. They just need to send \"authentic\" phishing as your brand.\n"
         ),
     ),
     (
         4,
         (
-            "4/5 You don't need a bloated $25k enterprise contract to lock down your perimeter.\n\n"
-            "We built Orbit Security to give web engineering agencies and dev teams autonomous attack-surface visibility in under 800ms:\n\n"
-            "`pip install orbit-security`\n"
-            "`orbit-recon yourbrand.com --remediate`\n\n"
-            "Scans DNS routing, checks 30+ SaaS takeover signatures, and generates instant copy-paste Cloudflare / Route 53 fixes."
+            "4/5 You don't need a $25k enterprise contract to lock down a perimeter.\n"
+            "We built Orbit Security: autonomous attack-surface visibility for agencies and dev teams, in under 800ms.\n"
+            "`pip install \"orbit-security @ git+https://github.com/CmfH009/Orbit-Security.git\"`\n`orbit-recon yourbrand.com --remediate`\n"
         ),
     ),
     (
         5,
         (
-            "5/5 Web agencies & dev shops:\n\n"
-            "This security wave is the perfect moment to turn perimeter hygiene into a high-margin care plan for your clients.\n\n"
-            "Test your apex domain right now in our zero-server 16-bit cyber terminal:\n"
-            "👉 https://cmfh009.github.io/Orbit-Security/\n\n"
-            "Open-source & RFC-compliant: https://github.com/CmfH009/Orbit-Security"
+            "5/5 Agencies & dev shops: perimeter hygiene is a high-margin care plan.\n"
+            "Test your apex domain free in a zero-server cyber terminal:\n"
+            "👉 https://cmfh009.github.io/Orbit-Security/\n"
+            "Open source: github.com/CmfH009/Orbit-Security\n"
         ),
     ),
+
 ]
+
+
+def _weighted_length(text: str) -> int:
+    """X counts a URL as 23 characters; every other character counts as one."""
+    import re as _re
+    total = 0
+    last = 0
+    for m in _re.finditer(r"https?://\S+", text):
+        total += len(text[last:m.start()]) + 23
+        last = m.end()
+    return total + len(text[last:])
+
+
+def _assert_fits_x_limit(tweets, label: str) -> None:
+    """Fail fast at import time if any tweet exceeds X's 280 character limit.
+
+    An over-long tweet is silently dropped by the X composer, which is how a
+    five-part thread turns into a one-part thread with no error raised.
+    """
+    for item in tweets:
+        index, body = item[0], item[1]
+        length = _weighted_length(body)
+        if length > 280:
+            raise AssertionError(
+                f"{label} tweet {index} is {length} weighted characters, over X's 280 limit"
+            )
+
+
+_assert_fits_x_limit(REMAINING_TWEETS, "REMAINING_TWEETS")
 
 
 def post_remaining(start_url: str):

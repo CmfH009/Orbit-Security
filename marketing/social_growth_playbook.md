@@ -93,7 +93,7 @@ This playbook details four coordinated growth vectors:
 > 
 > We packaged Orbit Security’s core detection heuristics into an open-source CLI utility (`orbit-recon`):
 > 
-> `pip install orbit-security`
+> `pip install "orbit-security @ git+https://github.com/CmfH009/Orbit-Security.git"`
 > `orbit-recon clientbrand.com`
 > 
 > It resolves DNS pointers, audits RFC 7489 DMARC alignment, and checks 17 SaaS takeover signatures in parallel.

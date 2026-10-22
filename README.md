@@ -35,7 +35,17 @@ By delivering a co-branded, high-polish Security & Perimeter Audit on the 1st of
 
 ## 🚀 Quickstart
 
-### 1. Installation
+### 0. Install the CLI (any machine)
+
+```powershell
+pip install "orbit-security @ git+https://github.com/CmfH009/Orbit-Security.git"
+```
+
+That installs three entry points: `orbit-security` (full CLI), `orbit-recon` (standalone perimeter recon) and `agency-sentry`.
+
+> **Note on PyPI:** the package is **not** published to PyPI yet, so `pip install orbit-security` does not resolve. The command above installs from the GitHub source and is verified to build and install cleanly. A PyPI release is on the roadmap - until then, use the source install.
+
+### 1. Installation (development)
 ```powershell
 cd A:\projects\orbit-security
 uv sync

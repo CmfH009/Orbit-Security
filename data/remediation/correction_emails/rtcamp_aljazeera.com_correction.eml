@@ -1,0 +1,50 @@
+From: "Carson | Founder", Orbit Security <carsonmail009@gmail.com>
+To: hello@rtcamp.com
+Subject: Correction: revised audit score for aljazeera.com - grade B (80/100)
+Reply-To: carsonmail009@gmail.com
+Date: Thu, 22 Oct 2026 12:08:46 +0000
+Message-ID: <orbit-correction.rtcamp.8bf0ec04341d543a@cmfh009.github.io>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+Hi rtCamp team,
+
+We sent you a client security audit for aljazeera.com with a published grade =
+of F (40/100). That grade was wrong. Our scoring model at the time penalised =
+every finding flatly and counted best-practice configuration items as vulnera=
+bilities. Re-scoring the same scan under the corrected model gives B (80/100).
+
+Three finding classes drove the wrong grade: the SSL/TLS certificate expiring=
+ soon, the missing HTTP response hardening headers (CSP, X-Frame-Options, X-C=
+ontent-Type-Options, Referrer-Policy, Permissions-Policy, COOP) and the missi=
+ng mail security records (BIMI, MTA-STS, TLS-RPT).
+
+One critical or high finding in that report is unaffected by this correction =
+and still needs attention.
+
+The rule now: best-practice items are reported but never scored, a scan with =
+no critical or high finding cannot score below 60, and repeated findings of t=
+he same class are charged at a reduced rate under a per-class cap.
+
+Next step: reply to this note and we will re-issue the aljazeera.com audit wi=
+th the corrected grade and score. No change to the client's configuration is =
+required to correct the score.
+
+Best regards,
+Carson Haynes
+Founder, Orbit Security
+carsonmail009@gmail.com
+https://cmfh009.github.io/Orbit-Security/
+
+What changed:
+
+- Best-practice items (BIMI, MTA-STS, TLS-RPT, CAA, incomplete HSTS, CSP, X-F=
+rame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, CO=
+OP, security.txt) are still detected and still reported, but they are no long=
+er scored as vulnerabilities.
+- A scan with no critical and no high finding cannot score below 60 (grade C)=
+, so a failing grade always means exploitable risk.
+- Repeated findings of the same class are charged at a reduced rate and each =
+class is capped, so a large estate is not punished for being large.
+- Grade bands are unchanged: A+ 95, A 88, B 75, C 60, D 45, F below 45.
