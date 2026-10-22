@@ -26,6 +26,8 @@ dist/
 
 # Logs, Campaigns & Private Lead Data
 *.log
+*.log.*
+data/roast_f_grades_post_log.jsonl
 data/leads_state.json
 data/prospects.json
 data/dispatched_campaigns.json

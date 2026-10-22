@@ -17,6 +17,12 @@ dependencies = [
     "pywinauto>=0.6.9",
     "reportlab>=5.0.1",
     "rich>=15.0.0",
+    # Imported at module level by src/orbit_security/voice_model.py (edge-tts)
+    # and src/orbit_security/desktop_x_bridge.py (Windows clipboard / focus).
+    # Declared here so CI and `uv sync` install them without extra steps.
+    "edge-tts>=7.0.0",
+    "pillow>=11.0.0",
+    "pywin32>=306; sys_platform == 'win32'",
 ]
 
 [build-system]

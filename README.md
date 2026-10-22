@@ -10,6 +10,18 @@
 
 ---
 
+## 📍 Project Status & Roadmap
+
+| Artifact | What it is |
+|---|---|
+| [`ROADMAP.md`](ROADMAP.md) | Phase plan (Trust Surface → Product Integrity → Revenue Loop → AI-Search Authority → Scale & Harden) with owners, exit gates, risk register and a 14-day view |
+| [`detailed_handoff_orbit_security.md`](detailed_handoff_orbit_security.md) | Current-state audit: live-surface status, artifact index, GEO research on the About page, quota remediation, task register T1–T31, 90-day scorecard |
+| Live showcase | <https://cmfh009.github.io/Orbit-Security/> · About: <https://cmfh009.github.io/Orbit-Security/about.html> |
+
+**In flight:** trust assets + sitemap/robots/security.txt · structured data on every public page · **scoring model rewrite** (an "F" grade now means *actively exploitable*, not *missing a nice-to-have header*) · CI gates for tests, `landing/`↔`docs/` parity and live-asset health.
+
+---
+
 ## 🎯 The Daily Micro-Revenue Model ($10 – $100/day)
 
 Agencies charge 20–100+ clients between **$150 and $350/month** for "Website Maintenance & Care Plans". However, clients frequently ask: *"What are we paying you for if the site hasn't changed?"*
