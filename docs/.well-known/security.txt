@@ -1,0 +1,10 @@
+# Orbit Security - vulnerability disclosure contact
+# Scope: passive perimeter hygiene disclosures affecting this site only.
+# No funded bug bounty program is currently operating.
+
+Canonical: https://cmfh009.github.io/Orbit-Security/.well-known/security.txt
+Contact: mailto:carsonmail009@gmail.com
+Expires: 2027-10-22T00:00:00.000Z
+Policy: https://cmfh009.github.io/Orbit-Security/disclaimer.html
+Preferred-Languages: en
+Description: Reports are accepted for perimeter hygiene issues affecting this site only - missing or misconfigured security headers, exposed configuration or backup files, leaked credentials in public responses, dangling DNS records, and other publicly observable weaknesses. This is a best-effort channel for defensive research, not a bug bounty. No funded bug bounty program is currently operating, no financial reward is offered, and the presence of this file does not authorise active testing, exploitation, denial of service, or access to any data beyond what is already publicly served. Reports are acknowledged on a best-effort basis and handled in line with the RFC Passive Reconnaissance and Safe Harbor policy linked above.

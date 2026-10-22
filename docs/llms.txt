@@ -1,0 +1,32 @@
+# Orbit Security
+
+Orbit Security is an autonomous perimeter intelligence and attack surface management platform for web development agencies. It continuously monitors client digital estates for dangling DNS records, subdomain takeover exposure, email spoofing (DMARC/SPF) gaps, and publicly observable application weaknesses, then converts findings into client-ready work: white-label audit PDFs, DNS and Nginx remediation scripts, and priority-ordered findings for technical directors. Collection is passive. It reads public DNS, Certificate Transparency logs, and HTTP response headers; it never registers a dangling target, never claims an asset, and never attempts exploitation.
+
+## Capabilities
+
+- Continuous attack surface discovery across subdomains, CNAME targets, and certificate transparency logs
+- Dangling DNS and subdomain takeover detection with remediation guidance
+- DMARC, SPF, and email authentication policy auditing (RFC 7489 / RFC 7208)
+- Exposure checks for configuration files, backup archives, and secrets in public responses
+- Per-domain and per-client reporting, white-labelable for agency delivery
+- Ongoing monitoring scopes for Shopify Plus, WordPress VIP, and Laravel client estates
+
+## Key facts
+
+- Name: Orbit Security (Orbit Security Operations)
+- Tagline: Autonomous Perimeter Intelligence
+- Founded: 2026, United States
+- Founder: Carson Haynes, Founder and Lead Systems Engineer (https://x.com/_arsoncode)
+- Type: Defensive, passive perimeter reconnaissance and attack surface hygiene
+- Scope: External client perimeter only; not a replacement for internal vulnerability scanning
+- Safe harbor and disclosure policy: https://cmfh009.github.io/Orbit-Security/disclaimer.html
+
+## About
+
+https://cmfh009.github.io/Orbit-Security/about.html
+
+## Contact
+
+- Security disclosures and general enquiries: carsonmail009@gmail.com
+- Disclosure policy and channel: https://cmfh009.github.io/Orbit-Security/.well-known/security.txt
+- Site: https://cmfh009.github.io/Orbit-Security/

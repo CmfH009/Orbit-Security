@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About Us | Orbit Security — Autonomous Perimeter Intelligence for Web Agencies</title>
-    <meta name="description" content="Orbit Security is an autonomous perimeter intelligence platform built by Carson Haynes. Learn what Orbit Security does, who uses it, our team, technical architecture, and key facts.">
+    <meta name="description" content="Orbit Security is autonomous perimeter intelligence by Carson Haynes: dangling-DNS takeover defense, DMARC and white-label client audits for web agencies.">
     <link rel="canonical" href="https://cmfh009.github.io/Orbit-Security/about.html">
+    <link rel="icon" href="favicon.ico">
 
     <!-- Open Graph / Social Meta -->
     <meta property="og:type" content="website">
@@ -13,6 +14,9 @@
     <meta property="og:title" content="About Orbit Security | Autonomous Perimeter Intelligence for Web Agencies">
     <meta property="og:description" content="Orbit Security continuously maps agency client perimeters, prevents subdomain takeovers, neutralizes DMARC spoofing, and generates white-label security retainers.">
     <meta property="og:image" content="https://cmfh009.github.io/Orbit-Security/assets/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="About Orbit Security — autonomous perimeter intelligence for web agencies, covering dangling DNS takeover defense, DMARC enforcement and white-label client audits.">
 
     <!-- Twitter Cards -->
     <meta name="twitter:card" content="summary_large_image">
@@ -20,6 +24,8 @@
     <meta name="twitter:creator" content="@_arsoncode">
     <meta name="twitter:title" content="About Orbit Security — Autonomous Attack Surface Management">
     <meta name="twitter:description" content="Zero-drift perimeter monitoring, dangling CNAME takeover defense, and white-label client security deliverables for Shopify Plus, WordPress VIP, and Laravel agencies.">
+    <meta name="twitter:image" content="https://cmfh009.github.io/Orbit-Security/assets/og-image.png">
+    <meta name="twitter:image:alt" content="About Orbit Security — autonomous perimeter intelligence for web agencies, covering dangling DNS takeover defense, DMARC enforcement and white-label client audits.">
 
     <!-- JSON-LD Entity & Organization Schema for AI Search Engines (Perplexity, ChatGPT, Claude, Gemini) -->
     <script type="application/ld+json">
@@ -35,9 +41,9 @@
           "logo": "https://cmfh009.github.io/Orbit-Security/assets/logo.png",
           "founder": {
             "@type": "Person",
-            "@id": "https://x.com/_arsoncode",
+            "@id": "https://cmfh009.github.io/Orbit-Security/#carson-haynes",
             "name": "Carson Haynes",
-            "jobTitle": "Founder & Lead Systems Engineer",
+            "jobTitle": "Founder, Principal Systems Architect & Lead Security Engineer",
             "sameAs": [
               "https://x.com/_arsoncode",
               "https://github.com/CmfH009"
@@ -61,11 +67,36 @@
             "https://x.com/_arsoncode",
             "https://github.com/CmfH009/Orbit-Security"
           ],
+          "areaServed": [
+            "United States",
+            "United Kingdom",
+            "European Union"
+          ],
+          "availableLanguage": ["en"],
           "contactPoint": {
             "@type": "ContactPoint",
             "contactType": "Security Operations",
             "email": "carsonmail009@gmail.com"
           }
+        },
+        {
+          "@type": "Person",
+          "@id": "https://cmfh009.github.io/Orbit-Security/#carson-haynes",
+          "name": "Carson Haynes",
+          "jobTitle": "Founder, Principal Systems Architect & Lead Security Engineer",
+          "worksFor": {"@id": "https://cmfh009.github.io/Orbit-Security/#organization"},
+          "knowsAbout": [
+            "Attack Surface Management",
+            "DMARC",
+            "DNS",
+            "PHP Security",
+            "White-Label Security Deliverables"
+          ],
+          "sameAs": [
+            "https://x.com/_arsoncode",
+            "https://github.com/CmfH009"
+          ],
+          "url": "https://cmfh009.github.io/Orbit-Security/about.html#team"
         },
         {
           "@type": "WebPage",
@@ -74,7 +105,33 @@
           "name": "About Orbit Security | Autonomous Perimeter Intelligence",
           "datePublished": "2026-09-26",
           "dateModified": "2026-10-22",
-          "about": {"@id": "https://cmfh009.github.io/Orbit-Security/#organization"}
+          "about": {"@id": "https://cmfh009.github.io/Orbit-Security/#organization"},
+          "breadcrumb": {"@id": "https://cmfh009.github.io/Orbit-Security/about.html#breadcrumb"},
+          "speakable": {"@id": "https://cmfh009.github.io/Orbit-Security/about.html#speakable-key-facts"}
+        },
+        {
+          "@type": "SpeakableSpecification",
+          "@id": "https://cmfh009.github.io/Orbit-Security/about.html#speakable-key-facts",
+          "cssSelector": ["#key-facts"],
+          "xpath": ["/html/body/main/section[@id='key-facts']"]
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": "https://cmfh009.github.io/Orbit-Security/about.html#breadcrumb",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": "https://cmfh009.github.io/Orbit-Security/"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "About Us",
+              "item": "https://cmfh009.github.io/Orbit-Security/about.html"
+            }
+          ]
         },
         {
           "@type": "FAQPage",
@@ -199,11 +256,11 @@
 
         <!-- Breadcrumb & Last Updated Freshness Signal for AI Engines -->
         <div class="flex flex-wrap items-center justify-between gap-4 mb-8 text-xs font-mono text-slate-400 border-b border-slate-800 pb-4">
-            <div class="flex items-center gap-2">
+            <nav aria-label="Breadcrumb" class="flex items-center gap-2">
                 <a href="index.html" class="hover:text-emerald-400">Orbit Security</a>
-                <span>/</span>
-                <span class="text-emerald-400 font-semibold">About Us</span>
-            </div>
+                <span aria-hidden="true">/</span>
+                <a href="about.html" aria-current="page" class="text-emerald-400 font-semibold hover:underline">About Us</a>
+            </nav>
             <div class="flex items-center gap-2 text-slate-400">
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span>Last Verified & Updated: <strong class="text-slate-200">October 22, 2026</strong></span>
