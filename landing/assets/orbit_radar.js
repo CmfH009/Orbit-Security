@@ -1772,14 +1772,20 @@
     // ==========================================
 
     async function runRealScanAndGeneratePdf() {
-        const domainInput = document.getElementById('realScanDomain');
+        // Prefer Radar Terminal's targetDomain, fall back to Audit Studio's realScanDomain
+        const radarDomainInput = document.getElementById('targetDomain');
+        const studioDomainInput = document.getElementById('realScanDomain');
+        
         // Prefer radar terminal agency name, fall back to audit studio
         const radarAgencyInput = document.getElementById('radarAgencyName');
         const studioAgencyInput = document.getElementById('customAgencyName');
         const btn = document.getElementById('btnRealScanPdf');
         
+        // Use radar domain if it has a value, otherwise studio domain
+        const domainInput = (radarDomainInput && radarDomainInput.value.trim()) ? radarDomainInput : studioDomainInput;
+        
         if (!domainInput || !domainInput.value.trim()) {
-            showArcadeToast('Enter a domain to scan first');
+            showArcadeToast('Enter a domain to scan first (Radar Terminal or Audit Studio)');
             return;
         }
         
@@ -1975,13 +1981,19 @@
 
     // Helper for flipbook modal
     async function runRealScanFromFlipbook() {
-        const domainInput = document.getElementById('flipbookRealScanDomain');
+        // Prefer radar terminal domain, then flipbook domain
+        const radarDomainInput = document.getElementById('targetDomain');
+        const flipbookDomainInput = document.getElementById('flipbookRealScanDomain');
+        
         // Prefer radar terminal agency name, fall back to audit studio
         const radarAgencyInput = document.getElementById('radarAgencyName');
         const studioAgencyInput = document.getElementById('customAgencyName');
         
+        // Use radar domain if it has a value, otherwise flipbook domain
+        const domainInput = (radarDomainInput && radarDomainInput.value.trim()) ? radarDomainInput : flipbookDomainInput;
+        
         if (!domainInput || !domainInput.value.trim()) {
-            showArcadeToast('Enter a domain to scan first');
+            showArcadeToast('Enter a domain to scan first (Radar Terminal or Flipbook)');
             return;
         }
         
