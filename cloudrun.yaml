@@ -1,0 +1,77 @@
+# orbit-security/cloudrun.yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: orbit-security-api
+  annotations:
+    # Security: Run in gVisor sandbox (default on Cloud Run Gen2)
+    run.googleapis.com/sandbox: "gvisor"
+    # Security: Gen2 execution environment
+    run.googleapis.com/execution-environment: "gen2"
+    # Security: Private networking only (no public internet egress)
+    run.googleapis.com/vpc-access-egress: "private-ranges-only"
+  labels:
+    app: orbit-security
+    environment: production
+    security-level: hardened
+spec:
+  template:
+    metadata:
+      annotations:
+        # Resource limits (prevent DoS)
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "3"
+        # Security: CPU/memory limits prevent resource exhaustion
+        run.googleapis.com/cpu-throttling: "true"
+        run.googleapis.com/startup-cpu-boost: "false"
+        # Security: Request timeout
+        run.googleapis.com/timeout: "300s"
+        # Security: Concurrency limit
+        run.googleapis.com/concurrency: "10"
+    spec:
+      # Security: Non-root, read-only filesystem enforced by distroless
+      serviceAccountName: orbit-api-sa@PROJECT_ID.iam.gserviceaccount.com
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT_ID/orbit-repo/orbit-api:COMMIT_SHA
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+          resources:
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+          # Security: No privilege escalation
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          # Security: Liveness/readiness probes
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+      # Security: Private networking only
+      vpcAccess:
+        egress: PRIVATE_RANGES_ONLY
