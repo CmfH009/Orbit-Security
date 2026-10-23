@@ -72,4 +72,23 @@ src/data/
 FREEBUFF_AUDIT_PROMPT.md
 data/EMERGENCY_STOP
 
+# Browser automation storage state & session cookies
+**/storage_state.json
+
+# Private prospects, lead rosters, cohorts & remediation data
+data/bounced_agencies.json
+data/new_prospects.json
+data/clients.json
+data/subscribers.json
+data/cohort_*
+data/contact_verification/
+data/remediation/
+data/dispatched_followups.json
+data/dispatched_security_advisories.json
+data/roast_f_grades_posts.json
+data/certificates/
+data/*_audit_*.md
+data/*_audit_*.pdf
+
+
 
