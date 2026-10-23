@@ -256,22 +256,51 @@ class DesktopAutomationDriver:
             return False
 
         if HAS_WIN32:
-            try:
-                hwnd = win["hwnd"]
-                if win32gui.IsIconic(hwnd):
-                    win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-                else:
-                    win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+            # Retry with window re-enumeration to handle stale handles
+            for attempt in range(3):
                 try:
-                    import ctypes
-                    ctypes.windll.user32.AllowSetForegroundWindow(-1)
-                except Exception:
-                    pass
-                win32gui.SetForegroundWindow(hwnd)
-                time.sleep(self.config.action_delay)
-                return True
-            except Exception as e:
-                logger.warning(f"Win32 focus fallback failed: {e}")
+                    hwnd = win["hwnd"]
+                    # Verify window still exists and is valid
+                    if not win32gui.IsWindow(hwnd):
+                        logger.warning(f"Window handle {hwnd} no longer valid, re-enumerating...")
+                        # Re-enumerate to find the window again
+                        fresh_win = self.find_x_window()
+                        if not fresh_win:
+                            logger.warning("Could not re-locate X window")
+                            return False
+                        win = fresh_win
+                        hwnd = win["hwnd"]
+                        continue
+                    
+                    if win32gui.IsIconic(hwnd):
+                        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                    else:
+                        win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+                    
+                    # AllowSetForegroundWindow before each attempt (per T11 hardening)
+                    try:
+                        import ctypes
+                        ctypes.windll.user32.AllowSetForegroundWindow(-1)
+                    except Exception:
+                        pass
+                    
+                    win32gui.SetForegroundWindow(hwnd)
+                    time.sleep(self.config.action_delay)
+                    return True
+                except Exception as e:
+                    error_msg = str(e)
+                    if "1400" in error_msg or "Invalid window handle" in error_msg:
+                        logger.warning(f"SetForegroundWindow failed (attempt {attempt + 1}/3): Invalid window handle, re-enumerating...")
+                        # Re-enumerate to find the window again
+                        fresh_win = self.find_x_window()
+                        if not fresh_win:
+                            logger.warning("Could not re-locate X window after invalid handle")
+                            return False
+                        win = fresh_win
+                        continue
+                    else:
+                        logger.warning(f"Win32 focus fallback failed: {e}")
+                        break  # Non-handle error, don't retry
 
         if hasattr(self.auto, "focus_window"):
             ok, msg = self.auto.focus_window(win["title"])
