@@ -62,7 +62,8 @@ def test_canary_probe_simulated_audit_quick():
     supervisor = OrbitMasterSupervisor()
     probe = SupervisorCanaryProbe(audit_duration_seconds=0.1)
 
-    result = probe.execute_canary_audit(supervisor, quick=True)
+    with patch.object(OrbitMasterSupervisor, "check_recent_crashes", return_value={"crash_count": 0, "bugcheck": None, "unexpected_shutdown": None}):
+        result = probe.execute_canary_audit(supervisor, quick=True)
 
     assert result["status"] in ("PASSED", "HEALTHY")
     assert result["audit_duration_seconds"] >= 0.0
@@ -103,30 +104,32 @@ def test_canary_probe_memory_tracking_and_graceful_recycle():
     # Establish initial baseline RSS: 100.0 MB
     probe.baselines["test_worker"] = 100.0
 
-    # Cycle 1: Memory bloats to 280MB (+180MB > 150MB threshold)
-    with patch.object(probe, "_get_process_rss_mb", return_value=280.0):
-        res1 = probe.execute_canary_audit(supervisor, quick=True)
-        assert res1["status"] == "WARNING_EXPANDING"
-        assert probe.consecutive_bloat_counts["test_worker"] == 1
-        assert supervisor.stop_service.call_count == 0
+    # Mock check_recent_crashes to return no crashes (static method)
+    with patch.object(OrbitMasterSupervisor, "check_recent_crashes", return_value={"crash_count": 0, "bugcheck": None, "unexpected_shutdown": None}):
+        # Cycle 1: Memory bloats to 280MB (+180MB > 150MB threshold)
+        with patch.object(probe, "_get_process_rss_mb", return_value=280.0):
+            res1 = probe.execute_canary_audit(supervisor, quick=True)
+            assert res1["status"] == "WARNING_EXPANDING"
+            assert probe.consecutive_bloat_counts["test_worker"] == 1
+            assert supervisor.stop_service.call_count == 0
 
-    # Cycle 2: Memory remains bloated at 310MB (+210MB)
-    with patch.object(probe, "_get_process_rss_mb", return_value=310.0):
-        res2 = probe.execute_canary_audit(supervisor, quick=True)
-        assert res2["status"] == "WARNING_EXPANDING"
-        assert probe.consecutive_bloat_counts["test_worker"] == 2
-        assert supervisor.stop_service.call_count == 0
+        # Cycle 2: Memory remains bloated at 310MB (+210MB)
+        with patch.object(probe, "_get_process_rss_mb", return_value=310.0):
+            res2 = probe.execute_canary_audit(supervisor, quick=True)
+            assert res2["status"] == "WARNING_EXPANDING"
+            assert probe.consecutive_bloat_counts["test_worker"] == 2
+            assert supervisor.stop_service.call_count == 0
 
-    # Cycle 3: Memory bloats again at 320MB (3rd consecutive cycle!) -> Trigger graceful recycle
-    with patch.object(probe, "_get_process_rss_mb", return_value=320.0):
-        res3 = probe.execute_canary_audit(supervisor, quick=True)
-        assert res3["status"] == "RECYCLED"
-        assert "test_worker" in res3["recycled_services"]
-        # Asserts graceful process recycle was invoked
-        supervisor.stop_service.assert_called_once_with("test_worker")
-        supervisor.start_service.assert_called_once_with("test_worker")
-        # Counter should reset to 0 after recycling
-        assert probe.consecutive_bloat_counts["test_worker"] == 0
+        # Cycle 3: Memory bloats again at 320MB (3rd consecutive cycle!) -> Trigger graceful recycle
+        with patch.object(probe, "_get_process_rss_mb", return_value=320.0):
+            res3 = probe.execute_canary_audit(supervisor, quick=True)
+            assert res3["status"] == "RECYCLED"
+            assert "test_worker" in res3["recycled_services"]
+            # Asserts graceful process recycle was invoked
+            supervisor.stop_service.assert_called_once_with("test_worker")
+            supervisor.start_service.assert_called_once_with("test_worker")
+            # Counter should reset to 0 after recycling
+            assert probe.consecutive_bloat_counts["test_worker"] == 0
 
 
 def test_canary_probe_reset_on_memory_drop():
@@ -148,12 +151,14 @@ def test_canary_probe_reset_on_memory_drop():
     )
     probe.baselines["stable_svc"] = 100.0
 
-    # Cycle 1: Spikes to 260MB (+160MB)
-    with patch.object(probe, "_get_process_rss_mb", return_value=260.0):
-        probe.execute_canary_audit(supervisor, quick=True)
-        assert probe.consecutive_bloat_counts["stable_svc"] == 1
+    # Mock check_recent_crashes to return no crashes (static method)
+    with patch.object(OrbitMasterSupervisor, "check_recent_crashes", return_value={"crash_count": 0, "bugcheck": None, "unexpected_shutdown": None}):
+        # Cycle 1: Spikes to 260MB (+160MB)
+        with patch.object(probe, "_get_process_rss_mb", return_value=260.0):
+            probe.execute_canary_audit(supervisor, quick=True)
+            assert probe.consecutive_bloat_counts["stable_svc"] == 1
 
-    # Cycle 2: Drops back down to 110MB (+10MB) -> Counter resets to 0
-    with patch.object(probe, "_get_process_rss_mb", return_value=110.0):
-        probe.execute_canary_audit(supervisor, quick=True)
-        assert probe.consecutive_bloat_counts["stable_svc"] == 0
+        # Cycle 2: Drops back down to 110MB (+10MB) -> Counter resets to 0
+        with patch.object(probe, "_get_process_rss_mb", return_value=110.0):
+            probe.execute_canary_audit(supervisor, quick=True)
+            assert probe.consecutive_bloat_counts["stable_svc"] == 0

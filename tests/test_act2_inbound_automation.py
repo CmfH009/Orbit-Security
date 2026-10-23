@@ -219,26 +219,28 @@ def test_act2_supervisor_canary_self_healing_flow():
     )
     probe.baselines["orbit_worker"] = 120.0
 
-    # Cycle 1: Memory bloats to 300MB (+180MB > 150MB) -> bloat count 1
-    with patch.object(probe, "_get_process_rss_mb", return_value=300.0):
-        r1 = probe.execute_canary_audit(supervisor, quick=True)
-        assert r1["status"] == "WARNING_EXPANDING"
-        assert probe.consecutive_bloat_counts["orbit_worker"] == 1
-        assert supervisor.stop_service.call_count == 0
+    # Mock check_recent_crashes to return no crashes (static method)
+    with patch.object(OrbitMasterSupervisor, "check_recent_crashes", return_value={"crash_count": 0, "bugcheck": None, "unexpected_shutdown": None}):
+        # Cycle 1: Memory bloats to 300MB (+180MB > 150MB) -> bloat count 1
+        with patch.object(probe, "_get_process_rss_mb", return_value=300.0):
+            r1 = probe.execute_canary_audit(supervisor, quick=True)
+            assert r1["status"] == "WARNING_EXPANDING"
+            assert probe.consecutive_bloat_counts["orbit_worker"] == 1
+            assert supervisor.stop_service.call_count == 0
 
-    # Cycle 2: Memory continues bloat at 320MB (+200MB) -> bloat count 2
-    with patch.object(probe, "_get_process_rss_mb", return_value=320.0):
-        r2 = probe.execute_canary_audit(supervisor, quick=True)
-        assert r2["status"] == "WARNING_EXPANDING"
-        assert probe.consecutive_bloat_counts["orbit_worker"] == 2
-        assert supervisor.stop_service.call_count == 0
+        # Cycle 2: Memory continues bloat at 320MB (+200MB) -> bloat count 2
+        with patch.object(probe, "_get_process_rss_mb", return_value=320.0):
+            r2 = probe.execute_canary_audit(supervisor, quick=True)
+            assert r2["status"] == "WARNING_EXPANDING"
+            assert probe.consecutive_bloat_counts["orbit_worker"] == 2
+            assert supervisor.stop_service.call_count == 0
 
-    # Cycle 3: 3rd consecutive bloated cycle (+230MB) -> Triggers graceful self-healing recycle
-    with patch.object(probe, "_get_process_rss_mb", return_value=350.0):
-        r3 = probe.execute_canary_audit(supervisor, quick=True)
-        assert r3["status"] == "RECYCLED"
-        assert "orbit_worker" in r3["recycled_services"]
-        # Empirical verification of graceful recycle
-        supervisor.stop_service.assert_called_once_with("orbit_worker")
-        supervisor.start_service.assert_called_once_with("orbit_worker")
-        assert probe.consecutive_bloat_counts["orbit_worker"] == 0
+        # Cycle 3: 3rd consecutive bloated cycle (+230MB) -> Triggers graceful self-healing recycle
+        with patch.object(probe, "_get_process_rss_mb", return_value=350.0):
+            r3 = probe.execute_canary_audit(supervisor, quick=True)
+            assert r3["status"] == "RECYCLED"
+            assert "orbit_worker" in r3["recycled_services"]
+            # Empirical verification of graceful recycle
+            supervisor.stop_service.assert_called_once_with("orbit_worker")
+            supervisor.start_service.assert_called_once_with("orbit_worker")
+            assert probe.consecutive_bloat_counts["orbit_worker"] == 0
