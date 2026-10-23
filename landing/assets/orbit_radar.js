@@ -1207,7 +1207,13 @@
                                     onclick="generateInstantPdfForDomain('${safeDomain}', ${totalScore}, '${escapeHtml(grade)}')" 
                                     class="w-full sm:w-auto min-h-[48px] px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer pixel-btn">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                <span>Download Co-Branded PDF</span>
+                                <span>Download Co-Branded PDF (Demo)</span>
+                            </button>
+                            <button type="button" 
+                                    onclick="runRealScanAndGeneratePdfFromHUD('${safeDomain}', ${totalScore}, '${escapeHtml(grade)}')" 
+                                    class="w-full sm:w-auto min-h-[48px] px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide shadow-md shadow-cyan-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer pixel-btn">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                <span>Generate Real Audit PDF (API)</span>
                             </button>
                             <button type="button" 
                                     onclick="copyShareableBadge('${safeDomain}', ${totalScore}, '${escapeHtml(grade)}', '${dmarcStatus}', '${spfStatus}')" 
@@ -1767,9 +1773,69 @@
     window.hideKeyboardHud = hideKeyboardHud;
     window.toggleKeyboardHud = toggleKeyboardHud;
     window.AuditStore = AuditStore;
+
+    // Expose for HUD button
+    window.runRealScanAndGeneratePdfFromHUD = runRealScanAndGeneratePdfFromHUD;
 // ==========================================
     // Real Scan API Integration
     // ==========================================
+
+    async function runRealScanAndGeneratePdfFromHUD(domain, clientScore, clientGrade) {
+        const radarAgencyInput = document.getElementById('radarAgencyName');
+        const studioAgencyInput = document.getElementById('customAgencyName');
+        
+        if (!domain) {
+            showArcadeToast('No domain specified');
+            return;
+        }
+        
+        const agencyName = (radarAgencyInput?.value?.trim() || studioAgencyInput?.value?.trim() || 'Apex Digital Studio').trim();
+        
+        showArcadeToast(`Running real API scan for ${domain}...`);
+        
+        try {
+            const response = await fetch('/api/orbit-security/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    domain: domain,
+                    branding: {
+                        agency_name: agencyName,
+                        agency_tagline: 'Managed Web & Security Operations',
+                        primary_color: currentBrandColorHex || '#0F172A',
+                        accent_color: currentBrandColorHex || '#2563EB',
+                        support_email: 'ops@apexdigital.io',
+                        website: 'https://apexdigital.io'
+                    },
+                    use_crtsh: true
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (!result.ok) {
+                throw new Error(result.error || 'Scan failed');
+            }
+            
+            // Convert real findings to PDF format
+            const pdfFindings = convertRealFindingsToPdfFormat(result.findings);
+            
+            // Generate PDF with real data
+            await generateInstantPdfForDomain(
+                result.domain,
+                result.score,
+                result.grade,
+                agencyName,
+                pdfFindings
+            );
+            
+            showArcadeToast(`✓ Real scan complete: ${result.domain} — Grade ${result.grade} (${result.score}/100)`);
+            
+        } catch (err) {
+            console.error('Real scan error:', err);
+            showArcadeToast('Real scan failed: ' + err.message);
+        }
+    }
 
     async function runRealScanAndGeneratePdf() {
         // Prefer Radar Terminal's targetDomain, fall back to Audit Studio's realScanDomain
