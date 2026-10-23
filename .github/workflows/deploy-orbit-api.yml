@@ -1,0 +1,137 @@
+# .github/workflows/deploy-orbit-api.yml
+name: Secure Deploy Orbit Security API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'projects/orbit-security/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  security-events: write
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  SERVICE: orbit-security-api
+  REPO: orbit-repo
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Build & Push (SLSA Level 3 Provenance + SBOM)
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./projects/orbit-security
+          file: ./projects/orbit-security/Dockerfile
+          push: true
+          tags: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/orbit-api:${{ github.sha }}
+          provenance: true
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Sign Image with Cosign (Keyless)
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign Container Image
+        run: |
+          cosign sign --yes \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/orbit-api:${{ github.sha }}
+
+      - name: Verify Image Signature
+        run: |
+          cosign verify \
+            --certificate-identity-regexp "https://github.com/${{ github.repository }}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/orbit-api:${{ github.sha }}
+
+      - name: Deploy to Cloud Run (Gen2 + gVisor + Private Networking)
+        run: |
+          gcloud run deploy ${{ env.SERVICE }} \
+            --image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/orbit-api:${{ github.sha }} \
+            --region=${{ env.REGION }} \
+            --platform=managed \
+            --execution-environment=gen2 \
+            --sandbox=gvisor \
+            --service-account=orbit-api-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
+            --vpc-connector=orbit-vpc-connector \
+            --vpc-egress=private-ranges-only \
+            --port=8080 \
+            --cpu=1 --memory=512Mi \
+            --min-instances=0 --max-instances=3 \
+            --concurrency=10 \
+            --timeout=300 \
+            --no-allow-unauthenticated \
+            --labels=security-level=hardened,app=orbit-security \
+            --set-env-vars="PYTHONUNBUFFERED=1,PYTHONDONTWRITEBYTECODE=1"
+
+      - name: Configure Cloud Armor WAF
+        run: |
+          # Create WAF policy (idempotent)
+          gcloud compute security-policies create orbit-waf \
+            --description="Orbit Security API WAF" \
+            --project=${{ env.PROJECT_ID }} 2>/dev/null || true
+
+          # Rule 1000: Block SQLi, XSS, RCE using preconfigured expressions
+          gcloud compute security-policies rules create 1000 \
+            --security-policy=orbit-waf \
+            --expression="evaluatePreconfiguredExpr('sqli-stable') || evaluatePreconfiguredExpr('xss-stable') || evaluatePreconfiguredExpr('rce-stable')" \
+            --action=deny-403 \
+            --project=${{ env.PROJECT_ID }} 2>/dev/null || \
+          gcloud compute security-policies rules update 1000 \
+            --security-policy=orbit-waf \
+            --expression="evaluatePreconfiguredExpr('sqli-stable') || evaluatePreconfiguredExpr('xss-stable') || evaluatePreconfiguredExpr('rce-stable')" \
+            --action=deny-403 \
+            --project=${{ env.PROJECT_ID }}
+
+          # Rule 2000: Rate limiting - 100 req/min per IP
+          gcloud compute security-policies rules create 2000 \
+            --security-policy=orbit-waf \
+            --expression="true" \
+            --action=rate-based-ban \
+            --rate-limit-threshold-count=100 \
+            --rate-limit-threshold-interval-sec=60 \
+            --ban-duration-sec=300 \
+            --project=${{ env.PROJECT_ID }} 2>/dev/null || \
+          gcloud compute security-policies rules update 2000 \
+            --security-policy=orbit-waf \
+            --expression="true" \
+            --action=rate-based-ban \
+            --rate-limit-threshold-count=100 \
+            --rate-limit-threshold-interval-sec=60 \
+            --ban-duration-sec=300 \
+            --project=${{ env.PROJECT_ID }}
+
+          # Attach WAF to Cloud Run service
+          gcloud run services update ${{ env.SERVICE }} \
+            --region=${{ env.REGION }} \
+            --security-policy=orbit-waf \
+            --project=${{ env.PROJECT_ID }}
