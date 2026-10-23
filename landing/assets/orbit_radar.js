@@ -13,6 +13,98 @@
     'use strict';
 
     // ==========================================
+    // 0. Session Management (Multi-User Support)
+    // ==========================================
+
+    const SESSION_PREFIX = 'orbit_session_';
+    const BROADCAST_CHANNEL_NAME = 'orbit-session-sync';
+
+    // Generate or get session ID from URL
+    function getOrCreateSessionId() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let sessionId = urlParams.get('session');
+        if (!sessionId) {
+            sessionId = 'sess_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 9);
+            // Update URL without reload
+            urlParams.set('session', sessionId);
+            window.history.replaceState({}, '', `${window.location.pathname}?${urlParams.toString()}`);
+        }
+        return sessionId;
+    }
+
+    const SESSION_ID = getOrCreateSessionId();
+
+    // Session-scoped storage keys
+    function sessionKey(key) {
+        return SESSION_PREFIX + SESSION_ID + '_' + key;
+    }
+
+    // Cross-tab broadcast channel for real-time sync
+    let broadcastChannel = null;
+    function initBroadcastChannel() {
+        if (typeof BroadcastChannel !== 'undefined') {
+            broadcastChannel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+            broadcastChannel.onmessage = (event) => {
+                if (event.data.sessionId !== SESSION_ID) return; // Ignore other sessions
+                const { type, payload } = event.data;
+                if (type === 'branding_update') {
+                    applyBrandingFromSync(payload);
+                } else if (type === 'scan_update') {
+                    applyScanFromSync(payload);
+                } else if (type === 'domain_update') {
+                    applyDomainFromSync(payload);
+                }
+            };
+        }
+    }
+
+    function broadcast(type, payload) {
+        if (broadcastChannel) {
+            broadcastChannel.postMessage({ sessionId: SESSION_ID, type, payload });
+        }
+    }
+
+    // Apply synced data from other tabs
+    function applyBrandingFromSync(payload) {
+        const { agencyName, brandColorHex, brandColorName } = payload;
+        const radarInput = document.getElementById('radarAgencyName');
+        const studioInput = document.getElementById('customAgencyName');
+        const display = document.getElementById('brandNameDisplay');
+        if (radarInput && radarInput.value !== agencyName) radarInput.value = agencyName;
+        if (studioInput && studioInput.value !== agencyName) studioInput.value = agencyName;
+        if (display) display.textContent = agencyName;
+        if (brandColorHex) currentBrandColorHex = brandColorHex;
+        if (brandColorName) {
+            currentBrandColorName = brandColorName;
+            setBrandColor(brandColorName);
+        }
+    }
+
+    function applyScanFromSync(payload) {
+        // Update radar view with scan results from another tab
+        if (payload.domain) {
+            const targetDisplay = document.getElementById('targetDomainDisplay');
+            if (targetDisplay) targetDisplay.textContent = payload.domain;
+        }
+        // Could also update grade badge, etc.
+    }
+
+    function applyDomainFromSync(payload) {
+        const { domain } = payload;
+        const radarInput = document.getElementById('targetDomain');
+        const studioInput = document.getElementById('realScanDomain');
+        const flipbookInput = document.getElementById('flipbookRealScanDomain');
+        if (radarInput && radarInput.value !== domain) radarInput.value = domain;
+        if (studioInput && studioInput.value !== domain) studioInput.value = domain;
+        if (flipbookInput && flipbookInput.value !== domain) flipbookInput.value = domain;
+        const targetDisplay = document.getElementById('targetDomainDisplay');
+        if (targetDisplay) targetDisplay.textContent = domain;
+    }
+
+    // Initialize broadcast channel
+    initBroadcastChannel();
+
+    // ==========================================
     // 1. Core Utilities & Input Validation
     // ==========================================
 
@@ -223,6 +315,11 @@
         KEY_BRANDING: 'orbit_brand_settings',
         MAX_HISTORY: 8,
 
+        // Get session-scoped key
+        _sessionKey(key) {
+            return SESSION_PREFIX + SESSION_ID + '_' + key;
+        },
+
         saveScan(domain, score, grade, findings) {
             try {
                 const history = this.getHistory().filter(h => h.domain !== domain);
@@ -233,7 +330,7 @@
                     timestamp: new Date().toISOString(),
                     findings
                 });
-                localStorage.setItem(this.KEY_HISTORY, JSON.stringify(history.slice(0, this.MAX_HISTORY)));
+                localStorage.setItem(this._sessionKey(this.KEY_HISTORY), JSON.stringify(history.slice(0, this.MAX_HISTORY)));
                 this.renderHistory();
             } catch (e) {
                 // Ignore storage limits
@@ -242,7 +339,7 @@
 
         getHistory() {
             try {
-                const raw = localStorage.getItem(this.KEY_HISTORY);
+                const raw = localStorage.getItem(this._sessionKey(this.KEY_HISTORY));
                 return raw ? JSON.parse(raw) : [];
             } catch (e) {
                 return [];
@@ -272,15 +369,21 @@
             }).join('');
         },
 
-        saveBranding(name, color) {
+        saveBranding(name, colorHex, colorName) {
             try {
-                localStorage.setItem(this.KEY_BRANDING, JSON.stringify({ name, color }));
+                localStorage.setItem(this._sessionKey(this.KEY_BRANDING), JSON.stringify({ 
+                    name, 
+                    color: colorHex,
+                    colorName: colorName 
+                }));
+                // Broadcast to other tabs in same session
+                broadcast('branding_update', { agencyName: name, brandColorHex: colorHex, brandColorName: colorName });
             } catch (e) {}
         },
 
         loadBranding() {
             try {
-                const raw = localStorage.getItem(this.KEY_BRANDING);
+                const raw = localStorage.getItem(this._sessionKey(this.KEY_BRANDING));
                 if (raw) return JSON.parse(raw);
             } catch (e) {}
             return null;
@@ -296,9 +399,12 @@
 
     function updateCustomBranding() {
         const input = document.getElementById('customAgencyName');
+        const radarInput = document.getElementById('radarAgencyName');
         const display = document.getElementById('brandNameDisplay');
         const name = input ? input.value.trim() : 'Your Agency';
         if (display) display.textContent = name || 'Your Agency';
+        // Sync radar input
+        if (radarInput && radarInput.value !== name) radarInput.value = name;
         AuditStore.saveBranding(name, currentBrandColorHex, currentBrandColorName);
     }
 
@@ -344,7 +450,7 @@
             if (brandName) brandName.className = 'text-emerald-400 font-bold';
         }
 
-        const agencyName = document.getElementById('customAgencyName')?.value || 'Your Agency';
+        const agencyName = document.getElementById('customAgencyName')?.value?.trim() || 'Apex Digital Studio';
         AuditStore.saveBranding(agencyName, currentBrandColorHex, color);
         if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
     }
@@ -543,32 +649,36 @@
                 color: darkSlate 
             });
 
+            // Detect if we have real findings (not demo data)
+            const isRealData = Array.isArray(customFindings) && customFindings.length === 5 && 
+                customFindings.every(f => f.status && ['PASS', 'FAIL', 'WARN'].includes(f.status));
+
             // 5 Structured Audit Categories
             const defaultFindings = [
                 { 
                     category: "SUBDOMAIN TAKEOVER SENTINEL", 
-                    desc: `17 SaaS provider signatures audited across ${cleanDomain}. Zero dangling CNAMEs.`, 
-                    status: "PASS" 
+                    desc: `Example: 17 SaaS provider signatures would be audited. Real scan checks crt.sh + DNS.`, 
+                    status: "DEMO" 
                 },
                 { 
                     category: "EMAIL SPOOFING PROTECTION (DMARC)", 
-                    desc: "RFC 7489 DMARC policy verified active with strict quarantine alignment. Unauthorized sender forging blocked.", 
-                    status: "PASS" 
+                    desc: "Example: RFC 7489 DMARC policy would be verified. Real scan queries _dmarc TXT record.", 
+                    status: "DEMO" 
                 },
                 { 
                     category: "SENDER POLICY FRAMEWORK (SPF)", 
-                    desc: "SPF TXT record configured with valid mechanism qualifiers. Zero over-permissive (+all) rules.", 
-                    status: "PASS" 
+                    desc: "Example: SPF TXT record would be checked for +all over-permissive rules.", 
+                    status: "DEMO" 
                 },
                 { 
                     category: "SENSITIVE EXPOSURE SENTINEL", 
-                    desc: "No public exposure of environment secrets (.env, .git, configuration backup files).", 
-                    status: "PASS" 
+                    desc: "Example: .env, .git, wp-config.php.bak would be probed for public exposure.", 
+                    status: "DEMO" 
                 },
                 { 
                     category: "TLS / SSL CERTIFICATE EXPIRY", 
-                    desc: "Edge certificate valid. Active TLS cipher suites enforced.", 
-                    status: "PASS" 
+                    desc: "Example: Edge certificate validity and cipher suites would be verified via TLS handshake.", 
+                    status: "DEMO" 
                 }
             ];
 
@@ -576,24 +686,61 @@
                 ? customFindings 
                 : defaultFindings;
 
+            // DEMO WATERMARK - Only for demo data
+            if (!isRealData) {
+                const watermarkFont = helveticaBold;
+                const watermarkColor = rgb(0.85, 0.85, 0.85);
+                page.drawText("DEMO PREVIEW - NOT A REAL SCAN", {
+                    x: width / 2 - 120,
+                    y: height / 2,
+                    size: 36,
+                    font: watermarkFont,
+                    color: watermarkColor,
+                    rotate: { type: 'degrees', angle: -45 },
+                    opacity: 0.15
+                });
+            }
+
             let startY = height - 175;
             for (const item of findings) {
                 page.drawRectangle({ x: 40, y: startY - 45, width: width - 80, height: 40, color: lightSlate });
                 page.drawText(item.category, { x: 55, y: startY - 20, size: 8, font: helveticaBold, color: darkSlate });
                 page.drawText(item.desc, { x: 55, y: startY - 34, size: 7.5, font: helvetica, color: midSlate });
                 
-                const isFail = item.status === 'FAIL' || item.status === 'RISK';
-                const isWarn = item.status === 'WARN';
-                const statusColor = isFail ? roseRed : (isWarn ? amberGold : emeraldGreen);
-
-                page.drawText(item.status, { 
-                    x: width - 85, 
+                // Status color based on actual finding status
+                let statusColor;
+                let statusText = item.status;
+                if (item.status === 'FAIL') {
+                    statusColor = roseRed;
+                } else if (item.status === 'WARN') {
+                    statusColor = amberGold;
+                } else if (item.status === 'PASS') {
+                    statusColor = emeraldGreen;
+                } else {
+                    // Demo mode
+                    statusColor = rgb(120 / 255, 130 / 255, 145 / 255); // Gray
+                    statusText = 'NOT SCANNED';
+                }
+                
+                page.drawText(statusText, { 
+                    x: width - 110, 
                     y: startY - 25, 
                     size: 9, 
                     font: helveticaBold, 
                     color: statusColor 
                 });
                 startY -= 50;
+            }
+
+            // Footer note about demo status (only for demo)
+            if (!isRealData) {
+                page.drawText("⚠ This is a DEMO PREVIEW with example data. Run a real scan via CLI or API for actual findings.", {
+                    x: 40,
+                    y: startY - 15,
+                    size: 7,
+                    font: helvetica,
+                    color: amberGold
+                });
             }
 
             // Care Plan Stewardship Box
@@ -1238,6 +1385,19 @@
         }
     }
 
+    function copySessionLink() {
+        const sessionUrl = window.location.href;
+        const notify = () => {
+            if (window.SimpleCat && SimpleCat.playCoin) SimpleCat.playCoin();
+            showArcadeToast(`✓ Session link copied! Share this URL to collaborate in real-time.`);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(sessionUrl).then(notify).catch(() => prompt('Copy Session Link:', sessionUrl));
+        } else {
+            prompt('Copy Session Link:', sessionUrl);
+        }
+    }
+
     function copyLegalRider() {
         const riderText = '"Client authorizes Agency and its designated automated surveillance sentinels (Orbit Security) to perform continuous, non-invasive perimeter telemetry queries (including RFC 1035/8484 DNS-over-HTTPS records, SSL/TLS certificate transparency logs, and public HTTP security headers) on Client-owned web domains for the sole purpose of identifying security misconfigurations, email authentication posture (SPF/DKIM/DMARC), and subdomain exposure. All telemetry is passive, causes zero system degradation, and conforms to Computer Fraud and Abuse Act (CFAA §1030) authorized assessment guidelines."';
         const btn = document.getElementById('copy-rider-btn');
@@ -1519,6 +1679,63 @@
         } else {
             setBrandColor('emerald');
         }
+
+        // ==========================================
+        // Input Sync Listeners (Multi-User Real-Time)
+        // ==========================================
+        
+        // Sync agency name inputs in real-time
+        const studioAgencyInput = document.getElementById('customAgencyName');
+        const radarAgencyInput = document.getElementById('radarAgencyName');
+        
+        if (studioAgencyInput) {
+            studioAgencyInput.addEventListener('input', () => {
+                const name = studioAgencyInput.value.trim();
+                if (radarAgencyInput && radarAgencyInput.value !== name) radarAgencyInput.value = name;
+                const display = document.getElementById('brandNameDisplay');
+                if (display) display.textContent = name || 'Your Agency';
+                AuditStore.saveBranding(name, currentBrandColorHex, currentBrandColorName);
+            });
+        }
+        
+        if (radarAgencyInput) {
+            radarAgencyInput.addEventListener('input', () => {
+                const name = radarAgencyInput.value.trim();
+                if (studioAgencyInput && studioAgencyInput.value !== name) studioAgencyInput.value = name;
+                const display = document.getElementById('brandNameDisplay');
+                if (display) display.textContent = name || 'Your Agency';
+                AuditStore.saveBranding(name, currentBrandColorHex, currentBrandColorName);
+            });
+        }
+
+        // Sync domain inputs in real-time
+        const radarDomainInput = document.getElementById('targetDomain');
+        const studioDomainInput = document.getElementById('realScanDomain');
+        const flipbookDomainInput = document.getElementById('flipbookRealScanDomain');
+        
+        function syncDomainInputs(sourceInput) {
+            const domain = sourceInput.value.trim();
+            const targetDisplay = document.getElementById('targetDomainDisplay');
+            if (targetDisplay) targetDisplay.textContent = domain || 'clientbrand.com';
+            
+            const inputs = [radarDomainInput, studioDomainInput, flipbookDomainInput].filter(i => i && i !== sourceInput);
+            inputs.forEach(input => {
+                if (input.value !== domain) input.value = domain;
+            });
+            
+            // Broadcast to other tabs
+            broadcast('domain_update', { domain });
+        }
+        
+        if (radarDomainInput) {
+            radarDomainInput.addEventListener('input', () => syncDomainInputs(radarDomainInput));
+        }
+        if (studioDomainInput) {
+            studioDomainInput.addEventListener('input', () => syncDomainInputs(studioDomainInput));
+        }
+        if (flipbookDomainInput) {
+            flipbookDomainInput.addEventListener('input', () => syncDomainInputs(flipbookDomainInput));
+        }
     }
 
     if (document.readyState === 'loading') {
@@ -1544,9 +1761,277 @@
     window.toggleFaq = toggleFaq;
     window.copyShareableBadge = copyShareableBadge;
     window.copyLegalRider = copyLegalRider;
+    window.copySessionLink = copySessionLink;
     window.switchLegalTab = switchLegalTab;
     window.showKeyboardHud = showKeyboardHud;
     window.hideKeyboardHud = hideKeyboardHud;
     window.toggleKeyboardHud = toggleKeyboardHud;
     window.AuditStore = AuditStore;
+// ==========================================
+    // Real Scan API Integration
+    // ==========================================
+
+    async function runRealScanAndGeneratePdf() {
+        const domainInput = document.getElementById('realScanDomain');
+        // Prefer radar terminal agency name, fall back to audit studio
+        const radarAgencyInput = document.getElementById('radarAgencyName');
+        const studioAgencyInput = document.getElementById('customAgencyName');
+        const btn = document.getElementById('btnRealScanPdf');
+        
+        if (!domainInput || !domainInput.value.trim()) {
+            showArcadeToast('Enter a domain to scan first');
+            return;
+        }
+        
+        const domain = domainInput.value.trim();
+        const agencyName = (radarAgencyInput?.value?.trim() || studioAgencyInput?.value?.trim() || 'Apex Digital Studio').trim();
+        
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<span class="animate-spin">⟳</span> Scanning...`;
+        }
+        
+        try {
+            const response = await fetch('/api/orbit-security/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    domain: domain,
+                    branding: {
+                        agency_name: agencyName,
+                        agency_tagline: 'Managed Web & Security Operations',
+                        primary_color: currentBrandColorHex || '#0F172A',
+                        accent_color: currentBrandColorHex || '#2563EB',
+                        support_email: 'ops@apexdigital.io',
+                        website: 'https://apexdigital.io'
+                    },
+                    use_crtsh: true
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (!result.ok) {
+                throw new Error(result.error || 'Scan failed');
+            }
+            
+            // Convert real findings to PDF format
+            const pdfFindings = convertRealFindingsToPdfFormat(result.findings);
+            
+            // Generate PDF with real data
+            await generateInstantPdfForDomain(
+                result.domain,
+                result.score,
+                result.grade,
+                agencyName,
+                pdfFindings
+            );
+            
+            // Update UI with real scan results
+            const targetDisplay = document.getElementById('targetDomainDisplay');
+            if (targetDisplay) targetDisplay.textContent = result.domain;
+            
+            const gradeBadge = document.getElementById('brandGradeBadge');
+            if (gradeBadge) {
+                const scoreColor = result.score >= 90 ? 'emerald' : (result.score >= 70 ? 'amber' : 'rose');
+                const bgColor = scoreColor === 'emerald' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 
+                                scoreColor === 'amber' ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' :
+                                'bg-rose-500/10 border-rose-500/30 text-rose-400';
+                const dotColor = scoreColor === 'emerald' ? 'bg-emerald-400' : 
+                                 scoreColor === 'amber' ? 'bg-amber-400' : 'bg-rose-400';
+                gradeBadge.className = `px-4 py-2 rounded-xl ${bgColor} text-sm font-bold flex items-center gap-2`;
+                gradeBadge.innerHTML = `<span class="w-2 h-2 rounded-full ${dotColor} animate-pulse"></span>Grade: ${result.grade} (${result.score}/100) <span class="text-[10px] text-emerald-400">(Real Scan)</span>`;
+            }
+            
+            // Update radar view with real subdomain data
+            updateRadarViewWithRealData(result);
+            
+            showArcadeToast(`Real scan complete: ${result.domain} — Grade ${result.grade} (${result.score}/100)`);
+            
+        } catch (err) {
+            console.error('Real scan error:', err);
+            showArcadeToast('Scan failed: ' + err.message);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <span>Generate Real Audit PDF</span>`;
+            }
+        }
+    }
+
+    function convertRealFindingsToPdfFormat(findings) {
+        // Map real scanner findings to the 5 PDF categories
+        // Use both category AND title to correctly distribute findings
+        const findingsByCategory = {
+            'SUBDOMAIN TAKEOVER SENTINEL': [],
+            'EMAIL SPOOFING PROTECTION (DMARC)': [],
+            'SENDER POLICY FRAMEWORK (SPF)': [],
+            'SENSITIVE EXPOSURE SENTINEL': [],
+            'TLS / SSL CERTIFICATE EXPIRY': []
+        };
+        
+        for (const f of findings) {
+            const title = (f.title || '').toLowerCase();
+            const category = f.category || '';
+            
+            // Route based on category + title keywords
+            if (category === 'Subdomain & DNS') {
+                findingsByCategory['SUBDOMAIN TAKEOVER SENTINEL'].push(f);
+            }
+            else if (category === 'Transport Security') {
+                if (title.includes('certificate') || title.includes('ssl') || title.includes('tls') || title.includes('expir')) {
+                    findingsByCategory['TLS / SSL CERTIFICATE EXPIRY'].push(f);
+                } else if (title.includes('hsts')) {
+                    findingsByCategory['TLS / SSL CERTIFICATE EXPIRY'].push(f);
+                } else {
+                    findingsByCategory['TLS / SSL CERTIFICATE EXPIRY'].push(f);
+                }
+            }
+            else if (category === 'Email Authentication') {
+                if (title.includes('spf') || title.includes('sender policy')) {
+                    findingsByCategory['SENDER POLICY FRAMEWORK (SPF)'].push(f);
+                } else {
+                    // DMARC, BIMI, MTA-STS, TLS-RPT, CAA
+                    findingsByCategory['EMAIL SPOOFING PROTECTION (DMARC)'].push(f);
+                }
+            }
+            else if (category === 'Exposed Assets' || category === 'Information Disclosure' || category === 'Input Validation') {
+                findingsByCategory['SENSITIVE EXPOSURE SENTINEL'].push(f);
+            }
+            else if (category === 'Application Security') {
+                // Security headers (CSP, X-Frame-Options, etc.) - group with email auth for PDF
+                findingsByCategory['EMAIL SPOOFING PROTECTION (DMARC)'].push(f);
+            }
+            else {
+                // Fallback
+                findingsByCategory['SENSITIVE EXPOSURE SENTINEL'].push(f);
+            }
+        }
+        
+        // Build the 5 standard PDF categories with real data
+        const pdfCategories = [
+            { key: 'SUBDOMAIN TAKEOVER SENTINEL', findings: findingsByCategory['SUBDOMAIN TAKEOVER SENTINEL'] || [] },
+            { key: 'EMAIL SPOOFING PROTECTION (DMARC)', findings: findingsByCategory['EMAIL SPOOFING PROTECTION (DMARC)'] || [] },
+            { key: 'SENDER POLICY FRAMEWORK (SPF)', findings: findingsByCategory['SENDER POLICY FRAMEWORK (SPF)'] || [] },
+            { key: 'SENSITIVE EXPOSURE SENTINEL', findings: findingsByCategory['SENSITIVE EXPOSURE SENTINEL'] || [] },
+            { key: 'TLS / SSL CERTIFICATE EXPIRY', findings: findingsByCategory['TLS / SSL CERTIFICATE EXPIRY'] || [] }
+        ];
+        
+        return pdfCategories.map(cat => {
+            const catFindings = cat.findings;
+            if (catFindings.length === 0) {
+                return {
+                    category: cat.key,
+                    desc: 'No findings in this category. All checks passed.',
+                    status: 'PASS'
+                };
+            }
+            
+            // Get highest severity
+            const severityOrder = { 'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1, 'INFO': 0 };
+            const maxSeverity = catFindings.reduce((max, f) => 
+                severityOrder[f.severity] > severityOrder[max.severity] ? f : max, catFindings[0]
+            );
+            
+            const statusMap = { 'CRITICAL': 'FAIL', 'HIGH': 'FAIL', 'MEDIUM': 'WARN', 'LOW': 'WARN', 'INFO': 'PASS' };
+            const status = statusMap[maxSeverity.severity] || 'PASS';
+            
+            // Build description from findings
+            const descParts = catFindings.map(f => {
+                const target = f.target ? ` (${f.target})` : '';
+                return `${f.title}${target}: ${f.description}`;
+            });
+            
+            return {
+                category: cat.key,
+                desc: descParts.join(' | '),
+                status: status
+            };
+        });
+    }
+
+    function updateRadarViewWithRealData(result) {
+        const radarView = document.getElementById('reportView-radar');
+        if (!radarView) return;
+        
+        // Update the subdomain count
+        const subdomainCount = radarView.querySelector('.text-emerald-400');
+        if (subdomainCount) {
+            subdomainCount.textContent = `${result.subdomains_scanned.length} SaaS Signatures Audited`;
+        }
+        
+        // Update the apex domain
+        const apexNode = radarView.querySelector('.text-white.font-medium.break-all');
+        if (apexNode) {
+            apexNode.textContent = `${result.domain} (Apex A/AAAA)`;
+        }
+    }
+
+    // Expose to window
+    window.runRealScanAndGeneratePdf = runRealScanAndGeneratePdf;
+    window.convertRealFindingsToPdfFormat = convertRealFindingsToPdfFormat;
+    window.updateRadarViewWithRealData = updateRadarViewWithRealData;
+
+    // Helper for flipbook modal
+    async function runRealScanFromFlipbook() {
+        const domainInput = document.getElementById('flipbookRealScanDomain');
+        // Prefer radar terminal agency name, fall back to audit studio
+        const radarAgencyInput = document.getElementById('radarAgencyName');
+        const studioAgencyInput = document.getElementById('customAgencyName');
+        
+        if (!domainInput || !domainInput.value.trim()) {
+            showArcadeToast('Enter a domain to scan first');
+            return;
+        }
+        
+        const domain = domainInput.value.trim();
+        const agencyName = (radarAgencyInput?.value?.trim() || studioAgencyInput?.value?.trim() || 'Apex Digital Studio').trim();
+        
+        try {
+            const response = await fetch('/api/orbit-security/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    domain: domain,
+                    branding: {
+                        agency_name: agencyName,
+                        agency_tagline: 'Managed Web & Security Operations',
+                        primary_color: currentBrandColorHex || '#0F172A',
+                        accent_color: currentBrandColorHex || '#2563EB',
+                        support_email: 'ops@apexdigital.io',
+                        website: 'https://apexdigital.io'
+                    },
+                    use_crtsh: true
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (!result.ok) {
+                throw new Error(result.error || 'Scan failed');
+            }
+            
+            // Convert real findings to PDF format
+            const pdfFindings = convertRealFindingsToPdfFormat(result.findings);
+            
+            // Generate PDF with real data
+            await generateInstantPdfForDomain(
+                result.domain,
+                result.score,
+                result.grade,
+                agencyName,
+                pdfFindings
+            );
+            
+            showArcadeToast(`Real scan complete: ${result.domain} — Grade ${result.grade} (${result.score}/100)`);
+            
+        } catch (err) {
+            console.error('Real scan error:', err);
+            showArcadeToast('Scan failed: ' + err.message);
+        }
+    }
+
+    window.runRealScanFromFlipbook = runRealScanFromFlipbook;
+
 })();
