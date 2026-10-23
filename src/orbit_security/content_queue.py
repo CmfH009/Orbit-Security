@@ -310,11 +310,18 @@ class ContentQueue:
                     domain=f"radar-{random.randint(100, 999)}.io",
                     score=random.randint(75, 98),
                 )
-                vid = self.creative_engine.video_gen.generate_video_short(
+                vid_result = self.creative_engine.video_gen.generate_video_short(
                     script_text=item.get("text", "Orbit Security radar online. Perimeter validated.")[:120],
                     image_path=card,
                     title=f"auto_{item['id']}",
                 )
+                # Handle tuple return (path, metadata)
+                if isinstance(vid_result, tuple):
+                    vid, vid_metadata = vid_result
+                    if vid_metadata.get("degraded_audio"):
+                        logger.warning(f"Video generated with degraded audio: {vid_metadata}")
+                else:
+                    vid = vid_result
                 fresh_path = str(vid)
             except Exception as e:
                 logger.error(f"Error synthesizing dynamic video: {e}")

@@ -418,11 +418,18 @@ class CreativeEngine:
             if chosen.get("is_dynamic_video"):
                 try:
                     dyn_card = self.media_gen.generate_doh_speed_benchmark()
-                    vid = self.video_gen.generate_video_short(
+                    vid_result = self.video_gen.generate_video_short(
                         script_text=chosen.get("script", chosen["text"][:100]),
                         image_path=dyn_card,
                         title=chosen["id"],
                     )
+                    # Handle tuple return (path, metadata)
+                    if isinstance(vid_result, tuple):
+                        vid, vid_metadata = vid_result
+                        if vid_metadata.get("degraded_audio"):
+                            logger.warning(f"Video generated with degraded audio: {vid_metadata}")
+                    else:
+                        vid = vid_result
                     media_path = str(vid)
                 except Exception as e:
                     logger.error(f"Error synthesizing dynamic video for {chosen['id']}: {e}")
@@ -434,11 +441,18 @@ class CreativeEngine:
                     # Synthesize on the fly if video missing or repeated
                     try:
                         dyn_card = self.media_gen.generate_telemetry_radar_card()
-                        vid = self.video_gen.generate_video_short(
+                        vid_result = self.video_gen.generate_video_short(
                             script_text="Orbit Security automated radar. Threat perimeter verified secure.",
                             image_path=dyn_card,
                             title=f"auto_{chosen['id']}",
                         )
+                        # Handle tuple return (path, metadata)
+                        if isinstance(vid_result, tuple):
+                            vid, vid_metadata = vid_result
+                            if vid_metadata.get("degraded_audio"):
+                                logger.warning(f"Video generated with degraded audio: {vid_metadata}")
+                        else:
+                            vid = vid_result
                         media_path = str(vid)
                     except Exception as e:
                         logger.error(f"Error generating fallback video: {e}")

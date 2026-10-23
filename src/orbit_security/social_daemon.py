@@ -450,11 +450,19 @@ class SocialDaemon:
             if req_type == "video":
                 try:
                     card = self.content_queue.creative_engine.media_gen.generate_telemetry_radar_card()
-                    vid = self.content_queue.creative_engine.video_gen.generate_video_short(
+                    vid_result = self.content_queue.creative_engine.video_gen.generate_video_short(
                         script_text=text[:120] if text else "Orbit Security perimeter scan complete.",
                         image_path=card,
                         title=f"auto_{final_post_id}",
                     )
+                    # Handle tuple return (path, metadata)
+                    if isinstance(vid_result, tuple):
+                        vid, vid_metadata = vid_result
+                        # Log degradation if audio fallback was used
+                        if vid_metadata.get("degraded_audio"):
+                            logger.warning(f"Video generated with degraded audio: {vid_metadata}")
+                    else:
+                        vid = vid_result
                     media_path = str(vid)
                 except Exception as e:
                     logger.error(f"Error synthesizing video fallback: {e}")

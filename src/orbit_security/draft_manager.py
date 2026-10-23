@@ -194,11 +194,18 @@ class DraftManager:
                 try:
                     if item.get("media_type") == "video":
                         card = self.creative_engine.media_gen.generate_telemetry_radar_card()
-                        vid = self.creative_engine.video_gen.generate_video_short(
+                        vid_result = self.creative_engine.video_gen.generate_video_short(
                             script_text=item.get("text", "Orbit Security perimeter scan online.")[:120],
                             image_path=card,
                             title=f"draft_{item['id']}",
                         )
+                        # Handle tuple return (path, metadata)
+                        if isinstance(vid_result, tuple):
+                            vid, vid_metadata = vid_result
+                            if vid_metadata.get("degraded_audio"):
+                                logger.warning(f"Video generated with degraded audio: {vid_metadata}")
+                        else:
+                            vid = vid_result
                         staged_media = str(vid)
                     else:
                         card = self.creative_engine.media_gen.generate_dns_attack_diagram()

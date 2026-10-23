@@ -61,12 +61,25 @@ class VideoGenerator:
         image_path: Optional[Path] = None,
         title: str = "orbit_intel_brief",
         duration_margin: float = 0.5,
-    ) -> Path:
-        """Synthesizes an MP4 video clip from script text and an image card."""
+    ) -> Tuple[Path, Dict[str, Any]]:
+        """Synthesizes an MP4 video clip from script text and an image card.
+        
+        Returns:
+            Tuple of (output_path, metadata_dict) where metadata contains:
+            - degraded_audio: bool - True if silent fallback was used
+            - voice_backend: str - which TTS backend was used
+            - dsp_applied: bool - whether helmet DSP was applied
+            - output_size: int - bytes of generated MP4
+        """
         # 1. Ensure visual card exists
         card_img = image_path
         if card_img is None or not card_img.exists():
             card_img = self.media_gen.generate_dns_attack_diagram()
+
+        # Track degradation state
+        degraded_audio = False
+        voice_backend = "unknown"
+        dsp_applied = False
 
         # 2. Synthesize audio voiceover with astronaut cat helmet DSP
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -81,11 +94,14 @@ class VideoGenerator:
                     text=script_text,
                     output_path=raw_audio,
                 )
+                voice_backend = self.voice_engine.profile.engine_backend
             except Exception as e:
                 logger.warning(
                     f"Voice synthesis unavailable ({e}); rendering silent audio fallback"
                 )
                 _write_silent_wav(raw_audio, duration_seconds=1.0)
+                degraded_audio = True
+                voice_backend = "silent_fallback"
 
             # Apply helmet DSP (bandpass, resonance, companding, and comms chirps)
             try:
@@ -95,6 +111,7 @@ class VideoGenerator:
                     add_chirps=True,
                 )
                 final_audio = helmet_audio
+                dsp_applied = True
             except Exception as e:
                 logger.warning(f"Helmet DSP application skipped, using raw audio: {e}")
                 final_audio = raw_audio
@@ -138,5 +155,13 @@ class VideoGenerator:
             if res.returncode != 0 or not output_mp4.exists():
                 raise RuntimeError(f"ffmpeg video mux failed: {res.stderr}")
 
-            logger.info(f"Successfully rendered video short: {output_mp4} ({output_mp4.stat().st_size} bytes)")
-            return output_mp4
+            output_size = output_mp4.stat().st_size
+            logger.info(f"Successfully rendered video short: {output_mp4} ({output_size} bytes)")
+            
+            metadata = {
+                "degraded_audio": degraded_audio,
+                "voice_backend": voice_backend,
+                "dsp_applied": dsp_applied,
+                "output_size": output_size,
+            }
+            return output_mp4, metadata
