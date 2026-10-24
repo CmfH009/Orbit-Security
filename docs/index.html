@@ -850,6 +850,8 @@
                         <span class="text-xs font-mono text-slate-400 uppercase tracking-wider flex-shrink-0 hidden sm:inline">Views:</span>
                         <button type="button" onclick="switchReportView('radar')" id="viewBtn-radar" class="report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Subdomain Radar</button>
                         <button type="button" onclick="switchReportView('dmarc')" id="viewBtn-dmarc" class="report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Email Spoofing (DMARC)</button>
+                        <button type="button" onclick="switchReportView('secrets')" id="viewBtn-secrets" class="report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">JS Bundle Secrets</button>
+                        <button type="button" onclick="switchReportView('compliance')" id="viewBtn-compliance" class="report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Bulk Sender Compliance</button>
                         <button type="button" onclick="switchReportView('contrast')" id="viewBtn-contrast" class="report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Before vs. After</button>
                     </div>
                     
@@ -993,6 +995,73 @@
                                 <div class="text-xs font-mono text-slate-400 mb-2">SPF Record Mechanization:</div>
                                 <div class="text-base font-bold text-white font-mono">v=spf1 include:_spf.google.com ~all</div>
                                 <p class="text-xs text-slate-400 mt-2">Soft-fail quarantine policy configured. Aligned with client's Google Workspace infrastructure.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- View 3: JavaScript Bundle Secrets Scanner -->
+                    <div id="reportView-secrets" class="hidden space-y-4">
+                        <div class="p-4 sm:p-5 rounded-xl bg-slate-950/90 border border-slate-800 space-y-3 font-mono text-xs">
+                            <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                                <span class="text-slate-300 font-bold flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-red-400 animate-pulse"></span>
+                                    Frontend Secret Harvesting Radar
+                                </span>
+                                <span class="text-[11px] text-amber-400">Automated Passive Bundle Decompilation</span>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="p-3 rounded-lg bg-red-950/30 border border-red-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div>
+                                        <div class="flex items-center gap-2 text-red-300 font-bold">
+                                            <span class="px-1.5 py-0.5 rounded bg-red-500/20 text-[10px] text-red-400 font-sans">CRITICAL</span>
+                                            <span>Exposed Live Stripe Secret Key</span>
+                                        </div>
+                                        <div class="text-slate-400 text-[11px] mt-1 break-all">Source: /static/chunks/app-bundle.js &rarr; Detected: sk_live_51Abcd...NOPQ</div>
+                                    </div>
+                                    <span class="text-emerald-400 text-[11px] font-sans font-semibold">Immediate Key Rotation Required</span>
+                                </div>
+                                <div class="p-3 rounded-lg bg-amber-950/20 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div>
+                                        <div class="flex items-center gap-2 text-amber-300 font-bold">
+                                            <span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-[10px] text-amber-400 font-sans">HIGH</span>
+                                            <span>AWS IAM Access Key ID</span>
+                                        </div>
+                                        <div class="text-slate-400 text-[11px] mt-1 break-all">Source: inline homepage script &rarr; Detected: AKIAIOSF...EXAMPLE</div>
+                                    </div>
+                                    <span class="text-emerald-400 text-[11px] font-sans font-semibold">Migrate to STS Temporary Token</span>
+                                </div>
+                                <div class="p-3 rounded-lg bg-red-950/30 border border-red-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div>
+                                        <div class="flex items-center gap-2 text-red-300 font-bold">
+                                            <span class="px-1.5 py-0.5 rounded bg-red-500/20 text-[10px] text-red-400 font-sans">CRITICAL</span>
+                                            <span>SendGrid Mailer API Token</span>
+                                        </div>
+                                        <div class="text-slate-400 text-[11px] mt-1 break-all">Source: /assets/contact.min.js &rarr; Detected: SG.abcdefgh...0123</div>
+                                    </div>
+                                    <span class="text-emerald-400 text-[11px] font-sans font-semibold">Relay via Backend Gateway</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- View 4: 2024 Bulk Sender Compliance & Supply Chain -->
+                    <div id="reportView-compliance" class="hidden space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="text-xs font-mono text-slate-400">Google &amp; Yahoo 2024+ Bulk Sender Standard:</div>
+                                    <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold">COMPLIANT</span>
+                                </div>
+                                <div class="text-sm font-bold text-emerald-400 font-mono">DMARC Enforcement: p=reject (Aligned)</div>
+                                <p class="text-xs text-slate-400 mt-2">Zero mail deliverability penalties. Complies with February 2024 Google/Yahoo mandatory authentication requirements for bulk senders (>5,000 msgs/day).</p>
+                            </div>
+                            <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="text-xs font-mono text-slate-400">Supply-Chain &amp; CDN Integrity:</div>
+                                    <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold">ZERO SUSPICIOUS CDNS</span>
+                                </div>
+                                <div class="text-sm font-bold text-white font-mono">polyfill.io &amp; bootcdn.net Blocked</div>
+                                <p class="text-xs text-slate-400 mt-2">Passive supply chain audit verified all client-side scripts originate from approved first-party origins or certified CDNs (cdnjs / unpkg).</p>
                             </div>
                         </div>
                     </div>

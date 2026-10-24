@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import ipaddress
 import logging
+import re
 import socket
 import ssl
 from typing import Any, Dict, List, Optional, Set
@@ -1148,6 +1149,245 @@ class OrbitSecurityScanner:
 
         return result
 
+    async def audit_public_secrets(
+        self, base_url: str, client: Optional[httpx.AsyncClient] = None
+    ) -> List[Finding]:
+        """Passively audits client-side JavaScript bundles referenced on the target homepage
+        for exposed live API keys, tokens, and secret credentials."""
+        parsed = urlparse(base_url)
+        if parsed.hostname and not await async_is_safe_host(parsed.hostname):
+            return []
+
+        should_close = False
+        if client is None:
+            client = self.create_http_client()
+            should_close = True
+
+        findings: List[Finding] = []
+        try:
+            resp = await client.get(base_url, timeout=5.0)
+            if resp.status_code != 200 or not resp.text:
+                return []
+
+            html_text = resp.text
+
+            script_srcs = re.findall(r"""<script[^>]+src=["']([^"']+)["']""", html_text, re.IGNORECASE)
+            target_scripts = []
+            for src in script_srcs:
+                src_clean = src.strip()
+                if not src_clean.endswith(".js") and ".js?" not in src_clean:
+                    continue
+                if src_clean.startswith("//"):
+                    src_url = f"https:{src_clean}"
+                elif src_clean.startswith("http://") or src_clean.startswith("https://"):
+                    src_url = src_clean
+                else:
+                    src_url = f"{base_url.rstrip('/')}/{src_clean.lstrip('/')}" if not src_clean.startswith("/") else f"{parsed.scheme}://{parsed.netloc}{src_clean}"
+
+                parsed_src = urlparse(src_url)
+                if parsed_src.netloc == parsed.netloc or not parsed_src.netloc:
+                    target_scripts.append(src_url)
+                if len(target_scripts) >= 5:
+                    break
+
+            secret_rules = [
+                (
+                    "Stripe Live Secret Key",
+                    re.compile(r"\b(sk_live_[0-9a-zA-Z]{24,})\b"),
+                    Severity.CRITICAL,
+                    "Exposed Live Stripe Secret Key in Client-Side JavaScript Bundle",
+                    "A production Stripe secret API key was detected in publicly served frontend JavaScript. Attackers can abuse this to create unauthorized charges, issue refunds, or access customer PII.",
+                    "Immediately roll the exposed key in the Stripe Dashboard and migrate all payment operations to a server-side endpoint."
+                ),
+                (
+                    "AWS Access Key ID",
+                    re.compile(r"\b((?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16})\b"),
+                    Severity.HIGH,
+                    "Exposed AWS Access Key ID in Public JavaScript Bundle",
+                    "An active AWS access key ID was discovered in frontend code. If paired with exposed secrets or permissive IAM policies, cloud infrastructure can be compromised.",
+                    "Rotate the IAM credential immediately, audit CloudTrail for unauthorized calls, and use AWS Cognito or STS temporary credentials."
+                ),
+                (
+                    "SendGrid API Key",
+                    re.compile(r"\b(SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43})\b"),
+                    Severity.CRITICAL,
+                    "Exposed SendGrid API Key in Client-Side Code",
+                    "A live SendGrid mail API key was found in client-side bundles. Attackers can hijack domain reputation to send phishing campaigns.",
+                    "Revoke the SendGrid key in the console and ensure transactional emails are dispatched strictly from backend services."
+                ),
+                (
+                    "GitHub Personal Access Token",
+                    re.compile(r"\b(ghp_[0-9a-zA-Z]{36})\b"),
+                    Severity.CRITICAL,
+                    "Exposed GitHub Personal Access Token in Public Bundle",
+                    "A classic GitHub personal access token was identified in production frontend code, risking private repository and CI/CD leakage.",
+                    "Revoke the token immediately via GitHub Settings -> Developer Settings -> Personal Access Tokens."
+                ),
+                (
+                    "Slack Incoming Webhook",
+                    re.compile(r"(https://hooks\.slack\.com/services/T[a-zA-Z0-9_]+/B[a-zA-Z0-9_]+/[a-zA-Z0-9_]+)"),
+                    Severity.HIGH,
+                    "Exposed Slack Incoming Webhook in Public JavaScript",
+                    "An unauthenticated Slack webhook URL was found in public client-side code, allowing third parties to spam or spoof internal company channels.",
+                    "Invalidate the webhook in your Slack App configuration and relay notifications through an authenticated backend."
+                )
+            ]
+
+            for name, pattern, severity, title, desc, remediation in secret_rules:
+                match = pattern.search(html_text)
+                if match:
+                    matched_val = match.group(0)
+                    masked = matched_val[:8] + "..." + matched_val[-4:] if len(matched_val) > 12 else "[REDACTED]"
+                    findings.append(Finding(
+                        title=title,
+                        severity=severity,
+                        category="Secret Exposure",
+                        description=desc,
+                        remediation=remediation,
+                        target=parsed.hostname or base_url,
+                        evidence=f"Detected {name} in inline homepage HTML: {masked}"
+                    ))
+
+            for script_url in target_scripts:
+                try:
+                    js_resp = await client.get(script_url, timeout=4.0)
+                    if js_resp.status_code == 200 and js_resp.text:
+                        js_code = js_resp.text
+                        for name, pattern, severity, title, desc, remediation in secret_rules:
+                            match = pattern.search(js_code)
+                            if match:
+                                matched_val = match.group(0)
+                                masked = matched_val[:8] + "..." + matched_val[-4:] if len(matched_val) > 12 else "[REDACTED]"
+                                findings.append(Finding(
+                                    title=title,
+                                    severity=severity,
+                                    category="Secret Exposure",
+                                    description=desc,
+                                    remediation=remediation,
+                                    target=script_url,
+                                    evidence=f"Detected {name} in public bundle {script_url}: {masked}"
+                                ))
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        finally:
+            if should_close and client:
+                await client.aclose()
+
+        return findings
+
+    async def audit_third_party_scripts(
+        self, base_url: str, client: Optional[httpx.AsyncClient] = None
+    ) -> List[Finding]:
+        """Passively audits third-party external scripts loaded on the target homepage
+        for compromised CDNs (e.g. polyfill.io) and insecure HTTP scripts on HTTPS pages."""
+        parsed = urlparse(base_url)
+        if parsed.hostname and not await async_is_safe_host(parsed.hostname):
+            return []
+
+        should_close = False
+        if client is None:
+            client = self.create_http_client()
+            should_close = True
+
+        findings: List[Finding] = []
+        try:
+            resp = await client.get(base_url, timeout=5.0)
+            if resp.status_code != 200 or not resp.text:
+                return []
+
+            html_text = resp.text
+            script_srcs = re.findall(r"""<script[^>]+src=["']([^"']+)["']""", html_text, re.IGNORECASE)
+
+            compromised_domains = ("polyfill.io", "bootcdn.net", "bootcss.com", "staticfile.org")
+
+            for src in script_srcs:
+                src_clean = src.strip()
+                if base_url.startswith("https://") and src_clean.startswith("http://") and not src_clean.startswith("http://localhost"):
+                    findings.append(Finding(
+                        title="Insecure Mixed-Content Third-Party Script",
+                        severity=Severity.HIGH,
+                        category="Supply Chain Security",
+                        description=f"Target loads external script '{src_clean}' over unencrypted HTTP on an HTTPS webpage. Attackers capable of adversary-in-the-middle (MitM) inspection can tamper with this script to execute arbitrary JavaScript.",
+                        remediation="Update the script URL to use HTTPS or self-host the script asset.",
+                        target=parsed.hostname or base_url,
+                        evidence=f"Insecure script source: {src_clean}"
+                    ))
+
+                src_lower = src_clean.lower()
+                for comp in compromised_domains:
+                    if comp in src_lower:
+                        findings.append(Finding(
+                            title=f"Compromised Supply Chain Domain Detected ({comp})",
+                            severity=Severity.CRITICAL,
+                            category="Supply Chain Security",
+                            description=f"Target references script source from '{comp}', a known compromised domain associated with supply chain redirection and malware distribution.",
+                            remediation=f"Immediately purge all script tags referencing '{comp}'. Migrate to trusted alternatives such as cdnjs.cloudflare.com or self-host the asset.",
+                            target=parsed.hostname or base_url,
+                            evidence=f"Flagged supply chain script: {src_clean}"
+                        ))
+        except Exception:
+            pass
+        finally:
+            if should_close and client:
+                await client.aclose()
+
+        return findings
+
+    async def audit_bulk_sender_compliance(self, domain: str) -> Optional[Finding]:
+        """Audits apex domain against Google & Yahoo 2024+ mandatory bulk sender guidelines
+        (DMARC quarantine/reject enforcement and valid SPF)."""
+        if not await async_is_safe_host(domain):
+            return None
+
+        resolver = get_orbit_async_resolver()
+        dmarc_record = ""
+        try:
+            answers = await resolver.resolve(f"_dmarc.{domain}", "TXT")
+            for rdata in answers:
+                txt = "".join(b.decode("utf-8", errors="ignore") for b in rdata.strings)
+                if txt.startswith("v=DMARC1"):
+                    dmarc_record = txt
+                    break
+        except Exception:
+            pass
+
+        if not dmarc_record:
+            return Finding(
+                title="Google & Yahoo 2024 Bulk Sender Non-Compliance (Missing DMARC)",
+                severity=Severity.MEDIUM,
+                category="Email Authentication",
+                description=(
+                    f"Domain {domain} lacks a published DMARC policy (_dmarc.{domain}). "
+                    "Google and Yahoo Mail enforce mandatory DMARC records for bulk senders as of 2024; "
+                    "marketing and transactional emails sent from this domain risk aggressive junk filtering or rejection."
+                ),
+                remediation=(
+                    f"Publish a DMARC TXT record at _dmarc.{domain} starting with `v=DMARC1; p=none; rua=mailto:dmarc-reports@{domain}` "
+                    "and gradually escalate to `p=quarantine` or `p=reject`."
+                ),
+                target=f"_dmarc.{domain}",
+                evidence="No DMARC record returned via DNS resolution."
+            )
+
+        if "p=none" in dmarc_record.lower() and "sp=reject" not in dmarc_record.lower():
+            return Finding(
+                title="Google & Yahoo 2024 Bulk Sender Risk: Unenforced DMARC Policy (p=none)",
+                severity=Severity.LOW,
+                category="Email Authentication",
+                description=(
+                    f"Domain {domain} has DMARC configured with `p=none` (monitoring only). "
+                    "While compliant with the minimum 2024 Google/Yahoo entry requirements, `p=none` does not protect "
+                    "against domain spoofing and phishing in mail clients."
+                ),
+                remediation="Review inbound DMARC failure reports and escalate policy from `p=none` to `p=quarantine` or `p=reject`.",
+                target=f"_dmarc.{domain}",
+                evidence=f"Active DMARC record: {dmarc_record}"
+            )
+
+        return None
+
     def audit_ssl(self, domain: str, port: int = 443) -> Optional[Finding]:
         if not is_safe_host(domain):
             return Finding(
@@ -1315,6 +1555,19 @@ class OrbitSecurityScanner:
                 security_txt_finding = await self.audit_security_txt(base_url, client=shared_client)
                 if security_txt_finding:
                     result.findings.append(security_txt_finding)
+
+                # Audit public JavaScript bundles for exposed secrets
+                secret_findings = await self.audit_public_secrets(base_url, client=shared_client)
+                result.findings.extend(secret_findings)
+
+                # Audit third-party script supply chain & mixed content
+                script_findings = await self.audit_third_party_scripts(base_url, client=shared_client)
+                result.findings.extend(script_findings)
+
+                # Audit Google & Yahoo bulk sender compliance
+                bulk_finding = await self.audit_bulk_sender_compliance(domain)
+                if bulk_finding:
+                    result.findings.append(bulk_finding)
 
                 # Run SSL check on apex in worker thread to prevent event loop blocking
                 ssl_finding = await asyncio.to_thread(self.audit_ssl, domain)

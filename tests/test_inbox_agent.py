@@ -203,3 +203,84 @@ def test_handle_message_ignores_system_bots():
             os.remove(state_file)
 
 
+def test_detect_bounce_notification_records_state_without_name_error():
+    """Verify that IMAP bounce processing extracts recipient and writes timestamp without NameError."""
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        state_file = f.name
+    try:
+        agent = InboxAgent(state_file=state_file)
+
+        raw_msg = (
+            b"From: Mail Delivery Subsystem <mailer-daemon@googlemail.com>\r\n"
+            b"To: carsonmail009@gmail.com\r\n"
+            b"Subject: Delivery Status Notification (Failure)\r\n"
+            b"Content-Type: text/plain; charset=utf-8\r\n\r\n"
+            b"The following message to <hello@avexdesigns.com> was undeliverable.\r\n"
+            b"Technical details of permanent failure:\r\n"
+            b"550 5.1.1 The email account that you tried to reach does not exist.\r\n"
+        )
+
+        mock_mail = MagicMock()
+        mock_mail.search.return_value = ("OK", [b"1"])
+        mock_mail.fetch.return_value = ("OK", [(b"1", raw_msg)])
+
+        with patch("imaplib.IMAP4_SSL", return_value=mock_mail):
+            with patch.dict(os.environ, {"IMAP_SERVER": "imap.test.local", "IMAP_USER": "test@test.local", "IMAP_PASSWORD": "secret"}):
+                agent.poll_inbox()
+
+        state_entry = next((v for k, v in agent.state.items() if v.get("intent") == "BOUNCE"), None)
+        assert state_entry is not None, "Expected bounce entry in agent state"
+        assert state_entry["bounced_target"] == "hello@avexdesigns.com"
+        assert state_entry["verdict"] == "HARD_BOUNCE_PRUNED"
+    finally:
+        if os.path.exists(state_file):
+            os.remove(state_file)
+
+
+def test_classify_intent_auto_reply_or_ticket():
+    agent = InboxAgent(state_file=tempfile.mktemp())
+    text_samples = [
+        "Your support request received: Ticket #99281 has been opened.",
+        "Automatic reply: I am currently out of the office and away until next Monday.",
+        "Thank you for contacting the reception team. We will review your query-1049.",
+    ]
+    for sample in text_samples:
+        intent = agent.classify_intent(sample)
+        assert intent == LeadIntent.AUTO_REPLY_OR_TICKET
+
+
+def test_classify_intent_unclear():
+    agent = InboxAgent(state_file=tempfile.mktemp())
+    text_samples = [
+        "We have received the transmission regarding company infrastructure. Considering various alternatives.",
+        "Our digital ecosystem is undergoing a transition phase at this time.",
+    ]
+    for sample in text_samples:
+        intent = agent.classify_intent(sample)
+        assert intent == LeadIntent.UNCLEAR
+
+
+def test_process_inbound_lead_provisions_portal_and_blackboard():
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        state_file = f.name
+    try:
+        agent = InboxAgent(state_file=state_file)
+        lead_input = {
+            "sender": "austin@alley.com",
+            "subject": "Re: White-label security audits for Alley Interactive's client portfolio",
+            "body": "Hi Carson, we want to buy the Scale remediation retainer for 15 domains. Send payment link.",
+            "agency_name": "Alley Interactive"
+        }
+        res = agent.process_inbound_lead(lead_input)
+        assert res["ok"] is True
+        assert res["intent"] == "READY_TO_BUY"
+        assert res["tier"] == "remediation"
+        assert "alley_interactive.html" in res["portal_path"]
+        assert "https://buy.stripe.com/test_orbit_ret_250" in res["checkout_url"]
+        assert os.path.exists(res["portal_path"])
+    finally:
+        if os.path.exists(state_file):
+            os.remove(state_file)
+
+
+

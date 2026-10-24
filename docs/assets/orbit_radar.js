@@ -457,7 +457,7 @@
 
     function switchReportView(viewId) {
         if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
-        ['radar', 'dmarc', 'contrast'].forEach(id => {
+        ['radar', 'dmarc', 'contrast', 'secrets', 'compliance'].forEach(id => {
             const pane = document.getElementById(`reportView-${id}`);
             const btn = document.getElementById(`viewBtn-${id}`);
             if (pane) pane.classList.add('hidden');
@@ -2044,16 +2044,32 @@
 
     function updateRadarViewWithRealData(result) {
         const radarView = document.getElementById('reportView-radar');
-        if (!radarView) return;
-        
-        const subdomainCount = radarView.querySelector('.text-emerald-400');
-        if (subdomainCount && result.subdomains_scanned) {
-            subdomainCount.textContent = `${result.subdomains_scanned.length} SaaS Signatures Audited`;
+        if (radarView) {
+            const subdomainCount = radarView.querySelector('.text-emerald-400');
+            if (subdomainCount && result.subdomains_scanned) {
+                subdomainCount.textContent = `${result.subdomains_scanned.length} SaaS Signatures Audited`;
+            }
+            
+            const apexNode = radarView.querySelector('.text-white.font-medium.break-all');
+            if (apexNode && result.domain) {
+                apexNode.textContent = `${result.domain} (Apex A/AAAA)`;
+            }
         }
-        
-        const apexNode = radarView.querySelector('.text-white.font-medium.break-all');
-        if (apexNode && result.domain) {
-            apexNode.textContent = `${result.domain} (Apex A/AAAA)`;
+
+        const secretsView = document.getElementById('reportView-secrets');
+        if (secretsView && result.domain) {
+            const badge = secretsView.querySelector('.text-amber-400');
+            if (badge) {
+                badge.textContent = `${result.domain} — Automated Passive Bundle Decompilation`;
+            }
+        }
+
+        const complianceView = document.getElementById('reportView-compliance');
+        if (complianceView && result.domain) {
+            const header = complianceView.querySelector('.text-xs.font-mono.text-slate-400');
+            if (header) {
+                header.textContent = `${result.domain} — Google & Yahoo 2024+ Bulk Sender Standard:`;
+            }
         }
     }
 

@@ -342,6 +342,44 @@ class ReportGenerator:
                 )))
                 story.append(Paragraph(pivot_text, body_style))
 
+        # Retainer & Infrastructure Care Plan Recommendations
+        story.append(Spacer(1, 10))
+        story.append(Paragraph("Retainer & Infrastructure Care Plan Recommendations", h2_style))
+        story.append(HRFlowable(width="100%", thickness=0.75, color=colors.HexColor("#CBD5E1"), spaceBefore=2, spaceAfter=8))
+
+        care_plan_intro = Paragraph(
+            f"As part of managed web operations with <b>{b.agency_name}</b>, we recommend enrolling in the "
+            "Continuous Security & Infrastructure Care Plan ($1,500/mo retainer) covering:",
+            body_style
+        )
+        story.append(care_plan_intro)
+        story.append(Spacer(1, 6))
+
+        care_plan_items = [
+            ("Continuous Subdomain Sentinel", "Automated monitoring preventing dangling DNS takeovers as SaaS trials (Unbounce, Webflow, Shopify, Azure) expire."),
+            ("Google & Yahoo Bulk Sender Protection", "Active enforcement of DMARC (escalating p=none to p=quarantine/p=reject), SPF alignment, and MTA-STS TLS encryption to preserve 100% primary inbox deliverability."),
+            ("Third-Party Supply-Chain & CDN Surveillance", "Real-time auditing of external script dependencies to block compromised CDN assets (e.g., polyfill.io, bootcdn.net) and eliminate insecure mixed content."),
+            ("JavaScript Bundle Secret Harvesting Protection", "Continuous passive inspection of client-side assets to catch leaked API keys, tokens (Stripe, AWS, SendGrid, GitHub PAT, Slack), and sensitive endpoints prior to public exploitation."),
+            ("BIMI & Brand Trust Verification", "Publishing BIMI (RFC 8617) to display verified brand logos directly in Gmail, Yahoo, and Apple Mail client inboxes.")
+        ]
+
+        care_rows = []
+        for c_title, c_desc in care_plan_items:
+            care_rows.append([
+                Paragraph(f"<b>• {c_title}</b>", ParagraphStyle("CareH", fontName="Helvetica-Bold", fontSize=8.5, leading=11, textColor=primary_col)),
+                Paragraph(c_desc, body_style)
+            ])
+
+        t_care = Table(care_rows, colWidths=[180, 360])
+        t_care.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+            ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+            ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#E2E8F0")),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("PADDING", (0, 0), (-1, -1), 4),
+        ]))
+        story.append(KeepTogether([t_care]))
+
         story.append(Spacer(1, 12))
         story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#CBD5E1"), spaceBefore=8, spaceAfter=8))
         story.append(Paragraph(f"Confidential Report compiled by {b.agency_name} for client records. Powered by Orbit Security Labs. Questions? Contact {b.support_email}.", subtitle_style))

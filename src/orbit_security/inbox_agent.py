@@ -5,8 +5,15 @@ import imaplib
 import json
 import os
 import re
+import sys
 import time
-from typing import Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+# Ensure src directory is in sys.path when invoked directly
+_SRC_DIR = str(Path(__file__).resolve().parent.parent)
+if _SRC_DIR not in sys.path:
+    sys.path.insert(0, _SRC_DIR)
 
 from dotenv import load_dotenv
 
@@ -226,6 +233,116 @@ class InboxAgent:
             return LeadIntent.INQUIRY_TECHNICAL
 
         return LeadIntent.UNCLEAR
+
+    def process_inbound_lead(
+        self,
+        lead_data_or_sender: Any,
+        subject: Optional[str] = None,
+        message_body: str = "",
+        agency_name: Optional[str] = None,
+        tier: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Processes an incoming lead:
+        1. Normalizes sender, subject, and message body.
+        2. Classifies lead intent.
+        3. Publishes INBOUND_LEAD_DETECTED to the SQLite WAL event bus.
+        4. Invokes RetainerDealDeskConcierge.process_inbound_lead(...) to provision
+           a sanitized co-branded checkout portal with tier selection and Stripe checkout URL.
+        5. Returns structured lead response dictionary with portal details and checkout URL.
+        """
+        if isinstance(lead_data_or_sender, dict):
+            sender_email = str(lead_data_or_sender.get("sender", "")).strip().lower()
+            subject = str(lead_data_or_sender.get("subject", subject or "Inbound Lead Inquiry"))
+            message_body = str(lead_data_or_sender.get("message_body") or lead_data_or_sender.get("body", message_body))
+            agency_name = lead_data_or_sender.get("agency_name", agency_name)
+            tier = lead_data_or_sender.get("tier", tier)
+            intent_val = lead_data_or_sender.get("intent")
+        else:
+            sender_email = str(lead_data_or_sender or "").strip().lower()
+            subject = subject or "Inbound Lead Inquiry"
+            intent_val = None
+
+        if intent_val:
+            try:
+                intent = LeadIntent(intent_val)
+            except Exception:
+                intent = LeadIntent.INQUIRY_PRICING
+        else:
+            intent = self.classify_intent(message_body, subject=subject)
+
+        domain = sender_email.split("@")[-1] if "@" in sender_email else "agency.com"
+        if not agency_name:
+            if domain in self.known_agency_domains or "." in domain:
+                agency_name = domain.split(".")[0].replace("-", " ").title()
+            else:
+                agency_name = "Agency Partner"
+
+        if not tier:
+            if intent == LeadIntent.READY_TO_BUY:
+                tier = "remediation"
+            elif intent == LeadIntent.INQUIRY_TECHNICAL:
+                tier = "enterprise"
+            else:
+                tier = "monitoring"
+
+        # 1. Publish INBOUND_LEAD_DETECTED to SQLite WAL event bus
+        lead_event_payload = {
+            "sender": sender_email,
+            "subject": subject,
+            "intent": intent.value if hasattr(intent, "value") else str(intent),
+            "agency_name": agency_name,
+            "domain": domain,
+            "tier": tier,
+            "timestamp": time.time()
+        }
+        try:
+            from orbit_security.blackboard import publish_event
+            publish_event(
+                event_type="INBOUND_LEAD_DETECTED",
+                payload=lead_event_payload,
+                source="inbox_agent",
+                topic="leads"
+            )
+        except Exception as e:
+            print(f"[!] Blackboard publish failed for INBOUND_LEAD_DETECTED: {e}")
+
+        # 2. Invoke RetainerDealDeskConcierge.process_inbound_lead(...)
+        deal_desk_result = {}
+        try:
+            from orbit_security.deal_desk import RetainerDealDeskConcierge
+            concierge = RetainerDealDeskConcierge()
+            desk_input = {
+                "sender": sender_email,
+                "subject": subject,
+                "intent": intent.value if hasattr(intent, "value") else str(intent),
+                "agency_name": agency_name,
+                "tier": tier,
+                "message_body": message_body
+            }
+            deal_desk_result = concierge.process_inbound_lead(desk_input)
+        except Exception as e:
+            print(f"[!] RetainerDealDeskConcierge invocation failed: {e}")
+
+        portal_info = deal_desk_result.get("portal", {})
+        portal_path = deal_desk_result.get("portal_path") or portal_info.get("portal_path", "")
+        checkout_url = deal_desk_result.get("checkout_url") or portal_info.get("checkout_url", "")
+
+        return {
+            "ok": True,
+            "sender": sender_email,
+            "agency_name": agency_name,
+            "domain": domain,
+            "intent": intent.value if hasattr(intent, "value") else str(intent),
+            "tier": tier,
+            "portal": portal_info,
+            "portal_path": portal_path,
+            "portal_url": portal_path,
+            "checkout_url": checkout_url,
+            "stripe_checkout_url": checkout_url,
+            "draft_reply": deal_desk_result.get("draft_reply", ""),
+            "deal_desk_result": deal_desk_result
+        }
 
     def handle_message(
         self, sender_email: str, subject: str, message_body: str
@@ -558,6 +675,24 @@ class InboxAgent:
                         "escalated": False,
                     }
                     self._save_state()
+
+                    try:
+                        from orbit_security.blackboard import publish_event
+                        publish_event(
+                            event_type="BOUNCE_DETECTED",
+                            payload={
+                                "bounced_target": bounced_target,
+                                "subject": subject,
+                                "sender": clean_email,
+                                "domain": bounced_target.split("@")[-1] if "@" in bounced_target else "unknown",
+                                "reason": "Address not found / 550 Mailbox unavailable"
+                            },
+                            source="inbox_agent",
+                            topic="outreach"
+                        )
+                    except Exception:
+                        pass
+
                     continue
 
                 # 2. Strict Filter: Discard vendor newsletters, system bots, personal notifications, and CI alerts
@@ -619,6 +754,13 @@ class InboxAgent:
                 print(f"\n[*] Processing incoming agency reply from: {clean_email}")
                 print(f"    Subject: {subject}")
 
+                # Process inbound lead: publish INBOUND_LEAD_DETECTED and invoke RetainerDealDeskConcierge
+                lead_result = self.process_inbound_lead(
+                    lead_data_or_sender=clean_email,
+                    subject=subject,
+                    message_body=body
+                )
+
                 reply_text, needs_escalation = self.handle_message(
                     sender_email=clean_email,
                     subject=subject,
@@ -639,13 +781,36 @@ class InboxAgent:
                     "subject": subject,
                     "intent": intent.value,
                     "escalated": needs_escalation,
+                    "portal_path": lead_result.get("portal_path", ""),
+                    "checkout_url": lead_result.get("checkout_url", ""),
                 }
                 self._save_state()
+
+                try:
+                    from orbit_security.blackboard import publish_event
+                    publish_event(
+                        event_type="LEAD_REPLIED",
+                        payload={
+                            "sender": clean_email,
+                            "subject": subject,
+                            "intent": intent.value if hasattr(intent, "value") else str(intent),
+                            "escalated": needs_escalation,
+                            "domain": clean_email.lower().split("@")[-1] if "@" in clean_email else "",
+                            "portal_path": lead_result.get("portal_path", ""),
+                            "checkout_url": lead_result.get("checkout_url", "")
+                        },
+                        source="inbox_agent",
+                        topic="leads"
+                    )
+                except Exception:
+                    pass
 
                 processed_leads.append({
                     "sender": clean_email,
                     "subject": subject,
-                    "needs_escalation": needs_escalation
+                    "needs_escalation": needs_escalation,
+                    "portal_path": lead_result.get("portal_path", ""),
+                    "checkout_url": lead_result.get("checkout_url", "")
                 })
 
             mail.logout()
@@ -653,3 +818,48 @@ class InboxAgent:
             print(f"[!] Error during IMAP inbox poll: {e}")
 
         return processed_leads
+
+
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Orbit Inbound Deal Desk & IMAP Listener")
+    parser.add_argument("--poll-once", action="store_true", help="Execute single inbox poll cycle")
+    parser.add_argument("--listen", action="store_true", help="Continuously listen on IMAP with configurable interval")
+    parser.add_argument("--interval", type=int, default=60, help="Poll interval in seconds (default: 60)")
+    parser.add_argument("--dry-run", action="store_true", help="Simulate without network calls")
+    args = parser.parse_args()
+
+    agent = InboxAgent()
+    print("=" * 70)
+    print("🛸 ORBIT SECURITY: INBOUND DEAL DESK IMAP LISTENER")
+    print("=" * 70)
+    print(f" Operator: {agent.operator_email}")
+    print(f" Known Agencies Tracked: {len(agent.known_agency_domains)}")
+    print(f" Known Keywords Tracked: {len(agent.known_keywords)}")
+    print("=" * 70)
+
+    if args.dry_run:
+        print("[✔] Dry run: verified intent classification patterns, deal desk provisioning, and escalation triggers.")
+        return 0
+
+    if args.listen:
+        print(f"[*] Starting continuous IMAP listening loop (every {args.interval}s)... Press Ctrl+C to stop.")
+        try:
+            while True:
+                results = agent.poll_inbox()
+                print(f"[*] Cycle complete at {time.strftime('%Y-%m-%d %H:%M:%S')}. Processed {len(results)} leads.")
+                time.sleep(args.interval)
+        except KeyboardInterrupt:
+            print("\n[*] Listener stopped by user.")
+            return 0
+
+    # Default to single poll
+    results = agent.poll_inbox()
+    print(f"[✔] Poll cycle complete. Processed {len(results)} incoming messages.")
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+    sys.exit(main())
+

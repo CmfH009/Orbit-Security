@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: 'Press Start 2P';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('PressStart2P-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Silkscreen';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('Silkscreen-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Silkscreen';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('Silkscreen-Bold.ttf') format('truetype');
+}
+
+@theme {
+  --color-brand-50: #ecfdf5;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+}
+
+/* Cyber-Sentinel Atmospheric Background & Grid */
+.cyber-grid {
+  background-image: 
+    linear-gradient(to right, rgba(16, 185, 129, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(16, 185, 129, 0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 60%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 60%, transparent 100%);
+}
+
+/* Telemetry Glow Beam */
+.telemetry-beam {
+  background: linear-gradient(90deg, transparent 0%, rgba(16, 185, 129, 0.6) 50%, transparent 100%);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+}
+
+/* Radar Sweep Keyframe */
+@keyframes radarSweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.animate-radar-sweep {
+  animation: radarSweep 6s linear infinite;
+}
+
+/* Neon Glow Utilities */
+.neon-glow-emerald {
+  box-shadow: 0 0 35px -5px rgba(16, 185, 129, 0.35);
+}
+.neon-glow-cyan {
+  box-shadow: 0 0 35px -5px rgba(6, 182, 212, 0.35);
+}
+
+@keyframes neonBorderPulse {
+  0%, 100% { 
+    border-color: rgba(16, 185, 129, 0.3); 
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.1);
+  }
+  50% { 
+    border-color: rgba(16, 185, 129, 0.7); 
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.25); 
+  }
+}
+.neon-border-pulse {
+  animation: neonBorderPulse 3.5s ease-in-out infinite;
+}
+
+/* Stacking Order Guarantee: Ensure page content is always above background canvas */
+main, footer {
+  position: relative;
+  z-index: 10;
+}

@@ -1165,3 +1165,188 @@ class TestBountyProgramScopeFiltering:
         assert "excluded" in crypto.get("reason", "")
 
 
+class TestPhase4BountyRadar:
+    """Empirical test suite for Phase 4 Bug Bounty Radar enhancements."""
+
+    def test_generate_pgp_disclosure_draft_from_vulnerability(self):
+        vuln = BountyVulnerability(
+            program_id="shopify",
+            program_name="Shopify",
+            platform="hackerone",
+            target_domain="stage-admin.shopify.com",
+            flaw_type="subdomain_takeover",
+            provider="AWS S3",
+            evidence="NoSuchBucket on s3-website-us-east-1.amazonaws.com",
+            severity=Severity.HIGH,
+            cvss_score=7.5,
+            cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+            bounty_viability="HIGH_CONFIDENCE",
+        )
+        draft = ResponsibleDisclosureDrafter.generate_pgp_disclosure_draft(vuln)
+        assert draft.startswith("-----BEGIN PGP MESSAGE-----")
+        assert draft.rstrip().endswith("-----END PGP MESSAGE-----")
+        assert "Version: Orbit-Security-PGP-v4.0" in draft
+        assert "X-Target-Scope: stage-admin.shopify.com" in draft
+        assert "X-CVSS-Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N" in draft
+        assert "X-Severity: HIGH" in draft
+
+        # Decode base64 payload and verify cleartext report
+        import base64
+        lines = [line.strip() for line in draft.splitlines() if line.strip()]
+        # find header gap
+        payload_lines = []
+        in_payload = False
+        for l in lines:
+            if in_payload:
+                if l.startswith("="):
+                    break
+                if l.startswith("-----END"):
+                    break
+                payload_lines.append(l)
+            elif l == "":
+                in_payload = True
+        # If payload_lines empty, extract between headers
+        if not payload_lines:
+            header_idx = -1
+            for i, l in enumerate(lines):
+                if l.startswith("X-Proof-Of-Concept:"):
+                    header_idx = i
+                    break
+            payload_lines = [l for l in lines[header_idx + 1:] if not l.startswith("=") and not l.startswith("-----")]
+
+        raw_payload = "".join(payload_lines)
+        decoded = base64.b64decode(raw_payload).decode("utf-8")
+        assert "ORBIT SECURITY RESPONSIBLE DISCLOSURE ADVISORY" in decoded
+        assert "Target Scope: stage-admin.shopify.com" in decoded
+        assert "CVSS v3.1 Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N" in decoded
+        assert "STEPS TO REPRODUCE (PROOF OF CONCEPT)" in decoded
+        assert "NoSuchBucket" in decoded
+
+    def test_generate_pgp_disclosure_draft_from_dict(self):
+        finding = {
+            "target_domain": "dev.fintech.io",
+            "flaw_type": "exposed_staging_endpoint",
+            "severity": "HIGH",
+            "cvss_score": 7.5,
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+            "cwe_id": "CWE-200: Exposure of Sensitive Information to an Unauthorized Actor",
+            "evidence": "Debug environment variable leak on dev.fintech.io",
+            "remediation": "Restrict dev environment to internal VPN.",
+            "poc": "1. Run curl -i https://dev.fintech.io/\n2. Verify 200 OK with X-Debug header.",
+            "program_name": "Fintech Corp",
+        }
+        draft = ResponsibleDisclosureDrafter.generate_pgp_disclosure_draft(finding)
+        assert draft.startswith("-----BEGIN PGP MESSAGE-----")
+        assert draft.rstrip().endswith("-----END PGP MESSAGE-----")
+        assert "X-Target-Scope: dev.fintech.io" in draft
+        assert "X-CVSS-Score: 7.5" in draft
+
+        import base64
+        lines = [line.strip() for line in draft.splitlines() if line.strip()]
+        header_idx = -1
+        for i, l in enumerate(lines):
+            if l.startswith("X-Proof-Of-Concept:"):
+                header_idx = i
+                break
+        payload_lines = [l for l in lines[header_idx + 1:] if not l.startswith("=") and not l.startswith("-----")]
+        raw_payload = "".join(payload_lines)
+        decoded = base64.b64decode(raw_payload).decode("utf-8")
+        assert "Target Scope: dev.fintech.io" in decoded
+        assert "X-Debug header" in decoded
+
+    def test_save_bundle_generates_pgp_txt(self, tmp_path):
+        vuln = BountyVulnerability(
+            program_id="acme_corp",
+            program_name="Acme Corp",
+            platform="hackerone",
+            target_domain="portal.acme.com",
+            flaw_type="subdomain_takeover",
+            provider="GitHub Pages",
+            evidence="404 There isn't a GitHub Pages site here.",
+            severity=Severity.HIGH,
+            cvss_score=7.5,
+            cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+            bounty_viability="HIGH_CONFIDENCE",
+        )
+        bundle = ResponsibleDisclosureDrafter.save_bundle(vuln, output_dir=tmp_path)
+        assert "hackerone" in bundle and bundle["hackerone"].exists()
+        assert "bugcrowd" in bundle and bundle["bugcrowd"].exists()
+        assert "email" in bundle and bundle["email"].exists()
+        assert "pgp" in bundle and bundle["pgp"].exists()
+        assert bundle["pgp"].name == "acme_corp_subdomain_takeover_portal_acme_com.pgp.txt"
+
+        content = bundle["pgp"].read_text(encoding="utf-8")
+        assert content.startswith("-----BEGIN PGP MESSAGE-----")
+        assert "X-Target-Scope: portal.acme.com" in content
+
+    def test_audit_exposed_staging_endpoint_direct(self):
+        sweeper = BountyTakeoverSweeper()
+        mock_resp = {
+            "status": 200,
+            "headers": {"X-Debug": "1", "X-Env": "staging"},
+            "body": "<html><body><h1>Staging Environment</h1><p>Swagger UI</p></body></html>",
+        }
+        res = sweeper.audit_exposed_staging_endpoint("stage.target.com", mock_response=mock_resp)
+        assert res["exposed"] is True
+        assert res["vulnerable"] is True
+        assert res["target_domain"] == "stage.target.com"
+        assert res["staging_prefix"] == "stage"
+        assert res["cvss_score"] == 7.5
+        assert "Swagger UI" in res["evidence"] or "swagger" in res["evidence"].lower() or "staging" in res["evidence"].lower()
+
+    def test_audit_exposed_staging_endpoint_dns_misconfiguration(self):
+        mock_dns = {
+            "staging.target.com": {
+                "CNAME": "staging-bucket.s3.amazonaws.com",
+                "A": [],
+                "error": "NXDOMAIN",
+            }
+        }
+        res = BountyTakeoverSweeper.audit_exposed_staging_endpoint("staging.target.com", mock_dns=mock_dns)
+        assert res["exposed"] is True
+        assert res["vulnerable"] is True
+        assert len(res["dns_misconfigurations"]) > 0
+        assert "dangling cname" in res["dns_misconfigurations"][0].lower() or "nxdomain" in res["dns_misconfigurations"][0].lower()
+
+    def test_audit_exposed_staging_endpoint_clean_domain(self):
+        sweeper = BountyTakeoverSweeper()
+        mock_resp = {"status": 404, "headers": {}, "body": "Not found"}
+        res = sweeper.audit_exposed_staging_endpoint("prod.target.com", mock_response=mock_resp)
+        assert res["exposed"] is False
+        assert res["vulnerable"] is False
+        assert res["cvss_score"] == 0.0
+
+    def test_dispatch_bounty_alert_publishes_to_blackboard(self):
+        mock_dispatcher = MagicMock()
+        mock_dispatcher.send_bounty_alert.return_value = {"slack": True, "discord": True}
+        mock_dispatcher.send_windows_toast.return_value = True
+
+        supervisor = BountyRadarSupervisor(dispatcher=mock_dispatcher)
+        prog = BountyProgram(program_id="shopify", name="Shopify", max_bounty=50000)
+        vuln = BountyVulnerability(
+            program_id="shopify",
+            program_name="Shopify",
+            platform="hackerone",
+            target_domain="stage-checkout.shopify.com",
+            cname_target="target.s3.amazonaws.com",
+            flaw_type="subdomain_takeover",
+            provider="AWS S3",
+            evidence="NoSuchBucket",
+            bounty_viability="HIGH_CONFIDENCE",
+        )
+
+        with patch("orbit_security.blackboard.publish_event", return_value=123) as mock_pub:
+            res = supervisor.dispatch_bounty_alert(vuln, prog, send_toast=True)
+            assert res["dispatched"] is True
+            assert res["blackboard"] is True
+            assert res["blackboard_event_id"] == 123
+            mock_pub.assert_called_once()
+            call_kwargs = mock_pub.call_args.kwargs
+            assert call_kwargs["event_type"] == "BOUNTY_ALERT"
+            assert call_kwargs["source"] == "bounty_radar"
+            assert call_kwargs["topic"] == "security"
+            assert call_kwargs["payload"]["target_domain"] == "stage-checkout.shopify.com"
+            assert call_kwargs["payload"]["program_id"] == "shopify"
+
+
+
