@@ -18,7 +18,7 @@ advisory = """        <div class="max-w-5xl mx-auto px-4 sm:px-6 text-center rel
                         <div>
                             <div class="flex items-center gap-2 flex-wrap mb-1">
                                 <span class="px-2 py-0.5 rounded bg-red-500/20 text-red-300 font-arcade text-[9px] uppercase tracking-wide border border-red-500/40">SECURITY ADVISORY</span>
-                                <span class="text-xs font-mono text-slate-200 font-bold">OCTOBER 2026 MASS PERIMETER CVEs ACTIVE</span>
+                                <span class="text-xs font-mono text-slate-200 font-bold">OCTOBER 2026 MASS PERIMETER EXPOSURES ACTIVE</span>
                                 <span class="hidden sm:inline-block w-1.5 h-1.5 rounded-full bg-red-400 animate-ping"></span>
                             </div>
                             <p class="text-xs sm:text-sm text-slate-300 font-sans leading-relaxed">

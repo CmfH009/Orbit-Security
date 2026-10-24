@@ -1789,6 +1789,10 @@ def _format_h1_generic(vuln: BountyVulnerability) -> Tuple[str, str, str]:
 
 H1_DISPATCH_TABLE = {
     "subdomain_takeover": _format_h1_subdomain_takeover,
+    "dangling_cname": _format_h1_subdomain_takeover,
+    "dangling_dns": _format_h1_subdomain_takeover,
+    "takeover": _format_h1_subdomain_takeover,
+    "cname_takeover": _format_h1_subdomain_takeover,
     "cors_wildcard_origin": _format_h1_cors,
     "cors_arbitrary_origin_with_credentials": _format_h1_cors,
     "cors_null_origin_with_credentials": _format_h1_cors,
@@ -1962,6 +1966,10 @@ def _format_bc_generic(vuln: BountyVulnerability, target: str) -> Tuple[str, str
 
 BUGCROWD_DISPATCH_TABLE = {
     "subdomain_takeover": _format_bc_subdomain_takeover,
+    "dangling_cname": _format_bc_subdomain_takeover,
+    "dangling_dns": _format_bc_subdomain_takeover,
+    "takeover": _format_bc_subdomain_takeover,
+    "cname_takeover": _format_bc_subdomain_takeover,
     "cors_wildcard_origin": _format_bc_cors,
     "cors_arbitrary_origin_with_credentials": _format_bc_cors,
     "cors_null_origin_with_credentials": _format_bc_cors,
@@ -1985,7 +1993,7 @@ BUGCROWD_DISPATCH_TABLE = {
 def _format_email_impact(vuln: BountyVulnerability) -> str:
     if vuln.flaw_type == "mail_spoofing":
         return "Missing or permissive email authentication policies can be abused by external adversaries to send spoofed emails impersonating official brand infrastructure."
-    elif vuln.flaw_type == "subdomain_takeover":
+    elif vuln.flaw_type in ("subdomain_takeover", "dangling_cname", "takeover", "cname_takeover", "dangling_dns"):
         return f"Unclaimed perimeter DNS resources can be registered by external adversaries to hijack domain traffic and take complete control over {vuln.target_domain}."
     elif "cors" in vuln.flaw_type:
         return f"Insecure Cross-Origin Resource Sharing policies on {vuln.target_domain} allow untrusted third-party websites to extract sensitive API responses cross-origin."
@@ -2035,7 +2043,7 @@ class HackerOneDisclosureGenerator:
                     f"> Finding viability is classified as {vuln.bounty_viability}. Please review program policy guidelines regarding eligible impact.\n"
                 )
         elif vuln.bounty_viability == "HIGH_CONFIDENCE":
-            if vuln.flaw_type == "subdomain_takeover":
+            if vuln.flaw_type in ("subdomain_takeover", "dangling_cname", "takeover", "cname_takeover", "dangling_dns"):
                 advisory_box = (
                     "\n> [!TIP] **High-Value P1/P2 Bounty Finding**\n"
                     "> Unclaimed SaaS / cloud resource takeover verified via empirical DNS and HTTP response fingerprint. "
@@ -2052,7 +2060,7 @@ class HackerOneDisclosureGenerator:
         provider_display = vuln.provider or (
             "Email / DNS Infrastructure"
             if vuln.flaw_type == "mail_spoofing"
-            else ("DNS Infrastructure" if vuln.flaw_type == "subdomain_takeover" else "Target Infrastructure")
+            else ("DNS Infrastructure" if vuln.flaw_type in ("subdomain_takeover", "dangling_cname", "takeover", "cname_takeover", "dangling_dns") else "Target Infrastructure")
         )
 
         report_md = f"""# {title}

@@ -91,6 +91,7 @@ data/roast_f_grades_posts.json
 data/certificates/
 data/*_audit_*.md
 data/*_audit_*.pdf
+docs/SESSION_HANDOFF*.md
 
 
 
