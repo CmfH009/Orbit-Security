@@ -501,7 +501,8 @@ https://cmfh009.github.io/Orbit-Security/
         )
 
         # 1-Touch Day 5 Follow-Up Note: drops direct link to pre-staged co-branded portal
-        followup_subject = f"Re: White-label security audits for {agency_possessive} client portfolio"
+        original_subject = existing.get("subject") or subject
+        followup_subject = f"Re: {original_subject}" if not original_subject.lower().startswith("re:") else original_subject
         followup_body = f"""{greeting}
 
 Following up briefly on this—we went ahead and pre-staged a complimentary co-branded client security portal for {agency_name} with a sample perimeter scan of your public portfolio:

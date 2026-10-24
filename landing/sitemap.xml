@@ -48,40 +48,4 @@
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
-  <url>
-    <loc>https://cmfh009.github.io/Orbit-Security/portals/avex_designs.html</loc>
-    <lastmod>2026-10-24</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://cmfh009.github.io/Orbit-Security/portals/anatta.html</loc>
-    <lastmod>2026-10-24</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://cmfh009.github.io/Orbit-Security/portals/ask_phill.html</loc>
-    <lastmod>2026-10-24</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://cmfh009.github.io/Orbit-Security/portals/active_theory.html</loc>
-    <lastmod>2026-10-24</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://cmfh009.github.io/Orbit-Security/portals/palantir_net.html</loc>
-    <lastmod>2026-10-24</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://cmfh009.github.io/Orbit-Security/portals/alley_interactive.html</loc>
-    <lastmod>2026-10-24</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
 </urlset>

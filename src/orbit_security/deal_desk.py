@@ -63,7 +63,9 @@ class RetainerDealDeskConcierge:
         agency_name: str,
         tier: str = "remediation",
         primary_client_domain: Optional[str] = None,
-        portfolio_domains: Optional[List[str]] = None
+        portfolio_domains: Optional[List[str]] = None,
+        portfolio_title: Optional[str] = None,
+        portfolio_subtitle: Optional[str] = None
     ) -> Dict[str, Any]:
         """Provisions a dedicated co-branded client security portal HTML document."""
         # Sanitize clean_id to strictly alphanumeric + underscores to prevent path traversal
@@ -114,14 +116,16 @@ class RetainerDealDeskConcierge:
           </div>
         </div>""")
             joined_cards = "\n".join(domain_cards)
+            card_title = html.escape(portfolio_title or "🌐 Pre-Staged Client Portfolio Scope")
+            card_subtitle = html.escape(portfolio_subtitle or f"Active passive telemetry initialized across {safe_agency_name}'s public client builds. Includes continuous subdomain takeover monitoring, DMARC bulk sender verification, and zero-liability secret leak alerting.")
             portfolio_section_html = f"""
     <div class="card" style="margin-top: 20px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <h3 style="margin: 0; color: var(--cyan); font-size: 15px;">🌐 Pre-Staged Client Portfolio Scope</h3>
+        <h3 style="margin: 0; color: var(--cyan); font-size: 15px;">{card_title}</h3>
         <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: var(--cyan); border-color: var(--cyan);">{len(portfolio_domains)} CLIENT DOMAINS</span>
       </div>
       <p style="font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 14px;">
-        Active passive telemetry initialized across {safe_agency_name}'s public client builds. Includes continuous subdomain takeover monitoring, DMARC bulk sender verification, and zero-liability secret leak alerting.
+        {card_subtitle}
       </p>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
 {joined_cards}
@@ -133,6 +137,7 @@ class RetainerDealDeskConcierge:
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
   <title>🛡️ {safe_agency_name} // Autonomous Security &amp; Perimeter Command</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
