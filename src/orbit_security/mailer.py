@@ -95,3 +95,21 @@ class EmailDispatcher:
             server.send_message(msg)
 
         return True
+
+    def send_raw_eml(self, eml_path: str) -> bool:
+        """Sends an already-formed RFC 5322 .eml file directly via SMTP."""
+        if not self.is_configured():
+            raise ValueError(
+                "SMTP is not configured. Please set SMTP_HOST, SMTP_USER, and SMTP_PASSWORD in your environment or .env file."
+            )
+
+        with open(eml_path, "rb") as f:
+            msg = email.message_from_binary_file(f)
+
+        with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+            server.starttls()
+            server.login(self.smtp_user, self.smtp_password)
+            server.send_message(msg)
+
+        return True
+

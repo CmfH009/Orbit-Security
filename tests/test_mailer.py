@@ -81,3 +81,29 @@ def test_send_email_mocked():
         mock_instance.starttls.assert_called_once()
         mock_instance.login.assert_called_once_with("user@gmail.com", "app-password")
         mock_instance.send_message.assert_called_once()
+
+
+def test_send_raw_eml_mocked():
+    dispatcher = EmailDispatcher(
+        smtp_host="smtp.gmail.com",
+        smtp_port=587,
+        smtp_user="user@gmail.com",
+        smtp_password="app-password",
+        sender_name="Auditor"
+    )
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        eml_path = os.path.join(tmpdir, "test.eml")
+        with open(eml_path, "wb") as f:
+            f.write(b"From: auditor@example.com\r\nTo: client@example.com\r\nSubject: Test\r\n\r\nBody\r\n")
+
+        mock_smtp = MagicMock()
+        with patch("smtplib.SMTP", return_value=mock_smtp):
+            mock_instance = mock_smtp.__enter__.return_value
+            result = dispatcher.send_raw_eml(eml_path)
+
+            assert result is True
+            mock_instance.starttls.assert_called_once()
+            mock_instance.login.assert_called_once_with("user@gmail.com", "app-password")
+            mock_instance.send_message.assert_called_once()
+
