@@ -38,6 +38,7 @@ outbound_campaigns/
 # OS artifacts
 .DS_Store
 Thumbs.db
+.tmp.driveupload/
 
 # Node dependencies & Generated reports
 node_modules/

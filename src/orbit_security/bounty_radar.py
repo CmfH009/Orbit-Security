@@ -60,6 +60,96 @@ HIGH_FREQUENCY_PREFIXES: List[str] = [
 ]
 
 
+def is_vulnerability_in_scope(program: Optional[BountyProgram], flaw_type: str, viability: str = "") -> bool:
+    """Evaluates whether a vulnerability vector is permitted under program policy.
+
+    Checks program.excluded_vulnerabilities against normalized flaw_type, category aliases,
+    and viability constraints. Returns False if vector is excluded by policy.
+    """
+    if not program or not getattr(program, "excluded_vulnerabilities", None):
+        return True
+
+    flaw_norm = flaw_type.lower().replace("-", "_").strip()
+
+    vector_aliases: Dict[str, Set[str]] = {
+        "mail_spoofing": {
+            "mail_spoofing", "email_spoofing", "dmarc", "missing_dmarc", "spf",
+            "permissive_spf", "spf_dmarc", "dmarc_policy", "email_security", "spoofing"
+        },
+        "cors_wildcard_origin": {
+            "cors_wildcard_origin", "cors_wildcard", "unauthenticated_cors",
+            "cors_unauthenticated", "wildcard_cors", "cors"
+        },
+        "cors_arbitrary_origin_with_credentials": {
+            "cors_arbitrary_origin_with_credentials", "cors_credentials", "cors"
+        },
+        "cors_null_origin_with_credentials": {
+            "cors_null_origin_with_credentials", "cors_null_origin", "cors"
+        },
+        "cors_misconfiguration": {
+            "cors_misconfiguration", "cors", "cors_wildcard", "cors_wildcard_origin",
+            "unauthenticated_cors"
+        },
+        "graphql_introspection": {
+            "graphql_introspection", "graphql", "introspection", "graphql_schema"
+        },
+        "cloud_storage_takeover": {
+            "cloud_storage_takeover", "cloud_storage", "bucket_takeover", "s3_takeover",
+            "storage_takeover"
+        },
+        "open_cloud_bucket": {
+            "open_cloud_bucket", "open_bucket", "public_bucket", "cloud_storage"
+        },
+        "http_request_smuggling_cl_te": {
+            "http_request_smuggling_cl_te", "http_request_smuggling", "request_smuggling",
+            "http_smuggling", "smuggling"
+        },
+        "http_request_smuggling_te_cl": {
+            "http_request_smuggling_te_cl", "http_request_smuggling", "request_smuggling",
+            "http_smuggling", "smuggling"
+        },
+        "http_request_smuggling_h2_downgrade": {
+            "http_request_smuggling_h2_downgrade", "http_request_smuggling", "request_smuggling",
+            "http_smuggling", "smuggling"
+        },
+        "oauth_redirect_uri_hijack": {
+            "oauth_redirect_uri_hijack", "oauth_redirect", "oauth", "oauth_flaws"
+        },
+        "oauth_login_csrf": {
+            "oauth_login_csrf", "oauth_csrf", "oauth", "oauth_flaws"
+        },
+        "oauth_missing_pkce": {
+            "oauth_missing_pkce", "missing_pkce", "pkce", "oauth", "oauth_flaws"
+        },
+        "oidc_insecure_signing_alg": {
+            "oidc_insecure_signing_alg", "oidc_alg_none", "oidc", "oauth"
+        },
+        "oidc_internal_endpoint_leak": {
+            "oidc_internal_endpoint_leak", "oidc_leak", "oidc", "oauth"
+        },
+        "dependency_confusion_namespace_takeover": {
+            "dependency_confusion_namespace_takeover", "dependency_confusion",
+            "namespace_takeover", "supply_chain"
+        },
+        "subdomain_takeover": {
+            "subdomain_takeover", "takeover", "dangling_cname"
+        },
+    }
+
+    flaw_aliases = vector_aliases.get(flaw_norm, {flaw_norm})
+
+    for excl in program.excluded_vulnerabilities:
+        excl_norm = excl.lower().replace("-", "_").strip()
+        if not excl_norm:
+            continue
+        if excl_norm == flaw_norm or excl_norm in flaw_aliases:
+            return False
+        if excl_norm in flaw_norm or flaw_norm in excl_norm:
+            return False
+
+    return True
+
+
 @dataclass
 class BountyProgram:
     program_id: str
@@ -68,6 +158,7 @@ class BountyProgram:
     policy_url: str = ""
     in_scope: List[str] = field(default_factory=list)  # e.g. ["*.shopify.com", "*.myshopify.com"]
     out_of_scope: List[str] = field(default_factory=list)
+    excluded_vulnerabilities: List[str] = field(default_factory=list)
     bounty_tier: str = "cash"  # cash, swag, points
     max_bounty: int = 10000
     state: str = "active"  # active, paused
@@ -75,6 +166,10 @@ class BountyProgram:
     created_at: str = field(
         default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat()
     )
+
+    def is_vulnerability_in_scope(self, flaw_type: str, viability: str = "") -> bool:
+        """Evaluates whether vulnerability vector is permitted under program policy."""
+        return is_vulnerability_in_scope(self, flaw_type, viability)
 
 
 @dataclass
@@ -497,6 +592,11 @@ class BountyScopeIngester:
 
 class BountyTakeoverSweeper:
     """Expands wildcard scopes and tests targets for dangling SaaS CNAMEs and mail-spoofing vectors."""
+
+    @staticmethod
+    def is_vulnerability_in_scope(program: Optional[BountyProgram], flaw_type: str, viability: str = "") -> bool:
+        """Evaluates whether vulnerability vector is permitted under program policy."""
+        return is_vulnerability_in_scope(program, flaw_type, viability)
 
     def __init__(
         self,
@@ -963,101 +1063,111 @@ class BountyTakeoverSweeper:
             mock_nx = target in mock_nxdomain_domains
 
             # 1. Cloud Storage Bucket Takeover Check (if enabled)
-            if audit_cloud_buckets:
+            if audit_cloud_buckets and self.is_vulnerability_in_scope(program, "cloud_storage_takeover"):
                 bucket_res = self.audit_cloud_storage_bucket(
                     target, cname_target=mock_cn, mock_body=mock_bd
                 )
                 if bucket_res and bucket_res.get("vulnerable"):
-                    vuln = BountyVulnerability(
-                        program_id=program.program_id,
-                        program_name=program.name,
-                        platform=program.platform,
-                        target_domain=target,
-                        cname_target=mock_cn,
-                        flaw_type=bucket_res.get("flaw_type", "cloud_storage_takeover"),
-                        provider=bucket_res.get("provider", "Cloud Storage"),
-                        severity=bucket_res.get("severity", Severity.HIGH),
-                        cvss_score=bucket_res.get("cvss_score", 8.6),
-                        cvss_vector=bucket_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:N/I:H/A:N"),
-                        evidence=bucket_res.get("evidence", ""),
-                        cwe_id=bucket_res.get("cwe_id", "CWE-284: Improper Access Control"),
-                        remediation=bucket_res.get("remediation", ""),
-                        bounty_viability=bucket_res.get("bounty_viability", "HIGH_CONFIDENCE"),
-                    )
-                    vulns.append(vuln)
-                    continue
+                    flaw = bucket_res.get("flaw_type", "cloud_storage_takeover")
+                    viab = bucket_res.get("bounty_viability", "HIGH_CONFIDENCE")
+                    if self.is_vulnerability_in_scope(program, flaw, viab):
+                        vuln = BountyVulnerability(
+                            program_id=program.program_id,
+                            program_name=program.name,
+                            platform=program.platform,
+                            target_domain=target,
+                            cname_target=mock_cn,
+                            flaw_type=flaw,
+                            provider=bucket_res.get("provider", "Cloud Storage"),
+                            severity=bucket_res.get("severity", Severity.HIGH),
+                            cvss_score=bucket_res.get("cvss_score", 8.6),
+                            cvss_vector=bucket_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:N/I:H/A:N"),
+                            evidence=bucket_res.get("evidence", ""),
+                            cwe_id=bucket_res.get("cwe_id", "CWE-284: Improper Access Control"),
+                            remediation=bucket_res.get("remediation", ""),
+                            bounty_viability=viab,
+                        )
+                        vulns.append(vuln)
+                        continue
 
             # 2. Subdomain Takeover Check (SaaS services)
-            takeover_res = self.check_subdomain_takeover(
-                target, mock_cname=mock_cn, mock_body=mock_bd, mock_nxdomain=mock_nx
-            )
-            if takeover_res:
-                sig, cname, evidence = takeover_res
-                score, vector = CVSSv31Calculator.calculate_score(
-                    av="N", ac="L", pr="N", ui="N", s="U", c="N", i="H", a="N"
+            if self.is_vulnerability_in_scope(program, "subdomain_takeover"):
+                takeover_res = self.check_subdomain_takeover(
+                    target, mock_cname=mock_cn, mock_body=mock_bd, mock_nxdomain=mock_nx
                 )
-                vuln = BountyVulnerability(
-                    program_id=program.program_id,
-                    program_name=program.name,
-                    platform=program.platform,
-                    target_domain=target,
-                    cname_target=cname,
-                    flaw_type="subdomain_takeover",
-                    provider=sig.name,
-                    severity=Severity.HIGH,
-                    cvss_score=score,
-                    cvss_vector=vector,
-                    evidence=evidence,
-                    cwe_id="CWE-284: Improper Access Control",
-                    remediation=sig.remediation,
-                    bounty_viability="HIGH_CONFIDENCE",
-                )
-                vulns.append(vuln)
-                continue  # If takeover found, proceed to next target
-
-            # 3. GraphQL Introspection Check
-            if audit_graphql:
-                gql_mock = mock_graphql_responses.get(target) if mock_graphql_responses else None
-                gql_res = self.audit_graphql_introspection(target, mock_paths=gql_mock)
-                if gql_res and gql_res.get("vulnerable"):
+                if takeover_res:
+                    sig, cname, evidence = takeover_res
+                    score, vector = CVSSv31Calculator.calculate_score(
+                        av="N", ac="L", pr="N", ui="N", s="U", c="N", i="H", a="N"
+                    )
                     vuln = BountyVulnerability(
                         program_id=program.program_id,
                         program_name=program.name,
                         platform=program.platform,
                         target_domain=target,
-                        flaw_type="graphql_introspection",
-                        provider="GraphQL",
-                        severity=gql_res.get("severity", Severity.MEDIUM),
-                        cvss_score=gql_res.get("cvss_score", 5.3),
-                        cvss_vector=gql_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"),
-                        evidence=gql_res.get("evidence", ""),
-                        cwe_id=gql_res.get("cwe_id", "CWE-200: Exposure of Sensitive Information to an Unauthorized Actor"),
-                        remediation=gql_res.get("remediation", ""),
+                        cname_target=cname,
+                        flaw_type="subdomain_takeover",
+                        provider=sig.name,
+                        severity=Severity.HIGH,
+                        cvss_score=score,
+                        cvss_vector=vector,
+                        evidence=evidence,
+                        cwe_id="CWE-284: Improper Access Control",
+                        remediation=sig.remediation,
                         bounty_viability="HIGH_CONFIDENCE",
                     )
                     vulns.append(vuln)
+                    continue  # If takeover found, proceed to next target
+
+            # 3. GraphQL Introspection Check
+            if audit_graphql and self.is_vulnerability_in_scope(program, "graphql_introspection"):
+                gql_mock = mock_graphql_responses.get(target) if mock_graphql_responses else None
+                gql_res = self.audit_graphql_introspection(target, mock_paths=gql_mock)
+                if gql_res and gql_res.get("vulnerable"):
+                    flaw = "graphql_introspection"
+                    viab = "HIGH_CONFIDENCE"
+                    if self.is_vulnerability_in_scope(program, flaw, viab):
+                        vuln = BountyVulnerability(
+                            program_id=program.program_id,
+                            program_name=program.name,
+                            platform=program.platform,
+                            target_domain=target,
+                            flaw_type=flaw,
+                            provider="GraphQL",
+                            severity=gql_res.get("severity", Severity.MEDIUM),
+                            cvss_score=gql_res.get("cvss_score", 5.3),
+                            cvss_vector=gql_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"),
+                            evidence=gql_res.get("evidence", ""),
+                            cwe_id=gql_res.get("cwe_id", "CWE-200: Exposure of Sensitive Information to an Unauthorized Actor"),
+                            remediation=gql_res.get("remediation", ""),
+                            bounty_viability=viab,
+                        )
+                        vulns.append(vuln)
 
             # 4. CORS Misconfiguration Check
             if audit_cors:
                 cors_mock = mock_cors_responses.get(target) if mock_cors_responses else None
                 cors_res = self.audit_cors_misconfiguration(target, mock_responses=cors_mock)
                 if cors_res and cors_res.get("vulnerable"):
-                    vuln = BountyVulnerability(
-                        program_id=program.program_id,
-                        program_name=program.name,
-                        platform=program.platform,
-                        target_domain=target,
-                        flaw_type=cors_res.get("flaw_type", "cors_misconfiguration"),
-                        provider="API Gateway CORS",
-                        severity=cors_res.get("severity", Severity.HIGH),
-                        cvss_score=cors_res.get("cvss_score", 8.1),
-                        cvss_vector=cors_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N"),
-                        evidence=cors_res.get("evidence", ""),
-                        cwe_id=cors_res.get("cwe_id", "CWE-942: Permissive Cross-domain Policy with Untrusted Domains"),
-                        remediation=cors_res.get("remediation", ""),
-                        bounty_viability=cors_res.get("bounty_viability", "HIGH_CONFIDENCE"),
-                    )
-                    vulns.append(vuln)
+                    flaw = cors_res.get("flaw_type", "cors_misconfiguration")
+                    viab = cors_res.get("bounty_viability", "HIGH_CONFIDENCE")
+                    if self.is_vulnerability_in_scope(program, flaw, viab):
+                        vuln = BountyVulnerability(
+                            program_id=program.program_id,
+                            program_name=program.name,
+                            platform=program.platform,
+                            target_domain=target,
+                            flaw_type=flaw,
+                            provider="API Gateway CORS",
+                            severity=cors_res.get("severity", Severity.HIGH),
+                            cvss_score=cors_res.get("cvss_score", 8.1),
+                            cvss_vector=cors_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N"),
+                            evidence=cors_res.get("evidence", ""),
+                            cwe_id=cors_res.get("cwe_id", "CWE-942: Permissive Cross-domain Policy with Untrusted Domains"),
+                            remediation=cors_res.get("remediation", ""),
+                            bounty_viability=viab,
+                        )
+                        vulns.append(vuln)
 
             # 5. HTTP Request Smuggling Check
             if audit_smuggling:
@@ -1069,22 +1179,24 @@ class BountyTakeoverSweeper:
                     mock_h2=smug_mock.get("h2") if smug_mock else None,
                 )
                 if smug_res and smug_res.get("vulnerable"):
-                    vuln = BountyVulnerability(
-                        program_id=program.program_id,
-                        program_name=program.name,
-                        platform=program.platform,
-                        target_domain=target,
-                        flaw_type=smug_res.get("flaw_type", "http_request_smuggling_cl_te"),
-                        provider="HTTP Reverse Proxy",
-                        severity=Severity.CRITICAL,
-                        cvss_score=smug_res.get("cvss_score", 9.1),
-                        cvss_vector=smug_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N"),
-                        evidence=smug_res.get("evidence", ""),
-                        cwe_id=smug_res.get("cwe_id", "CWE-444: Inconsistent Interpretation of HTTP Requests"),
-                        remediation=smug_res.get("remediation", ""),
-                        bounty_viability="HIGH_CONFIDENCE",
-                    )
-                    vulns.append(vuln)
+                    flaw = smug_res.get("flaw_type", "http_request_smuggling_cl_te")
+                    if self.is_vulnerability_in_scope(program, flaw):
+                        vuln = BountyVulnerability(
+                            program_id=program.program_id,
+                            program_name=program.name,
+                            platform=program.platform,
+                            target_domain=target,
+                            flaw_type=flaw,
+                            provider="HTTP Reverse Proxy",
+                            severity=Severity.CRITICAL,
+                            cvss_score=smug_res.get("cvss_score", 9.1),
+                            cvss_vector=smug_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N"),
+                            evidence=smug_res.get("evidence", ""),
+                            cwe_id=smug_res.get("cwe_id", "CWE-444: Inconsistent Interpretation of HTTP Requests"),
+                            remediation=smug_res.get("remediation", ""),
+                            bounty_viability="HIGH_CONFIDENCE",
+                        )
+                        vulns.append(vuln)
 
             # 6. OAuth / OIDC Flow Check
             if audit_oauth:
@@ -1097,25 +1209,27 @@ class BountyTakeoverSweeper:
                     mock_pkce=oa_mock.get("pkce") if oa_mock else None,
                 )
                 if oa_res and oa_res.get("vulnerable"):
-                    vuln = BountyVulnerability(
-                        program_id=program.program_id,
-                        program_name=program.name,
-                        platform=program.platform,
-                        target_domain=target,
-                        flaw_type=oa_res.get("flaw_type", "oauth_redirect_uri_hijack"),
-                        provider="OAuth / Identity Provider",
-                        severity=Severity(oa_res.get("severity", "HIGH")),
-                        cvss_score=oa_res.get("cvss_score", 8.1),
-                        cvss_vector=oa_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N"),
-                        evidence=oa_res.get("evidence", ""),
-                        cwe_id=oa_res.get("cwe_id", "CWE-601: URL Redirection to Untrusted Site"),
-                        remediation=oa_res.get("remediation", ""),
-                        bounty_viability="HIGH_CONFIDENCE",
-                    )
-                    vulns.append(vuln)
+                    flaw = oa_res.get("flaw_type", "oauth_redirect_uri_hijack")
+                    if self.is_vulnerability_in_scope(program, flaw):
+                        vuln = BountyVulnerability(
+                            program_id=program.program_id,
+                            program_name=program.name,
+                            platform=program.platform,
+                            target_domain=target,
+                            flaw_type=flaw,
+                            provider="OAuth / Identity Provider",
+                            severity=Severity(oa_res.get("severity", "HIGH")),
+                            cvss_score=oa_res.get("cvss_score", 8.1),
+                            cvss_vector=oa_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N"),
+                            evidence=oa_res.get("evidence", ""),
+                            cwe_id=oa_res.get("cwe_id", "CWE-601: URL Redirection to Untrusted Site"),
+                            remediation=oa_res.get("remediation", ""),
+                            bounty_viability="HIGH_CONFIDENCE",
+                        )
+                        vulns.append(vuln)
 
             # 7. Dependency Confusion Check
-            if audit_dependency:
+            if audit_dependency and self.is_vulnerability_in_scope(program, "dependency_confusion_namespace_takeover"):
                 dep_mock = mock_dependency_responses.get(target) if mock_dependency_responses else None
                 source_code = dep_mock.get("source_text", "") if dep_mock else ""
                 dep_res = self.audit_dependency_confusion(
@@ -1125,28 +1239,30 @@ class BountyTakeoverSweeper:
                     mock_pypi=dep_mock.get("pypi") if dep_mock else None,
                 )
                 if dep_res and dep_res.get("vulnerable"):
-                    vuln = BountyVulnerability(
-                        program_id=program.program_id,
-                        program_name=program.name,
-                        platform=program.platform,
-                        target_domain=target,
-                        flaw_type=dep_res.get("flaw_type", "dependency_confusion_namespace_takeover"),
-                        provider="Public Package Registry",
-                        severity=Severity.CRITICAL,
-                        cvss_score=dep_res.get("cvss_score", 9.8),
-                        cvss_vector=dep_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"),
-                        evidence=dep_res.get("evidence", ""),
-                        cwe_id=dep_res.get("cwe_id", "CWE-427: Uncontrolled Search Path Element"),
-                        remediation=dep_res.get("remediation", ""),
-                        bounty_viability="HIGH_CONFIDENCE",
-                    )
-                    vulns.append(vuln)
+                    flaw = dep_res.get("flaw_type", "dependency_confusion_namespace_takeover")
+                    if self.is_vulnerability_in_scope(program, flaw):
+                        vuln = BountyVulnerability(
+                            program_id=program.program_id,
+                            program_name=program.name,
+                            platform=program.platform,
+                            target_domain=target,
+                            flaw_type=flaw,
+                            provider="Public Package Registry",
+                            severity=Severity.CRITICAL,
+                            cvss_score=dep_res.get("cvss_score", 9.8),
+                            cvss_vector=dep_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"),
+                            evidence=dep_res.get("evidence", ""),
+                            cwe_id=dep_res.get("cwe_id", "CWE-427: Uncontrolled Search Path Element"),
+                            remediation=dep_res.get("remediation", ""),
+                            bounty_viability="HIGH_CONFIDENCE",
+                        )
+                        vulns.append(vuln)
 
             # 8. Email Spoofing Check (primarily on apex or mail hosts)
             if "." in target:
                 org_domain = self.get_organizational_domain(target)
                 is_apex = target == org_domain
-                if is_apex or "mail" in target or mock_spfs.get(target) or mock_dmarcs.get(target):
+                if (is_apex or "mail" in target or mock_spfs.get(target) or mock_dmarcs.get(target)) and self.is_vulnerability_in_scope(program, "mail_spoofing"):
                     spoof_res = self.check_mail_spoofing(
                         target,
                         mock_spf=mock_spfs.get(target),
@@ -1156,30 +1272,31 @@ class BountyTakeoverSweeper:
                         issue_title, evidence, sev, cvss = spoof_res
                         has_mx = self.has_mx_records(target)
                         viability = "CONDITIONAL" if has_mx else "INFORMATIONAL_LOW"
-                        if has_mx:
-                            score, vector = CVSSv31Calculator.calculate_score(
-                                av="N", ac="L", pr="N", ui="N", s="U", c="N", i="L", a="N"
+                        if self.is_vulnerability_in_scope(program, "mail_spoofing", viability):
+                            if has_mx:
+                                score, vector = CVSSv31Calculator.calculate_score(
+                                    av="N", ac="L", pr="N", ui="N", s="U", c="N", i="L", a="N"
+                                )
+                            else:
+                                score, vector = CVSSv31Calculator.calculate_score(
+                                    av="N", ac="L", pr="N", ui="R", s="U", c="N", i="L", a="N"
+                                )
+                            vuln = BountyVulnerability(
+                                program_id=program.program_id,
+                                program_name=program.name,
+                                platform=program.platform,
+                                target_domain=target,
+                                flaw_type="mail_spoofing",
+                                provider=None,
+                                severity=sev,
+                                cvss_score=score,
+                                cvss_vector=vector,
+                                evidence=evidence,
+                                cwe_id="CWE-290: Authentication Bypass by Spoofing",
+                                remediation=f"Publish a strict DMARC record at '_dmarc.{target}' with 'v=DMARC1; p=reject; sp=reject;' and ensure valid SPF (~all or -all).",
+                                bounty_viability=viability,
                             )
-                        else:
-                            score, vector = CVSSv31Calculator.calculate_score(
-                                av="N", ac="L", pr="N", ui="R", s="U", c="N", i="L", a="N"
-                            )
-                        vuln = BountyVulnerability(
-                            program_id=program.program_id,
-                            program_name=program.name,
-                            platform=program.platform,
-                            target_domain=target,
-                            flaw_type="mail_spoofing",
-                            provider=None,
-                            severity=sev,
-                            cvss_score=score,
-                            cvss_vector=vector,
-                            evidence=evidence,
-                            cwe_id="CWE-290: Authentication Bypass by Spoofing",
-                            remediation=f"Publish a strict DMARC record at '_dmarc.{target}' with 'v=DMARC1; p=reject; sp=reject;' and ensure valid SPF (~all or -all).",
-                            bounty_viability=viability,
-                        )
-                        vulns.append(vuln)
+                            vulns.append(vuln)
 
         program.last_scanned = datetime.datetime.now(datetime.timezone.utc).isoformat()
         return vulns
@@ -1364,6 +1481,528 @@ class CVSSv31Calculator:
         return round(base_score, 1), vector
 
 
+# --- Comprehensive Disclosure Report Dispatchers ---
+
+def _format_h1_subdomain_takeover(vuln: BountyVulnerability) -> Tuple[str, str, str]:
+    title = f"[Subdomain Takeover] Unclaimed {vuln.provider or 'SaaS'} Resource via Dangling CNAME on {vuln.target_domain}"
+    impact_desc = (
+        f"An attacker can register the orphaned `{vuln.cname_target}` resource on {vuln.provider or 'the designated service'} "
+        f"and take complete control of `{vuln.target_domain}`. This allows the adversary to:\n"
+        f"1. Host arbitrary phishing pages, deceptive logins, or malware under the official `{vuln.target_domain}` authority.\n"
+        f"2. Harvest sensitive user session tokens, authentication cookies (with `Domain={vuln.target_domain}` scope), or OAuth tokens.\n"
+        f"3. Bypass Content Security Policy (CSP) and Cross-Origin Resource Sharing (CORS) rules trusting `{vuln.target_domain}`."
+    )
+    poc_steps = (
+        f"1. Query the DNS CNAME record for `{vuln.target_domain}`:\n"
+        f"   ```bash\n"
+        f"   dig {vuln.target_domain} CNAME +short\n"
+        f"   # Output: {vuln.cname_target}\n"
+        f"   ```\n"
+        f"2. Send an HTTP request to `{vuln.target_domain}` to observe the provider unallocated error response:\n"
+        f"   ```bash\n"
+        f"   curl -i -s https://{vuln.target_domain}\n"
+        f"   ```\n"
+        f"3. Observe evidence: `{vuln.evidence}`"
+    )
+    return title, impact_desc, poc_steps
+
+
+def _format_h1_cors(vuln: BountyVulnerability) -> Tuple[str, str, str]:
+    if vuln.flaw_type == "cors_wildcard_origin":
+        sub_type = "Permissive Wildcard Access-Control-Allow-Origin"
+    elif vuln.flaw_type == "cors_arbitrary_origin_with_credentials":
+        sub_type = "Arbitrary Origin Reflection with Credentials"
+    elif vuln.flaw_type == "cors_null_origin_with_credentials":
+        sub_type = "Insecure Null Origin Trust with Credentials"
+    else:
+        sub_type = "Insecure Cross-Origin Resource Sharing Policy"
+
+    title = f"[CORS Misconfiguration] {sub_type} on {vuln.target_domain}"
+    impact_desc = (
+        f"The endpoint on `{vuln.target_domain}` implements an insecure Cross-Origin Resource Sharing (CORS) policy.\n"
+        f"When an authenticated user visits an attacker-controlled website:\n"
+        f"1. The malicious website can issue background cross-origin requests to `{vuln.target_domain}`.\n"
+        f"2. The browser grants the untrusted site read access to sensitive response bodies due to permissive origin allowance.\n"
+        f"3. The attacker can extract private user records, account details, CSRF tokens, or internal API responses cross-origin."
+    )
+    poc_steps = (
+        f"1. Send an HTTP request with an untrusted Origin header to `{vuln.target_domain}`:\n"
+        f"   ```bash\n"
+        f"   curl -i -s -H \"Origin: https://evil.com\" https://{vuln.target_domain}/\n"
+        f"   ```\n"
+        f"2. Inspect the HTTP response headers for reflected origin and credentials allowance:\n"
+        f"   ```http\n"
+        f"   Access-Control-Allow-Origin: https://evil.com\n"
+        f"   Access-Control-Allow-Credentials: true\n"
+        f"   ```\n"
+        f"3. Observe evidence: `{vuln.evidence}`"
+    )
+    return title, impact_desc, poc_steps
+
+
+def _format_h1_graphql(vuln: BountyVulnerability) -> Tuple[str, str, str]:
+    title = f"[Information Disclosure] Public GraphQL Schema Introspection on {vuln.target_domain}"
+    impact_desc = (
+        f"Full GraphQL schema introspection is enabled on `{vuln.target_domain}` for unauthorized external clients.\n"
+        f"This leaks the entire backend data architecture, including:\n"
+        f"1. All available queries, mutations, subscriptions, and internal service fields.\n"
+        f"2. Undocumented administrative interfaces and sensitive entity relationship graphs.\n"
+        f"3. Complete technical specification that significantly accelerates targeted access control bypasses and parameter tampering."
+    )
+    poc_steps = (
+        f"1. Send an HTTP POST request containing a GraphQL introspection query to `{vuln.target_domain}`:\n"
+        f"   ```bash\n"
+        f"   curl -i -s -X POST https://{vuln.target_domain}/graphql \\\n"
+        f"     -H \"Content-Type: application/json\" \\\n"
+        f"     -d '{{\"query\":\"{{ __schema {{ queryType {{ name }} mutationType {{ name }} types {{ name }} }} }}\"}}'\n"
+        f"   ```\n"
+        f"2. Observe the complete schema hierarchy and internal type definitions in the JSON response.\n"
+        f"3. Observe evidence: `{vuln.evidence}`"
+    )
+    return title, impact_desc, poc_steps
+
+
+def _format_h1_cloud_storage(vuln: BountyVulnerability) -> Tuple[str, str, str]:
+    if vuln.flaw_type == "open_cloud_bucket":
+        title = f"[Cloud Storage] Open Public Bucket Directory Listing on {vuln.target_domain}"
+        impact_desc = (
+            f"The cloud storage bucket mapped to `{vuln.target_domain}` has open public READ permissions enabled.\n"
+            f"Any unauthorized internet user can list and download stored assets, potentially exposing private customer "
+            f"documents, source backups, configuration archives, and sensitive media."
+        )
+        poc_steps = (
+            f"1. Issue an HTTP GET request to the bucket endpoint on `{vuln.target_domain}`:\n"
+            f"   ```bash\n"
+            f"   curl -i -s https://{vuln.target_domain}\n"
+            f"   ```\n"
+            f"2. Observe the XML storage index containing key names, sizes, and file metadata (`<ListBucketResult>` or `<EnumerationResults>`).\n"
+            f"3. Observe evidence: `{vuln.evidence}`"
+        )
+    else:
+        title = f"[Cloud Storage Takeover] Unclaimed Storage Bucket on {vuln.target_domain}"
+        impact_desc = (
+            f"The domain `{vuln.target_domain}` points to an unallocated or deleted cloud storage bucket "
+            f"(`{vuln.cname_target or 'storage endpoint'}`) on {vuln.provider or 'Cloud Storage'}.\n"
+            f"An adversary can claim the identical bucket name in their own cloud account and serve arbitrary malicious content "
+            f"under `{vuln.target_domain}`, enabling stored XSS, session hijacking, and brand impersonation."
+        )
+        poc_steps = (
+            f"1. Query the DNS CNAME record for `{vuln.target_domain}`:\n"
+            f"   ```bash\n"
+            f"   dig {vuln.target_domain} CNAME +short\n"
+            f"   # Output: {vuln.cname_target}\n"
+            f"   ```\n"
+            f"2. Query the HTTP endpoint and observe the unallocated storage response (`NoSuchBucket` / `BlobNotFound`):\n"
+            f"   ```bash\n"
+            f"   curl -i -s https://{vuln.target_domain}\n"
+            f"   ```\n"
+            f"3. Observe evidence: `{vuln.evidence}`"
+        )
+    return title, impact_desc, poc_steps
+
+
+def _format_h1_http_smuggling(vuln: BountyVulnerability) -> Tuple[str, str, str]:
+    if vuln.flaw_type == "http_request_smuggling_cl_te":
+        sub_type = "Frontend CL / Backend TE Desynchronization"
+    elif vuln.flaw_type == "http_request_smuggling_te_cl":
+        sub_type = "Frontend TE / Backend CL Desynchronization"
+    elif vuln.flaw_type == "http_request_smuggling_h2_downgrade":
+        sub_type = "HTTP/2 Downgrade Desynchronization"
+    else:
+        sub_type = "HTTP Request Desynchronization"
+
+    title = f"[HTTP Request Smuggling] {sub_type} on {vuln.target_domain}"
+    impact_desc = (
+        f"A desynchronization vulnerability exists in how the edge reverse proxy and origin server interpret HTTP request "
+        f"boundaries on `{vuln.target_domain}`.\n"
+        f"An attacker can exploit this discrepancy to smuggle requests across persistent backend TCP connections. This enables:\n"
+        f"1. Cache poisoning to serve malicious JavaScript or redirects to downstream users.\n"
+        f"2. Request hijacking to capture sensitive HTTP Authorization headers and session cookies from subsequent victim requests.\n"
+        f"3. Complete bypass of front-end security filters and WAF rules."
+    )
+    poc_steps = (
+        f"1. Transmit an ambiguous HTTP request with conflicting Content-Length and Transfer-Encoding headers to `{vuln.target_domain}`:\n"
+        f"   ```http\n"
+        f"   POST / HTTP/1.1\n"
+        f"   Host: {vuln.target_domain}\n"
+        f"   Content-Length: 4\n"
+        f"   Transfer-Encoding: chunked\n\n"
+        f"   1\n"
+        f"   Z\n"
+        f"   Q\n"
+        f"   ```\n"
+        f"2. Observe backend socket desynchronization or differential connection timeout.\n"
+        f"3. Observe evidence: `{vuln.evidence}`"
+    )
+    return title, impact_desc, poc_steps
+
+
+def _format_h1_oauth(vuln: BountyVulnerability) -> Tuple[str, str, str]:
+    if vuln.flaw_type == "oauth_redirect_uri_hijack":
+        title = f"[OAuth 2.0] Authorization Code / Token Theft via Redirect URI Hijack on {vuln.target_domain}"
+        impact_desc = (
+            f"The OAuth 2.0 authorization endpoint on `{vuln.target_domain}` does not enforce strict redirect URI whitelisting.\n"
+            f"An attacker can supply a manipulated or wildcard redirect_uri pointing to an external server. When a user authorizes "
+            f"the application, the authorization code or access token is leaked to the attacker's server, leading to complete account takeover."
+        )
+        poc_steps = (
+            f"1. Construct an authorization request with an arbitrary or path-traversal redirect URI:\n"
+            f"   ```bash\n"
+            f"   curl -i -s \"https://{vuln.target_domain}/oauth/authorize?client_id=TARGET_CLIENT_ID&redirect_uri=https://{vuln.target_domain}.evil.com/callback&response_type=code\"\n"
+            f"   ```\n"
+            f"2. Observe that the authorization server accepts the unvalidated redirect URI without error.\n"
+            f"3. Observe evidence: `{vuln.evidence}`"
+        )
+    elif vuln.flaw_type == "oauth_login_csrf":
+        title = f"[OAuth 2.0] Login CSRF via Missing or Static State Parameter on {vuln.target_domain}"
+        impact_desc = (
+            f"The OAuth authorization flow on `{vuln.target_domain}` fails to validate the `state` parameter or omits it entirely.\n"
+            f"An attacker can initiate an authorization flow, intercept their own authorization code, and trick a victim into "
+            f"submitting that code to link the victim's session to the attacker's account."
+        )
+        poc_steps = (
+            f"1. Trigger authorization flow omitting the `state` parameter or reusing static state values across sessions.\n"
+            f"2. Observe lack of CSRF token verification during authorization code exchange.\n"
+            f"3. Observe evidence: `{vuln.evidence}`"
+        )
+    elif vuln.flaw_type == "oauth_missing_pkce":
+        title = f"[OAuth 2.0] Authorization Code Interception via Missing PKCE on {vuln.target_domain}"
+        impact_desc = (
+            f"The OAuth endpoint on `{vuln.target_domain}` does not enforce Proof Key for Code Exchange (PKCE, RFC 7636).\n"
+            f"For public clients, an authorization code intercepted via custom URI schemes or browser history can be exchanged "
+            f"for access tokens without proving possession of the code verifier secret."
+        )
+        poc_steps = (
+            f"1. Submit authorization request without `code_challenge` parameter.\n"
+            f"2. Exchange obtained authorization code at token endpoint without `code_verifier`.\n"
+            f"3. Observe evidence: `{vuln.evidence}`"
+        )
+    elif vuln.flaw_type == "oidc_insecure_signing_alg":
+        title = f"[OIDC] Insecure JWT Token Signing Algorithm (alg: none) Supported on {vuln.target_domain}"
+        impact_desc = (
+            f"The OpenID Connect discovery or token validation endpoint on `{vuln.target_domain}` permits insecure signature "
+            f"algorithms such as `none` or weak symmetric HMAC keys where asymmetric keys are expected.\n"
+            f"An attacker can forge arbitrary ID tokens or JWTs with modified user claims (e.g. `sub`, `email`, `role: admin`) "
+            f"without a valid signature, bypassing authentication completely."
+        )
+        poc_steps = (
+            f"1. Query OpenID Connect discovery configuration:\n"
+            f"   ```bash\n"
+            f"   curl -i -s https://{vuln.target_domain}/.well-known/openid-configuration\n"
+            f"   ```\n"
+            f"2. Inspect `id_token_signing_alg_values_supported` for `none` or weak algorithms.\n"
+            f"3. Observe evidence: `{vuln.evidence}`"
+        )
+    elif vuln.flaw_type == "oidc_internal_endpoint_leak":
+        title = f"[Information Disclosure] Internal Infrastructure Endpoints Leaked in OIDC Metadata on {vuln.target_domain}"
+        impact_desc = (
+            f"The OpenID Connect configuration published at `{vuln.target_domain}/.well-known/openid-configuration` exposes "
+            f"internal hostnames, non-routable IP addresses, or staging backend endpoints.\n"
+            f"This reveals organizational network topology and targets for Server-Side Request Forgery (SSRF) and perimeter penetration."
+        )
+        poc_steps = (
+            f"1. Query the OIDC configuration endpoint:\n"
+            f"   ```bash\n"
+            f"   curl -i -s https://{vuln.target_domain}/.well-known/openid-configuration\n"
+            f"   ```\n"
+            f"2. Inspect discovery document for internal/private network endpoint URIs.\n"
+            f"3. Observe evidence: `{vuln.evidence}`"
+        )
+    else:
+        title = f"[OAuth 2.0 / OIDC] Authentication Flow Vulnerability on {vuln.target_domain}"
+        impact_desc = (
+            f"A vulnerability exists in the identity and authorization implementation on `{vuln.target_domain}` "
+            f"({vuln.flaw_type.replace('_', ' ')}).\n"
+            f"Adversaries can exploit this weakness to intercept OAuth authorization codes or tokens, forge authentication claims "
+            f"without valid cryptographic signatures, or force victims into attacker-controlled accounts."
+        )
+        poc_steps = (
+            f"1. Inspect OAuth/OIDC endpoint responses on `{vuln.target_domain}`.\n"
+            f"2. Observe evidence: `{vuln.evidence}`"
+        )
+    return title, impact_desc, poc_steps
+
+
+def _format_h1_dependency_confusion(vuln: BountyVulnerability) -> Tuple[str, str, str]:
+    title = f"[Supply Chain] Unclaimed Internal Package Namespace on Public Registry ({vuln.target_domain})"
+    impact_desc = (
+        f"Frontend application bundles on `{vuln.target_domain}` expose references to internal scoped packages that are not "
+        f"registered on public registries ({vuln.provider or 'npm/PyPI'}).\n"
+        f"An attacker can register the matching package on the public registry with an elevated version number. When internal "
+        f"developer machines, CI/CD pipelines, or deployment runners resolve dependencies, the package manager fetches the "
+        f"public package, executing arbitrary code with the privileges of the build runner (Remote Code Execution)."
+    )
+    poc_steps = (
+        f"1. Identify the internal organizational package reference extracted from `{vuln.target_domain}` application assets.\n"
+        f"2. Query the public package repository to verify the namespace is unclaimed:\n"
+        f"   ```bash\n"
+        f"   curl -i -s https://registry.npmjs.org/@internal-scope/package\n"
+        f"   # Output: HTTP/1.1 404 Not Found\n"
+        f"   ```\n"
+        f"3. Observe evidence: `{vuln.evidence}`"
+    )
+    return title, impact_desc, poc_steps
+
+
+def _format_h1_mail_spoofing(vuln: BountyVulnerability) -> Tuple[str, str, str]:
+    title = f"[Email Spoofing] Missing DMARC Enforcement Enables Inbound Spoofing on {vuln.target_domain}"
+    impact_desc = (
+        f"Because `{vuln.target_domain}` lacks strict DMARC rejection (`p=reject`), an adversary can forge email "
+        f"`From:` headers appearing to originate directly from `*@{vuln.target_domain}`. This enables highly convincing "
+        f"CEO fraud, invoice fraud, and employee credential harvesting that bypasses standard email security gateways."
+    )
+    poc_steps = (
+        f"1. Query the DMARC TXT record at `_dmarc.{vuln.target_domain}`:\n"
+        f"   ```bash\n"
+        f"   dig _dmarc.{vuln.target_domain} TXT +short\n"
+        f"   ```\n"
+        f"2. Query the SPF TXT record at `{vuln.target_domain}`:\n"
+        f"   ```bash\n"
+        f"   dig {vuln.target_domain} TXT +short\n"
+        f"   ```\n"
+        f"3. Observe evidence: `{vuln.evidence}`"
+    )
+    return title, impact_desc, poc_steps
+
+
+def _format_h1_generic(vuln: BountyVulnerability) -> Tuple[str, str, str]:
+    clean_flaw = vuln.flaw_type.replace('_', ' ').title()
+    title = f"[{clean_flaw}] Security Misconfiguration Identified on {vuln.target_domain}"
+    impact_desc = (
+        f"During perimeter hygiene auditing of `{vuln.target_domain}`, a security weakness categorized as "
+        f"`{clean_flaw}` was identified.\n"
+        f"Adversaries could leverage this issue to weaken security controls, discover internal infrastructure details, "
+        f"or impact application confidentiality and integrity."
+    )
+    poc_steps = (
+        f"1. Send an HTTP request to the target endpoint on `{vuln.target_domain}`:\n"
+        f"   ```bash\n"
+        f"   curl -i -s https://{vuln.target_domain}/\n"
+        f"   ```\n"
+        f"2. Observe technical evidence:\n"
+        f"   ```\n"
+        f"   {vuln.evidence}\n"
+        f"   ```"
+    )
+    return title, impact_desc, poc_steps
+
+
+H1_DISPATCH_TABLE = {
+    "subdomain_takeover": _format_h1_subdomain_takeover,
+    "cors_wildcard_origin": _format_h1_cors,
+    "cors_arbitrary_origin_with_credentials": _format_h1_cors,
+    "cors_null_origin_with_credentials": _format_h1_cors,
+    "cors_misconfiguration": _format_h1_cors,
+    "graphql_introspection": _format_h1_graphql,
+    "cloud_storage_takeover": _format_h1_cloud_storage,
+    "open_cloud_bucket": _format_h1_cloud_storage,
+    "http_request_smuggling_cl_te": _format_h1_http_smuggling,
+    "http_request_smuggling_te_cl": _format_h1_http_smuggling,
+    "http_request_smuggling_h2_downgrade": _format_h1_http_smuggling,
+    "oauth_redirect_uri_hijack": _format_h1_oauth,
+    "oauth_login_csrf": _format_h1_oauth,
+    "oauth_missing_pkce": _format_h1_oauth,
+    "oidc_insecure_signing_alg": _format_h1_oauth,
+    "oidc_internal_endpoint_leak": _format_h1_oauth,
+    "dependency_confusion_namespace_takeover": _format_h1_dependency_confusion,
+    "mail_spoofing": _format_h1_mail_spoofing,
+}
+
+
+# --- Bugcrowd Report Dispatchers ---
+
+def _format_bc_subdomain_takeover(vuln: BountyVulnerability, target: str) -> Tuple[str, str, str, str, str]:
+    v_type = "Server Security Misconfiguration > Subdomain Takeover"
+    title = f"Subdomain Takeover on {target} ({vuln.provider or 'SaaS'})"
+    desc = (
+        f"The domain `{target}` delegates to an unclaimed `{vuln.provider or 'SaaS'}` resource at `{vuln.cname_target}`. "
+        f"Because the remote resource is unallocated, an external adversary can claim the tenant and take full control "
+        f"of `{target}`."
+    )
+    poc = (
+        f"1. Query CNAME record: `dig {target} CNAME +short` -> `{vuln.cname_target}`\n"
+        f"2. Query HTTP response: `curl -i -s https://{target}`\n"
+        f"3. Fingerprint: `{vuln.evidence}`"
+    )
+    impact = (
+        f"Complete control of subdomain `{target}`. An attacker can serve arbitrary content, intercept session cookies "
+        f"scoped to parent domains, or bypass CORS policies."
+    )
+    return v_type, title, desc, poc, impact
+
+
+def _format_bc_cors(vuln: BountyVulnerability, target: str) -> Tuple[str, str, str, str, str]:
+    v_type = "Application Security Misconfiguration > Cross-Origin Resource Sharing (CORS)"
+    title = f"CORS Policy Misconfiguration on {target}"
+    desc = (
+        f"The domain `{target}` exposes an insecure Cross-Origin Resource Sharing configuration that trusts untrusted origins."
+    )
+    poc = (
+        f"1. Issue cross-origin probe: `curl -i -s -H \"Origin: https://evil.com\" https://{target}/`\n"
+        f"2. Inspect response headers for Access-Control-Allow-Origin\n"
+        f"3. Observed evidence: `{vuln.evidence}`"
+    )
+    impact = (
+        f"Enables unauthorized cross-origin data extraction and user session data leakage from `{target}`."
+    )
+    return v_type, title, desc, poc, impact
+
+
+def _format_bc_graphql(vuln: BountyVulnerability, target: str) -> Tuple[str, str, str, str, str]:
+    v_type = "Information Disclosure > Exposed GraphQL Schema Introspection"
+    title = f"Exposed GraphQL Schema Introspection on {target}"
+    desc = (
+        f"The GraphQL API on `{target}` has schema introspection publicly enabled for unauthenticated clients."
+    )
+    poc = (
+        f"1. Send introspection query: `curl -i -s -X POST https://{target}/graphql -H \"Content-Type: application/json\" "
+        f"-d '{{\"query\":\"{{ __schema {{ types {{ name }} }} }}\"}}'`\n"
+        f"2. Inspect JSON response\n"
+        f"3. Observed evidence: `{vuln.evidence}`"
+    )
+    impact = (
+        f"Exposes complete internal backend schemas, queries, and mutations, facilitating targeted unauthorized actions on `{target}`."
+    )
+    return v_type, title, desc, poc, impact
+
+
+def _format_bc_cloud_storage(vuln: BountyVulnerability, target: str) -> Tuple[str, str, str, str, str]:
+    if vuln.flaw_type == "open_cloud_bucket":
+        v_type = "Information Disclosure > Public Cloud Storage Listing"
+        title = f"Open Cloud Storage Bucket Directory Listing on {target}"
+        desc = f"Cloud storage bucket at `{target}` permits unrestricted anonymous object enumeration."
+        poc = (
+            f"1. Request storage endpoint: `curl -i -s https://{target}`\n"
+            f"2. Observe XML object listing\n"
+            f"3. Observed evidence: `{vuln.evidence}`"
+        )
+        impact = f"Unauthorized public exposure of files and private backups stored on `{target}`."
+    else:
+        v_type = "Server Security Misconfiguration > Unclaimed Cloud Storage Bucket"
+        title = f"Cloud Storage Misconfiguration on {target} ({vuln.provider or 'Cloud Storage'})"
+        desc = f"Cloud storage resource associated with `{target}` is improperly secured or unclaimed."
+        poc = (
+            f"1. Request storage endpoint: `curl -i -s https://{target}`\n"
+            f"2. Observe unallocated storage response\n"
+            f"3. Observed evidence: `{vuln.evidence}`"
+        )
+        impact = f"Adversary can take over domain content or serve malicious payloads on `{target}`."
+    return v_type, title, desc, poc, impact
+
+
+def _format_bc_http_smuggling(vuln: BountyVulnerability, target: str) -> Tuple[str, str, str, str, str]:
+    v_type = "Server Security Misconfiguration > HTTP Request Smuggling"
+    title = f"HTTP Request Smuggling Desync on {target}"
+    desc = f"The reverse proxy and origin server for `{target}` disagree on request boundary parsing (CL/TE desynchronization)."
+    poc = (
+        f"1. Send ambiguous HTTP request with conflicting Content-Length and Transfer-Encoding headers.\n"
+        f"2. Observe backend response delay or desync.\n"
+        f"3. Observed evidence: `{vuln.evidence}`"
+    )
+    impact = f"Enables cache poisoning, request hijacking, and credential theft across users of `{target}`."
+    return v_type, title, desc, poc, impact
+
+
+def _format_bc_oauth(vuln: BountyVulnerability, target: str) -> Tuple[str, str, str, str, str]:
+    v_type = "Broken Authentication & Session Management > OAuth Redirection / CSRF"
+    title = f"OAuth / OIDC Authentication Flow Vulnerability on {target}"
+    desc = f"The OAuth/OIDC implementation on `{target}` contains an authentication or token security flaw ({vuln.flaw_type})."
+    poc = (
+        f"1. Analyze authorization or token endpoint parameters.\n"
+        f"2. Observed evidence: `{vuln.evidence}`"
+    )
+    impact = f"Authorization codes, ID tokens, or session states on `{target}` may be hijacked, leading to account takeover."
+    return v_type, title, desc, poc, impact
+
+
+def _format_bc_dependency_confusion(vuln: BountyVulnerability, target: str) -> Tuple[str, str, str, str, str]:
+    v_type = "Supply Chain Security > Internal Package Namespace Takeover"
+    title = f"Dependency Confusion Namespace Takeover on {target}"
+    desc = f"Internal package dependencies referenced by `{target}` are unregistered on public package registries."
+    poc = (
+        f"1. Identify private package import in application bundle.\n"
+        f"2. Verify 404 on public registry: `curl -i -s https://registry.npmjs.org/@internal/package`\n"
+        f"3. Observed evidence: `{vuln.evidence}`"
+    )
+    impact = f"Allows remote code execution in internal developer workstations and CI/CD build pipelines if malicious public packages are published."
+    return v_type, title, desc, poc, impact
+
+
+def _format_bc_mail_spoofing(vuln: BountyVulnerability, target: str) -> Tuple[str, str, str, str, str]:
+    v_type = "Email Security Misconfiguration > Missing DMARC Policy"
+    title = f"Missing DMARC Protection Enables Email Spoofing on {target}"
+    desc = (
+        f"The domain `{target}` lacks an active DMARC rejection policy (`p=reject`), allowing unauthorized external parties "
+        f"to send spoofed emails claiming to be from `{target}`."
+    )
+    poc = (
+        f"1. Inspect DMARC: `dig _dmarc.{target} TXT +short`\n"
+        f"2. Inspect SPF: `dig {target} TXT +short`\n"
+        f"3. Observed evidence: `{vuln.evidence}`"
+    )
+    impact = (
+        f"Adversaries can craft targeted phishing and invoice fraud emails with spoofed `{target}` sender addresses "
+        f"that bypass SPF validation."
+    )
+    return v_type, title, desc, poc, impact
+
+
+def _format_bc_generic(vuln: BountyVulnerability, target: str) -> Tuple[str, str, str, str, str]:
+    clean_flaw = vuln.flaw_type.replace('_', ' ').title()
+    v_type = "Server Security Misconfiguration > General"
+    title = f"Security Vulnerability ({clean_flaw}) on {target}"
+    desc = f"A security flaw of type `{vuln.flaw_type}` was detected during automated reconnaissance on `{target}`."
+    poc = (
+        f"1. Inspect target endpoint: `curl -i -s https://{target}/`\n"
+        f"2. Observed evidence: `{vuln.evidence}`"
+    )
+    impact = f"May allow adversaries to compromise the security posture or service availability of `{target}`."
+    return v_type, title, desc, poc, impact
+
+
+BUGCROWD_DISPATCH_TABLE = {
+    "subdomain_takeover": _format_bc_subdomain_takeover,
+    "cors_wildcard_origin": _format_bc_cors,
+    "cors_arbitrary_origin_with_credentials": _format_bc_cors,
+    "cors_null_origin_with_credentials": _format_bc_cors,
+    "cors_misconfiguration": _format_bc_cors,
+    "graphql_introspection": _format_bc_graphql,
+    "cloud_storage_takeover": _format_bc_cloud_storage,
+    "open_cloud_bucket": _format_bc_cloud_storage,
+    "http_request_smuggling_cl_te": _format_bc_http_smuggling,
+    "http_request_smuggling_te_cl": _format_bc_http_smuggling,
+    "http_request_smuggling_h2_downgrade": _format_bc_http_smuggling,
+    "oauth_redirect_uri_hijack": _format_bc_oauth,
+    "oauth_login_csrf": _format_bc_oauth,
+    "oauth_missing_pkce": _format_bc_oauth,
+    "oidc_insecure_signing_alg": _format_bc_oauth,
+    "oidc_internal_endpoint_leak": _format_bc_oauth,
+    "dependency_confusion_namespace_takeover": _format_bc_dependency_confusion,
+    "mail_spoofing": _format_bc_mail_spoofing,
+}
+
+
+def _format_email_impact(vuln: BountyVulnerability) -> str:
+    if vuln.flaw_type == "mail_spoofing":
+        return "Missing or permissive email authentication policies can be abused by external adversaries to send spoofed emails impersonating official brand infrastructure."
+    elif vuln.flaw_type == "subdomain_takeover":
+        return f"Unclaimed perimeter DNS resources can be registered by external adversaries to hijack domain traffic and take complete control over {vuln.target_domain}."
+    elif "cors" in vuln.flaw_type:
+        return f"Insecure Cross-Origin Resource Sharing policies on {vuln.target_domain} allow untrusted third-party websites to extract sensitive API responses cross-origin."
+    elif vuln.flaw_type == "graphql_introspection":
+        return f"Publicly accessible GraphQL schema introspection on {vuln.target_domain} exposes internal data models, administrative operations, and internal queries."
+    elif "cloud" in vuln.flaw_type or "bucket" in vuln.flaw_type:
+        return f"Unsecured or unallocated cloud storage resources linked to {vuln.target_domain} allow unauthorized file access or arbitrary content hosting."
+    elif "smuggling" in vuln.flaw_type:
+        return f"HTTP request smuggling desynchronization on {vuln.target_domain} permits request hijacking, web cache poisoning, and security filter bypass."
+    elif "oauth" in vuln.flaw_type or "oidc" in vuln.flaw_type:
+        return f"Insecure OAuth/OIDC implementation on {vuln.target_domain} permits authorization code or token interception leading to account takeover."
+    elif "dependency" in vuln.flaw_type:
+        return f"Unregistered internal package namespaces on public registries enable supply chain code execution across internal build systems for {vuln.target_domain}."
+    else:
+        return f"Identified perimeter security weakness ({vuln.flaw_type.replace('_', ' ')}) can be abused by external adversaries to compromise {vuln.target_domain}."
+
+
 class HackerOneDisclosureGenerator:
     """Generates structured vulnerability reports conforming strictly to HackerOne disclosure standards."""
 
@@ -1373,61 +2012,48 @@ class HackerOneDisclosureGenerator:
         prog_name = program.name if program else vuln.program_name
         policy_url = program.policy_url if program else f"https://hackerone.com/{vuln.program_id}"
 
-        if vuln.flaw_type == "subdomain_takeover":
-            title = f"[Subdomain Takeover] Unclaimed {vuln.provider or 'SaaS'} Resource via Dangling CNAME on {vuln.target_domain}"
-            impact_desc = (
-                f"An attacker can register the orphaned `{vuln.cname_target}` resource on {vuln.provider} and take complete "
-                f"control of `{vuln.target_domain}`. This allows the adversary to:\n"
-                f"1. Host arbitrary phishing pages, deceptive logins, or malware under the official `{vuln.target_domain}` authority.\n"
-                f"2. Harvest sensitive user session tokens, authentication cookies (with `Domain={vuln.target_domain}` scope), or OAuth tokens.\n"
-                f"3. Bypass Content Security Policy (CSP) and Cross-Origin Resource Sharing (CORS) rules trusting `{vuln.target_domain}`."
-            )
-            poc_steps = (
-                f"1. Query the DNS CNAME record for `{vuln.target_domain}`:\n"
-                f"   ```bash\n"
-                f"   dig {vuln.target_domain} CNAME +short\n"
-                f"   # Output: {vuln.cname_target}\n"
-                f"   ```\n"
-                f"2. Send an HTTP request to `{vuln.target_domain}` to observe the provider unallocated error response:\n"
-                f"   ```bash\n"
-                f"   curl -i -s https://{vuln.target_domain}\n"
-                f"   ```\n"
-                f"3. Observe evidence: `{vuln.evidence}`"
-            )
-        else:
-            title = f"[Email Spoofing] Missing DMARC Enforcement Enables Inbound Spoofing on {vuln.target_domain}"
-            impact_desc = (
-                f"Because `{vuln.target_domain}` lacks strict DMARC rejection (`p=reject`), an adversary can forge email "
-                f"`From:` headers appearing to originate directly from `*@{vuln.target_domain}`. This enables highly convincing "
-                f"CEO fraud, invoice fraud, and employee credential harvesting that bypasses standard email security gateways."
-            )
-            poc_steps = (
-                f"1. Query the DMARC TXT record at `_dmarc.{vuln.target_domain}`:\n"
-                f"   ```bash\n"
-                f"   dig _dmarc.{vuln.target_domain} TXT +short\n"
-                f"   ```\n"
-                f"2. Query the SPF TXT record at `{vuln.target_domain}`:\n"
-                f"   ```bash\n"
-                f"   dig {vuln.target_domain} TXT +short\n"
-                f"   ```\n"
-                f"3. Observe evidence: `{vuln.evidence}`"
-            )
+        formatter = H1_DISPATCH_TABLE.get(vuln.flaw_type, _format_h1_generic)
+        title, impact_desc, poc_steps = formatter(vuln)
 
         if vuln.bounty_viability == "INFORMATIONAL_LOW":
-            advisory_box = (
-                "\n> [!NOTE] **HackerOne Triage Advisory**\n"
-                "> This target does not publish active Mail Exchange (MX) records. While missing DMARC on an apex brand domain "
-                "permits unauthorized outbound sender header spoofing to external inboxes, most HackerOne programs require "
-                "demonstrating active inbound mail routing or inbox impact on corporate employees before awarding cash bounties.\n"
-            )
+            if vuln.flaw_type == "mail_spoofing":
+                advisory_box = (
+                    "\n> [!NOTE] **HackerOne Triage Advisory**\n"
+                    "> This target does not publish active Mail Exchange (MX) records. While missing DMARC on an apex brand domain "
+                    "permits unauthorized outbound sender header spoofing to external inboxes, most HackerOne programs require "
+                    "demonstrating active inbound mail routing or inbox impact on corporate employees before awarding cash bounties.\n"
+                )
+            elif "cors" in vuln.flaw_type:
+                advisory_box = (
+                    "\n> [!NOTE] **HackerOne Triage Advisory**\n"
+                    "> Permissive or wildcard CORS on public endpoints without credentials or sensitive data exposure is commonly "
+                    "categorized as informational by bug bounty programs unless authenticated user data can be extracted cross-origin.\n"
+                )
+            else:
+                advisory_box = (
+                    "\n> [!NOTE] **HackerOne Triage Advisory**\n"
+                    f"> Finding viability is classified as {vuln.bounty_viability}. Please review program policy guidelines regarding eligible impact.\n"
+                )
         elif vuln.bounty_viability == "HIGH_CONFIDENCE":
-            advisory_box = (
-                "\n> [!TIP] **High-Value P1/P2 Bounty Finding**\n"
-                "> Unclaimed SaaS / cloud resource takeover verified via empirical DNS and HTTP response fingerprint. "
-                "Full origin domain control achievable by adversary.\n"
-            )
+            if vuln.flaw_type == "subdomain_takeover":
+                advisory_box = (
+                    "\n> [!TIP] **High-Value P1/P2 Bounty Finding**\n"
+                    "> Unclaimed SaaS / cloud resource takeover verified via empirical DNS and HTTP response fingerprint. "
+                    "Full origin domain control achievable by adversary.\n"
+                )
+            else:
+                advisory_box = (
+                    "\n> [!TIP] **High-Value Bounty Finding**\n"
+                    f"> High-confidence security finding verified on target infrastructure with direct impact on origin integrity or confidentiality.\n"
+                )
         else:
             advisory_box = ""
+
+        provider_display = vuln.provider or (
+            "Email / DNS Infrastructure"
+            if vuln.flaw_type == "mail_spoofing"
+            else ("DNS Infrastructure" if vuln.flaw_type == "subdomain_takeover" else "Target Infrastructure")
+        )
 
         report_md = f"""# {title}
 
@@ -1446,7 +2072,7 @@ class HackerOneDisclosureGenerator:
 During an external attack surface and DNS perimeter hygiene assessment under the **{prog_name}** Responsible Disclosure Program, Orbit Security identified a security weakness on `{vuln.target_domain}`.
 
 - **Vulnerability Category:** `{vuln.flaw_type.replace('_', ' ').title()}`
-- **Affected Provider/Service:** `{vuln.provider or 'DNS / Mail Infrastructure'}`
+- **Affected Provider/Service:** `{provider_display}`
 - **Observed Evidence:** {vuln.evidence}
 
 ---
@@ -1476,8 +2102,14 @@ This vulnerability report is submitted in good faith adherence to the **{prog_na
         vuln: BountyVulnerability,
         program: Optional[BountyProgram] = None,
         output_dir: Optional[Path] = None,
-    ) -> Path:
+    ) -> Optional[Path]:
         """Persists the disclosure report to disk as Markdown."""
+        if program and not is_vulnerability_in_scope(program, vuln.flaw_type, vuln.bounty_viability):
+            logger.info(
+                f"Skipping disclosure saving: '{vuln.flaw_type}' is out of scope for {program.name}"
+            )
+            return None
+
         out_path = Path(output_dir or DEFAULT_DISCLOSURES_DIR)
         out_path.mkdir(parents=True, exist_ok=True)
 
@@ -1504,39 +2136,8 @@ class ResponsibleDisclosureDrafter:
         prog_name = program.name if program else vuln.program_name
         target = vuln.target_domain
 
-        if vuln.flaw_type == "subdomain_takeover":
-            v_type = "Server Security Misconfiguration > Subdomain Takeover"
-            title = f"Subdomain Takeover on {target} ({vuln.provider or 'SaaS'})"
-            desc = (
-                f"The domain `{target}` delegates to an unclaimed `{vuln.provider}` resource at `{vuln.cname_target}`. "
-                "Because the remote resource is unallocated, an external adversary can claim the tenant and take full control "
-                f"of `{target}`."
-            )
-            poc = (
-                f"1. Query CNAME record: `dig {target} CNAME +short` -> `{vuln.cname_target}`\n"
-                f"2. Query HTTP response: `curl -i -s https://{target}`\n"
-                f"3. Fingerprint: `{vuln.evidence}`"
-            )
-            impact = (
-                f"Complete control of subdomain `{target}`. An attacker can serve arbitrary content, intercept session cookies "
-                "scoped to parent domains, or bypass CORS policies."
-            )
-        else:
-            v_type = "Email Security Misconfiguration > Missing DMARC Policy"
-            title = f"Missing DMARC Protection Enables Email Spoofing on {target}"
-            desc = (
-                f"The domain `{target}` lacks an active DMARC rejection policy (`p=reject`), allowing unauthorized external parties "
-                f"to send spoofed emails claiming to be from `{target}`."
-            )
-            poc = (
-                f"1. Inspect DMARC: `dig _dmarc.{target} TXT +short`\n"
-                f"2. Inspect SPF: `dig {target} TXT +short`\n"
-                f"3. Observed evidence: `{vuln.evidence}`"
-            )
-            impact = (
-                f"Adversaries can craft targeted phishing and invoice fraud emails with spoofed `{target}` sender addresses "
-                "that bypass SPF validation."
-            )
+        formatter = BUGCROWD_DISPATCH_TABLE.get(vuln.flaw_type, _format_bc_generic)
+        v_type, title, desc, poc, impact = formatter(vuln, target)
 
         return f"""# Bugcrowd Vulnerability Report: {title}
 
@@ -1577,6 +2178,7 @@ Submitted via Orbit Security Automated Perimeter Sentinel. Research strictly adh
         prog_name = program.name if program else vuln.program_name
         target = vuln.target_domain
         apex = BountyTakeoverSweeper.get_organizational_domain(target)
+        impact_summary = _format_email_impact(vuln)
 
         return f"""Subject: [SECURITY ADVISORY] Responsible Disclosure: {vuln.flaw_type.replace('_', ' ').title()} on {target}
 To: security@{apex}, security-team@{apex}
@@ -1603,7 +2205,7 @@ OBSERVED TECHNICAL EVIDENCE:
 
 IMPACT:
 -------
-Unclaimed perimeter resources or missing email authentication policies can be abused by external adversaries to impersonate official brand infrastructure.
+{impact_summary}
 
 REMEDIATION RECOMMENDATIONS:
 ----------------------------
@@ -1624,6 +2226,12 @@ Orbit Security Coordinated Disclosure Team
         output_dir: Optional[Path] = None,
     ) -> Dict[str, Path]:
         """Saves disclosure reports across all 3 formats (HackerOne, Bugcrowd, security.txt email)."""
+        if program and not is_vulnerability_in_scope(program, vuln.flaw_type, vuln.bounty_viability):
+            logger.info(
+                f"Skipping bundle generation: '{vuln.flaw_type}' is out of scope for {program.name}"
+            )
+            return {}
+
         out_path = Path(output_dir or DEFAULT_DISCLOSURES_DIR)
         out_path.mkdir(parents=True, exist_ok=True)
         clean_domain = re.sub(r"[^a-zA-Z0-9_-]", "_", vuln.target_domain)
@@ -1646,6 +2254,12 @@ Orbit Security Coordinated Disclosure Team
         output_dir: Optional[Path] = None,
     ) -> Dict[str, Any]:
         """Packages reports, raw technical evidence, and a SHA-256 integrity manifest into a zip archive."""
+        if program and not is_vulnerability_in_scope(program, vuln.flaw_type, vuln.bounty_viability):
+            logger.info(
+                f"Skipping crypto bundle generation: '{vuln.flaw_type}' is out of scope for {program.name}"
+            )
+            return {"status": "SKIPPED_OUT_OF_SCOPE", "reason": f"Vulnerability {vuln.flaw_type} is excluded by policy"}
+
         import hashlib
         import zipfile
 
@@ -1911,20 +2525,22 @@ class BountyRadarSupervisor:
             for v in vulns:
                 if save_disclosures:
                     p = HackerOneDisclosureGenerator.save_disclosure(v, prog, output_dir=output_dir)
-                    disclosed_files.append(str(p))
+                    if p is not None:
+                        disclosed_files.append(str(p))
 
                     if package_crypto_bundle:
                         try:
                             bundle_info = ResponsibleDisclosureDrafter.export_cryptographic_bundle(
                                 v, prog, output_dir=output_dir
                             )
-                            crypto_bundles.append({
-                                "target": v.target_domain,
-                                "flaw_type": v.flaw_type,
-                                "zip_path": str(bundle_info["zip_path"]),
-                                "zip_sha256": bundle_info["zip_sha256"],
-                                "total_files": bundle_info["total_files"],
-                            })
+                            if bundle_info and "zip_path" in bundle_info:
+                                crypto_bundles.append({
+                                    "target": v.target_domain,
+                                    "flaw_type": v.flaw_type,
+                                    "zip_path": str(bundle_info["zip_path"]),
+                                    "zip_sha256": bundle_info["zip_sha256"],
+                                    "total_files": bundle_info["total_files"],
+                                })
                         except Exception as bundle_err:
                             logger.warning(f"Failed to export cryptographic bundle for {v.target_domain}: {bundle_err}")
 

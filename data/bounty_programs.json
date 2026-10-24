@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-10-23T07:20:02.091805+00:00",
+  "updated_at": "2026-10-24T00:07:10.546961+00:00",
   "programs": [
     {
       "program_id": "shopify",
@@ -15,10 +15,11 @@
       "out_of_scope": [
         "community.shopify.com"
       ],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 50000,
       "state": "active",
-      "last_scanned": "2026-10-23T07:20:02.079886+00:00",
+      "last_scanned": "2026-10-24T00:07:10.537544+00:00",
       "created_at": "2026-10-02T09:32:47.938770+00:00"
     },
     {
@@ -31,10 +32,11 @@
         "*.about.gitlab.com"
       ],
       "out_of_scope": [],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 35000,
       "state": "active",
-      "last_scanned": "2026-10-22T09:01:48.760885+00:00",
+      "last_scanned": "2026-10-23T09:02:39.543932+00:00",
       "created_at": "2026-10-02T09:32:47.938782+00:00"
     },
     {
@@ -47,10 +49,11 @@
         "*.starbucksreserve.com"
       ],
       "out_of_scope": [],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": "2026-10-22T09:02:10.349942+00:00",
+      "last_scanned": "2026-10-23T09:03:12.624413+00:00",
       "created_at": "2026-10-02T09:32:47.938786+00:00"
     },
     {
@@ -64,10 +67,11 @@
         "*.engadget.com"
       ],
       "out_of_scope": [],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 25000,
       "state": "active",
-      "last_scanned": "2026-10-22T09:03:04.987062+00:00",
+      "last_scanned": "2026-10-23T09:04:02.313622+00:00",
       "created_at": "2026-10-02T09:32:47.938788+00:00"
     },
     {
@@ -81,10 +85,11 @@
         "*.braintreepayments.com"
       ],
       "out_of_scope": [],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 30000,
       "state": "active",
-      "last_scanned": "2026-10-22T09:03:42.673938+00:00",
+      "last_scanned": "2026-10-23T09:04:39.723074+00:00",
       "created_at": "2026-10-03T10:52:00.000000+00:00"
     },
     {
@@ -97,10 +102,11 @@
         "*.ubereats.com"
       ],
       "out_of_scope": [],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 50000,
       "state": "active",
-      "last_scanned": "2026-10-22T09:05:03.839767+00:00",
+      "last_scanned": "2026-10-23T09:05:26.653142+00:00",
       "created_at": "2026-10-03T10:52:00.000000+00:00"
     },
     {
@@ -114,10 +120,11 @@
         "*.githubassets.com"
       ],
       "out_of_scope": [],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 30000,
       "state": "active",
-      "last_scanned": "2026-10-22T09:06:01.730769+00:00",
+      "last_scanned": "2026-10-23T09:06:25.742810+00:00",
       "created_at": "2026-10-03T10:52:00.000000+00:00"
     },
     {
@@ -130,10 +137,11 @@
         "*.unrealengine.com"
       ],
       "out_of_scope": [],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 30000,
       "state": "active",
-      "last_scanned": "2026-10-22T09:06:48.322278+00:00",
+      "last_scanned": "2026-10-23T09:07:04.308546+00:00",
       "created_at": "2026-10-03T10:52:00.000000+00:00"
     },
     {
@@ -146,10 +154,11 @@
         "*.pro.coinbase.com"
       ],
       "out_of_scope": [],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 50000,
       "state": "active",
-      "last_scanned": "2026-10-22T09:07:21.572259+00:00",
+      "last_scanned": "2026-10-23T09:07:33.611163+00:00",
       "created_at": "2026-10-03T10:52:00.000000+00:00"
     },
     {
@@ -163,10 +172,11 @@
         "*.valvesoftware.com"
       ],
       "out_of_scope": [],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 20000,
       "state": "active",
-      "last_scanned": "2026-10-22T09:08:20.199449+00:00",
+      "last_scanned": "2026-10-23T09:08:36.611999+00:00",
       "created_at": "2026-10-03T10:52:00.000000+00:00"
     },
     {
@@ -178,10 +188,11 @@
         "*.hyatt.com"
       ],
       "out_of_scope": [],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 15000,
       "state": "active",
-      "last_scanned": "2026-10-22T09:08:33.147204+00:00",
+      "last_scanned": "2026-10-23T09:08:52.974263+00:00",
       "created_at": "2026-10-02T09:32:47.938791+00:00"
     },
     {
@@ -197,10 +208,11 @@
         "*.defense.gov"
       ],
       "out_of_scope": [],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "points",
       "max_bounty": 0,
       "state": "active",
-      "last_scanned": "2026-10-22T09:11:40.810486+00:00",
+      "last_scanned": "2026-10-23T09:14:32.893795+00:00",
       "created_at": "2026-10-03T11:00:00.000000+00:00"
     },
     {
@@ -215,10 +227,11 @@
         "*.tumblr.com"
       ],
       "out_of_scope": [],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 25000,
       "state": "active",
-      "last_scanned": "2026-10-22T09:15:16.447451+00:00",
+      "last_scanned": "2026-10-23T09:18:32.945277+00:00",
       "created_at": "2026-10-03T11:00:00.000000+00:00"
     },
     {
@@ -232,10 +245,11 @@
         "*.2k.com"
       ],
       "out_of_scope": [],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 20000,
       "state": "active",
-      "last_scanned": "2026-10-22T09:16:04.183389+00:00",
+      "last_scanned": "2026-10-23T09:19:43.774568+00:00",
       "created_at": "2026-10-03T11:00:00.000000+00:00"
     },
     {
@@ -249,10 +263,11 @@
         "*.slack-core.com"
       ],
       "out_of_scope": [],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 15000,
       "state": "active",
-      "last_scanned": "2026-10-22T09:17:15.881756+00:00",
+      "last_scanned": "2026-10-23T09:20:43.326196+00:00",
       "created_at": "2026-10-03T11:00:00.000000+00:00"
     },
     {
@@ -306,10 +321,11 @@
         "*.zmifi.com"
       ],
       "out_of_scope": [],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": "2026-10-22T09:40:39.509221+00:00",
+      "last_scanned": "2026-10-23T09:49:12.858481+00:00",
       "created_at": "2026-10-03T11:56:14.045652+00:00"
     },
     {
@@ -396,10 +412,11 @@
         "technology.skybettingandgaming.com",
         "www.betfair.com.co"
       ],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": "2026-10-22T09:49:45.409060+00:00",
+      "last_scanned": "2026-10-23T10:08:34.039868+00:00",
       "created_at": "2026-10-03T11:56:14.045828+00:00"
     },
     {
@@ -455,10 +472,11 @@
         "sendgrid.elastic.co",
         "track.email.elastic.co"
       ],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": "2026-10-22T09:56:08.091799+00:00",
+      "last_scanned": "2026-10-23T10:17:08.047898+00:00",
       "created_at": "2026-10-03T11:56:14.045946+00:00"
     },
     {
@@ -522,10 +540,11 @@
         "www.wotif.com"
       ],
       "out_of_scope": [],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": "2026-10-22T10:06:52.374339+00:00",
+      "last_scanned": "2026-10-23T10:27:39.320089+00:00",
       "created_at": "2026-10-03T11:56:14.046062+00:00"
     },
     {
@@ -567,10 +586,11 @@
         "amazongames.com",
         "learning.logistics.amazon.com"
       ],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": "2026-10-22T10:17:35.616868+00:00",
+      "last_scanned": "2026-10-23T10:41:41.356761+00:00",
       "created_at": "2026-10-03T11:56:14.046145+00:00"
     },
     {
@@ -647,10 +667,11 @@
         "*.kangu.tech",
         "wow-int.mercadolibre.com"
       ],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": "2026-10-22T10:29:09.848201+00:00",
+      "last_scanned": "2026-10-23T10:50:18.378862+00:00",
       "created_at": "2026-10-03T11:56:14.046290+00:00"
     },
     {
@@ -701,10 +722,11 @@
         "test-gw.epic.superbet.ro",
         "test.epic.superbet.ro"
       ],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": "2026-10-22T10:43:18.319890+00:00",
+      "last_scanned": "2026-10-23T10:57:16.419250+00:00",
       "created_at": "2026-10-03T11:56:14.046375+00:00"
     },
     {
@@ -730,10 +752,11 @@
         "gnocchi-www.buffalo-ggn.net"
       ],
       "out_of_scope": [],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": "2026-10-22T10:47:34.476928+00:00",
+      "last_scanned": "2026-10-23T11:04:55.427465+00:00",
       "created_at": "2026-10-03T11:56:14.046412+00:00"
     },
     {
@@ -778,10 +801,11 @@
         "success.zomato.com",
         "www.zomatobook.com"
       ],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": "2026-10-22T10:51:02.775719+00:00",
+      "last_scanned": "2026-10-23T11:14:26.682571+00:00",
       "created_at": "2026-10-03T11:56:14.046484+00:00"
     },
     {
@@ -808,10 +832,11 @@
         "*.playground.travix.com",
         "*.stg.travix.com"
       ],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": "2026-10-22T10:55:37.051246+00:00",
+      "last_scanned": "2026-10-23T11:20:36.100796+00:00",
       "created_at": "2026-10-03T11:56:14.046519+00:00"
     },
     {
@@ -837,10 +862,11 @@
         "salesforce.khealth.com",
         "www.kpharmacyllc.com"
       ],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": "2026-10-22T10:57:33.822909+00:00",
+      "last_scanned": "2026-10-23T11:23:25.010392+00:00",
       "created_at": "2026-10-03T11:56:14.046552+00:00"
     },
     {
@@ -869,10 +895,11 @@
         "everynoise.com",
         "example.com"
       ],
+      "excluded_vulnerabilities": [],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
-      "last_scanned": "2026-10-22T10:59:13.073471+00:00",
+      "last_scanned": "2026-10-23T11:27:18.115426+00:00",
       "created_at": "2026-10-03T11:56:14.046600+00:00"
     }
   ]

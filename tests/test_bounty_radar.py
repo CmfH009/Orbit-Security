@@ -30,6 +30,7 @@ from orbit_security.bounty_radar import (
     HackerOneDisclosureGenerator,
     OffPeakWindow,
     ResponsibleDisclosureDrafter,
+    is_vulnerability_in_scope,
 )
 from orbit_security.models import Severity
 
@@ -753,5 +754,414 @@ class TestCVSSv31CalculatorAndDisclosureDrafter:
         assert "oidc_insecure_signing_alg" in flaw_types
         assert "dependency_confusion_namespace_takeover" in flaw_types
         assert all(v.severity in (Severity.CRITICAL, Severity.HIGH) for v in vulns)
+
+
+class TestMultiVectorDisclosureDispatch:
+    """Tests verifying that all 8 vulnerability categories dispatch to specialized report templates,
+    correct PoCs, and never leak DMARC / email spoofing content into non-mail reports.
+    """
+
+    FORBIDDEN_MAIL_STRINGS = [
+        "dig _dmarc",
+        "dig {target} TXT +short",
+        "_dmarc.",
+        "Missing DMARC",
+        "p=reject",
+        "CEO fraud",
+        "invoice fraud",
+        "Email Spoofing",
+        "email spoofing",
+        "Mail Exchange (MX) records",
+    ]
+
+    def test_cors_wildcard_origin_h1_and_bugcrowd(self):
+        vuln = BountyVulnerability(
+            program_id="amazonvrp",
+            program_name="Amazon VRP",
+            platform="hackerone",
+            target_domain="api.amazon.ae",
+            flaw_type="cors_wildcard_origin",
+            provider="API Gateway CORS",
+            severity=Severity.LOW,
+            cvss_score=3.7,
+            evidence="Access-Control-Allow-Origin: *",
+            cwe_id="CWE-942: Permissive Cross-domain Policy with Untrusted Domains",
+            remediation="Validate Origin header against whitelist.",
+            bounty_viability="INFORMATIONAL_LOW",
+        )
+
+        h1 = HackerOneDisclosureGenerator.generate_h1_report(vuln)
+        assert "# [CORS Misconfiguration]" in h1
+        assert "Permissive Wildcard Access-Control-Allow-Origin" in h1
+        assert "Origin: https://evil.com" in h1
+        assert "Access-Control-Allow-Origin" in h1
+        for forbidden in self.FORBIDDEN_MAIL_STRINGS:
+            assert forbidden not in h1, f"Found forbidden mail string '{forbidden}' in CORS H1 report"
+
+        bc = ResponsibleDisclosureDrafter.generate_bugcrowd_report(vuln)
+        assert "Application Security Misconfiguration > Cross-Origin Resource Sharing (CORS)" in bc
+        assert "CORS Policy Misconfiguration on api.amazon.ae" in bc
+        for forbidden in self.FORBIDDEN_MAIL_STRINGS:
+            assert forbidden not in bc, f"Found forbidden mail string '{forbidden}' in CORS Bugcrowd report"
+
+        email = ResponsibleDisclosureDrafter.generate_security_txt_email(vuln)
+        assert "Cross-Origin Resource Sharing" in email
+        assert "email authentication policies" not in email
+
+    def test_cors_credentials_reflection(self):
+        vuln = BountyVulnerability(
+            program_id="shopify",
+            program_name="Shopify",
+            platform="hackerone",
+            target_domain="admin.shopify.com",
+            flaw_type="cors_arbitrary_origin_with_credentials",
+            provider="API Gateway CORS",
+            severity=Severity.HIGH,
+            cvss_score=8.1,
+            evidence="Access-Control-Allow-Origin: https://evil.com; Access-Control-Allow-Credentials: true",
+        )
+        h1 = HackerOneDisclosureGenerator.generate_h1_report(vuln)
+        assert "# [CORS Misconfiguration] Arbitrary Origin Reflection with Credentials" in h1
+        for forbidden in self.FORBIDDEN_MAIL_STRINGS:
+            assert forbidden not in h1
+
+    def test_graphql_introspection(self):
+        vuln = BountyVulnerability(
+            program_id="gitlab",
+            program_name="GitLab",
+            platform="hackerone",
+            target_domain="gitlab.com",
+            flaw_type="graphql_introspection",
+            provider="GraphQL",
+            severity=Severity.MEDIUM,
+            cvss_score=5.3,
+            evidence="GraphQL endpoint returned full __schema JSON",
+            cwe_id="CWE-200: Exposure of Sensitive Information to an Unauthorized Actor",
+            remediation="Disable schema introspection in production.",
+        )
+
+        h1 = HackerOneDisclosureGenerator.generate_h1_report(vuln)
+        assert "# [Information Disclosure] Public GraphQL Schema Introspection on gitlab.com" in h1
+        assert "__schema" in h1
+        assert "POST https://gitlab.com/graphql" in h1
+        for forbidden in self.FORBIDDEN_MAIL_STRINGS:
+            assert forbidden not in h1
+
+        bc = ResponsibleDisclosureDrafter.generate_bugcrowd_report(vuln)
+        assert "Information Disclosure > Exposed GraphQL Schema Introspection" in bc
+        assert "Exposed GraphQL Schema Introspection on gitlab.com" in bc
+        for forbidden in self.FORBIDDEN_MAIL_STRINGS:
+            assert forbidden not in bc
+
+        email = ResponsibleDisclosureDrafter.generate_security_txt_email(vuln)
+        assert "GraphQL schema introspection" in email
+        assert "email authentication policies" not in email
+
+    def test_cloud_storage_takeover_and_open_bucket(self):
+        vuln_takeover = BountyVulnerability(
+            program_id="starbucks",
+            program_name="Starbucks",
+            platform="hackerone",
+            target_domain="static.starbucks.com",
+            cname_target="starbucks-static.s3.amazonaws.com",
+            flaw_type="cloud_storage_takeover",
+            provider="AWS S3",
+            severity=Severity.HIGH,
+            cvss_score=8.6,
+            evidence="NoSuchBucket error",
+        )
+        h1_takeover = HackerOneDisclosureGenerator.generate_h1_report(vuln_takeover)
+        assert "# [Cloud Storage Takeover] Unclaimed Storage Bucket on static.starbucks.com" in h1_takeover
+        assert "dig static.starbucks.com CNAME +short" in h1_takeover
+        for forbidden in self.FORBIDDEN_MAIL_STRINGS:
+            assert forbidden not in h1_takeover
+
+        bc_takeover = ResponsibleDisclosureDrafter.generate_bugcrowd_report(vuln_takeover)
+        assert "Server Security Misconfiguration > Unclaimed Cloud Storage Bucket" in bc_takeover
+
+        vuln_open = BountyVulnerability(
+            program_id="starbucks",
+            program_name="Starbucks",
+            platform="hackerone",
+            target_domain="backups.starbucks.com",
+            flaw_type="open_cloud_bucket",
+            provider="AWS S3",
+            severity=Severity.HIGH,
+            cvss_score=7.5,
+            evidence="<ListBucketResult> public XML index",
+        )
+        h1_open = HackerOneDisclosureGenerator.generate_h1_report(vuln_open)
+        assert "# [Cloud Storage] Open Public Bucket Directory Listing on backups.starbucks.com" in h1_open
+        assert "<ListBucketResult>" in h1_open
+        for forbidden in self.FORBIDDEN_MAIL_STRINGS:
+            assert forbidden not in h1_open
+
+        bc_open = ResponsibleDisclosureDrafter.generate_bugcrowd_report(vuln_open)
+        assert "Information Disclosure > Public Cloud Storage Listing" in bc_open
+
+    def test_http_request_smuggling(self):
+        vuln = BountyVulnerability(
+            program_id="yahoo",
+            program_name="Yahoo",
+            platform="hackerone",
+            target_domain="mail.yahoo.com",
+            flaw_type="http_request_smuggling_cl_te",
+            provider="HTTP Reverse Proxy",
+            severity=Severity.CRITICAL,
+            cvss_score=9.1,
+            evidence="Frontend CL / Backend TE desync (HTTP 504 timeout on ambiguous chunk)",
+            cwe_id="CWE-444: Inconsistent Interpretation of HTTP Requests",
+        )
+
+        h1 = HackerOneDisclosureGenerator.generate_h1_report(vuln)
+        assert "# [HTTP Request Smuggling] Frontend CL / Backend TE Desynchronization on mail.yahoo.com" in h1
+        assert "Transfer-Encoding: chunked" in h1
+        assert "Content-Length: 4" in h1
+        for forbidden in self.FORBIDDEN_MAIL_STRINGS:
+            assert forbidden not in h1
+
+        bc = ResponsibleDisclosureDrafter.generate_bugcrowd_report(vuln)
+        assert "Server Security Misconfiguration > HTTP Request Smuggling" in bc
+        for forbidden in self.FORBIDDEN_MAIL_STRINGS:
+            assert forbidden not in bc
+
+    def test_oauth_and_oidc_flaws(self):
+        vuln_oauth = BountyVulnerability(
+            program_id="oauth_corp",
+            program_name="OAuth Corp",
+            platform="hackerone",
+            target_domain="auth.oauthcorp.com",
+            flaw_type="oauth_redirect_uri_hijack",
+            provider="OAuth Provider",
+            severity=Severity.HIGH,
+            cvss_score=8.1,
+            evidence="redirect_uri=https://auth.oauthcorp.com.evil.com accepted without error",
+            cwe_id="CWE-601: URL Redirection to Untrusted Site",
+        )
+        h1_oauth = HackerOneDisclosureGenerator.generate_h1_report(vuln_oauth)
+        assert "[OAuth 2.0] Authorization Code / Token Theft via Redirect URI Hijack on auth.oauthcorp.com" in h1_oauth
+        assert "oauth/authorize" in h1_oauth
+        for forbidden in self.FORBIDDEN_MAIL_STRINGS:
+            assert forbidden not in h1_oauth
+
+        vuln_oidc = BountyVulnerability(
+            program_id="oauth_corp",
+            program_name="OAuth Corp",
+            platform="hackerone",
+            target_domain="auth.oauthcorp.com",
+            flaw_type="oidc_insecure_signing_alg",
+            provider="OIDC Provider",
+            severity=Severity.HIGH,
+            cvss_score=8.1,
+            evidence="id_token_signing_alg_values_supported contains 'none'",
+        )
+        h1_oidc = HackerOneDisclosureGenerator.generate_h1_report(vuln_oidc)
+        assert "[OIDC] Insecure JWT Token Signing Algorithm (alg: none) Supported on auth.oauthcorp.com" in h1_oidc
+        assert ".well-known/openid-configuration" in h1_oidc
+        for forbidden in self.FORBIDDEN_MAIL_STRINGS:
+            assert forbidden not in h1_oidc
+
+    def test_dependency_confusion(self):
+        vuln = BountyVulnerability(
+            program_id="fintech",
+            program_name="Fintech",
+            platform="hackerone",
+            target_domain="fintech.com",
+            flaw_type="dependency_confusion_namespace_takeover",
+            provider="npm Registry",
+            severity=Severity.CRITICAL,
+            cvss_score=9.8,
+            evidence="Internal package @fintech/internal-payments returned HTTP 404 on npm registry",
+            cwe_id="CWE-427: Uncontrolled Search Path Element",
+        )
+
+        h1 = HackerOneDisclosureGenerator.generate_h1_report(vuln)
+        assert "[Supply Chain] Unclaimed Internal Package Namespace on Public Registry (fintech.com)" in h1
+        assert "registry.npmjs.org" in h1
+        for forbidden in self.FORBIDDEN_MAIL_STRINGS:
+            assert forbidden not in h1
+
+        bc = ResponsibleDisclosureDrafter.generate_bugcrowd_report(vuln)
+        assert "Supply Chain Security > Internal Package Namespace Takeover" in bc
+        for forbidden in self.FORBIDDEN_MAIL_STRINGS:
+            assert forbidden not in bc
+
+    def test_mail_spoofing_outputs_dmarc(self):
+        vuln = BountyVulnerability(
+            program_id="apex_inc",
+            program_name="Apex Inc",
+            platform="hackerone",
+            target_domain="apexinc.com",
+            flaw_type="mail_spoofing",
+            provider=None,
+            severity=Severity.HIGH,
+            cvss_score=7.5,
+            evidence="Domain 'apexinc.com' has NO DMARC record published at _dmarc.apexinc.com",
+            bounty_viability="INFORMATIONAL_LOW",
+        )
+
+        h1 = HackerOneDisclosureGenerator.generate_h1_report(vuln)
+        assert "[Email Spoofing] Missing DMARC Enforcement Enables Inbound Spoofing on apexinc.com" in h1
+        assert "dig _dmarc.apexinc.com TXT +short" in h1
+        assert "dig apexinc.com TXT +short" in h1
+        assert "p=reject" in h1
+        assert "CEO fraud" in h1
+        assert "Mail Exchange (MX) records" in h1
+
+        bc = ResponsibleDisclosureDrafter.generate_bugcrowd_report(vuln)
+        assert "Email Security Misconfiguration > Missing DMARC Policy" in bc
+        assert "dig _dmarc.apexinc.com TXT +short" in bc
+
+        email = ResponsibleDisclosureDrafter.generate_security_txt_email(vuln)
+        assert "email authentication policies" in email
+
+    def test_generic_fallback_for_unknown_flaw_type(self):
+        vuln = BountyVulnerability(
+            program_id="custom_prog",
+            program_name="Custom Program",
+            platform="hackerone",
+            target_domain="app.custom.com",
+            flaw_type="custom_memory_corruption_leak",
+            provider="Custom Service",
+            severity=Severity.MEDIUM,
+            cvss_score=5.0,
+            evidence="Observed anomalous response header leaking memory pointer 0x7ffd9a",
+        )
+
+        h1 = HackerOneDisclosureGenerator.generate_h1_report(vuln)
+        assert "[Custom Memory Corruption Leak] Security Misconfiguration Identified on app.custom.com" in h1
+        assert "curl -i -s https://app.custom.com/" in h1
+        assert "0x7ffd9a" in h1
+        for forbidden in self.FORBIDDEN_MAIL_STRINGS:
+            assert forbidden not in h1, f"Fallback must not contain '{forbidden}'"
+
+        bc = ResponsibleDisclosureDrafter.generate_bugcrowd_report(vuln)
+        assert "Server Security Misconfiguration > General" in bc
+        assert "Security Vulnerability (Custom Memory Corruption Leak) on app.custom.com" in bc
+        for forbidden in self.FORBIDDEN_MAIL_STRINGS:
+            assert forbidden not in bc
+
+
+class TestBountyProgramScopeFiltering:
+    """Tests verifying program policy scope filtering (excluded_vulnerabilities)."""
+
+    def test_is_vulnerability_in_scope_helper(self):
+        prog = BountyProgram(
+            program_id="amazonvrp",
+            name="Amazon VRP",
+            platform="hackerone",
+            in_scope=["*.amazon.com", "*.amazon.ae"],
+            excluded_vulnerabilities=["mail_spoofing", "dmarc", "cors_wildcard_origin", "unauthenticated_cors"],
+        )
+
+        # Excluded
+        assert prog.is_vulnerability_in_scope("mail_spoofing") is False
+        assert prog.is_vulnerability_in_scope("dmarc") is False
+        assert prog.is_vulnerability_in_scope("cors_wildcard_origin") is False
+        assert prog.is_vulnerability_in_scope("cors_wildcard") is False
+        assert is_vulnerability_in_scope(prog, "mail_spoofing") is False
+
+        # Permitted / in-scope
+        assert prog.is_vulnerability_in_scope("subdomain_takeover") is True
+        assert prog.is_vulnerability_in_scope("graphql_introspection") is True
+        assert prog.is_vulnerability_in_scope("cloud_storage_takeover") is True
+        assert prog.is_vulnerability_in_scope("http_request_smuggling_cl_te") is True
+        assert prog.is_vulnerability_in_scope("dependency_confusion_namespace_takeover") is True
+
+    def test_sweep_program_skips_excluded_vulnerabilities(self):
+        sweeper = BountyTakeoverSweeper()
+        prog = BountyProgram(
+            program_id="filtered_prog",
+            name="Filtered Program",
+            platform="hackerone",
+            in_scope=["api.filtered.com"],
+            excluded_vulnerabilities=["mail_spoofing", "dmarc", "cors_wildcard_origin"],
+        )
+
+        mock_cors = {
+            "api.filtered.com": {
+                "origin_reflected": "*",
+                "credentials": "false",
+                "vulnerable": True,
+                "flaw_type": "cors_wildcard_origin",
+                "bounty_viability": "INFORMATIONAL_LOW",
+                "evidence": "Access-Control-Allow-Origin: *",
+            }
+        }
+        mock_spfs = {"api.filtered.com": "v=spf1 ~all"}
+        mock_dmarcs = {"api.filtered.com": ""}
+
+        vulns = sweeper.sweep_program(
+            prog,
+            audit_cors=True,
+            mock_cors_responses=mock_cors,
+            mock_spfs=mock_spfs,
+            mock_dmarcs=mock_dmarcs,
+        )
+
+        flaw_types = {v.flaw_type for v in vulns}
+        assert "mail_spoofing" not in flaw_types, "mail_spoofing must be skipped when excluded by program policy"
+        assert "cors_wildcard_origin" not in flaw_types, "cors_wildcard_origin must be skipped when excluded by program policy"
+        assert len(vulns) == 0
+
+    def test_save_disclosure_skips_excluded_vulnerability(self, tmp_path):
+        prog = BountyProgram(
+            program_id="amazonvrp",
+            name="Amazon VRP",
+            platform="hackerone",
+            in_scope=["*.amazon.ae"],
+            excluded_vulnerabilities=["cors_wildcard_origin", "mail_spoofing"],
+        )
+
+        vuln_excluded = BountyVulnerability(
+            program_id="amazonvrp",
+            program_name="Amazon VRP",
+            platform="hackerone",
+            target_domain="amazon.ae",
+            flaw_type="cors_wildcard_origin",
+            evidence="Access-Control-Allow-Origin: *",
+        )
+
+        result_path = HackerOneDisclosureGenerator.save_disclosure(vuln_excluded, program=prog, output_dir=tmp_path)
+        assert result_path is None, "save_disclosure must return None and not write file when flaw is excluded"
+        assert len(list(tmp_path.iterdir())) == 0
+
+        # When program is None or flaw is in-scope, file should be written
+        vuln_allowed = BountyVulnerability(
+            program_id="amazonvrp",
+            program_name="Amazon VRP",
+            platform="hackerone",
+            target_domain="sub.amazon.ae",
+            flaw_type="subdomain_takeover",
+            cname_target="unclaimed.s3.amazonaws.com",
+            evidence="NoSuchBucket",
+        )
+        saved_path = HackerOneDisclosureGenerator.save_disclosure(vuln_allowed, program=prog, output_dir=tmp_path)
+        assert saved_path is not None and saved_path.exists()
+
+    def test_save_bundle_and_crypto_bundle_skip_excluded_vulnerability(self, tmp_path):
+        prog = BountyProgram(
+            program_id="shopify",
+            name="Shopify",
+            platform="hackerone",
+            in_scope=["*.shopify.com"],
+            excluded_vulnerabilities=["mail_spoofing", "missing_dmarc"],
+        )
+
+        vuln_mail = BountyVulnerability(
+            program_id="shopify",
+            program_name="Shopify",
+            platform="hackerone",
+            target_domain="shopify.com",
+            flaw_type="mail_spoofing",
+            evidence="No DMARC record",
+        )
+
+        bundle = ResponsibleDisclosureDrafter.save_bundle(vuln_mail, program=prog, output_dir=tmp_path)
+        assert bundle == {}, "save_bundle must return empty dict when flaw is excluded"
+
+        crypto = ResponsibleDisclosureDrafter.export_cryptographic_bundle(vuln_mail, program=prog, output_dir=tmp_path)
+        assert crypto.get("status") == "SKIPPED_OUT_OF_SCOPE"
+        assert "excluded" in crypto.get("reason", "")
 
 

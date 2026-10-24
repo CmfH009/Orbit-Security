@@ -1051,7 +1051,8 @@
                 });
 
                 const safeDomain = String(domain || '').replace(/[^\x20-\x7E]/g, '');
-                const safeClient = String(client || '').replace(/[^\x20-\x7E]/g, '');
+                const rawClient = String(client || '').trim().replace(/[^\x20-\x7E]/g, '');
+                const safeClient = (rawClient && rawClient !== safeDomain) ? rawClient : 'Orbit Security Certified Client';
 
                 page.drawText(`Target Perimeter: ${safeDomain}`, {
                     x: 60, y: 690, size: 16, font: fontBold, color: rgb(1, 1, 1)
@@ -1113,7 +1114,7 @@
             const submitBtn = e.target.querySelector("button[type='submit']");
 
             const domain = input.value.trim().toLowerCase().replace(/[^a-z0-9.-]/g, '').split('/')[0];
-            const client = nameInput.value.trim() || domain;
+            const client = nameInput.value.trim() || "Orbit Security Certified Client";
 
             if (!domain) return;
 

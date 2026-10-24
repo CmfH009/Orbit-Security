@@ -749,6 +749,26 @@
                         </button>
                     </form>
 
+                    <!-- Agency Branding for Real Scan PDF (Radar Terminal) -->
+                    <div class="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <span class="text-xs font-mono text-slate-400 self-center hidden sm:inline">Agency Name:</span>
+                        <input 
+                            type="text" 
+                            id="radarAgencyName" 
+                            placeholder="Your agency name for PDF (e.g. Apex Digital Studio)" 
+                            class="bg-slate-950 border border-slate-700 rounded-lg min-h-[48px] px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-400 w-full sm:w-[280px]"
+                            value=""
+                        />
+                        <button type="button" onclick="copySessionLink()" class="min-h-[48px] px-4 py-2.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-xs text-cyan-300 hover:text-cyan-200 font-mono transition-all pixel-btn flex items-center justify-center gap-1.5 shadow-sm shadow-cyan-500/10 cursor-pointer" title="Copy session URL to share with team for real-time collaboration">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                            <span>Copy Session Link</span>
+                        </button>
+                        <button type="button" onclick="runRealScanAndGeneratePdf()" class="min-h-[48px] px-4 py-2.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-xs text-emerald-300 hover:text-emerald-200 font-mono transition-all pixel-btn flex items-center justify-center gap-1.5 shadow-sm shadow-emerald-500/10 cursor-pointer" title="Run real perimeter scan on the domain above and generate branded PDF with actual findings">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            <span>Generate Real Audit PDF</span>
+                        </button>
+                    </div>
+
                     <!-- Legal Safe-Harbor & CFAA Authorization Notice -->
                     <div class="mt-2.5 flex flex-col xs:flex-row items-start xs:items-center justify-between gap-1 text-[11px] text-slate-400 font-mono">
                         <div class="flex items-center gap-1.5">
@@ -889,19 +909,37 @@
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6 mb-6">
                         <div>
                             <div class="text-xs uppercase tracking-wider text-emerald-400 font-mono font-semibold mb-1">Executive Perimeter Audit</div>
-                            <h3 class="text-xl font-bold text-white">Target Perimeter: <span class="font-mono text-emerald-300">clientbrand.com</span></h3>
+                            <h3 class="text-xl font-bold text-white">Target Perimeter: <span id="targetDomainDisplay" class="font-mono text-emerald-300">clientbrand.com</span></h3>
                             <p class="text-xs text-slate-400 mt-1">
                                 Compiled & certified by <span id="brandNameDisplay" class="text-emerald-400 font-bold">Apex Digital Studio</span> via Orbit Security Sentinel Engine
                             </p>
                         </div>
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-3 flex-wrap">
                             <div id="brandGradeBadge" class="px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm font-bold flex items-center gap-2">
                                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                                Grade: A (94/100)
+                                Grade: A (94/100) <span class="text-[10px] text-amber-400">(Demo)</span>
                             </div>
-                            <button type="button" id="btnExportPdf" onclick="generateInstantPdf()" class="min-h-[48px] px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 cursor-pointer">
+                            <button type="button" id="btnExportPdf" onclick="generateInstantPdf()" class="min-h-[48px] px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 cursor-pointer" title="Generates a DEMO PREVIEW PDF with example data — not a real scan">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                <span>Export Branded PDF</span>
+                                <span>Export Demo PDF Preview</span>
+                            </button>
+                        </div>
+                        
+                        <!-- Real Scan Section -->
+                        <div class="mt-4 pt-4 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                <span class="text-xs font-mono text-slate-400 self-center hidden sm:inline">Real Domain Scan:</span>
+                                <input 
+                                    type="text" 
+                                    id="realScanDomain" 
+                                    placeholder="Enter domain to scan (e.g. example.com)" 
+                                    class="bg-slate-950 border border-slate-700 rounded-lg min-h-[48px] px-3.5 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-emerald-400 w-full sm:w-[280px]"
+                                    value=""
+                                />
+                            </div>
+                            <button type="button" id="btnRealScanPdf" onclick="runRealScanAndGeneratePdf()" class="min-h-[48px] px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-cyan-500/20 cursor-pointer" title="Runs a real perimeter scan via API and generates a branded PDF with actual findings">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                <span>Generate Real Audit PDF</span>
                             </button>
                         </div>
                     </div>
@@ -2880,13 +2918,19 @@ Apex Digital Studio</pre>
          aria-labelledby="flipbookTitle">
         <div class="rounded-2xl w-full relative text-left overflow-hidden flex flex-col max-h-[90dvh]"
              style="max-width: 980px; background: #0b1329; border: 2px solid rgba(16, 185, 129, 0.7); box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.95), 0 0 40px rgba(16, 185, 129, 0.25);">
+            <!-- DEMO Watermark Overlay -->
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none" style="z-index: 10;">
+                <div style="transform: rotate(-15deg); opacity: 0.04; white-space: nowrap;">
+                    <span class="font-pixel text-amber-400 text-4xl font-bold tracking-wider">DEMO PREVIEW &bull; NOT A REAL SCAN &bull; DEMO PREVIEW</span>
+                </div>
+            </div>
             <!-- Modal Header -->
-            <div class="px-5 py-3.5 bg-slate-950 border-b border-emerald-500/30 flex items-center justify-between gap-4" style="display:flex; flex-direction:row; align-items:center; justify-content:space-between;">
+            <div class="px-5 py-3.5 bg-slate-950 border-b border-emerald-500/30 flex items-center justify-between gap-4 relative" style="display:flex; flex-direction:row; align-items:center; justify-content:space-between; z-index: 20;">
                 <div class="flex items-center gap-3" style="flex-shrink:0;">
                     <span class="text-xl">📖</span>
                     <div>
                         <h3 id="flipbookTitle" class="font-pixel text-emerald-400 text-xs sm:text-sm tracking-wide" style="margin:0; white-space:nowrap;">WHITE-LABEL EXECUTIVE AUDIT PREVIEW</h3>
-                        <p class="text-[11px] text-slate-400 font-mono" style="margin:0; white-space:nowrap;">100% Co-Branded Deliverable &bull; Zero Orbit Security Watermarks</p>
+                        <p class="text-[11px] text-amber-400 font-mono" style="margin:0; white-space:nowrap;">&#9888; DEMO MODE &mdash; Example Data Only &bull; Not a Real Audit</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-2" style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
@@ -2904,7 +2948,10 @@ Apex Digital Studio</pre>
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5 mb-6">
                         <div>
                             <div class="text-[10px] font-mono uppercase tracking-widest text-emerald-700 font-bold">MONTHLY PERIMETER SECURITY & HYGIENE AUDIT</div>
-                            <h4 class="text-2xl font-extrabold text-slate-900 mt-1">Prepared for: <span class="text-emerald-600 font-mono">clientbrand.com</span></h4>
+                            <div class="flex items-center gap-2 mt-1">
+                                <h4 class="text-2xl font-extrabold text-slate-900">Prepared for: <span class="text-emerald-600 font-mono">clientbrand.com</span></h4>
+                                <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-700 font-mono text-[10px] font-bold">DEMO DATA</span>
+                            </div>
                             <p class="text-xs text-slate-500 mt-0.5">Audited & Certified by <strong class="flipbook-agency-name text-slate-800">Apex Digital Studio</strong> • Autonomous Care Plan</p>
                         </div>
                         <div class="px-5 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
@@ -2914,20 +2961,23 @@ Apex Digital Studio</pre>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                        <div class="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                        <div class="p-4 rounded-lg bg-slate-50 border border-slate-200 relative">
                             <div class="text-xs font-bold text-slate-700">Subdomain Routing</div>
                             <div class="text-lg font-extrabold text-emerald-600 mt-1">17 / 17 Verified</div>
                             <p class="text-[11px] text-slate-500 mt-1">Zero abandoned CNAMEs or vulnerable cloud buckets detected.</p>
+                            <span class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-mono text-[8px] font-bold">DEMO</span>
                         </div>
-                        <div class="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                        <div class="p-4 rounded-lg bg-slate-50 border border-slate-200 relative">
                             <div class="text-xs font-bold text-slate-700">Email Anti-Spoofing</div>
                             <div class="text-lg font-extrabold text-emerald-600 mt-1">p=reject Active</div>
                             <p class="text-[11px] text-slate-500 mt-1">Strict DMARC & SPF enforcement blocking unauthorized senders.</p>
+                            <span class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-mono text-[8px] font-bold">DEMO</span>
                         </div>
-                        <div class="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                        <div class="p-4 rounded-lg bg-slate-50 border border-slate-200 relative">
                             <div class="text-xs font-bold text-slate-700">SSL & Transport</div>
                             <div class="text-lg font-extrabold text-emerald-600 mt-1">TLS 1.3 + HSTS</div>
                             <p class="text-[11px] text-slate-500 mt-1">Certificate valid for 78 days. Strict transport headers enforced.</p>
+                            <span class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-mono text-[8px] font-bold">DEMO</span>
                         </div>
                     </div>
                     <div class="p-4 rounded-lg bg-emerald-50/70 border border-emerald-200 text-xs text-slate-700 leading-relaxed">
@@ -2940,7 +2990,10 @@ Apex Digital Studio</pre>
                     <div class="flex items-center justify-between border-b border-slate-200 pb-4 mb-5">
                         <div>
                             <div class="text-[10px] font-mono uppercase tracking-widest text-cyan-700 font-bold">SECTION 02 // DNS & SUBDOMAIN TOPOLOGY</div>
-                            <h4 class="text-xl font-extrabold text-slate-900 mt-0.5">External Attack Surface & CNAME Verification</h4>
+                            <div class="flex items-center gap-2 mt-1">
+                                <h4 class="text-xl font-extrabold text-slate-900">External Attack Surface & CNAME Verification</h4>
+                                <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-700 font-mono text-[10px] font-bold">DEMO DATA</span>
+                            </div>
                         </div>
                         <span class="px-3 py-1 rounded bg-slate-100 text-slate-700 font-mono text-xs font-bold">Page 2 of 3</span>
                     </div>
@@ -2959,19 +3012,19 @@ Apex Digital Studio</pre>
                                     <td class="py-3 px-3 font-bold text-slate-900">clientbrand.com</td>
                                     <td class="py-3 px-3 text-slate-600">A &rarr; 104.21.45.12</td>
                                     <td class="py-3 px-3 text-slate-600">Cloudflare Edge</td>
-                                    <td class="py-3 px-3"><span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">PROTECTED</span></td>
+                                    <td class="py-3 px-3"><span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">PROTECTED (DEMO)</span></td>
                                 </tr>
                                 <tr>
                                     <td class="py-3 px-3 font-bold text-slate-900">shop.clientbrand.com</td>
                                     <td class="py-3 px-3 text-slate-600">CNAME &rarr; shops.myshopify.com</td>
                                     <td class="py-3 px-3 text-slate-600">Shopify Plus</td>
-                                    <td class="py-3 px-3"><span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">VERIFIED STORE</span></td>
+                                    <td class="py-3 px-3"><span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">VERIFIED (DEMO)</span></td>
                                 </tr>
                                 <tr class="bg-red-50/70">
                                     <td class="py-3 px-3 font-bold text-red-900">promo.clientbrand.com</td>
                                     <td class="py-3 px-3 text-red-700">CNAME &rarr; unbouncepages.com</td>
                                     <td class="py-3 px-3 text-red-700">Unbounce (Orphaned)</td>
-                                    <td class="py-3 px-3"><span class="px-2 py-0.5 rounded bg-red-200 text-red-900 font-bold">REMEDIATED BY AGENCY</span></td>
+                                    <td class="py-3 px-3"><span class="px-2 py-0.5 rounded bg-red-200 text-red-900 font-bold">REMEDIATED (DEMO)</span></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -3002,11 +3055,21 @@ Apex Digital Studio</pre>
             </div>
 
             <!-- Modal Footer -->
-            <div class="px-5 py-3.5 bg-slate-950 border-t border-slate-800 flex items-center justify-between gap-3" style="display:flex; flex-direction:row; align-items:center; justify-content:space-between;">
-                <span class="text-xs text-slate-400 font-mono">💡 Customize the agency name in the Audit Studio to see it reflected live in this preview!</span>
-                <div class="flex items-center gap-2.5" style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
-                    <a href="sample_audit.pdf" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono font-bold transition-colors" style="white-space:nowrap;">Download Full PDF File</a>
-                    <button type="button" onclick="closePdfFlipbookModal(); generateInstantPdf();" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold uppercase tracking-wide cursor-pointer pixel-btn" style="white-space:nowrap;">Export Custom Branded PDF</button>
+            <div class="px-5 py-3.5 bg-slate-950 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3" style="display:flex; flex-direction:column; align-items:stretch; sm:flex-direction:row; align-items:center; justify-content:space-between;">
+                <span class="text-xs text-amber-400 font-mono">⚠ DEMO PREVIEW — Not a real scan. Example data only.</span>
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2" style="display:flex; align-items:center; gap:10px; flex-shrink:0; width: 100%;">
+                    <a href="sample_audit.pdf" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono font-bold transition-colors text-center" style="white-space:nowrap;">Download Sample PDF</a>
+                    <button type="button" onclick="closePdfFlipbookModal(); generateInstantPdf();" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold uppercase tracking-wide cursor-pointer pixel-btn" style="white-space:nowrap;" title="Generates a DEMO PREVIEW PDF with example data — not a real scan">Export Demo PDF Preview</button>
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <input 
+                            type="text" 
+                            id="flipbookRealScanDomain" 
+                            placeholder="Domain for real scan (e.g. example.com)" 
+                            class="bg-slate-950 border border-slate-700 rounded-lg min-h-[42px] px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-cyan-400 flex-1 min-w-[180px]"
+                            value=""
+                        />
+                        <button type="button" onclick="closePdfFlipbookModal(); runRealScanFromFlipbook();" class="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold uppercase tracking-wide cursor-pointer pixel-btn" style="white-space:nowrap;" title="Runs a real perimeter scan via API and generates a branded PDF with actual findings">Generate Real Audit PDF</button>
+                    </div>
                 </div>
             </div>
         </div>
