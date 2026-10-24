@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 import email
 import json
 from pathlib import Path
+import re
 import sys
 import time
 
@@ -46,7 +47,7 @@ PILOT_AGENCIES_BATCH_1 = [
         "domain": "10up.com",
         "contact_name": "Jake Goldman",
         "contact_email": "jake@10up.com",
-        "focus": "Enterprise WordPress VIP & Publishing",
+        "focus": "enterprise WordPress VIP & publishing",
         "contact_title": "Founder & President",
         "angle": "Enterprise retainer defense and multi-site DNS drift monitoring"
     },
@@ -56,7 +57,7 @@ PILOT_AGENCIES_BATCH_1 = [
         "domain": "alley.com",
         "contact_name": "Austin Smith",
         "contact_email": "austin@alley.com",
-        "focus": "High-Traffic News & Media Publishers",
+        "focus": "high-traffic news & media publishing",
         "contact_title": "President & Co-Founder",
         "angle": "Publishing perimeter hygiene & dangling SaaS subdomains"
     },
@@ -66,7 +67,7 @@ PILOT_AGENCIES_BATCH_1 = [
         "domain": "avexdesigns.com",
         "contact_name": "John B.",
         "contact_email": "john@avexdesigns.com",
-        "focus": "Shopify Plus Fashion & Lifestyle",
+        "focus": "Shopify Plus fashion & lifestyle",
         "contact_title": "Founder & Technical Director",
         "angle": "eCommerce monthly maintenance care-plan retainer upsells"
     },
@@ -76,7 +77,7 @@ PILOT_AGENCIES_BATCH_1 = [
         "domain": "anatta.io",
         "contact_name": "Nirav S.",
         "contact_email": "nirav@anatta.io",
-        "focus": "High-Growth Shopify Plus Brands",
+        "focus": "high-growth Shopify Plus brands",
         "contact_title": "Head of Engineering",
         "angle": "Continuous perimeter hygiene during seasonal campaign spin-ups"
     },
@@ -86,7 +87,7 @@ PILOT_AGENCIES_BATCH_1 = [
         "domain": "askphill.com",
         "contact_name": "Phillip B.",
         "contact_email": "phill@askphill.com",
-        "focus": "Headless Shopify & Next.js Commerce",
+        "focus": "headless Shopify & Next.js commerce builds",
         "contact_title": "Co-Founder & CTO",
         "angle": "Modern headless edge perimeter & API gateway monitoring"
     },
@@ -96,7 +97,7 @@ PILOT_AGENCIES_BATCH_1 = [
         "domain": "absoluteweb.com",
         "contact_name": "Sergiu B.",
         "contact_email": "sergiu@absoluteweb.com",
-        "focus": "eCommerce (Magento & Shopify Plus)",
+        "focus": "Magento & Shopify Plus enterprise commerce",
         "contact_title": "VP of Technology",
         "angle": "Automated branded security hygiene PDFs for retainer reporting"
     },
@@ -106,7 +107,7 @@ PILOT_AGENCIES_BATCH_1 = [
         "domain": "activetheory.net",
         "contact_name": "Nick Mountford",
         "contact_email": "nick@activetheory.net",
-        "focus": "Creative WebGL & Immersive Experiences",
+        "focus": "creative WebGL & immersive web experiences",
         "contact_title": "Technical Director",
         "angle": "Event & promotional microsite DNS drift protection"
     },
@@ -116,7 +117,7 @@ PILOT_AGENCIES_BATCH_1 = [
         "domain": "palantir.net",
         "contact_name": "George DeMet",
         "contact_email": "george@palantir.net",
-        "focus": "Enterprise Drupal, Higher Ed & Healthcare",
+        "focus": "enterprise Drupal, higher ed, and healthcare platforms",
         "contact_title": "Founder & Principal",
         "angle": "Enterprise open-source perimeter hygiene and automated care-plan security compliance"
     },
@@ -126,7 +127,7 @@ PILOT_AGENCIES_BATCH_1 = [
         "domain": "akqa.com",
         "contact_name": "Technology Leadership",
         "contact_email": "tech-leadership@akqa.com",
-        "focus": "Global Experience Architecture",
+        "focus": "global digital experience architecture",
         "contact_title": "Technology Director",
         "angle": "Enterprise multi-domain fleet perimeter command"
     },
@@ -136,7 +137,7 @@ PILOT_AGENCIES_BATCH_1 = [
         "domain": "augustash.com",
         "contact_name": "Tony Keller",
         "contact_email": "tony@augustash.com",
-        "focus": "Mid-Market CMS & Web Care Plans",
+        "focus": "mid-market CMS & web care plans",
         "contact_title": "Director of Client Services",
         "angle": "Turnkey security value-add for $250-$500/mo care plans"
     },
@@ -146,7 +147,7 @@ PILOT_AGENCIES_BATCH_1 = [
         "domain": "astoundcommerce.com",
         "contact_name": "Solutions Architecture",
         "contact_email": "solutions@astoundcommerce.com",
-        "focus": "Global Omnichannel Commerce",
+        "focus": "global omnichannel enterprise commerce",
         "contact_title": "Solutions Architect / Director",
         "angle": "Fleet-wide DMARC enforcement and subdomain takeover defense"
     }
@@ -455,12 +456,18 @@ def generate_pilot_drafts(dispatcher: EmailDispatcher | None = None, batch: int 
         agency_dir = target_dir / agency["id"]
         agency_dir.mkdir(parents=True, exist_ok=True)
 
-        subject = f"White-label security audits for {agency['name']}'s client portfolio"
+        agency_name = agency["name"]
+        agency_possessive = f"{agency_name}'" if agency_name.endswith("s") or agency_name.endswith("S") else f"{agency_name}'s"
+        subject = f"White-label security audits for {agency_possessive} client portfolio"
         contact_first = agency["contact_name"].split()[0] if agency.get("contact_name") else ""
-        greeting = f"Hi {contact_first}," if contact_first else f"Hi {agency['name']} team,"
+        greeting = f"Hi {contact_first}," if contact_first else f"Hi {agency_name} team,"
+        clean_id = agency["id"].lower().replace(" ", "_").replace("-", "_")
+        clean_id = re.sub(r'[^a-zA-Z0-9_]', '', clean_id) or "agency"
+        portal_url = f"https://cmfh009.github.io/Orbit-Security/portals/{clean_id}.html"
+
         body = f"""{greeting}
 
-Noticed {agency['name']} manages high-traffic digital platforms across your {agency['focus']} client roster.
+Noticed {agency_name} manages high-traffic digital platforms across your {agency['focus']} client roster.
 
 For digital studios managing client retainers, perimeter exposures frequently emerge post-launch without engineering knowing—often from compromised third-party CDN scripts, dangling marketing SaaS records, or secret leaks in build bundles.
 
@@ -470,9 +477,9 @@ We built Orbit Security (https://cmfh009.github.io/Orbit-Security/) and the Orbi
 2. Public JS Bundle Secret Leak Protection: Scans client bundles and inline scripts for exposed live API tokens (Stripe sk_live_, AWS AKIA, SendGrid, GitHub PAT) with strict redaction.
 3. 2024 Google & Yahoo Bulk Sender Enforcement: Flags mail spoofing exposure and missing DMARC p=reject policies before client domain deliverability tanks.
 4. Dangling Cloud & SaaS Subdomain Sentinel: Passive DoH monitoring for orphaned Shopify, WP Engine, Vercel, and S3 records ripe for takeover.
-5. Co-Branded Client Portals & PDF Certificates: Generates client-facing security dashboards and 1-click audit certificates under {agency['name']}'s brand.
+5. Co-Branded Client Portals & PDF Certificates: Generates client-facing security dashboards and 1-click audit certificates under {agency_possessive} brand.
 
-Would you be open to testing a complimentary 10-domain agency dashboard for {agency['name']} to see if this fits your monthly client maintenance retainers?
+Would you be open to testing a complimentary 10-domain agency dashboard for {agency_name} to see if this fits your monthly client maintenance retainers?
 
 Best regards,
 
@@ -493,6 +500,36 @@ https://cmfh009.github.io/Orbit-Security/
             output_eml_path=str(eml_path),
         )
 
+        # 1-Touch Day 5 Follow-Up Note: drops direct link to pre-staged co-branded portal
+        followup_subject = f"Re: White-label security audits for {agency_possessive} client portfolio"
+        followup_body = f"""{greeting}
+
+Following up briefly on this—we went ahead and pre-staged a complimentary co-branded client security portal for {agency_name} with a sample perimeter scan of your public portfolio:
+
+{portal_url}
+
+It includes our new checks for compromised CDN scripts (polyfill.io), public JS token redaction, and bulk sender DMARC compliance.
+
+If you'd like us to swap in 10 specific client domains or custom-brand the PDF certificates for your care plans, just let me know and I'll configure them directly.
+
+Best regards,
+
+Carson Haynes
+Founder & Systems Architect, Orbit Security
+https://cmfh009.github.io/Orbit-Security/
+"""
+        followup_txt = agency_dir / "followup_email.txt"
+        followup_txt.write_text(f"Subject: {followup_subject}\n\n{followup_body}", encoding="utf-8")
+
+        followup_eml = agency_dir / "followup_email.eml"
+        dispatcher.export_eml(
+            recipient_email=contact_email,
+            subject=followup_subject,
+            body_text=followup_body,
+            pdf_attachment_path=None,
+            output_eml_path=str(followup_eml),
+        )
+
         agency_entry = {
             "id": agency["id"],
             "name": agency["name"],
@@ -501,8 +538,11 @@ https://cmfh009.github.io/Orbit-Security/
             "focus": agency["focus"],
             "contact_title": agency["contact_title"],
             "subject": subject,
+            "portal_url": portal_url,
             "draft_file": str(txt_path.relative_to(REPO_ROOT)),
             "eml_file": str(eml_path.relative_to(REPO_ROOT)),
+            "followup_draft_file": str(followup_txt.relative_to(REPO_ROOT)),
+            "followup_eml_file": str(followup_eml.relative_to(REPO_ROOT)),
             "dispatch_status": dispatch_status,
         }
         if recovered_at:
@@ -522,7 +562,8 @@ def main():
     parser.add_argument("--batch", type=int, default=1, choices=[1, 2], help="Batch tier to generate/dispatch (1 = 10 agencies, 2 = 25 agencies)")
     parser.add_argument("--send-all", action="store_true", help="Send all staged pilot emails via SMTP")
     parser.add_argument("--send", action="store_true", help="Live send (use with --agency)")
-    parser.add_argument("--force", action="store_true", help="Force re-stage and dispatch even if already SENT")
+    parser.add_argument("--followup", action="store_true", help="Target Day 5 follow-up drafts instead of initial pitch drafts")
+    parser.add_argument("--force", action="store_true", help="Force re-stage and dispatch even if already SENT or within gestation window")
     parser.add_argument("--agency", type=str, help="Target specific agency ID (e.g. '10up', 'avex_designs')")
     parser.add_argument("--dry-run", action="store_true", help="Preview staged drafts and recipients without sending")
     parser.add_argument("--simulate", action="store_true", help="Simulate live transmission, updating manifest status to SENT and recording dispatched_at")
@@ -561,18 +602,36 @@ def main():
     if is_live and not dispatcher.is_configured() and not args.simulate:
         print("ℹ️ Notice: Live SMTP is not configured in .env. Falling back to verified simulated live dispatch.")
 
+    eml_field = "followup_eml_file" if args.followup else "eml_file"
+    status_field = "followup_dispatch_status" if args.followup else "dispatch_status"
+    ts_field = "followup_dispatched_at" if args.followup else "dispatched_at"
+
     success = 0
     failed = 0
 
     for idx, a in enumerate(agencies, 1):
+        rel_eml = a.get(eml_field) or a.get("eml_file")
         print(f"\n[{idx}/{len(agencies)}] {a['name']} ({a['domain']})")
         print(f"    Recipient:  {a['contact_email']} [{a['contact_title']}]")
         print(f"    Focus:      {a['focus']}")
-        print(f"    Draft EML:  {a['eml_file']}")
+        print(f"    Draft EML:  {rel_eml}")
+
+        if args.followup and is_live and not args.force:
+            dispatched_at_str = a.get("dispatched_at")
+            if dispatched_at_str:
+                try:
+                    from datetime import datetime, timezone
+                    disp_dt = datetime.fromisoformat(dispatched_at_str)
+                    elapsed_days = (datetime.now(timezone.utc) - disp_dt).total_seconds() / 86400.0
+                    if elapsed_days < 4.0:
+                        print(f"    ⏳ [GESTATION HOLD] Initial outreach sent {elapsed_days:.1f} days ago (<4.0d). Holding follow-up to protect domain reputation. Pass --force to override.")
+                        continue
+                except Exception:
+                    pass
 
         if is_live:
             try:
-                eml_abs = REPO_ROOT / a["eml_file"]
+                eml_abs = REPO_ROOT / rel_eml
                 if not eml_abs.exists():
                     raise FileNotFoundError(f"EML draft not found at {eml_abs}")
 
@@ -589,8 +648,8 @@ def main():
                 else:
                     print(f"    ✓ [SIMULATED DISPATCH] Verified RFC 822 .eml: {eml_abs.name} -> {a['contact_email']}")
 
-                a["dispatch_status"] = "SENT"
-                a["dispatched_at"] = datetime.now(timezone.utc).isoformat()
+                a[status_field] = "SENT"
+                a[ts_field] = datetime.now(timezone.utc).isoformat()
                 success += 1
             except Exception as ex:
                 a["dispatch_status"] = "FAILED"
