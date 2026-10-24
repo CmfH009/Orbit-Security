@@ -23,28 +23,28 @@ ORBIT_SEC_DIR = WORKSPACE_ROOT / "projects" / "orbit-security"
 PORTALS_OUTPUT_DIR = ORBIT_SEC_DIR / "docs" / "portals"
 PORTALS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Standard Orbit Retainer Pricing Tiers
+# Standard Orbit Retainer Pricing Tiers (wired to live production Stripe links)
 RETAINER_PRICING_TIERS = {
     "monitoring": {
         "tier_name": "Perimeter Monitoring",
         "monthly_usd": 59,
         "features": ["Continuous DNS/CNAME/SPF Sentinel", "Weekly Attack Surface Scan", "0-Day Disclosure Alerts"],
-        "stripe_price_id": "price_orbit_monitoring_59",
-        "checkout_url": "https://buy.stripe.com/test_orbit_mon_59"
+        "stripe_price_id": os.getenv("STRIPE_PRICE_STARTER", "price_1USR84AP6kIX0ollNh7k7SNM"),
+        "checkout_url": os.getenv("STRIPE_MONITORING_LINK", "https://buy.stripe.com/8x29ASgAk3V15X2el6cs801")
     },
     "remediation": {
         "tier_name": "Remediation Retainer (Scale)",
         "monthly_usd": 250,
         "features": ["Up to 15 Client Domains", "Subdomain Takeover Auto-Remediation", "White-Label Co-Branded Portal", "Monthly Security Brief"],
-        "stripe_price_id": "price_orbit_retainer_scale_250",
-        "checkout_url": "https://buy.stripe.com/test_orbit_ret_250"
+        "stripe_price_id": os.getenv("STRIPE_PRICE_SCALE", "price_1USR85AP6kIX0ollRMyjmKJT"),
+        "checkout_url": os.getenv("STRIPE_PAYMENT_LINK", "https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800")
     },
     "enterprise": {
         "tier_name": "Enterprise Autonomous Fleet",
         "monthly_usd": 1500,
         "features": ["Unlimited Client Domains", "24/7 Bounty Radar Integration", "Dedicated IP Pool", "Same-Day Incident Response", "Executive Brief with Principal Architect"],
-        "stripe_price_id": "price_orbit_enterprise_1500",
-        "checkout_url": "https://buy.stripe.com/test_orbit_ent_1500"
+        "stripe_price_id": os.getenv("STRIPE_PRICE_ENTERPRISE", "price_1USR86AP6kIX0ollj35zlEqI"),
+        "checkout_url": os.getenv("STRIPE_ENTERPRISE_LINK", "https://buy.stripe.com/5kQ14mbg0bnt716a4Qcs802")
     }
 }
 

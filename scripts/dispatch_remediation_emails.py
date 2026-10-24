@@ -30,6 +30,9 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from orbit_security.mailer import EmailDispatcher
+from dotenv import load_dotenv
+
+load_dotenv(PROJECT_ROOT / ".env")
 
 REMEDIATION_DIR = PROJECT_ROOT / "data" / "remediation"
 MANIFEST_PATH = REMEDIATION_DIR / "remediation_manifest.json"

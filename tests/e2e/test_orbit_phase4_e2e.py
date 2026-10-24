@@ -275,7 +275,7 @@ def test_t1_inbound_lead_detection_ready_to_buy(deal_desk_concierge):
     res = deal_desk_concierge.process_inbound_lead(lead)
     assert res["ok"] is True
     assert res["intent"] == "READY_TO_BUY"
-    assert "https://buy.stripe.com/test_orbit_ret_250" in res["checkout_url"]
+    assert RETAINER_PRICING_TIERS["remediation"]["checkout_url"] in res["checkout_url"]
     assert "remediation" in res["portal"]["tier"].lower() or "scale" in res["portal"]["tier"].lower()
     assert Path(res["portal"]["portal_path"]).exists()
 
@@ -293,7 +293,7 @@ def test_t1_inbound_lead_inquiry_pricing(deal_desk_concierge):
     assert "$59/mo" in res["draft_reply"]
     assert "$250/mo" in res["draft_reply"]
     assert "$1,500/mo" in res["draft_reply"]
-    assert "https://buy.stripe.com/test_orbit_mon_59" in res["checkout_url"]
+    assert RETAINER_PRICING_TIERS["monitoring"]["checkout_url"] in res["checkout_url"]
 
 
 def test_t1_inbound_lead_request_human(deal_desk_concierge):

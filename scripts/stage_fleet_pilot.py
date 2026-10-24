@@ -32,6 +32,9 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from orbit_security.mailer import EmailDispatcher
+from dotenv import load_dotenv
+
+load_dotenv(REPO_ROOT / ".env")
 
 OUTPUT_DIR = REPO_ROOT / "data" / "outreach_fleet_pilot"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -106,6 +109,16 @@ PILOT_AGENCIES_BATCH_1 = [
         "focus": "Creative WebGL & Immersive Experiences",
         "contact_title": "Technical Director",
         "angle": "Event & promotional microsite DNS drift protection"
+    },
+    {
+        "id": "palantir_net",
+        "name": "Palantir.net",
+        "domain": "palantir.net",
+        "contact_name": "George DeMet",
+        "contact_email": "george@palantir.net",
+        "focus": "Enterprise Drupal, Higher Ed & Healthcare",
+        "contact_title": "Founder & Principal",
+        "angle": "Enterprise open-source perimeter hygiene and automated care-plan security compliance"
     },
     {
         "id": "akqa",
@@ -396,7 +409,7 @@ PILOT_AGENCIES = PILOT_AGENCIES_BATCH_1
 
 
 
-def generate_pilot_drafts(dispatcher: EmailDispatcher | None = None, batch: int = 1) -> dict:
+def generate_pilot_drafts(dispatcher: EmailDispatcher | None = None, batch: int = 1, force: bool = False) -> dict:
     if dispatcher is None:
         dispatcher = EmailDispatcher()
 
@@ -436,26 +449,30 @@ def generate_pilot_drafts(dispatcher: EmailDispatcher | None = None, batch: int 
         existing = existing_agencies.get(agency["id"], {})
         is_recovered = existing.get("dispatch_status") == "RECOVERED"
         contact_email = existing.get("contact_email") if is_recovered else agency["contact_email"]
-        dispatch_status = "RECOVERED" if is_recovered else existing.get("dispatch_status", "STAGED")
+        dispatch_status = "STAGED" if force else ("RECOVERED" if is_recovered else existing.get("dispatch_status", "STAGED"))
         recovered_at = existing.get("recovered_at")
 
         agency_dir = target_dir / agency["id"]
         agency_dir.mkdir(parents=True, exist_ok=True)
 
         subject = f"White-label security audits for {agency['name']}'s client portfolio"
-        greeting = f"Hi {agency['contact_name']}," if agency.get("contact_name") else f"Hi {agency['name']} team,"
+        contact_first = agency["contact_name"].split()[0] if agency.get("contact_name") else ""
+        greeting = f"Hi {contact_first}," if contact_first else f"Hi {agency['name']} team,"
         body = f"""{greeting}
 
-Noticed {agency['name']} manages complex web builds across your {agency['focus']} client roster.
+Noticed {agency['name']} manages high-traffic digital platforms across your {agency['focus']} client roster.
 
-A recurring headache for digital studios is client DNS drift post-launch—marketing teams spin up unmonitored subdomains or third-party SaaS services that eventually expire into dangling records.
+For digital studios managing client retainers, perimeter exposures frequently emerge post-launch without engineering knowing—often from compromised third-party CDN scripts, dangling marketing SaaS records, or secret leaks in build bundles.
 
-We built the Orbit Fleet Studio (https://cmfh009.github.io/Orbit-Security/fleet.html) specifically for agencies:
-1. Multi-Client Perimeter Sentinel: Monitor your entire client fleet in one lightweight HUD.
-2. 100% Passive DoH Telemetry: Zero active scans or intrusive probes against client infrastructure.
-3. Branded Client PDFs: Export 1-click executive hygiene certificates under {agency['name']}'s brand to include in your monthly maintenance retainers.
+We built Orbit Security (https://cmfh009.github.io/Orbit-Security/) and the Orbit Fleet Studio (https://cmfh009.github.io/Orbit-Security/fleet.html) to give agencies turnkey, white-labeled security intelligence they can bundle directly into $250–$500/mo client care plans:
 
-Would you be open to testing a complimentary 10-domain agency dashboard for {agency['name']} to see if it fits your client care plans?
+1. Third-Party Supply Chain & Compromised CDN Sentinel: Instant detection of hijacked CDN scripts (polyfill.io, bootcdn.net, bootcss) before malicious scripts execute in production.
+2. Public JS Bundle Secret Leak Protection: Scans client bundles and inline scripts for exposed live API tokens (Stripe sk_live_, AWS AKIA, SendGrid, GitHub PAT) with strict redaction.
+3. 2024 Google & Yahoo Bulk Sender Enforcement: Flags mail spoofing exposure and missing DMARC p=reject policies before client domain deliverability tanks.
+4. Dangling Cloud & SaaS Subdomain Sentinel: Passive DoH monitoring for orphaned Shopify, WP Engine, Vercel, and S3 records ripe for takeover.
+5. Co-Branded Client Portals & PDF Certificates: Generates client-facing security dashboards and 1-click audit certificates under {agency['name']}'s brand.
+
+Would you be open to testing a complimentary 10-domain agency dashboard for {agency['name']} to see if this fits your monthly client maintenance retainers?
 
 Best regards,
 
@@ -505,6 +522,7 @@ def main():
     parser.add_argument("--batch", type=int, default=1, choices=[1, 2], help="Batch tier to generate/dispatch (1 = 10 agencies, 2 = 25 agencies)")
     parser.add_argument("--send-all", action="store_true", help="Send all staged pilot emails via SMTP")
     parser.add_argument("--send", action="store_true", help="Live send (use with --agency)")
+    parser.add_argument("--force", action="store_true", help="Force re-stage and dispatch even if already SENT")
     parser.add_argument("--agency", type=str, help="Target specific agency ID (e.g. '10up', 'avex_designs')")
     parser.add_argument("--dry-run", action="store_true", help="Preview staged drafts and recipients without sending")
     parser.add_argument("--simulate", action="store_true", help="Simulate live transmission, updating manifest status to SENT and recording dispatched_at")
@@ -513,7 +531,7 @@ def main():
     args = parser.parse_args()
 
     dispatcher = EmailDispatcher()
-    manifest = generate_pilot_drafts(dispatcher=dispatcher, batch=args.batch)
+    manifest = generate_pilot_drafts(dispatcher=dispatcher, batch=args.batch, force=args.force)
 
     is_live = args.send_all or args.send or args.simulate
     is_simulated = args.simulate or (is_live and not dispatcher.is_configured())
@@ -521,7 +539,7 @@ def main():
 
     if args.agency:
         target = args.agency.lower()
-        agencies = [a for a in agencies if target in a["id"].lower() or target in a["name"].lower()]
+        agencies = [a for a in agencies if target in a["id"].lower() or target in a["name"].lower() or target in a.get("domain", "").lower() or target.replace("-", "_") in a["id"].lower()]
         if not agencies:
             print(f"No agency found matching '{args.agency}'")
             return 1

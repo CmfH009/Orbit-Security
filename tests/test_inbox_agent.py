@@ -276,7 +276,7 @@ def test_process_inbound_lead_provisions_portal_and_blackboard():
         assert res["intent"] == "READY_TO_BUY"
         assert res["tier"] == "remediation"
         assert "alley_interactive.html" in res["portal_path"]
-        assert "https://buy.stripe.com/test_orbit_ret_250" in res["checkout_url"]
+        assert "https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800" in res["checkout_url"]
         assert os.path.exists(res["portal_path"])
     finally:
         if os.path.exists(state_file):
