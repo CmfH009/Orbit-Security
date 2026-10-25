@@ -79,6 +79,7 @@ log_info "Setting up Python virtual environment..."
 python3 -m venv "${ORBIT_INSTALL_DIR}/.venv"
 "${ORBIT_INSTALL_DIR}/.venv/bin/pip" install --upgrade pip -q
 "${ORBIT_INSTALL_DIR}/.venv/bin/pip" install dnspython httpx pydantic psutil -q
+"${ORBIT_INSTALL_DIR}/.venv/bin/pip" install -e "${ORBIT_INSTALL_DIR}" -q
 
 # Set permissions
 mkdir -p "${ORBIT_INSTALL_DIR}/data" "${ORBIT_INSTALL_DIR}/logs"
@@ -101,6 +102,7 @@ Group=orbit
 WorkingDirectory=/opt/orbit-security
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONPATH=/opt/orbit-security/src
 Environment=ORBIT_WORKSPACE_ROOT=/opt/orbit-security
 ExecStart=/opt/orbit-security/.venv/bin/python src/orbit_security/bounty_rolling_daemon.py
 Restart=always
@@ -113,7 +115,50 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectKernelTunables=true
 ProtectControlGroups=true
+ProtectKernelModules=true
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictRealtime=true
+CapabilityBoundingSet=
+LockPersonality=true
+ReadWritePaths=/opt/orbit-security/data /opt/orbit-security/logs
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+SHUTTLE_SERVICE_FILE="/etc/systemd/system/orbit-shuttle.service"
+log_info "Installing hardened event shuttle systemd service unit..."
+cat << 'EOF' > "${SHUTTLE_SERVICE_FILE}"
+[Unit]
+Description=Orbit Security Private Blackboard Event Shuttle to Cockpit
+After=network.target tailscaled.service orbit-security.service
+Wants=tailscaled.service
+
+[Service]
+Type=simple
+User=orbit
+Group=orbit
+WorkingDirectory=/opt/orbit-security
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONPATH=/opt/orbit-security/src
+Environment=ORBIT_WORKSPACE_ROOT=/opt/orbit-security
+ExecStart=/opt/orbit-security/.venv/bin/python -m orbit_security.event_shuttle --daemon
+Restart=always
+RestartSec=15
+
+# Linux Kernel Hardening & Sandbox Directives
+ProtectSystem=strict
+ProtectHome=true
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictRealtime=true
+CapabilityBoundingSet=
+LockPersonality=true
 ReadWritePaths=/opt/orbit-security/data /opt/orbit-security/logs
 
 [Install]
@@ -122,7 +167,8 @@ EOF
 
 systemctl daemon-reload
 systemctl enable orbit-security.service
-log_ok "Service orbit-security.service enabled."
+systemctl enable orbit-shuttle.service
+log_ok "Services orbit-security.service and orbit-shuttle.service enabled."
 
 echo ""
 echo -e "${GREEN}========================================================================${NC}"
@@ -130,6 +176,7 @@ echo -e "${GREEN}🎉 Orbit Security Zero-Trust Node Provisioned Successfully!${
 echo -e "${GREEN}========================================================================${NC}"
 echo -e "Next Steps:"
 echo -e "  1. Authenticate Tailscale: ${CYAN}sudo tailscale up${NC}"
-echo -e "  2. Start the daemon     : ${CYAN}sudo systemctl start orbit-security${NC}"
-echo -e "  3. View live logs       : ${CYAN}sudo journalctl -u orbit-security -f${NC}"
+echo -e "  2. Start security daemon: ${CYAN}sudo systemctl start orbit-security${NC}"
+echo -e "  3. Start event shuttle   : ${CYAN}sudo systemctl start orbit-shuttle${NC}"
+echo -e "  4. View live logs        : ${CYAN}sudo journalctl -u orbit-security -f${NC}"
 echo -e "${GREEN}========================================================================${NC}"

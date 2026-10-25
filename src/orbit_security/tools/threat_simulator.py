@@ -90,6 +90,31 @@ SCENARIOS: Dict[str, Dict[str, Any]] = {
             "simulated": True,
         },
     },
+    "ct_log_new_subdomain": {
+        "topic": "threat_intel",
+        "event_type": "CT_LOG_NEW_SUBDOMAIN",
+        "source": "threat_simulator",
+        "payload": {
+            "subdomain": "shadow-api.client-sim.agency",
+            "apex_domain": "client-sim.agency",
+            "source_feed": "certificate_transparency",
+            "issuer": "C=US, O=Let's Encrypt, CN=R3",
+            "simulated": True,
+        },
+    },
+    "epss_critical_fusion": {
+        "topic": "cve_radar",
+        "event_type": "CRITICAL_0DAY_CORRELATED",
+        "source": "threat_simulator",
+        "payload": {
+            "cve_id": "CVE-2024-21887",
+            "domain": "remote-access.client-sim.agency",
+            "in_cisa_kev": True,
+            "epss_score": 0.942,
+            "threat_level": "CRITICAL_ACTUALLY_EXPLOITED_IN_WILD",
+            "simulated": True,
+        },
+    },
 }
 
 
@@ -172,15 +197,31 @@ class ThreatSimulator:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Orbit Offline Threat Simulator & Replay Engine")
     parser.add_argument("--scenario", "-s", choices=list(SCENARIOS.keys()) + ["all"], default="all")
-    parser.add_argument("--burst", "-b", type=int, help="Inject N events at max speed for concurrency testing")
-    parser.add_argument("--playback", "-p", type=int, default=5, help="Number of paced events to emit (default: 5)")
+    parser.add_argument(
+        "--burst",
+        "-b",
+        nargs="?",
+        const=100,
+        type=int,
+        default=None,
+        help="Inject N events at max speed for concurrency testing (default: 100)",
+    )
+    parser.add_argument(
+        "--playback",
+        "-p",
+        nargs="?",
+        const=10,
+        type=float,
+        default=None,
+        help="Playback mode: event count or spacing interval in seconds",
+    )
     parser.add_argument("--interval", "-i", type=float, default=1.5, help="Playback interval in seconds (default: 1.5)")
     parser.add_argument("--dry-run", action="store_true", help="Print simulated events without inserting into Blackboard")
     args = parser.parse_args()
 
     sim = ThreatSimulator(dry_run=args.dry_run)
 
-    if args.burst:
+    if args.burst is not None:
         sim.run_burst(count=args.burst)
         return 0
 
@@ -189,7 +230,18 @@ def main() -> int:
         print(f"[✓] Injected single scenario: {args.scenario}")
         return 0
 
-    sim.run_playback(count=args.playback, interval_sec=args.interval)
+    interval = args.interval
+    count = 10
+    if args.playback is not None:
+        if args.playback <= 0:
+            count = 5
+        elif args.playback < 5.0 and not float(args.playback).is_integer():
+            interval = float(args.playback)
+            count = 10
+        else:
+            count = int(args.playback)
+
+    sim.run_playback(count=count, interval_sec=interval)
     return 0
 
 

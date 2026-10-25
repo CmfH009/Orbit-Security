@@ -49,6 +49,7 @@ write_files:
       WorkingDirectory=/opt/orbit-security
       Environment=PYTHONUNBUFFERED=1
       Environment=PYTHONDONTWRITEBYTECODE=1
+      Environment=PYTHONPATH=/opt/orbit-security/src
       Environment=ORBIT_WORKSPACE_ROOT=/opt/orbit-security
       ExecStart=/opt/orbit-security/.venv/bin/python src/orbit_security/bounty_rolling_daemon.py
       Restart=always
@@ -61,13 +62,57 @@ write_files:
       PrivateTmp=true
       ProtectKernelTunables=true
       ProtectControlGroups=true
+      ProtectKernelModules=true
       RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+      RestrictRealtime=true
+      CapabilityBoundingSet=
+      LockPersonality=true
       ReadWritePaths=/opt/orbit-security/data /opt/orbit-security/logs
 
       [Install]
       WantedBy=multi-user.target
 
-  # 2. Daily security auto-patching configuration
+  # 2. Hardened systemd service unit for encrypted blackboard event shuttle to local cockpit
+  - path: /etc/systemd/system/orbit-shuttle.service
+    permissions: '0644'
+    owner: root:root
+    content: |
+      [Unit]
+      Description=Orbit Security Private Blackboard Event Shuttle to Cockpit
+      After=network.target tailscaled.service orbit-security.service
+      Wants=tailscaled.service
+
+      [Service]
+      Type=simple
+      User=orbit
+      Group=orbit
+      WorkingDirectory=/opt/orbit-security
+      Environment=PYTHONUNBUFFERED=1
+      Environment=PYTHONDONTWRITEBYTECODE=1
+      Environment=PYTHONPATH=/opt/orbit-security/src
+      Environment=ORBIT_WORKSPACE_ROOT=/opt/orbit-security
+      ExecStart=/opt/orbit-security/.venv/bin/python -m orbit_security.event_shuttle --daemon
+      Restart=always
+      RestartSec=15
+
+      # Linux Kernel Hardening & Sandbox Directives
+      ProtectSystem=strict
+      ProtectHome=true
+      NoNewPrivileges=true
+      PrivateTmp=true
+      ProtectKernelTunables=true
+      ProtectControlGroups=true
+      ProtectKernelModules=true
+      RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+      RestrictRealtime=true
+      CapabilityBoundingSet=
+      LockPersonality=true
+      ReadWritePaths=/opt/orbit-security/data /opt/orbit-security/logs
+
+      [Install]
+      WantedBy=multi-user.target
+
+  # 3. Daily security auto-patching configuration
   - path: /etc/apt/apt.conf.d/50unattended-upgrades
     permissions: '0644'
     owner: root:root
@@ -97,9 +142,11 @@ runcmd:
   - python3 -m venv /opt/orbit-security/.venv
   - /opt/orbit-security/.venv/bin/pip install --upgrade pip
   - /opt/orbit-security/.venv/bin/pip install dnspython httpx pydantic psutil
+  - /opt/orbit-security/.venv/bin/pip install -e /opt/orbit-security
   - chown -R orbit:orbit /opt/orbit-security
 
-  # 4. Enable and start hardened background daemon
+  # 4. Enable and start hardened background daemons
   - systemctl daemon-reload
   - systemctl enable orbit-security.service
+  - systemctl enable orbit-shuttle.service
   # Note: Run 'tailscale up' with your auth key to connect the node to your private tailnet

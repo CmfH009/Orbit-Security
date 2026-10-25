@@ -53,6 +53,16 @@ _LAZY_IMPORTS = {
     "SandboxExecutionHarness": ("orbit_security.exploit_sandbox", "SandboxExecutionHarness"),
     "EvidenceComparator": ("orbit_security.exploit_sandbox", "EvidenceComparator"),
     "SandboxVerificationReport": ("orbit_security.exploit_sandbox", "SandboxVerificationReport"),
+    "EventShuttleSender": ("orbit_security.event_shuttle", "EventShuttleSender"),
+    "EventShuttleReceiver": ("orbit_security.event_shuttle", "EventShuttleReceiver"),
+    "ShuttleAuth": ("orbit_security.event_shuttle", "ShuttleAuth"),
+    "CertificateTransparencyMonitor": ("orbit_security.cert_transparency", "CertificateTransparencyMonitor"),
+    "EpssCorrelator": ("orbit_security.epss", "EpssCorrelator"),
+    "EpssRecord": ("orbit_security.epss", "EpssRecord"),
+    "PassiveTakeoverDetector": ("orbit_security.cname_takeover", "PassiveTakeoverDetector"),
+    "TakeoverFinding": ("orbit_security.cname_takeover", "TakeoverFinding"),
+    "PrivateAlertSentinel": ("orbit_security.private_alerting", "PrivateAlertSentinel"),
+    "PrivateDefensiveAlert": ("orbit_security.private_alerting", "PrivateDefensiveAlert"),
 }
 
 __all__ = list(_LAZY_IMPORTS.keys()) + ["hello"]

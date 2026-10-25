@@ -281,6 +281,50 @@ class Blackboard:
 
         return events
 
+    def get_events_after(
+        self,
+        after_id: int = 0,
+        limit: int = 100,
+        topic: Optional[str] = None,
+        event_type: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Retrieves events with id > after_id for incremental shuttle replication."""
+        query = "SELECT id, topic, event_type, source, payload, created_at, processed FROM blackboard_events WHERE id > ?"
+        params: List[Any] = [int(after_id)]
+
+        if topic:
+            query += " AND topic = ?"
+            params.append(topic)
+        if event_type:
+            query += " AND event_type = ?"
+            params.append(event_type)
+
+        query += " ORDER BY id ASC LIMIT ?"
+        params.append(int(limit))
+
+        with self._connection() as conn:
+            cur = conn.cursor()
+            cur.execute(query, params)
+            rows = cur.fetchall()
+
+        events = []
+        for r in rows:
+            try:
+                p = json.loads(r["payload"])
+            except Exception:
+                p = {"raw": r["payload"]}
+            events.append({
+                "id": r["id"],
+                "topic": r["topic"],
+                "event_type": r["event_type"],
+                "source": r["source"],
+                "payload": p,
+                "created_at": r["created_at"],
+                "processed": bool(r["processed"]),
+                "iso_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(r["created_at"]))
+            })
+        return events
+
     def mark_processed(self, event_id: int) -> bool:
         """Marks an event as processed."""
         with self._connection() as conn:

@@ -74,3 +74,16 @@ def test_playback_mode_iteration():
     injected = sim.run_playback(count=3, interval_sec=0.0)
     assert injected == 3
     assert mock_bb.publish.call_count == 3
+
+
+def test_threat_simulator_cli_burst_flag(monkeypatch):
+    import sys
+    from orbit_security.tools.threat_simulator import main
+
+    # Test --burst flag without explicit count (defaults to 100)
+    monkeypatch.setattr(sys, "argv", ["threat_simulator.py", "--burst", "--dry-run"])
+    assert main() == 0
+
+    # Test --playback flag with float interval
+    monkeypatch.setattr(sys, "argv", ["threat_simulator.py", "--playback", "3.0", "--dry-run"])
+    assert main() == 0

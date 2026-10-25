@@ -66,7 +66,11 @@ def test_systemd_hardening_directives():
         "PrivateTmp=true",
         "ProtectKernelTunables=true",
         "ProtectControlGroups=true",
+        "ProtectKernelModules=true",
         "RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX",
+        "RestrictRealtime=true",
+        "CapabilityBoundingSet=",
+        "LockPersonality=true",
         "User=orbit",
         "Group=orbit",
     ]
@@ -74,6 +78,19 @@ def test_systemd_hardening_directives():
     for directive in required_directives:
         assert directive in content, f"Missing systemd directive in cloud-init: {directive}"
         assert directive in script, f"Missing systemd directive in shell script: {directive}"
+
+
+def test_shuttle_service_unit():
+    content = CLOUD_INIT_FILE.read_text(encoding="utf-8")
+    script = PROVISION_SCRIPT.read_text(encoding="utf-8")
+
+    assert "orbit-shuttle.service" in content
+    assert "orbit-shuttle.service" in script
+    assert "orbit_security.event_shuttle --daemon" in content
+    assert "orbit_security.event_shuttle --daemon" in script
+    assert "Environment=PYTHONPATH=/opt/orbit-security/src" in content
+    assert "Environment=PYTHONPATH=/opt/orbit-security/src" in script
+    assert "pip install -e /opt/orbit-security" in content or "pip install -e \"${ORBIT_INSTALL_DIR}\"" in script
 
 
 def test_shell_script_defensive_flags():

@@ -36,6 +36,8 @@ from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES
 from orbit_security.remediation import DnsRemediationGenerator
 from orbit_security.input_sanitizer import sanitize_domain, SecurityValidationError
 from orbit_security.cisa_kev import CisaKevCatalog
+from orbit_security.epss import EpssCorrelator
+from orbit_security.cname_takeover import PassiveTakeoverDetector
 from orbit_security.scoring import (
     MISSING_HEADER_TITLES,
     TAKEOVER_CLASS_KEY,
@@ -432,6 +434,20 @@ def run_recon(target: str, json_output: bool = False, remediate: bool = False) -
     kev_catalog = CisaKevCatalog()
     kev_matches = kev_catalog.correlate_server_headers(web_res.get("headers_found", {}), domain=domain)
 
+    # EPSS (Exploit Prediction Scoring System) Weaponization Forecast
+    epss_correlator = EpssCorrelator()
+    kev_cve_ids = [m.cve_id for m in kev_matches if getattr(m, "cve_id", None)]
+    fused_intel = epss_correlator.correlate_with_cisa_kev(kev_cve_ids, cisa_kev_catalog=kev_catalog, domain=domain) if kev_cve_ids else []
+
+    # Passive Dangling CNAME Subdomain Takeover Analysis
+    takeover_detector = PassiveTakeoverDetector()
+    takeover_findings = takeover_detector.evaluate_dns_records(
+        domain=domain,
+        records=dns_res,
+        body_snippet=web_res.get("error") or "",
+        is_nxdomain=bool(dns_res.get("cname") and not dns_res.get("a_records")),
+    )
+
     results = {
         "target": domain,
         "score": score,
@@ -439,6 +455,8 @@ def run_recon(target: str, json_output: bool = False, remediate: bool = False) -
         "dns": dns_res,
         "perimeter": web_res,
         "cisa_kev_matches": [asdict(m) for m in kev_matches],
+        "epss_fusion": fused_intel,
+        "takeover_findings": [asdict(f) for f in takeover_findings],
     }
 
     if remediate:
@@ -649,6 +667,7 @@ def main():
         description="Orbit Recon — Autonomous External Perimeter Reconnaissance"
     )
     parser.add_argument("target", nargs="?", default=None, help="Target domain (e.g. agency.com or client.agency.com)")
+    parser.add_argument("--target", "-t", dest="target_opt", default=None, help="Target domain")
     parser.add_argument("--targets-file", "-f", help="Text file with domains to scan (one per line)")
     parser.add_argument("--markdown", "-m", help="Path to export Markdown fleet matrix")
     parser.add_argument("--json", action="store_true", help="Output results in JSON format")
@@ -665,6 +684,8 @@ def main():
     )
     args = parser.parse_args()
 
+    effective_target = args.target or args.target_opt
+
     if args.targets_file:
         with open(args.targets_file, "r", encoding="utf-8") as f:
             domains = [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
@@ -675,17 +696,17 @@ def main():
             fail_on_critical=args.fail_on_critical,
             remediate=args.remediate,
         )
-    elif args.target:
+    elif effective_target:
         if args.markdown:
             run_bulk_recon(
-                targets=[args.target],
+                targets=[effective_target],
                 json_output=args.json,
                 markdown_path=args.markdown,
                 fail_on_critical=args.fail_on_critical,
                 remediate=args.remediate,
             )
         else:
-            res = run_recon(args.target, json_output=args.json, remediate=args.remediate)
+            res = run_recon(effective_target, json_output=args.json, remediate=args.remediate)
             if args.fail_on_critical:
                 has_takeover = bool(res["dns"].get("dangling_risk"))
                 has_exposure = bool(res["perimeter"].get("exposures"))
