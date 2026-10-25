@@ -97,7 +97,7 @@ class EventShuttleSender:
     def __init__(
         self,
         blackboard: Any = None,
-        target_url: str = "http://127.0.0.1:9090/api/orbit/blackboard/shuttle",
+        target_url: Optional[str] = None,
         secret: Optional[str] = None,
         node_id: Optional[str] = None,
         cursor_file: Optional[Path] = None,
@@ -108,6 +108,16 @@ class EventShuttleSender:
             self.bb = get_blackboard()
         else:
             self.bb = blackboard
+
+        if target_url is None:
+            env_url = os.environ.get("ORBIT_SHUTTLE_TARGET_URL", "").strip()
+            env_ip = os.environ.get("ORBIT_COCKPIT_TAILSCALE_IP", "").strip()
+            if env_url:
+                target_url = env_url
+            elif env_ip:
+                target_url = f"http://{env_ip}:9090/api/orbit/blackboard/shuttle"
+            else:
+                target_url = "http://127.0.0.1:9090/api/orbit/blackboard/shuttle"
 
         self.target_url = target_url.rstrip("/")
         self.secret = secret or ShuttleAuth.get_secret()
@@ -339,7 +349,7 @@ def main():
     parser = argparse.ArgumentParser(description="Orbit Private Blackboard Event Shuttle")
     parser.add_argument("--daemon", action="store_true", help="Run background shuttle sender daemon")
     parser.add_argument("--send-once", action="store_true", help="Send one batch of pending events")
-    parser.add_argument("--target", default="http://127.0.0.1:9090/api/orbit/blackboard/shuttle", help="Target Cockpit URL")
+    parser.add_argument("--target", default=None, help="Target Cockpit URL (defaults to ORBIT_SHUTTLE_TARGET_URL or :9090)")
     parser.add_argument("--node-id", default=None, help="Origin node identifier")
     parser.add_argument("--interval", type=float, default=3.0, help="Polling interval in seconds")
     parser.add_argument("--dry-run", action="store_true", help="Simulate batch compilation without network POST")

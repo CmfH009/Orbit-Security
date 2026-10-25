@@ -82,3 +82,101 @@ def test_compact_radar_dataset_filtering_and_size(tmp_path):
     high_vel = next(v for v in parsed["vulnerabilities"] if v["cve"] == "CVE-2026-9999")
     assert high_vel["is_cisa_kev"] is False
     assert high_vel["epss"] == 0.85
+
+
+def test_compact_radar_dataset_enforces_250kb_budget_on_full_catalog(tmp_path):
+    """Verifies that even with 1,800 verbose CISA KEV entries, compacted output stays < 250 KB."""
+    output_file = tmp_path / "large_radar.json"
+    verbose_desc = (
+        "A remote code execution vulnerability in enterprise appliance web management interface "
+        "allows unauthenticated attackers to execute arbitrary OS commands with root privileges. "
+    ) * 3
+    verbose_action = (
+        "Apply mitigations in accordance with vendor instructions, ensuring compliance with "
+        "CISA BOD 26-04 Prioritizing Security Updates Based on Risk guidance immediately."
+    )
+    large_vulns = [
+        {
+            "cveID": f"CVE-2026-{10000 + i}",
+            "vendorProject": f"Vendor-{i % 40}",
+            "product": f"Appliance-{i % 80}",
+            "vulnerabilityName": f"Enterprise Appliance RCE Vulnerability #{i}",
+            "dateAdded": f"2026-10-{(i % 28) + 1:02d}",
+            "shortDescription": verbose_desc,
+            "requiredAction": verbose_action,
+            "dueDate": "2026-11-15",
+        }
+        for i in range(1800)
+    ]
+    cisa_kev_large = {"catalogVersion": "2026.10.25", "vulnerabilities": large_vulns}
+    epss_fixture = {
+        "CVE-2026-10005": {"epss": "0.96100", "percentile": "0.99800", "date": "2026-10-25"},
+        "CVE-2026-99999": {"epss": "0.88000", "percentile": "0.99100", "vendor": "CloudCorp", "product": "Edge"},
+    }
+
+    result = compact_radar_dataset(
+        cisa_kev_data=cisa_kev_large,
+        epss_data=epss_fixture,
+        output_path=output_file,
+        sync_to_landing=False,
+    )
+
+    raw_bytes = output_file.read_bytes()
+    assert len(raw_bytes) < 250 * 1024, f"Expected < 250 KB, got {len(raw_bytes)} bytes"
+    assert result["cisa_kev_count"] == 1800
+    assert result["high_velocity_count"] == 1
+    # Highest EPSS KEV entry must be preserved first
+    assert result["vulnerabilities"][0]["cve"] == "CVE-2026-10005"
+    assert result["vulnerabilities"][0]["epss"] == 0.961
+
+
+def test_compact_radar_cli_integration_with_catalog_and_epss(tmp_path):
+    """Verifies CisaKevCatalog.catalog_data and EpssCorrelator.cache integration."""
+    from orbit_security.cisa_kev import CisaKevCatalog
+    from orbit_security.epss import EpssCorrelator
+
+    kev_catalog = CisaKevCatalog()
+    epss_correlator = EpssCorrelator()
+
+    assert isinstance(kev_catalog.catalog_data, dict)
+    assert "vulnerabilities" in kev_catalog.catalog_data
+    assert isinstance(epss_correlator.cache, dict)
+    assert len(epss_correlator.cache) > 0
+
+    out_path = tmp_path / "cli_radar.json"
+    res = compact_radar_dataset(
+        cisa_kev_data=kev_catalog.catalog_data,
+        epss_data=epss_correlator.cache,
+        output_path=out_path,
+        sync_to_landing=False,
+    )
+    assert out_path.exists()
+    assert out_path.stat().st_size < 250 * 1024
+    assert res["total_tracked"] > 0
+
+
+def test_github_pages_live_radar_showcase_ui_and_asset_parity():
+    """Verifies Project #3: Interactive CISA KEV & EPSS Intelligence Radar UI on GitHub Pages."""
+    repo_root = Path(__file__).resolve().parent.parent
+    docs_json = repo_root / "docs" / "assets" / "kev_epss_radar.json"
+    landing_json = repo_root / "landing" / "assets" / "kev_epss_radar.json"
+
+    assert docs_json.exists(), "docs/assets/kev_epss_radar.json must exist"
+    assert landing_json.exists(), "landing/assets/kev_epss_radar.json must exist"
+    assert docs_json.read_bytes() == landing_json.read_bytes(), "Radar JSON must be byte-identical"
+    assert docs_json.stat().st_size < 250 * 1024, "Radar JSON must be < 250 KB"
+
+    for tree in ("landing", "docs"):
+        index_html = (repo_root / tree / "index.html").read_text(encoding="utf-8")
+        assert 'id="kev-epss-radar"' in index_html
+        assert 'id="kevRadarSearchInput"' in index_html
+        assert 'id="kevRadarResultsGrid"' in index_html
+        assert 'id="kevRadarDetailPanel"' in index_html
+
+        radar_js = (repo_root / tree / "assets" / "orbit_radar.js").read_text(encoding="utf-8")
+        assert "assets/kev_epss_radar.json" in radar_js
+        assert "initKevEpssRadar" in radar_js
+        assert "filterKevEpssRadar" in radar_js
+        assert "selectKevRadarCve" in radar_js
+
+

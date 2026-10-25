@@ -303,3 +303,96 @@ def test_shuttle_receiver_fifo_eviction():
     assert len(receiver._seen_hashes) == 10000
     assert "hash_0" not in receiver._seen_hashes  # Oldest evicted FIFO
     assert "hash_10000" in receiver._seen_hashes
+
+
+def test_shuttle_sender_env_target_url_resolution(monkeypatch, tmp_path):
+    """Verifies EventShuttleSender resolves target URL from ORBIT_SHUTTLE_TARGET_URL or ORBIT_COCKPIT_TAILSCALE_IP."""
+    db_path = tmp_path / "env_bb.db"
+    bb = Blackboard(db_path=db_path)
+
+    monkeypatch.setenv("ORBIT_COCKPIT_TAILSCALE_IP", "100.101.102.103")
+    monkeypatch.delenv("ORBIT_SHUTTLE_TARGET_URL", raising=False)
+    sender1 = EventShuttleSender(blackboard=bb)
+    assert sender1.target_url == "http://100.101.102.103:9090/api/orbit/blackboard/shuttle"
+
+    monkeypatch.setenv("ORBIT_SHUTTLE_TARGET_URL", "http://100.64.0.9:9090/api/orbit/blackboard/shuttle/")
+    sender2 = EventShuttleSender(blackboard=bb)
+    assert sender2.target_url == "http://100.64.0.9:9090/api/orbit/blackboard/shuttle"
+
+
+def test_shuttle_live_tcp_loopback_end_to_end(tmp_path):
+    """Verifies live TCP HTTP replication between EventShuttleSender and EventShuttleReceiver."""
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    import threading
+
+    sender_db = tmp_path / "live_sender.db"
+    receiver_db = tmp_path / "live_receiver.db"
+    cursor_file = tmp_path / "live_cursor.json"
+
+    bb_sender = Blackboard(db_path=sender_db)
+    bb_receiver = Blackboard(db_path=receiver_db)
+    secret = "live-tailscale-shuttle-hmac-key"
+    receiver = EventShuttleReceiver(blackboard=bb_receiver, secret=secret)
+
+    class ShuttleHandler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            if self.path == "/api/orbit/blackboard/shuttle":
+                length = int(self.headers.get("Content-Length", "0"))
+                raw_body = self.rfile.read(length)
+                sig = self.headers.get(HEADER_SIGNATURE, "")
+                ts = float(self.headers.get(HEADER_TIMESTAMP, "0"))
+                node_id = self.headers.get(HEADER_NODE_ID, "unknown")
+                res = receiver.ingest_batch(raw_body=raw_body, signature=sig, timestamp=ts, node_id=node_id)
+                code = 200 if res.get("ok") else int(res.get("status", 400))
+                body = json.dumps(res).encode("utf-8")
+                self.send_response(code)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+        def log_message(self, format, *args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), ShuttleHandler)
+    port = server.server_address[1]
+    t = threading.Thread(target=server.serve_forever, daemon=True)
+    t.start()
+
+    try:
+        bb_sender.publish(
+            event_type="CISA_KEV_MATCH_DETECTED",
+            payload={"cve_id": "CVE-2026-104935", "domain": "vpn.client.example"},
+            source="oracle-cloud-sentinel",
+            topic="cve_radar",
+        )
+        bb_sender.publish(
+            event_type="SUBDOMAIN_TAKEOVER_DETECTED",
+            payload={"provider": "GitHub Pages", "domain": "docs.client.example"},
+            source="oracle-cloud-sentinel",
+            topic="perimeter",
+        )
+
+        sender = EventShuttleSender(
+            blackboard=bb_sender,
+            target_url=f"http://127.0.0.1:{port}/api/orbit/blackboard/shuttle",
+            secret=secret,
+            node_id="oracle-arm64-free-1",
+            cursor_file=cursor_file,
+        )
+        res = sender.send_batch()
+        assert res["ok"] is True
+        assert res["count"] == 2
+        assert res["last_synced_id"] == 2
+        assert res["receiver_response"]["ingested_count"] == 2
+
+        replicated = bb_receiver.get_recent(limit=10)
+        assert len(replicated) == 2
+        assert replicated[0]["payload"]["_shuttle_origin"] == "oracle-arm64-free-1"
+    finally:
+        server.shutdown()
+        server.server_close()
+

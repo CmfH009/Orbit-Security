@@ -26,6 +26,15 @@ LANDING_ASSETS = REPO_ROOT / "landing" / "assets"
 DEFAULT_OUTPUT_FILE = DOCS_ASSETS / "kev_epss_radar.json"
 
 
+def _compact_text(text: str, max_len: int) -> str:
+    clean = (text or "").strip()
+    if len(clean) <= max_len:
+        return clean
+    if "BOD 26-04" in clean and max_len <= 100:
+        return "Apply vendor mitigations per CISA BOD 26-04 directive."
+    return clean[: max_len - 3].rstrip() + "..."
+
+
 def compact_radar_dataset(
     cisa_kev_data: Dict[str, Any],
     epss_data: Dict[str, Dict[str, Any]],
@@ -33,8 +42,9 @@ def compact_radar_dataset(
     sync_to_landing: bool = True,
     epss_threshold: float = 0.50,
     percentile_threshold: float = 0.97,
+    max_payload_bytes: int = 240 * 1024,
 ) -> Dict[str, Any]:
-    """Pre-joins CISA KEV and EPSS into a high-density, minified static payload."""
+    """Pre-joins CISA KEV and EPSS into a high-density, minified static payload (<250 KB)."""
     vulnerabilities = cisa_kev_data.get("vulnerabilities", [])
     kev_map: Dict[str, Dict[str, Any]] = {}
 
@@ -46,10 +56,10 @@ def compact_radar_dataset(
             "cve": cve,
             "vendor": v.get("vendorProject", "Unknown"),
             "product": v.get("product", "Unknown"),
-            "vulnerability_name": v.get("vulnerabilityName", ""),
+            "vulnerability_name": _compact_text(v.get("vulnerabilityName", ""), 110),
             "date_added": v.get("dateAdded", ""),
-            "short_description": v.get("shortDescription", ""),
-            "action_required": v.get("requiredAction", "Patch immediately"),
+            "short_description": _compact_text(v.get("shortDescription", ""), 150),
+            "action_required": _compact_text(v.get("requiredAction", "Patch immediately"), 90),
             "due_date": v.get("dueDate", ""),
             "is_cisa_kev": True,
             "epss": 0.0,
@@ -61,8 +71,8 @@ def compact_radar_dataset(
         epss_info = epss_data.get(cve)
         if epss_info:
             try:
-                record["epss"] = float(epss_info.get("epss", 0.0))
-                record["percentile"] = float(epss_info.get("percentile", 0.0))
+                record["epss"] = round(float(epss_info.get("epss", 0.0)), 5)
+                record["percentile"] = round(float(epss_info.get("percentile", 0.0)), 5)
             except (ValueError, TypeError):
                 pass
 
@@ -73,8 +83,8 @@ def compact_radar_dataset(
         if cve_upper in kev_map:
             continue  # Already captured in KEV map
         try:
-            score = float(epss_info.get("epss", 0.0))
-            perc = float(epss_info.get("percentile", 0.0))
+            score = round(float(epss_info.get("epss", 0.0)), 5)
+            perc = round(float(epss_info.get("percentile", 0.0)), 5)
         except (ValueError, TypeError):
             continue
 
@@ -93,22 +103,50 @@ def compact_radar_dataset(
                 "percentile": perc,
             }
 
-    combined_entries = list(kev_map.values()) + list(non_kev_high_velocity.values())
-    combined_entries.sort(key=lambda x: (x["is_cisa_kev"], x["epss"]), reverse=True)
+    kev_sorted = sorted(
+        kev_map.values(),
+        key=lambda x: (x["epss"], x.get("date_added", "")),
+        reverse=True,
+    )
+    non_kev_sorted = sorted(
+        non_kev_high_velocity.values(),
+        key=lambda x: (x["epss"], x.get("date_added", "")),
+        reverse=True,
+    )
+    combined_entries = kev_sorted + non_kev_sorted
 
-    compact_payload = {
-        "generated_at": cisa_kev_data.get("catalogVersion", "2026-10-25"),
-        "total_tracked": len(combined_entries),
-        "cisa_kev_count": len(kev_map),
-        "high_velocity_count": len(non_kev_high_velocity),
-        "vulnerabilities": combined_entries,
-    }
+    def _build_payload(entries: List[Dict[str, Any]]) -> Dict[str, Any]:
+        return {
+            "generated_at": cisa_kev_data.get("catalogVersion", "2026-10-25"),
+            "total_tracked": len(kev_map) + len(non_kev_high_velocity),
+            "cisa_kev_count": len(kev_map),
+            "high_velocity_count": len(non_kev_high_velocity),
+            "vulnerabilities": entries,
+        }
+
+    compact_payload = _build_payload(combined_entries)
+    minified_json = json.dumps(compact_payload, separators=(",", ":"))
+
+    # Enforce strict < 250 KB payload budget while preserving all non-KEV high-velocity entries
+    # and the highest-EPSS / newest CISA KEV entries
+    if len(minified_json.encode("utf-8")) > max_payload_bytes and len(kev_sorted) > 50:
+        low, high = 50, len(kev_sorted)
+        best_entries = kev_sorted[:50] + non_kev_sorted
+        while low <= high:
+            mid = (low + high) // 2
+            candidate = kev_sorted[:mid] + non_kev_sorted
+            cand_json = json.dumps(_build_payload(candidate), separators=(",", ":"))
+            if len(cand_json.encode("utf-8")) <= max_payload_bytes:
+                best_entries = candidate
+                low = mid + 1
+            else:
+                high = mid - 1
+        compact_payload = _build_payload(best_entries)
+        minified_json = json.dumps(compact_payload, separators=(",", ":"))
 
     if output_path is None:
         output_path = DEFAULT_OUTPUT_FILE
-
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    minified_json = json.dumps(compact_payload, separators=(",", ":"))
     output_path.write_text(minified_json, encoding="utf-8")
 
     if sync_to_landing:

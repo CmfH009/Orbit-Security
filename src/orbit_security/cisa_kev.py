@@ -162,6 +162,7 @@ class CisaKevCatalog:
     ):
         self.cache_file = Path(cache_file or DEFAULT_CACHE_PATH)
         self.offline_fixture = offline_fixture
+        self.catalog_data: Dict[str, Any] = {}
         self.vulnerabilities: Dict[str, KevVulnerability] = {}
         if auto_load:
             self.load_catalog()
@@ -217,6 +218,8 @@ class CisaKevCatalog:
         # 4. Fallback to bundled fixture if live and cache both unavailable
         if not catalog_data:
             catalog_data = BUILTIN_KEV_FALLBACK
+
+        self.catalog_data = catalog_data
 
         # Parse catalog into structured dict
         self.vulnerabilities.clear()

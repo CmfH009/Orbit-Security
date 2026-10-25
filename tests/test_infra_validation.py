@@ -104,3 +104,37 @@ def test_shell_script_defensive_flags():
     assert script.startswith("#!/usr/bin/env bash")
     assert "set -euo pipefail" in script
     assert "ARCH=$(uname -m)" in script
+
+
+def test_environment_file_and_deploy_oracle_sentinel_renderer(tmp_path):
+    """Verifies EnvironmentFile wiring and Oracle ARM64 cloud-init bundle rendering."""
+    content = CLOUD_INIT_FILE.read_text(encoding="utf-8")
+    script = PROVISION_SCRIPT.read_text(encoding="utf-8")
+
+    assert "EnvironmentFile=-/etc/default/orbit-security" in content
+    assert "EnvironmentFile=-/etc/default/orbit-security" in script
+
+    from orbit_security.tools.deploy_oracle_sentinel import render_oracle_cloud_init
+
+    out_yaml = tmp_path / "rendered_cloud_init.yaml"
+    meta = render_oracle_cloud_init(
+        cockpit_host="100.88.42.10",
+        cockpit_port=9090,
+        shuttle_secret="custom-hmac-secret-999",
+        node_id="oracle-arm64-prod-1",
+        tailscale_authkey="tskey-auth-test12345",
+        output_path=out_yaml,
+    )
+
+    assert out_yaml.exists()
+    assert meta["target_url"] == "http://100.88.42.10:9090/api/orbit/blackboard/shuttle"
+    assert meta["shape"] == "VM.Standard.A1.Flex"
+    assert meta["ocpus"] == 4
+    assert meta["memory_gb"] == 24
+
+    rendered_text = out_yaml.read_text(encoding="utf-8")
+    parsed = yaml.safe_load(rendered_text)
+    assert isinstance(parsed, dict)
+    assert "http://100.88.42.10:9090/api/orbit/blackboard/shuttle" in rendered_text
+    assert "oracle-arm64-prod-1" in rendered_text
+

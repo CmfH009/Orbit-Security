@@ -123,6 +123,7 @@ Type=simple
 User=orbit
 Group=orbit
 WorkingDirectory=/opt/orbit-security
+EnvironmentFile=-/etc/default/orbit-security
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=PYTHONPATH=/opt/orbit-security/src
@@ -162,6 +163,7 @@ Type=simple
 User=orbit
 Group=orbit
 WorkingDirectory=/opt/orbit-security
+EnvironmentFile=-/etc/default/orbit-security
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=PYTHONPATH=/opt/orbit-security/src

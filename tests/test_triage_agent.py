@@ -115,3 +115,28 @@ def test_local_triage_agent_ollama_mock_inference(tmp_path):
             assert sent_data["keep_alive"] == "0"
             assert sent_data["options"]["temperature"] == 0.1
             assert "properties" in sent_data["format"]
+
+
+def test_local_triage_agent_model_auto_resolution(tmp_path):
+    """Verifies dynamic selection of installed Orbit/local models when default is absent."""
+    db_path = tmp_path / "triage_resolve_bb.db"
+    bb = Blackboard(db_path=db_path)
+    agent = LocalTriageAgent(blackboard=bb)
+
+    mock_tags = {
+        "models": [
+            {"name": "gemma2:2b"},
+            {"name": "orbit-sentinel:latest"},
+            {"name": "orbit-coder:latest"},
+        ]
+    }
+    mock_resp = MagicMock()
+    mock_resp.status = 200
+    mock_resp.read.return_value = json.dumps(mock_tags).encode("utf-8")
+    mock_resp.__enter__.return_value = mock_resp
+
+    with patch("urllib.request.urlopen", return_value=mock_resp):
+        assert agent.is_ollama_available() is True
+        resolved = agent.resolve_available_model()
+        assert resolved == "orbit-sentinel:latest"
+

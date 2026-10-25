@@ -68,6 +68,60 @@ BUILTIN_EPSS_FALLBACK: Dict[str, Dict[str, Any]] = {
         "percentile": "0.82010",
         "date": "2026-10-24",
     },
+    "CVE-2026-114625": {
+        "cve": "CVE-2026-114625",
+        "epss": "0.91450",
+        "percentile": "0.99420",
+        "date": "2026-10-24",
+    },
+    "CVE-2026-104935": {
+        "cve": "CVE-2026-104935",
+        "epss": "0.95820",
+        "percentile": "0.99780",
+        "date": "2026-10-24",
+    },
+    "CVE-2026-0322": {
+        "cve": "CVE-2026-0322",
+        "epss": "0.93110",
+        "percentile": "0.99510",
+        "date": "2026-10-24",
+    },
+    "CVE-2026-21589": {
+        "cve": "CVE-2026-21589",
+        "epss": "0.88400",
+        "percentile": "0.98950",
+        "date": "2026-10-24",
+    },
+    "CVE-2026-110447": {
+        "cve": "CVE-2026-110447",
+        "epss": "0.84210",
+        "percentile": "0.98410",
+        "date": "2026-10-24",
+    },
+    "CVE-2026-44110": {
+        "cve": "CVE-2026-44110",
+        "epss": "0.86400",
+        "percentile": "0.98820",
+        "date": "2026-10-24",
+        "vendor": "Cloudflare / Edge Worker",
+        "product": "Edge Proxy Runtime",
+    },
+    "CVE-2026-50218": {
+        "cve": "CVE-2026-50218",
+        "epss": "0.79300",
+        "percentile": "0.98150",
+        "date": "2026-10-24",
+        "vendor": "WooCommerce / WordPress",
+        "product": "Checkout Webhook Gateway",
+    },
+    "CVE-2026-61004": {
+        "cve": "CVE-2026-61004",
+        "epss": "0.74120",
+        "percentile": "0.97640",
+        "date": "2026-10-24",
+        "vendor": "Next.js / Node",
+        "product": "SSR Action Handler",
+    },
 }
 
 
@@ -90,6 +144,13 @@ class EpssCorrelator:
     ):
         self.cache_file = Path(cache_file or DEFAULT_EPSS_CACHE_PATH)
         self.offline_fixtures = offline_fixtures or BUILTIN_EPSS_FALLBACK
+
+    @property
+    def cache(self) -> Dict[str, Dict[str, Any]]:
+        """Returns merged mapping of offline baseline fixtures and disk-cached EPSS scores."""
+        merged = dict(self.offline_fixtures)
+        merged.update(self.load_cached_scores())
+        return merged
 
     def is_cache_valid(self, ttl_seconds: float = 86400.0) -> bool:
         """Returns True if the local disk cache exists and is fresh."""

@@ -14,6 +14,7 @@ Features:
 
 from __future__ import annotations
 
+import argparse
 import json
 import logging
 import os
@@ -28,6 +29,15 @@ logger = logging.getLogger("orbit_security.triage_agent")
 
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434/api/chat"
 DEFAULT_MODEL = "qwen2.5-coder:7b-instruct-q4_K_M"
+FALLBACK_MODEL_PRIORITY = (
+    "qwen2.5-coder:7b-instruct-q4_K_M",
+    "orbit-sentinel:latest",
+    "orbit-coder:latest",
+    "gemma4:e4b",
+    "gemma4:e2b",
+    "llama3.2:latest",
+    "gemma2:2b",
+)
 
 
 class TriageRemediationSpec(BaseModel):
@@ -51,26 +61,52 @@ class LocalTriageAgent:
     ):
         self.ollama_url = ollama_url or os.environ.get("ORBIT_OLLAMA_URL", DEFAULT_OLLAMA_URL)
         self.model_name = model_name or os.environ.get("ORBIT_TRIAGE_MODEL", DEFAULT_MODEL)
+        self._installed_models: List[str] = []
         if blackboard is None:
             from orbit_security.blackboard import get_blackboard
             self.bb = get_blackboard()
         else:
             self.bb = blackboard
 
-    def is_ollama_available(self, timeout: float = 1.0) -> bool:
-        """Checks if local Ollama daemon is reachable."""
+    def is_ollama_available(self, timeout: float = 1.5) -> bool:
+        """Checks if local Ollama daemon is reachable and caches installed models."""
         try:
-            req = urllib.request.Request("http://127.0.0.1:11434/api/tags", headers={"User-Agent": "Orbit-Triage/1.0"})
+            parsed = urllib.parse.urlparse(self.ollama_url)
+            base_url = f"{parsed.scheme}://{parsed.netloc}" if parsed.netloc else "http://127.0.0.1:11434"
+            req = urllib.request.Request(f"{base_url}/api/tags", headers={"User-Agent": "Orbit-Triage/1.0"})
             with urllib.request.urlopen(req, timeout=timeout) as resp:
-                return resp.status == 200
+                if resp.status == 200:
+                    try:
+                        raw = resp.read()
+                        if raw:
+                            tags_data = json.loads(raw.decode("utf-8"))
+                            self._installed_models = [
+                                m.get("name", "") for m in tags_data.get("models", []) if m.get("name")
+                            ]
+                    except Exception:
+                        pass
+                    return True
+                return False
         except Exception:
             return False
+
+    def resolve_available_model(self) -> str:
+        """Selects configured model if installed, or highest-priority local Orbit/quantized model."""
+        if not self._installed_models:
+            return self.model_name
+        if self.model_name in self._installed_models:
+            return self.model_name
+        for candidate in FALLBACK_MODEL_PRIORITY:
+            if candidate in self._installed_models:
+                return candidate
+        return self._installed_models[0]
 
     def triage_vulnerability(
         self,
         event_type: str,
         payload: Dict[str, Any],
         unload_after: bool = True,
+        timeout: float = 60.0,
     ) -> TriageRemediationSpec:
         """Analyzes vulnerability event and returns schema-constrained triage spec."""
         target = payload.get("domain") or payload.get("target") or "target.system"
@@ -86,18 +122,18 @@ class LocalTriageAgent:
             f"and executive summary."
         )
 
-        keep_alive = "0" if unload_after else "5m"
-        req_payload = {
-            "model": self.model_name,
-            "messages": [{"role": "user", "content": prompt}],
-            "format": TriageRemediationSpec.model_json_schema(),
-            "options": {"temperature": 0.1},
-            "keep_alive": keep_alive,
-            "stream": False,
-        }
-
         # Attempt live Ollama inference
         if self.is_ollama_available():
+            active_model = self.resolve_available_model()
+            keep_alive = "0" if unload_after else "5m"
+            req_payload = {
+                "model": active_model,
+                "messages": [{"role": "user", "content": prompt}],
+                "format": TriageRemediationSpec.model_json_schema(),
+                "options": {"temperature": 0.1},
+                "keep_alive": keep_alive,
+                "stream": False,
+            }
             try:
                 body_bytes = json.dumps(req_payload).encode("utf-8")
                 req = urllib.request.Request(
@@ -105,7 +141,7 @@ class LocalTriageAgent:
                     data=body_bytes,
                     headers={"Content-Type": "application/json"},
                 )
-                with urllib.request.urlopen(req, timeout=15.0) as resp:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
                     if resp.status == 200:
                         res_data = json.loads(resp.read().decode("utf-8"))
                         msg_content = res_data.get("message", {}).get("content", "{}")
@@ -170,3 +206,34 @@ class LocalTriageAgent:
                 source="local-triage-agent",
                 topic="intel",
             )
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Orbit Security Local Quantized LLM Triage Agent")
+    parser.add_argument("--event-type", default="CISA_KEV_MATCH_DETECTED", help="Security event type")
+    parser.add_argument("--cve", default="CVE-2024-21887", help="CVE ID or service component")
+    parser.add_argument("--domain", default="vpn.agency-client.example", help="Target domain")
+    parser.add_argument("--model", default=None, help="Explicit Ollama model name")
+    parser.add_argument("--keep-loaded", action="store_true", help="Keep model in RAM for 5m instead of immediate unload")
+    args = parser.parse_args()
+
+    agent = LocalTriageAgent(model_name=args.model)
+    online = agent.is_ollama_available()
+    resolved_model = agent.resolve_available_model() if online else "offline-fallback"
+    spec = agent.triage_vulnerability(
+        event_type=args.event_type,
+        payload={"domain": args.domain, "cve_id": args.cve},
+        unload_after=not args.keep_loaded,
+    )
+    output = {
+        "ollama_online": online,
+        "resolved_model": resolved_model,
+        "keep_alive": "5m" if args.keep_loaded else "0",
+        "triage_spec": spec.model_dump(),
+    }
+    print(json.dumps(output, indent=2))
+
+
+if __name__ == "__main__":
+    main()
+
