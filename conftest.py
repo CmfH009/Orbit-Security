@@ -38,6 +38,8 @@ _SIBLING_TEST_MODULES = [
     "tests/test_act3_capital_and_bounty.py",
     "tests/test_nova_email_daemon.py",
     "tests/test_supervisor_canary.py",
+    "tests/test_mega_skill_orchestration.py",
+    "tests/test_orbit_orchestrator_stress.py",
 ]
 
 if os.environ.get("ORBIT_SKIP_SIBLING_TESTS") == "1" or not _SIBLING_SCRIPTS.exists():

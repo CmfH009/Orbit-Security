@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+"""Top-level re-export of orbit_security.blackboard for root-level and test imports."""
+from orbit_security.blackboard import *
+from orbit_security.blackboard import (
+    Blackboard,
+    get_blackboard,
+    publish_event,
+    get_recent_events,
+    subscribe,
+    unsubscribe,
+    broadcast,
+    checkpoint,
+    DEFAULT_BLACKBOARD_DB,
+    TOPIC_TELEMETRY,
+    TOPIC_GROWTH,
+    TOPIC_DEVOPS,
+    TOPIC_THREAT_INTEL,
+    TOPIC_SOCIAL,
+    EVENT_THREAT_INTEL_DISCOVERED,
+    EVENT_ROAST_STAGED,
+    EVENT_GITHUB_RELEASE_READY,
+    EVENT_PORTAL_CONVERSION,
+    EVENT_VIRAL_THREAD_COMPOSED,
+    EVENT_COMMUNITY_ENGAGEMENT_QUEUED,
+    EVENT_MARKETING_CAMPAIGN_STAGED,
+    EVENT_PR_AUDIT_COMPLETED,
+    EVENT_SHOWCASE_UPDATED,
+    __all__,
+)

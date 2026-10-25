@@ -32,7 +32,9 @@ for p in (SKILL_SCRIPT_DIR, SYSTEM_SCRIPTS_DIR):
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 
-from orbit_recursive_loop import OrbitRecursiveOrchestrator, RecursiveTransition
+orbit_recursive_module = pytest.importorskip("orbit_recursive_loop", reason="orbit_recursive_loop script not present")
+OrbitRecursiveOrchestrator = orbit_recursive_module.OrbitRecursiveOrchestrator
+RecursiveTransition = orbit_recursive_module.RecursiveTransition
 from orbit_security.blackboard import Blackboard, get_blackboard
 
 

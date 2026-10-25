@@ -227,11 +227,65 @@ test('Screen recorder (startScreenRecording) includes preferCurrentTab and selfB
     assert(docsCatJs.includes('surfaceSwitching: "include"'), 'Missing surfaceSwitching in getDisplayMedia');
 });
 
+// 7i. MINI-GAME MUTUAL EXCLUSIVITY & ACTIVE CLASS HYGIENE
+test('Mini-game mutual exclusivity: clearActiveGameModes cleanly strips active states and elements', () => {
+    assert(docsCatJs.includes('clearActiveGameModes'), 'Missing clearActiveGameModes function');
+    assert(docsCatJs.includes('clearActiveModes: clearActiveGameModes'), 'clearActiveModes must be exported in SimpleCat API');
+    assert(docsCatJs.includes('laserHudBtn.classList.remove("astro-hud-btn-active")'), 'Laser button active state must be cleared');
+    assert(docsCatJs.includes('treatsHudBtn.classList.remove("astro-hud-btn-active")'), 'Treats button active state must be cleared');
+    assert(docsCatJs.includes('patrolHudBtn.classList.remove("astro-hud-btn-active")'), 'Patrol button active state must be cleared');
+    assert(docsCatJs.includes('tourHudBtn.classList.remove("astro-hud-btn-active")'), 'Tour button active state must be cleared');
+});
+
+// 7j. DYNAMIC SPEECH BUBBLE TITLE RESOLUTION & STALE HEADER PREVENTION
+test('Dynamic Speech Bubble Title Updates: showSpeechBubble assigns contextual titles to prevent stale headers', () => {
+    assert(docsCatJs.includes('showSpeechBubble(text, duration = 7500, isTour = false, customTitle = null)'), 'showSpeechBubble must accept customTitle');
+    assert(docsCatJs.includes('ASTRO-CAT // TREATS'), 'Treat mode must set title to ASTRO-CAT // TREATS');
+    assert(docsCatJs.includes('ASTRO-CAT // THREAT PATROL'), 'Patrol mode must set title to ASTRO-CAT // THREAT PATROL');
+    assert(docsCatJs.includes('ASTRO-CAT // LASER CHASE'), 'Laser mode must set title to ASTRO-CAT // LASER CHASE');
+    assert(docsCatJs.includes('ASTRO-CAT // COMMS'), 'Default floating mode must set title to ASTRO-CAT // COMMS');
+});
+
+// 7k. VIEWPORT SAFE-BOUNDARY CLAMPING & TREAT CHOMP COLLISION
+test('Viewport safe-boundary clamping for dropped treats and responsive chomp collision distance', () => {
+    assert(docsCatJs.includes('const safeX = Math.max(50, Math.min(window.innerWidth - 70, x))'), 'Treats must be clamped to safe X viewport');
+    assert(docsCatJs.includes('const safeY = Math.max(90, Math.min(window.innerHeight - 100, y))'), 'Treats must be clamped to safe Y viewport');
+    assert(docsCatJs.includes('if (dist > 46)'), 'Treat chomp collision distance must be >= 46px');
+    assert(docsCatJs.includes('minX = 15') && docsCatJs.includes('maxX = window.innerWidth - 85'), 'Universal screen edge bounce must clamp X');
+    assert(docsCatJs.includes('minY = 65') && docsCatJs.includes('maxY = window.innerHeight - 95'), 'Universal screen edge bounce must clamp Y');
+});
+
+// 7l. COORDINATED HUD AND SPEECH BUBBLE OVERLAP PREVENTION
+test('Coordinated HUD and Speech Bubble layout prevents occlusion in high viewport positions', () => {
+    assert(docsCatJs.includes('forceHudAbove = (visualY > window.innerHeight - 130) || (bubbleVisible && visualY < bubbleH + 32)'), 'forceHudAbove must coordinate bubble and HUD geometry');
+    assert(docsCatJs.includes('targetY = window.innerWidth > 640 ? 190 : 210'), 'Tour step targetY must provide >=190px top clearance');
+});
+
+// 7m. GLOBAL ASTRO-CAT DOCK PERSISTENCE ACROSS ALL PAGES
+test('Space Station Dock & SimpleCat persistence across about.html and signup.html', () => {
+    const aboutHtml = fs.readFileSync(path.join(__dirname, '..', 'docs', 'about.html'), 'utf8');
+    const signupHtml = fs.readFileSync(path.join(__dirname, '..', 'docs', 'signup.html'), 'utf8');
+    assert(aboutHtml.includes('assets/simple_cat.js'), 'docs/about.html must include assets/simple_cat.js');
+    assert(signupHtml.includes('assets/simple_cat.js'), 'docs/signup.html must include assets/simple_cat.js');
+});
+
 // 8. STRICT 100% BYTE-FOR-BYTE SHA-256 PARITY BETWEEN DOCS/ AND LANDING/
 test('docs/index.html and landing/index.html have 100% SHA-256 parity', () => {
     const hDocs = sha256(docsIndexPath);
     const hLanding = sha256(landingIndexPath);
     assert.strictEqual(hDocs, hLanding, `index.html drift: docs=${hDocs} landing=${hLanding}`);
+});
+
+test('docs/about.html and landing/about.html have 100% SHA-256 parity', () => {
+    const hDocs = sha256(path.join(__dirname, '..', 'docs', 'about.html'));
+    const hLanding = sha256(path.join(__dirname, '..', 'landing', 'about.html'));
+    assert.strictEqual(hDocs, hLanding, `about.html drift: docs=${hDocs} landing=${hLanding}`);
+});
+
+test('docs/signup.html and landing/signup.html have 100% SHA-256 parity', () => {
+    const hDocs = sha256(path.join(__dirname, '..', 'docs', 'signup.html'));
+    const hLanding = sha256(path.join(__dirname, '..', 'landing', 'signup.html'));
+    assert.strictEqual(hDocs, hLanding, `signup.html drift: docs=${hDocs} landing=${hLanding}`);
 });
 
 test('docs/assets/simple_cat.js and landing/assets/simple_cat.js have 100% SHA-256 parity', () => {

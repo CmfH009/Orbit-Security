@@ -1890,33 +1890,12 @@
         playPowerUp();
         playThruster();
         spawnSparks(copilot.x + 32, copilot.y + 54, 12, '#38bdf8');
-        showSpeechBubble("Thrusters engaged! Drag & toss me around the screen! 🐾");
+        showSpeechBubble("Thrusters engaged! Drag & toss me around the screen! 🐾", 7500, false, "ASTRO-CAT // ZERO-G LAUNCH");
     }
 
     function dockAstroCat() {
+        clearActiveGameModes();
         copilot.state = 'docked';
-        copilot.laserActive = false;
-        copilot.patrolActive = false;
-        copilot.treatsActive = false;
-        clearTimeout(copilot.laserAutoStopTimer);
-        const dockLaserStop = document.getElementById("dock-laser-stop-btn");
-        if (dockLaserStop) dockLaserStop.classList.add("hidden");
-        const laserHudBtn = document.getElementById("hud-laser-btn");
-        if (laserHudBtn) laserHudBtn.classList.remove("astro-hud-btn-active");
-        const treatsHudBtn = document.getElementById("hud-treats-btn");
-        if (treatsHudBtn) treatsHudBtn.classList.remove("astro-hud-btn-active");
-        if (laserDotEl) laserDotEl.classList.add("hidden");
-        clearPatrolThreats();
-
-        if (copilot.treatsList) {
-            copilot.treatsList.forEach(t => {
-                if (t.el && t.el.parentElement) t.el.parentElement.removeChild(t.el);
-            });
-            copilot.treatsList = [];
-        }
-
-        const tourControls = document.getElementById("astro-tour-controls");
-        if (tourControls) tourControls.classList.add("hidden");
 
         const statusPill = document.getElementById("station-status-pill");
         if (statusPill) {
@@ -1945,7 +1924,7 @@
         } else {
             playPurr();
         }
-        showSpeechBubble("Purrrrr... Station shields 100%! All orbital sensors nominal! 🐾", 4500);
+        showSpeechBubble("Purrrrr... Station shields 100%! All orbital sensors nominal! 🐾", 4500, false, "ORBIT STATION // COMMS");
     }
 
     function toggleTouchDrawer() {
@@ -2000,10 +1979,10 @@
         if (copilot.state === 'docked') {
             launchAstroCatIntoZeroG();
         }
+        clearActiveGameModes('tour');
         copilot.state = 'tour';
-        copilot.laserActive = false;
-        copilot.patrolActive = false;
-        copilot.treatsActive = false;
+        const tourBtn = document.getElementById("hud-tour-btn");
+        if (tourBtn) tourBtn.classList.add("astro-hud-btn-active");
         currentTourStep = 0;
         playPowerUp();
         executeTourStep(0);
@@ -2023,7 +2002,7 @@
         }
 
         const targetX = window.innerWidth > 640 ? Math.min(window.innerWidth - 220, Math.max(80, window.innerWidth * 0.7)) : 24;
-        const targetY = 140;
+        const targetY = window.innerWidth > 640 ? 190 : 210;
         copilot.x = targetX;
         copilot.y = targetY;
         copilot.vx = 0;
@@ -2039,7 +2018,7 @@
         const nextBtn = document.getElementById("tour-next-btn");
         if (nextBtn) nextBtn.textContent = step.btnText;
 
-        showSpeechBubble(step.text, 60000, true);
+        showSpeechBubble(step.text, 60000, true, step.title);
     }
 
     function nextTourStep() {
@@ -2047,6 +2026,7 @@
     }
 
     function finishSiteTour() {
+        clearActiveGameModes();
         copilot.state = 'floating';
         const tourControls = document.getElementById("astro-tour-controls");
         if (tourControls) tourControls.classList.add("hidden");
@@ -2061,10 +2041,11 @@
         playPowerUp();
         playMeow();
         spawnSparks(copilot.x + 32, copilot.y + 32, 16, '#10b981');
-        showSpeechBubble("🎉 Tour Complete! Enjoy exploring Orbit Security, or toss me around in zero-G! 😸", 8000, false);
+        showSpeechBubble("🎉 Tour Complete! Enjoy exploring Orbit Security, or toss me around in zero-G! 😸", 8000, false, "ASTRO-CAT // TOUR COMPLETE");
     }
 
     function exitSiteTour() {
+        clearActiveGameModes();
         copilot.state = 'floating';
         const tourControls = document.getElementById("astro-tour-controls");
         if (tourControls) tourControls.classList.add("hidden");
@@ -2073,7 +2054,61 @@
     }
 
     // =========================================================================
-    // 6a. COSMIC TREATS & MINI-GAMES ("STARFISH CHOMP")
+    // 6a. GAME MODES COORDINATOR & MUTUAL EXCLUSIVITY GUARD
+    // =========================================================================
+    function clearActiveGameModes(keepMode = null) {
+        // 1. Laser Mode cleanup
+        if (keepMode !== 'laser') {
+            copilot.laserActive = false;
+            clearTimeout(copilot.laserAutoStopTimer);
+            const laserHudBtn = document.getElementById("hud-laser-btn");
+            if (laserHudBtn) laserHudBtn.classList.remove("astro-hud-btn-active");
+            const dockLaserStop = document.getElementById("dock-laser-stop-btn");
+            if (dockLaserStop) dockLaserStop.classList.add("hidden");
+            if (laserDotEl) laserDotEl.classList.add("hidden");
+        }
+
+        // 2. Treats Mode cleanup
+        if (keepMode !== 'treats') {
+            copilot.treatsActive = false;
+            const treatsHudBtn = document.getElementById("hud-treats-btn");
+            if (treatsHudBtn) treatsHudBtn.classList.remove("astro-hud-btn-active");
+            if (copilot.treatsList && copilot.treatsList.length > 0) {
+                copilot.treatsList.forEach(t => {
+                    if (t.el && t.el.parentElement) {
+                        t.el.parentElement.removeChild(t.el);
+                    }
+                });
+                copilot.treatsList = [];
+            }
+        }
+
+        // 3. Patrol Mode cleanup
+        if (keepMode !== 'patrol') {
+            copilot.patrolActive = false;
+            const patrolHudBtn = document.getElementById("hud-patrol-btn");
+            if (patrolHudBtn) patrolHudBtn.classList.remove("astro-hud-btn-active");
+            if (copilot.patrolThreats && copilot.patrolThreats.length > 0) {
+                copilot.patrolThreats.forEach(t => {
+                    if (t.el && t.el.parentElement) {
+                        t.el.parentElement.removeChild(t.el);
+                    }
+                });
+                copilot.patrolThreats = [];
+            }
+        }
+
+        // 4. Tour Mode cleanup
+        if (keepMode !== 'tour') {
+            const tourHudBtn = document.getElementById("hud-tour-btn");
+            if (tourHudBtn) tourHudBtn.classList.remove("astro-hud-btn-active");
+            const tourControls = document.getElementById("astro-tour-controls");
+            if (tourControls) tourControls.classList.add("hidden");
+        }
+    }
+
+    // =========================================================================
+    // 6b. COSMIC TREATS & MINI-GAMES ("STARFISH CHOMP")
     // =========================================================================
     function toggleTreatsGame() {
         if (copilot.treatsActive) {
@@ -2087,6 +2122,7 @@
         if (copilot.state === 'docked') {
             launchAstroCatIntoZeroG();
         }
+        clearActiveGameModes('treats');
         copilot.treatsActive = true;
         copilot.state = 'treats';
         copilot.treatsScore = 0;
@@ -2097,46 +2133,40 @@
         if (treatsBtn) treatsBtn.classList.add("astro-hud-btn-active");
 
         playPowerUp();
-        showSpeechBubble("🐟 Treat Mode Active! Tap anywhere on screen to drop cosmic fish snacks! 🐾", 10000);
+        showSpeechBubble("🐟 Treat Mode Active! Tap anywhere on screen to drop cosmic fish snacks! 🐾", 10000, false, "ASTRO-CAT // TREATS");
     }
 
     function stopTreatsGame() {
-        copilot.treatsActive = false;
+        clearActiveGameModes();
         if (copilot.state === 'treats') {
             copilot.state = 'floating';
         }
-        const treatsBtn = document.getElementById("hud-treats-btn");
-        if (treatsBtn) treatsBtn.classList.remove("astro-hud-btn-active");
-
-        if (copilot.treatsList) {
-            copilot.treatsList.forEach(t => {
-                if (t.el && t.el.parentElement) {
-                    t.el.parentElement.removeChild(t.el);
-                }
-            });
-            copilot.treatsList = [];
-        }
         playPurr();
-        showSpeechBubble(`Whew! Astro-Cat ate ${copilot.treatsCount || 0} treats (+${copilot.treatsScore || 0} PTS)! Floating happy in zero-g. 😸`, 6000);
+        showSpeechBubble(`Whew! Astro-Cat ate ${copilot.treatsCount || 0} treats (+${copilot.treatsScore || 0} PTS)! Floating happy in zero-g. 😸`, 6000, false, "ASTRO-CAT // TREATS");
     }
 
     function dropCosmicTreat(x, y) {
         if (!copilot.treatsList) copilot.treatsList = [];
         if (copilot.treatsList.length >= 8) return;
+
+        // Viewport safe-boundary clamping: prevent treats from dropping off-screen or under edge UI
+        const safeX = Math.max(50, Math.min(window.innerWidth - 70, x));
+        const safeY = Math.max(90, Math.min(window.innerHeight - 100, y));
+
         const treatId = 'treat-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
         const treatEl = document.createElement("div");
         treatEl.id = treatId;
         treatEl.className = "astro-cosmic-treat";
-        treatEl.style.left = `${x - 14}px`;
-        treatEl.style.top = `${y - 14}px`;
+        treatEl.style.left = `${safeX - 14}px`;
+        treatEl.style.top = `${safeY - 14}px`;
         treatEl.innerHTML = `
             <span class="treat-icon">🐟</span>
         `;
         document.body.appendChild(treatEl);
-        copilot.treatsList.push({ id: treatId, x, y, el: treatEl, spawnedAt: Date.now() });
+        copilot.treatsList.push({ id: treatId, x: safeX, y: safeY, el: treatEl, spawnedAt: Date.now() });
 
         playChirp();
-        spawnSparks(x, y, 4, '#38bdf8');
+        spawnSparks(safeX, safeY, 4, '#38bdf8');
 
         if (copilot.state === 'docked') {
             launchAstroCatIntoZeroG();
@@ -2188,7 +2218,7 @@
 
         spawnSparks(copilot.x + 32, copilot.y + 20, 6, '#34d399');
         const randomQuip = QUIPS[Math.floor(Math.random() * QUIPS.length)];
-        showSpeechBubble(randomQuip);
+        showSpeechBubble(randomQuip, 6000, false, "ASTRO-CAT // PURR");
     }
 
     function toggleLaserChase() {
@@ -2197,6 +2227,7 @@
             return;
         }
 
+        clearActiveGameModes('laser');
         copilot.laserActive = true;
         copilot.state = 'laser';
         const btn = document.getElementById("hud-laser-btn");
@@ -2209,7 +2240,7 @@
             laserDotEl.style.transform = `translate(${copilot.mouseX - 12}px, ${copilot.mouseY - 12}px)`;
         }
         playPowerUp();
-        showSpeechBubble("Laser locked! Click anywhere, press ESC, or I'll catch my breath in 15s! 🎯");
+        showSpeechBubble("Laser locked! Click anywhere, press ESC, or I'll catch my breath in 15s! 🎯", 7500, false, "ASTRO-CAT // LASER CHASE");
 
         // Auto-stop after 15 seconds so cat doesn't exhaust itself or trap the user
         clearTimeout(copilot.laserAutoStopTimer);
@@ -2222,18 +2253,10 @@
 
     function stopLaserChase(customMsg) {
         if (!copilot.laserActive) return;
-        copilot.laserActive = false;
-        clearTimeout(copilot.laserAutoStopTimer);
+        clearActiveGameModes();
         copilot.state = 'floating';
-
-        const btn = document.getElementById("hud-laser-btn");
-        if (btn) btn.classList.remove("astro-hud-btn-active");
-        const dockLaserStop = document.getElementById("dock-laser-stop-btn");
-        if (dockLaserStop) dockLaserStop.classList.add("hidden");
-
-        if (laserDotEl) laserDotEl.classList.add("hidden");
         playPurr();
-        showSpeechBubble(customMsg || "Laser disengaged! Floating smooth in zero-g. 😸");
+        showSpeechBubble(customMsg || "Laser disengaged! Floating smooth in zero-g. 😸", 6000, false, "ASTRO-CAT // LASER CHASE");
     }
 
     // =========================================================================
@@ -2365,7 +2388,7 @@
                 }, 100);
 
                 playCoin();
-                showSpeechBubble("🎬 Clip saved! Ready to post on X (Twitter)! 🚀");
+                showSpeechBubble("🎬 Clip saved! Ready to post on X (Twitter)! 🚀", 6000, false, "ASTRO-CAT // CLIP SAVED");
             };
 
             recStream.getVideoTracks()[0].onended = () => {
@@ -2398,7 +2421,7 @@
             if (dockRecBtn) dockRecBtn.innerHTML = '<span class="text-rose-400 animate-pulse">⏹️ Stop Rec</span>';
 
             playPowerUp();
-            showSpeechBubble("🎥 Recording clip (GPU optimized)! Flips & tricks ready! 🐾");
+            showSpeechBubble("🎥 Recording clip (GPU optimized)! Flips & tricks ready! 🐾", 7500, false, "ASTRO-CAT // RECORDER");
         } catch (err) {
             console.warn("Screen recording cancelled or failed:", err);
             if (recStream) {
@@ -2416,6 +2439,7 @@
 
     function startSpacePatrol() {
         if (copilot.patrolActive) return;
+        clearActiveGameModes('patrol');
         copilot.patrolActive = true;
         copilot.state = 'patrol';
         copilot.patrolScore = 0;
@@ -2424,7 +2448,7 @@
         if (patrolBtn) patrolBtn.classList.add("astro-hud-btn-active");
 
         playPowerUp();
-        showSpeechBubble("🚨 Threat Alert! 3 rogue DNS anomalies detected! Intercepting...");
+        showSpeechBubble("🚨 Threat Alert! 3 rogue DNS anomalies detected! Intercepting...", 7500, false, "ASTRO-CAT // THREAT PATROL");
 
         // Spawn 3 Threat Bugs across the viewport
         const threats = [
@@ -2447,24 +2471,46 @@
     }
 
     function clearPatrolThreats() {
-        copilot.patrolThreats.forEach(t => {
-            if (t.el && t.el.parentElement) {
-                t.el.parentElement.removeChild(t.el);
-            }
-        });
-        copilot.patrolThreats = [];
+        if (copilot.patrolThreats && copilot.patrolThreats.length > 0) {
+            copilot.patrolThreats.forEach(t => {
+                if (t.el && t.el.parentElement) {
+                    t.el.parentElement.removeChild(t.el);
+                }
+            });
+            copilot.patrolThreats = [];
+        }
         copilot.patrolActive = false;
         const patrolBtn = document.getElementById("hud-patrol-btn");
         if (patrolBtn) patrolBtn.classList.remove("astro-hud-btn-active");
     }
 
-    function showSpeechBubble(text, duration = 7500, isTour = false) {
+    function showSpeechBubble(text, duration = 7500, isTour = false, customTitle = null) {
         const bubble = document.getElementById("astro-speech-bubble");
         const bubbleText = document.getElementById("astro-bubble-text");
+        const bubbleTitle = document.getElementById("astro-bubble-title");
         const tourControls = document.getElementById("astro-tour-controls");
         if (!bubble || !bubbleText) return;
 
         bubbleText.innerText = text;
+
+        if (bubbleTitle) {
+            if (customTitle) {
+                bubbleTitle.textContent = customTitle;
+            } else if (!isTour) {
+                if (copilot.state === 'treats' || copilot.treatsActive) {
+                    bubbleTitle.textContent = "ASTRO-CAT // TREATS";
+                } else if (copilot.state === 'patrol' || copilot.patrolActive) {
+                    bubbleTitle.textContent = "ASTRO-CAT // THREAT PATROL";
+                } else if (copilot.state === 'laser' || copilot.laserActive) {
+                    bubbleTitle.textContent = "ASTRO-CAT // LASER CHASE";
+                } else if (copilot.state === 'docked') {
+                    bubbleTitle.textContent = "ORBIT STATION // COMMS";
+                } else {
+                    bubbleTitle.textContent = "ASTRO-CAT // COMMS";
+                }
+            }
+        }
+
         bubble.classList.remove("hidden");
 
         if (tourControls) {
@@ -2622,9 +2668,9 @@
                     const dy = ty - copilot.y;
                     const dist = Math.hypot(dx, dy);
 
-                    if (dist > 34) {
-                        copilot.vx += (dx / dist) * 0.95;
-                        copilot.vy += (dy / dist) * 0.95;
+                    if (dist > 46) {
+                        copilot.vx += (dx / dist) * 1.05;
+                        copilot.vy += (dy / dist) * 1.05;
                         copilot.vx *= 0.93;
                         copilot.vy *= 0.93;
                         copilot.rot = Math.atan2(copilot.vy, copilot.vx) * (180 / Math.PI) * 0.35;
@@ -2645,7 +2691,7 @@
 
                         if (copilot.treatsCount % 3 === 0) {
                             petAstroCat();
-                            showSpeechBubble(`Nom nom nom! 🐟 Score: ${copilot.treatsScore} PTS! You're the best! 😻`, 4000);
+                            showSpeechBubble(`Nom nom nom! 🐟 Score: ${copilot.treatsScore} PTS! You're the best! 😻`, 4000, false, "ASTRO-CAT // TREATS");
                         }
                     }
                 }
@@ -2673,36 +2719,36 @@
                 }
 
                 copilot.rot += (copilot.vx * 1.5 - copilot.rot) * 0.08;
+            }
 
-                // Screen edge bounce
-                const minX = 15;
-                const maxX = window.innerWidth - 85;
-                const minY = 65;
-                const maxY = window.innerHeight - 95;
+            // Universal screen edge boundary clamping for ALL active modes
+            const minX = 15;
+            const maxX = window.innerWidth - 85;
+            const minY = 65;
+            const maxY = window.innerHeight - 95;
 
-                if (copilot.x < minX) {
-                    copilot.x = minX;
-                    copilot.vx = Math.abs(copilot.vx) * 0.85;
-                    playBoing();
-                    spawnSparks(copilot.x, copilot.y + 32, 4, '#38bdf8');
-                } else if (copilot.x > maxX) {
-                    copilot.x = maxX;
-                    copilot.vx = -Math.abs(copilot.vx) * 0.85;
-                    playBoing();
-                    spawnSparks(copilot.x + 64, copilot.y + 32, 4, '#38bdf8');
-                }
+            if (copilot.x < minX) {
+                copilot.x = minX;
+                copilot.vx = Math.abs(copilot.vx) * 0.85;
+                playBoing();
+                spawnSparks(copilot.x, copilot.y + 32, 4, '#38bdf8');
+            } else if (copilot.x > maxX) {
+                copilot.x = maxX;
+                copilot.vx = -Math.abs(copilot.vx) * 0.85;
+                playBoing();
+                spawnSparks(copilot.x + 64, copilot.y + 32, 4, '#38bdf8');
+            }
 
-                if (copilot.y < minY) {
-                    copilot.y = minY;
-                    copilot.vy = Math.abs(copilot.vy) * 0.85;
-                    playBoing();
-                    spawnSparks(copilot.x + 32, copilot.y, 4, '#38bdf8');
-                } else if (copilot.y > maxY) {
-                    copilot.y = maxY;
-                    copilot.vy = -Math.abs(copilot.vy) * 0.85;
-                    playBoing();
-                    spawnSparks(copilot.x + 32, copilot.y + 64, 4, '#38bdf8');
-                }
+            if (copilot.y < minY) {
+                copilot.y = minY;
+                copilot.vy = Math.abs(copilot.vy) * 0.85;
+                playBoing();
+                spawnSparks(copilot.x + 32, copilot.y, 4, '#38bdf8');
+            } else if (copilot.y > maxY) {
+                copilot.y = maxY;
+                copilot.vy = -Math.abs(copilot.vy) * 0.85;
+                playBoing();
+                spawnSparks(copilot.x + 32, copilot.y + 64, 4, '#38bdf8');
             }
 
             // Render DOM Position (Astro-Cat wrapper stays upright for HUD stability)
@@ -2716,9 +2762,19 @@
 
                 // HUD Boundary & Collision Guard (Dynamic Flip & Horizontal Clamping)
                 const hud = document.getElementById("astro-cat-hud");
+                const bubble = document.getElementById("astro-speech-bubble");
+                const bubbleVisible = bubble && !bubble.classList.contains("hidden");
+                const bubbleH = bubbleVisible ? (bubble.offsetHeight || 80) : 0;
+                const bubbleW = bubbleVisible ? (bubble.offsetWidth || 230) : 230;
+
+                // Smart Collision Coordination:
+                // If bubble is visible and Astro-Cat is near top of screen (visualY < bubbleH + 32),
+                // bubble must go BELOW cat, and HUD must flip ABOVE cat!
+                // Otherwise, bubble goes ABOVE cat, and HUD stays BELOW cat (unless near bottom edge).
+                const forceHudAbove = (visualY > window.innerHeight - 130) || (bubbleVisible && visualY < bubbleH + 32);
+
                 if (hud) {
-                    const flipAbove = (visualY > window.innerHeight - 130);
-                    if (flipAbove) {
+                    if (forceHudAbove) {
                         hud.classList.add("astro-hud-above");
                     } else {
                         hud.classList.remove("astro-hud-above");
@@ -2726,7 +2782,7 @@
 
                     // Keep HUD buttons within screen boundaries
                     const catCenterX = copilot.x + 32;
-                    const hudHalfWidth = 135;
+                    const hudHalfWidth = Math.min(140, (hud.offsetWidth || 270) / 2);
                     let hudOffset = 0;
                     if (catCenterX - hudHalfWidth < 12) {
                         hudOffset = 12 - (catCenterX - hudHalfWidth);
@@ -2735,35 +2791,39 @@
                     }
                     hud.style.transform = `translateX(calc(-50% + ${hudOffset}px))`;
                 }
-            }
 
-            // Render Independent Fixed Speech Bubble (Never tilts, clamped to screen)
-            const bubble = document.getElementById("astro-speech-bubble");
-            if (bubble && !bubble.classList.contains("hidden")) {
-                const bubbleW = bubble.offsetWidth || 230;
-                const bubbleH = bubble.offsetHeight || 75;
-                let bubbleX = (copilot.x + 32) - (bubbleW / 2);
-                bubbleX = Math.max(12, Math.min(window.innerWidth - bubbleW - 12, bubbleX));
+                // Render Independent Fixed Speech Bubble (Never tilts, zero collision with HUD or cat)
+                if (bubbleVisible) {
+                    let bubbleX = (copilot.x + 32) - (bubbleW / 2);
+                    bubbleX = Math.max(16, Math.min(window.innerWidth - bubbleW - 16, bubbleX));
 
-                let bubbleY;
-                const tail = document.getElementById("astro-bubble-tail");
-                if (visualY > 120 && visualY < window.innerHeight - 80) {
-                    // Position bubble above the cat
-                    bubbleY = visualY - bubbleH - 12;
-                    if (tail) tail.className = "astro-bubble-tail-down";
-                } else {
-                    // Position bubble below the cat (if cat is near top edge or near bottom)
-                    bubbleY = (visualY >= window.innerHeight - 80) ? visualY - bubbleH - 12 : visualY + 74;
-                    if (tail) tail.className = (visualY >= window.innerHeight - 80) ? "astro-bubble-tail-down" : "astro-bubble-tail-up";
+                    let bubbleY;
+                    const tail = document.getElementById("astro-bubble-tail");
+
+                    if (visualY >= bubbleH + 32) {
+                        // Sufficient clearance above Astro-Cat
+                        if (visualY > window.innerHeight - 130) {
+                            // Cat is near bottom edge, HUD is flipped above cat (-44px), place bubble above the HUD
+                            bubbleY = visualY - 48 - bubbleH - 14;
+                        } else {
+                            // Normal: bubble sits cleanly above the cat
+                            bubbleY = visualY - bubbleH - 16;
+                        }
+                        if (tail) tail.className = "astro-bubble-tail-down";
+                    } else {
+                        // Not enough space above Astro-Cat: place bubble below the cat (HUD is flipped above)
+                        bubbleY = visualY + 72;
+                        if (tail) tail.className = "astro-bubble-tail-up";
+                    }
+
+                    bubbleY = Math.max(12, Math.min(window.innerHeight - bubbleH - 12, bubbleY));
+
+                    if (tail) {
+                        const tailLeft = Math.max(18, Math.min(bubbleW - 18, (copilot.x + 32) - bubbleX));
+                        tail.style.left = `${tailLeft}px`;
+                    }
+                    bubble.style.transform = `translate3d(${bubbleX}px, ${bubbleY}px, 0px)`;
                 }
-                // Strictly clamp bubbleY within viewport boundaries (never off-screen)
-                bubbleY = Math.max(12, Math.min(window.innerHeight - bubbleH - 12, bubbleY));
-
-                if (tail) {
-                    const tailLeft = Math.max(16, Math.min(bubbleW - 16, (copilot.x + 32) - bubbleX));
-                    tail.style.left = `${tailLeft}px`;
-                }
-                bubble.style.transform = `translate3d(${bubbleX}px, ${bubbleY}px, 0px)`;
             }
         }
 
@@ -3490,6 +3550,7 @@
         stopTreats: stopTreatsGame,
         toggleTreats: toggleTreatsGame,
         dropTreat: dropCosmicTreat,
+        clearActiveModes: clearActiveGameModes,
         recordClip: toggleScreenRecording,
         stopRecording: stopScreenRecording,
         patrol: startSpacePatrol,

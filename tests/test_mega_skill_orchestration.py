@@ -29,7 +29,7 @@ for p in (str(SCRIPTS_DIR), str(ORBIT_SRC)):
     if p not in sys.path and Path(p).exists():
         sys.path.insert(0, p)
 
-import swarm_orchestrator
+swarm_orchestrator = pytest.importorskip("swarm_orchestrator", reason="swarm_orchestrator sibling script not present")
 
 
 class TestMegaSkillIntentRouting:
