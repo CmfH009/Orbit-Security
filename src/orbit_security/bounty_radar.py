@@ -3102,7 +3102,7 @@ class BountyRadarSupervisor:
             total_findings.extend(vulns)
 
             for v in vulns:
-                if save_disclosures:
+                if save_disclosures and getattr(v, "bounty_viability", "HIGH_CONFIDENCE") != "INFORMATIONAL_LOW":
                     p = HackerOneDisclosureGenerator.save_disclosure(v, prog, output_dir=output_dir)
                     if p is not None:
                         disclosed_files.append(str(p))

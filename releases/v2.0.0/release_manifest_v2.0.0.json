@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "version": "2.0.0",
+  "tag": "v2.0.0",
+  "test_count": 96,
+  "commits_count": 3,
+  "changelog_path": "A:\\projects\\orbit-security\\releases\\v2.0.0\\CHANGELOG_v2.0.0.md",
+  "badge_svg_path": "A:\\projects\\orbit-security\\releases\\v2.0.0\\badge_tests_v2.0.0.svg",
+  "showcase_path": "A:\\projects\\orbit-security\\releases\\v2.0.0\\SHOWCASE_v2.0.0.md",
+  "manifest_path": "A:\\projects\\orbit-security\\releases\\v2.0.0\\release_manifest_v2.0.0.json",
+  "sha256_digest": "86b7f4f60e47de8bf6463c50b73618075b941db2dba5db588b388de0a371b7ac",
+  "packaged_at": 1792934717.6127837
+}

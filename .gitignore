@@ -69,6 +69,8 @@ data/disclosures/*.md
 data/disclosures/*.zip
 data/disclosures/*_bundle/
 data/disclosures/staged_advisories_eml/
+data/disclosures/archived_*/
+data/disclosures/live_verification_receipts.json
 !data/disclosures/.gitkeep
 src/data/
 FREEBUFF_AUDIT_PROMPT.md
