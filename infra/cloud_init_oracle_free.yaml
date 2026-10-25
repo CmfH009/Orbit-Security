@@ -1,0 +1,105 @@
+#cloud-config
+# ==============================================================================
+# Orbit Security: Oracle Cloud Always Free (ARM64 Ampere) Zero-Trust Cloud-Init
+# ==============================================================================
+# Target: Ubuntu 24.04 / 22.04 LTS (aarch64) - 4 OCPUs, 24 GB RAM
+# Security Model: ZERO Public Ingress Ports (UFW Deny All, Tailscale Mesh Only)
+# ==============================================================================
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - ufw
+  - curl
+  - git
+  - ca-certificates
+  - unattended-upgrades
+  - python3-venv
+  - python3-pip
+
+groups:
+  - orbit: [orbit]
+
+users:
+  - default
+  - name: orbit
+    gecos: Orbit Security Service Account
+    primary_group: orbit
+    system: true
+    shell: /bin/bash
+    home: /home/orbit
+    lock_passwd: true
+
+write_files:
+  # 1. Systemd hardened service unit for 24/7 background agent
+  - path: /etc/systemd/system/orbit-security.service
+    permissions: '0644'
+    owner: root:root
+    content: |
+      [Unit]
+      Description=Orbit Security 24/7 Autonomous Threat Radar & Sentinel
+      After=network.target tailscaled.service
+      Wants=tailscaled.service
+
+      [Service]
+      Type=simple
+      User=orbit
+      Group=orbit
+      WorkingDirectory=/opt/orbit-security
+      Environment=PYTHONUNBUFFERED=1
+      Environment=PYTHONDONTWRITEBYTECODE=1
+      Environment=ORBIT_WORKSPACE_ROOT=/opt/orbit-security
+      ExecStart=/opt/orbit-security/.venv/bin/python src/orbit_security/bounty_rolling_daemon.py
+      Restart=always
+      RestartSec=10
+
+      # Linux Kernel Hardening & Sandbox Directives
+      ProtectSystem=strict
+      ProtectHome=true
+      NoNewPrivileges=true
+      PrivateTmp=true
+      ProtectKernelTunables=true
+      ProtectControlGroups=true
+      RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+      ReadWritePaths=/opt/orbit-security/data /opt/orbit-security/logs
+
+      [Install]
+      WantedBy=multi-user.target
+
+  # 2. Daily security auto-patching configuration
+  - path: /etc/apt/apt.conf.d/50unattended-upgrades
+    permissions: '0644'
+    owner: root:root
+    content: |
+      Unattended-Upgrade::Allowed-Origins {
+          "${distro_id}:${distro_codename}-security";
+      };
+      Unattended-Upgrade::AutoFixInterruptedDpkg "true";
+      Unattended-Upgrade::MinimalSteps "true";
+      Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+      Unattended-Upgrade::Remove-Unused-Dependencies "true";
+      Unattended-Upgrade::Automatic-Reboot "false";
+
+runcmd:
+  # 1. Install Tailscale for Zero-Trust Private Mesh
+  - curl -fsSL https://tailscale.com/install.sh | sh
+
+  # 2. ZERO INGRESS FIREWALL: All public ports blocked, only Tailscale permitted
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow in on tailscale0
+  - ufw --force enable
+
+  # 3. Clone Orbit Security repository and configure isolated Python environment
+  - mkdir -p /opt/orbit-security/data /opt/orbit-security/logs
+  - git clone https://github.com/CmfH009/Orbit-Security.git /opt/orbit-security
+  - python3 -m venv /opt/orbit-security/.venv
+  - /opt/orbit-security/.venv/bin/pip install --upgrade pip
+  - /opt/orbit-security/.venv/bin/pip install dnspython httpx pydantic psutil
+  - chown -R orbit:orbit /opt/orbit-security
+
+  # 4. Enable and start hardened background daemon
+  - systemctl daemon-reload
+  - systemctl enable orbit-security.service
+  # Note: Run 'tailscale up' with your auth key to connect the node to your private tailnet

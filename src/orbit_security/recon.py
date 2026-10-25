@@ -9,6 +9,7 @@ import argparse
 import json
 import socket
 import sys
+from dataclasses import asdict
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
@@ -34,6 +35,7 @@ from orbit_security.scanner import is_safe_host
 from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES
 from orbit_security.remediation import DnsRemediationGenerator
 from orbit_security.input_sanitizer import sanitize_domain, SecurityValidationError
+from orbit_security.cisa_kev import CisaKevCatalog
 from orbit_security.scoring import (
     MISSING_HEADER_TITLES,
     TAKEOVER_CLASS_KEY,
@@ -426,12 +428,17 @@ def run_recon(target: str, json_output: bool = False, remediate: bool = False) -
     score = calculate_score(dns_res, web_res, domain=domain)
     grade = calculate_grade(dns_res, web_res, domain=domain)
 
+    # CISA KEV (Known Exploited Vulnerabilities) 0-Day Correlation
+    kev_catalog = CisaKevCatalog()
+    kev_matches = kev_catalog.correlate_server_headers(web_res.get("headers_found", {}), domain=domain)
+
     results = {
         "target": domain,
         "score": score,
         "grade": grade,
         "dns": dns_res,
         "perimeter": web_res,
+        "cisa_kev_matches": [asdict(m) for m in kev_matches],
     }
 
     if remediate:
@@ -499,9 +506,19 @@ def run_recon(target: str, json_output: bool = False, remediate: bool = False) -
     else:
         print(f"  {GREEN}[✓] Zero sensitive config files (.git, .env) publicly exposed.{RESET}")
 
+    print(f"\n{CYAN}{BOLD}--- [5] CISA Known Exploited Vulnerabilities (0-Day Radar) ---{RESET}")
+    if kev_matches:
+        for km in kev_matches:
+            print(f"  {RED}{BOLD}[CRITICAL CISA KEV MATCH]{RESET} {km.cve_id} — {km.vulnerability_name}")
+            print(f"    {YELLOW}Action Required:{RESET} {km.required_action} (Due: {km.due_date})")
+            if km.known_ransomware_use == "Known":
+                print(f"    {RED}{BOLD}🚨 Known Ransomware Campaign Use{RESET}")
+    else:
+        print(f"  {GREEN}[✓] Zero matching CISA Known Exploited Vulnerabilities in server banners.{RESET}")
+
     if remediate:
         rem_plan = results.get("remediation", {})
-        print(f"\n{CYAN}{BOLD}--- [5] Automated Remediation & IaC Snippets ---{RESET}")
+        print(f"\n{CYAN}{BOLD}--- [6] Automated Remediation & IaC Snippets ---{RESET}")
         if not rem_plan.get("has_actions"):
             print(f"  {GREEN}[✓] Perimeter pristine. No DNS or header remediation needed.{RESET}")
         else:
@@ -560,9 +577,14 @@ def run_bulk_recon(
         score = calculate_score(dns_res, web_res, domain=domain)
         grade = calculate_grade(dns_res, web_res, domain=domain)
 
+        # CISA KEV Correlation
+        kev_catalog = CisaKevCatalog()
+        kev_matches = kev_catalog.correlate_server_headers(web_res.get("headers_found", {}), domain=domain)
+
         has_takeover = bool(dns_res.get("dangling_risk"))
         has_exposure = bool(web_res.get("exposures"))
-        if has_takeover or has_exposure:
+        has_kev = bool(kev_matches)
+        if has_takeover or has_exposure or has_kev:
             has_critical_failure = True
 
         res = {
@@ -571,8 +593,10 @@ def run_bulk_recon(
             "grade": grade,
             "dns": dns_res,
             "perimeter": web_res,
+            "cisa_kev_matches": [asdict(m) for m in kev_matches],
             "has_takeover": has_takeover,
             "has_exposure": has_exposure,
+            "has_kev": has_kev,
         }
         if remediate:
             res["remediation"] = build_remediation_plan(domain, dns_res, web_res)
@@ -590,8 +614,8 @@ def run_bulk_recon(
         md_lines = [
             "# Orbit Security: Bulk Perimeter Audit Matrix",
             f"**Audit Timestamp:** {socket.gethostname()} | **Total Targets:** {len(results)}\n",
-            "| Target Domain | Score | Grade | Routing / CNAME | Security Headers | Critical Exposures |",
-            "| :--- | :--- | :--- | :--- | :--- | :--- |",
+            "| Target Domain | Score | Grade | Routing / CNAME | Security Headers | Critical Exposures | CISA KEV (0-Day) |",
+            "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
         ]
         for r in results:
             cname = r["dns"].get("cname") or "Apex Direct"
@@ -599,8 +623,9 @@ def run_bulk_recon(
                 cname = f"🚨 **Dangling CNAME ({r['dns'].get('matched_service', 'SaaS')})**"
             h_count = f"{len(r['perimeter'].get('headers_found', {}))}/{len(SECURITY_HEADERS)}"
             exp_text = f"🚨 {len(r['perimeter']['exposures'])} exposed" if r["has_exposure"] else "Clean"
+            kev_text = f"🚨 **{len(r.get('cisa_kev_matches', []))} KEV Match**" if r.get("has_kev") else "Clean"
             md_lines.append(
-                f"| `{r['target']}` | **{r['score']}/100** | **{r['grade']}** | {cname} | {h_count} | {exp_text} |"
+                f"| `{r['target']}` | **{r['score']}/100** | **{r['grade']}** | {cname} | {h_count} | {exp_text} | {kev_text} |"
             )
 
         md_content = "\n".join(md_lines) + "\n"

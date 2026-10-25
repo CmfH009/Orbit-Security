@@ -17,6 +17,7 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+data/*_cache.json
 
 # PyInstaller Build Artifacts
 build/
