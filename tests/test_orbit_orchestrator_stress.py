@@ -35,6 +35,7 @@ for p in (SKILL_SCRIPT_DIR, SYSTEM_SCRIPTS_DIR):
 orbit_recursive_module = pytest.importorskip("orbit_recursive_loop", reason="orbit_recursive_loop script not present")
 OrbitRecursiveOrchestrator = orbit_recursive_module.OrbitRecursiveOrchestrator
 RecursiveTransition = orbit_recursive_module.RecursiveTransition
+ArtifactGate = getattr(orbit_recursive_module, "ArtifactGate", None)
 from orbit_security.blackboard import Blackboard, get_blackboard
 
 
@@ -195,3 +196,94 @@ def test_thermal_emergency_throttle_invariance():
     assert "orbit_security" not in stopped_calls
     assert "dns_cache" not in stopped_calls
     assert "inbox" not in stopped_calls
+
+
+# ============================================================================
+# 6. Event-Driven Blackboard Routing & CI Self-Healing Tests
+# ============================================================================
+
+def test_orchestrator_blackboard_event_routing(temp_blackboard):
+    """Verifies orchestrator ingests real Blackboard events and triggers correct transitions."""
+    orch = OrbitRecursiveOrchestrator(max_depth=3, dry_run=True)
+
+    # 1. Test Inbound Lead transition
+    state_inbound = {
+        "timestamp": "2026-10-24T05:00:00Z",
+        "inbound_leads_pending": 2,
+        "staged_pitches": 5,
+        "verified_executives": 5,
+    }
+    trans = orch.resolve_next_skill(state_inbound, depth=1)
+    assert trans is not None
+    assert trans.target_skill == "orbit-marketing-growth"
+    assert trans.trigger_event == "INBOUND_LEAD_DEAL_DESK"
+
+    # 2. Test CI Failure priority auto-healing transition
+    state_ci = {
+        "timestamp": "2026-10-24T05:00:00Z",
+        "ci_failure_detected": True,
+        "inbound_leads_pending": 2,
+    }
+    trans_ci = orch.resolve_next_skill(state_ci, depth=1)
+    assert trans_ci is not None
+    assert trans_ci.target_skill == "orbit-github-devops"
+    assert trans_ci.trigger_event == "CI_FAILURE_TRIAGE"
+
+    # 3. Test Bounced Lead OSINT recovery
+    state_bounce = {
+        "timestamp": "2026-10-24T05:00:00Z",
+        "bounced_recoverable": 1,
+    }
+    trans_bounce = orch.resolve_next_skill(state_bounce, depth=1)
+    assert trans_bounce is not None
+    assert trans_bounce.target_skill == "orbit-sec-review"
+    assert trans_bounce.trigger_event == "BOUNCE_OSINT_RECOVERY"
+
+
+def test_artifact_gate_verification(tmp_path):
+    """Verifies ArtifactGate verifies on-disk deliverables before marking transitions converged."""
+    if not ArtifactGate:
+        pytest.skip("ArtifactGate not defined")
+
+    trans = RecursiveTransition(
+        source_skill="orbit-sec-review",
+        target_skill="orbit-marketing-growth",
+        trigger_event="INBOUND_LEAD_DEAL_DESK",
+        reason="Testing artifact gate",
+    )
+
+    # In empty tmp_path, should report false (missing artifacts)
+    ok, detail = ArtifactGate.verify_transition_artifact(trans, tmp_path)
+    assert ok is False
+    assert "No client portals" in detail
+
+    # When portal is added, should report true
+    portals_dir = tmp_path / "docs" / "portals"
+    portals_dir.mkdir(parents=True, exist_ok=True)
+    (portals_dir / "test_client.html").write_text("<html></html>", encoding="utf-8")
+
+    ok_valid, detail_valid = ArtifactGate.verify_transition_artifact(trans, tmp_path)
+    assert ok_valid is True
+    assert "Found 1 client portal" in detail_valid
+
+
+def test_thermal_guard_circuit_breaker(tmp_path):
+    """Verifies check_thermal_and_load_guard pauses when CPU temp exceeds 90C."""
+    orch = OrbitRecursiveOrchestrator(max_depth=3, dry_run=True)
+
+    with patch("orbit_recursive_loop.PROJECT_ROOT", tmp_path):
+        # 1. Normal state
+        guard_normal = orch.check_thermal_and_load_guard()
+        assert guard_normal["safe"] is True
+        assert guard_normal["throttle_seconds"] == 0
+
+        # 2. Critical state (92.5C)
+        data_dir = tmp_path / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        (data_dir / "thermal_state.json").write_text(json.dumps({"temp_c": 92.5}), encoding="utf-8")
+
+        guard_critical = orch.check_thermal_and_load_guard()
+        assert guard_critical["safe"] is False
+        assert guard_critical["throttle_seconds"] == 10
+        assert "critical" in guard_critical["reason"]
+
