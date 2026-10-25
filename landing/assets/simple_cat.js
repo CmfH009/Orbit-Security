@@ -564,6 +564,104 @@
         </svg>`;
     }
 
+    function getSpaceStationSVG(width = 76, height = 56) {
+        return `
+        <svg width="${width}" height="${height}" viewBox="0 0 96 72" fill="none" xmlns="http://www.w3.org/2000/svg" class="space-station-svg" style="filter: drop-shadow(0 0 12px rgba(16,185,129,0.45)); image-rendering: pixelated;">
+            <defs>
+                <radialGradient id="stationGlass" cx="35%" cy="30%" r="70%">
+                    <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.5"/>
+                    <stop offset="55%" stop-color="#0f172a" stop-opacity="0.8"/>
+                    <stop offset="100%" stop-color="#020617" stop-opacity="0.95"/>
+                </radialGradient>
+                <linearGradient id="solarWingGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#0284c7"/>
+                    <stop offset="50%" stop-color="#0369a1"/>
+                    <stop offset="100%" stop-color="#075985"/>
+                </linearGradient>
+                <linearGradient id="stationHullGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#1e293b"/>
+                    <stop offset="100%" stop-color="#090d16"/>
+                </linearGradient>
+            </defs>
+
+            <!-- Left Solar Wing Array -->
+            <g class="solar-wing-left">
+                <rect x="2" y="24" width="22" height="24" rx="2" fill="url(#solarWingGrad)" stroke="#38bdf8" stroke-width="1.2" />
+                <line x1="2" y1="32" x2="24" y2="32" stroke="#67e8f9" stroke-width="0.8" opacity="0.7" />
+                <line x1="2" y1="40" x2="24" y2="40" stroke="#67e8f9" stroke-width="0.8" opacity="0.7" />
+                <line x1="9" y1="24" x2="9" y2="48" stroke="#67e8f9" stroke-width="0.8" opacity="0.7" />
+                <line x1="17" y1="24" x2="17" y2="48" stroke="#67e8f9" stroke-width="0.8" opacity="0.7" />
+                <line x1="2" y1="36" x2="24" y2="36" stroke="#fbbf24" stroke-width="1" />
+                <rect x="24" y="33" width="6" height="6" fill="#475569" stroke="#10b981" stroke-width="1" />
+                <circle cx="3" cy="24" r="1.5" fill="#ef4444" />
+            </g>
+
+            <!-- Right Solar Wing Array -->
+            <g class="solar-wing-right">
+                <rect x="72" y="24" width="22" height="24" rx="2" fill="url(#solarWingGrad)" stroke="#38bdf8" stroke-width="1.2" />
+                <line x1="72" y1="32" x2="94" y2="32" stroke="#67e8f9" stroke-width="0.8" opacity="0.7" />
+                <line x1="72" y1="40" x2="94" y2="40" stroke="#67e8f9" stroke-width="0.8" opacity="0.7" />
+                <line x1="79" y1="24" x2="79" y2="48" stroke="#67e8f9" stroke-width="0.8" opacity="0.7" />
+                <line x1="87" y1="24" x2="87" y2="48" stroke="#67e8f9" stroke-width="0.8" opacity="0.7" />
+                <line x1="72" y1="36" x2="94" y2="36" stroke="#fbbf24" stroke-width="1" />
+                <rect x="66" y="33" width="6" height="6" fill="#475569" stroke="#10b981" stroke-width="1" />
+                <circle cx="93" cy="24" r="1.5" fill="#10b981" />
+            </g>
+
+            <!-- Lower Ion Stabilizer Nozzles -->
+            <path d="M40 60 L42 66 L46 66 L44 60 Z" fill="#334155" stroke="#10b981" stroke-width="0.8" />
+            <path d="M52 60 L50 66 L54 66 L56 60 Z" fill="#334155" stroke="#10b981" stroke-width="0.8" />
+            <ellipse cx="44" cy="67" rx="2.5" ry="1.2" fill="#38bdf8" class="ion-glow-left" />
+            <ellipse cx="52" cy="67" rx="2.5" ry="1.2" fill="#38bdf8" class="ion-glow-right" />
+
+            <!-- Outer Armored Station Ring -->
+            <rect x="28" y="20" width="40" height="42" rx="14" fill="url(#stationHullGrad)" stroke="#10b981" stroke-width="2" />
+            <rect x="31" y="23" width="34" height="36" rx="11" fill="#090d16" stroke="#064e3b" stroke-width="1" />
+
+            <!-- Comms Antenna Mast & Pulsing Beacon -->
+            <line x1="48" y1="20" x2="48" y2="6" stroke="#94a3b8" stroke-width="2" />
+            <circle cx="48" cy="6" r="3" fill="#10b981" stroke="#34d399" stroke-width="1" class="station-beacon" />
+            <circle cx="48" cy="6" r="1.2" fill="#ffffff" />
+            <line x1="44" y1="12" x2="52" y2="12" stroke="#64748b" stroke-width="1.5" />
+
+            <!-- Cockpit Observation Dome Canopy (Transparent Glass) -->
+            <circle cx="48" cy="38" r="15" fill="url(#stationGlass)" stroke="#38bdf8" stroke-width="1.8" />
+
+            <!-- Astro-Cat Inside Station Cockpit! -->
+            <g class="station-cat-pilot" transform="translate(36, 26)">
+                <!-- Cat Ears -->
+                <polygon points="4,9 8,2 11,8" fill="#10b981" />
+                <polygon points="5,8 8,4 10,7" fill="#ec4899" />
+                <polygon points="20,9 16,2 13,8" fill="#10b981" />
+                <polygon points="19,8 16,4 14,7" fill="#ec4899" />
+                <!-- Cat Head -->
+                <ellipse cx="12" cy="13" rx="8" ry="7" fill="#0f172a" stroke="#1e293b" stroke-width="0.8" />
+                <!-- Cyber Visor / Shades -->
+                <rect x="6" y="10" width="12" height="3" rx="1" fill="#06b6d4" />
+                <rect x="8" y="11" width="8" height="1" fill="#ffffff" />
+                <!-- Cute Nose & Mouth -->
+                <circle cx="12" cy="15" r="0.8" fill="#f43f5e" />
+                <path d="M10.5 16.5 Q12 17.5 13.5 16.5" stroke="#cbd5e1" stroke-width="0.7" fill="none" />
+                <!-- Pilot Flight Console -->
+                <rect x="4" y="20" width="16" height="5" rx="2" fill="#1e293b" stroke="#334155" stroke-width="0.8" />
+                <circle cx="8" cy="22.5" r="1" fill="#10b981" />
+                <circle cx="12" cy="22.5" r="1" fill="#38bdf8" />
+                <circle cx="16" cy="22.5" r="1" fill="#f59e0b" />
+            </g>
+
+            <!-- Glass Canopy Specular Reflection Highlight -->
+            <path d="M38 29 A13 13 0 0 1 56 28" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" opacity="0.7" />
+            <circle cx="39" cy="31" r="1" fill="#ffffff" opacity="0.85" />
+
+            <!-- Status LED Strip at Station Bottom -->
+            <rect x="37" y="55" width="22" height="4" rx="2" fill="#020617" stroke="#334155" stroke-width="0.8" />
+            <circle cx="41" cy="57" r="1" fill="#10b981" class="animate-pulse" />
+            <circle cx="45" cy="57" r="1" fill="#06b6d4" />
+            <circle cx="49" cy="57" r="1" fill="#38bdf8" />
+            <circle cx="53" cy="57" r="1" fill="#10b981" />
+        </svg>`;
+    }
+
     // =========================================================================
     // 4. MULTI-TAB IN-DEPTH DIALOGUE MODAL
     // =========================================================================
@@ -586,9 +684,9 @@
                  style="box-shadow: 6px 6px 0px #064e3b; margin: auto;"
                  tabindex="0">
                 
-                <!-- Close Button with explicit ARIA label -->
+                <!-- Close Button matching flipbook modal arcade button (38x38px) -->
                 <button id="cat-close-btn" 
-                        class="absolute top-4 right-4 text-slate-400 hover:text-emerald-400 font-mono text-xl min-w-[48px] min-h-[48px] flex items-center justify-center border border-slate-700 hover:border-emerald-500 rounded-lg bg-slate-950 transition-colors cursor-pointer" 
+                        class="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 text-slate-400 hover:text-white font-arcade text-xs min-w-[38px] min-h-[38px] px-2.5 py-1.5 flex items-center justify-center border border-slate-700 hover:border-emerald-400 rounded bg-slate-900 transition-colors cursor-pointer shadow-sm z-10" 
                         title="Close (Esc)" 
                         aria-label="Close Simple Cat Decoder dialog">✕</button>
 
@@ -1218,7 +1316,7 @@
     ];
 
     const copilot = {
-        state: 'docked', // 'docked' | 'floating' | 'laser' | 'patrol'
+        state: 'docked', // 'docked' | 'floating' | 'laser' | 'patrol' | 'tour' | 'treats'
         x: window.innerWidth - 180,
         y: window.innerHeight - 140,
         vx: 0,
@@ -1238,6 +1336,10 @@
         patrolActive: false,
         patrolThreats: [],
         patrolScore: 0,
+        treatsActive: false,
+        treatsList: [],
+        treatsScore: 0,
+        treatsCount: 0,
         speechTimer: null,
         sparks: []
     };
@@ -1293,10 +1395,14 @@
         bubbleEl.innerHTML = `
             <div id="astro-bubble-tail" class="astro-bubble-tail-down"></div>
             <div class="astro-bubble-header">
-                <span class="astro-bubble-title">ASTRO-CAT // COMMS</span>
+                <span class="astro-bubble-title" id="astro-bubble-title">ASTRO-CAT // COMMS</span>
                 <button id="astro-bubble-close" class="astro-bubble-close" title="Dismiss">✕</button>
             </div>
             <div id="astro-bubble-text" class="astro-bubble-text">Mission ready! Toss me into zero-G! 🐾</div>
+            <div id="astro-tour-controls" class="hidden mt-2 pt-1.5 border-t border-emerald-500/30 flex items-center justify-between gap-2">
+                <button type="button" id="tour-next-btn" class="px-2.5 py-1 rounded bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-mono text-[10px] font-bold cursor-pointer transition-all shadow-sm">Next ➔</button>
+                <button type="button" id="tour-exit-btn" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-[10px] cursor-pointer transition-all">✕ Exit Tour</button>
+            </div>
         `;
         document.body.appendChild(bubbleEl);
 
@@ -1313,50 +1419,105 @@
             <!-- Floating Action HUD Menu (stays upright and readable) -->
             <div id="astro-cat-hud" class="astro-hud">
                 <button type="button" id="hud-pet-btn" class="astro-hud-btn" title="Pet Astro-Cat">🐾 Pet</button>
+                <button type="button" id="hud-tour-btn" class="astro-hud-btn" title="Guided Tour of Orbit Security">🗺️ Tour</button>
+                <button type="button" id="hud-treats-btn" class="astro-hud-btn" title="Feed Cosmic Treats">🐟 Treats</button>
                 <button type="button" id="hud-laser-btn" class="astro-hud-btn" title="Laser Chase Mode">🎯 Laser</button>
                 <button type="button" id="hud-patrol-btn" class="astro-hud-btn" title="Threat Patrol Mini-Game">👾 Patrol</button>
                 <button type="button" id="hud-decode-btn" class="astro-hud-btn" title="Security Dictionary">📖 Decode</button>
-                <button type="button" id="hud-dock-btn" class="astro-hud-btn" title="Park into Corner Dock">⚓ Dock</button>
+                <button type="button" id="hud-dock-btn" class="astro-hud-btn" title="Park into Corner Space Station">🛰️ Station</button>
             </div>
         `;
         document.body.appendChild(copilotEl);
 
-        // 5. Corner Docking Station
+        // 5. Corner Orbital Space Station Dock
         dockEl = document.createElement("div");
         dockEl.id = "simple-cat-dock";
         dockEl.className = "fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-45 flex items-center gap-2";
         dockEl.innerHTML = `
-            <div class="w-[52px] h-[52px] min-w-[52px] min-h-[52px] rounded-full p-0 flex items-center justify-center sm:w-auto sm:h-auto sm:rounded-xl sm:px-3 sm:py-2 bg-slate-900/95 border-2 border-emerald-500 shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:border-emerald-400 transition-all sm:gap-2.5 backdrop-blur-md" style="box-shadow: 4px 4px 0px #064e3b;">
-                <div class="relative flex-shrink-0 cursor-pointer min-w-[48px] min-h-[48px] flex items-center justify-center" id="dock-avatar-btn" title="Astro-Cat Copilot">
-                    ${getPixelCatSVG(32)}
-                    <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping"></span>
-                    <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border border-slate-900"></span>
+            <div id="space-station-pod" class="relative group cursor-pointer flex items-center justify-center p-1 rounded-2xl bg-slate-950/90 border-2 border-emerald-500 shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:border-emerald-400 hover:shadow-[0_0_35px_rgba(16,185,129,0.55)] transition-all backdrop-blur-md" style="box-shadow: 4px 4px 0px #064e3b;" title="Astro-Cat Orbital Space Station">
+                <div id="dock-avatar-btn" class="relative flex-shrink-0 cursor-pointer min-w-[56px] min-h-[48px] flex items-center justify-center">
+                    ${getSpaceStationSVG(76, 56)}
                 </div>
-                <div class="hidden sm:flex flex-col text-left pr-0.5">
+                <span id="station-beacon-led" class="absolute -top-1.5 -right-1 flex h-3 w-3 pointer-events-none">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border border-slate-950"></span>
+                </span>
+            </div>
+
+            <div id="desktop-station-deck" class="hidden sm:flex flex-col text-left px-3 py-2 bg-slate-950/90 border-2 border-emerald-500 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.25)] backdrop-blur-md" style="box-shadow: 3px 3px 0px #064e3b;">
+                <div class="flex items-center justify-between gap-3">
                     <div class="flex items-center gap-1.5">
-                        <span class="text-[9px] font-arcade text-emerald-400 tracking-wider">ASTRO-CAT</span>
-                        <span class="text-[8px] font-mono px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">ONLINE</span>
+                        <span class="text-[9px] font-arcade text-emerald-400 tracking-wider">ORBIT L4 STATION</span>
+                        <span id="station-status-pill" class="text-[8px] font-mono px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">DOCK OCCUPIED</span>
                     </div>
-                    <div class="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <button type="button" id="dock-launch-btn" class="text-[10px] font-mono font-bold text-emerald-400 hover:text-emerald-300 hover:underline flex items-center gap-0.5 cursor-pointer">
-                            <span>🚀 Fly Zero-G</span>
-                        </button>
-                        <span class="text-slate-600 text-[10px]">•</span>
-                        <button type="button" id="dock-decode-btn" class="text-[10px] font-mono text-slate-300 hover:text-white hover:underline cursor-pointer">
-                            <span>📖 Jargon</span>
-                        </button>
-                        <span class="text-slate-600 text-[10px]">•</span>
-                        <button type="button" id="dock-rec-btn" class="text-[10px] font-mono font-bold text-cyan-400 hover:text-cyan-300 hover:underline cursor-pointer flex items-center gap-1" title="Record 60fps gameplay clip directly for X (Twitter)">
-                            <span>📹 Clip for X</span>
-                        </button>
-                        <button type="button" id="dock-laser-stop-btn" class="hidden text-[10px] font-mono font-bold text-rose-400 hover:text-rose-300 hover:underline cursor-pointer animate-pulse ml-0.5">
-                            <span>🛑 Stop Laser</span>
-                        </button>
-                    </div>
+                </div>
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                    <button type="button" id="dock-launch-btn" class="text-[10px] font-mono font-bold text-emerald-400 hover:text-emerald-300 hover:underline flex items-center gap-0.5 cursor-pointer" title="Launch Astro-Cat into Zero-G physics flight">
+                        <span>🚀 Fly</span>
+                    </button>
+                    <span class="text-slate-600 text-[10px]">•</span>
+                    <button type="button" id="dock-tour-btn" class="text-[10px] font-mono font-bold text-amber-400 hover:text-amber-300 hover:underline flex items-center gap-0.5 cursor-pointer" title="Guided tour of Orbit Security features">
+                        <span>🗺️ Tour</span>
+                    </button>
+                    <span class="text-slate-600 text-[10px]">•</span>
+                    <button type="button" id="dock-treats-btn" class="text-[10px] font-mono font-bold text-pink-400 hover:text-pink-300 hover:underline flex items-center gap-0.5 cursor-pointer" title="Tap screen to drop fish treats!">
+                        <span>🐟 Treats</span>
+                    </button>
+                    <span class="text-slate-600 text-[10px]">•</span>
+                    <button type="button" id="dock-decode-btn" class="text-[10px] font-mono text-slate-300 hover:text-white hover:underline cursor-pointer" title="Open Security Term Decoder">
+                        <span>📖 Jargon</span>
+                    </button>
+                    <span class="text-slate-600 text-[10px]">•</span>
+                    <button type="button" id="dock-rec-btn" class="text-[10px] font-mono font-bold text-cyan-400 hover:text-cyan-300 hover:underline cursor-pointer flex items-center gap-1" title="Record 60fps gameplay clip directly for X (Twitter)">
+                        <span>📹 Clip</span>
+                    </button>
+                    <button type="button" id="dock-laser-stop-btn" class="hidden text-[10px] font-mono font-bold text-rose-400 hover:text-rose-300 hover:underline cursor-pointer animate-pulse ml-0.5">
+                        <span>🛑 Stop Laser</span>
+                    </button>
                 </div>
             </div>
         `;
         document.body.appendChild(dockEl);
+
+        // 6. Mobile Touchscreen Action Drawer (Drawer that pops up above dock)
+        const touchDrawerEl = document.createElement("div");
+        touchDrawerEl.id = "station-touch-drawer";
+        touchDrawerEl.className = "hidden fixed bottom-24 right-4 max-w-[300px] w-[calc(100vw-32px)] bg-slate-950/98 border-2 border-emerald-500 rounded-2xl p-4 shadow-[0_0_35px_rgba(16,185,129,0.5)] z-50 flex flex-col gap-2.5 backdrop-blur-xl";
+        touchDrawerEl.style.cssText = "box-shadow: 4px 4px 0px #064e3b; bottom: max(96px, calc(env(safe-area-inset-bottom, 16px) + 80px));";
+        touchDrawerEl.innerHTML = `
+            <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">🛰️</span>
+                    <div>
+                        <div class="text-[10px] font-arcade text-emerald-400 tracking-wider">ORBIT L4 STATION</div>
+                        <div class="text-[9px] font-mono text-slate-400">ASTRO-CAT COMPANION</div>
+                    </div>
+                </div>
+                <button type="button" id="touch-drawer-close" class="text-slate-400 hover:text-white font-arcade text-xs min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg border border-slate-700 bg-slate-900 cursor-pointer">✕</button>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+                <button type="button" id="touch-launch-btn" class="min-h-[46px] px-3 py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95">
+                    <span>🚀 Fly Free</span>
+                </button>
+                <button type="button" id="touch-tour-btn" class="min-h-[46px] px-3 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95">
+                    <span>🗺️ Tour Site</span>
+                </button>
+                <button type="button" id="touch-treats-btn" class="min-h-[46px] px-3 py-2.5 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/40 text-pink-300 font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95">
+                    <span>🐟 Treats</span>
+                </button>
+                <button type="button" id="touch-pet-btn" class="min-h-[46px] px-3 py-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-300 font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95">
+                    <span>🐾 Pet Cat</span>
+                </button>
+                <button type="button" id="touch-patrol-btn" class="min-h-[46px] px-3 py-2.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 text-purple-300 font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95">
+                    <span>👾 Patrol</span>
+                </button>
+                <button type="button" id="touch-decode-btn" class="min-h-[46px] px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95">
+                    <span>📖 Jargon</span>
+                </button>
+            </div>
+        `;
+        document.body.appendChild(touchDrawerEl);
 
         bindCopilotEvents();
         startCopilotAnimation();
@@ -1370,16 +1531,131 @@
     }
 
     function bindCopilotEvents() {
-        // Dock buttons
-        document.getElementById("dock-launch-btn").addEventListener("click", () => {
-            launchAstroCatIntoZeroG();
+        // Space Station Pod click
+        const stationPod = document.getElementById("space-station-pod");
+        if (stationPod) {
+            stationPod.addEventListener("click", (e) => {
+                e.stopPropagation();
+                if (window.innerWidth < 640) {
+                    toggleTouchDrawer();
+                } else {
+                    if (copilot.state === 'docked') {
+                        if (e.target.closest('.station-cat-pilot, circle')) {
+                            petStationCat();
+                        } else {
+                            launchAstroCatIntoZeroG();
+                        }
+                    } else {
+                        dockAstroCat();
+                    }
+                }
+            });
+        }
+
+        const dockAvatar = document.getElementById("dock-avatar-btn");
+        if (dockAvatar) {
+            dockAvatar.addEventListener("click", (e) => {
+                e.stopPropagation();
+                if (window.innerWidth < 640) {
+                    toggleTouchDrawer();
+                } else {
+                    if (copilot.state === 'docked') {
+                        petStationCat();
+                    } else {
+                        dockAstroCat();
+                    }
+                }
+            });
+        }
+
+        // Touch Drawer Buttons (Mobile Ergonomics)
+        const touchClose = document.getElementById("touch-drawer-close");
+        if (touchClose) {
+            touchClose.addEventListener("click", (e) => {
+                e.stopPropagation();
+                closeTouchDrawer();
+            });
+        }
+        const touchLaunch = document.getElementById("touch-launch-btn");
+        if (touchLaunch) {
+            touchLaunch.addEventListener("click", () => {
+                closeTouchDrawer();
+                launchAstroCatIntoZeroG();
+            });
+        }
+        const touchTour = document.getElementById("touch-tour-btn");
+        if (touchTour) {
+            touchTour.addEventListener("click", () => {
+                closeTouchDrawer();
+                startSiteTour();
+            });
+        }
+        const touchTreats = document.getElementById("touch-treats-btn");
+        if (touchTreats) {
+            touchTreats.addEventListener("click", () => {
+                closeTouchDrawer();
+                toggleTreatsGame();
+            });
+        }
+        const touchPet = document.getElementById("touch-pet-btn");
+        if (touchPet) {
+            touchPet.addEventListener("click", () => {
+                closeTouchDrawer();
+                if (copilot.state === 'docked') {
+                    petStationCat();
+                } else {
+                    petAstroCat();
+                }
+            });
+        }
+        const touchPatrol = document.getElementById("touch-patrol-btn");
+        if (touchPatrol) {
+            touchPatrol.addEventListener("click", () => {
+                closeTouchDrawer();
+                if (copilot.state === 'docked') launchAstroCatIntoZeroG();
+                startSpacePatrol();
+            });
+        }
+        const touchDecode = document.getElementById("touch-decode-btn");
+        if (touchDecode) {
+            touchDecode.addEventListener("click", () => {
+                closeTouchDrawer();
+                showSimpleCatDialog("dmarc");
+            });
+        }
+
+        // Close touch drawer on outside pointerdown
+        window.addEventListener("pointerdown", (e) => {
+            if (!e.target.closest('#station-touch-drawer') && !e.target.closest('#space-station-pod')) {
+                closeTouchDrawer();
+            }
         });
-        document.getElementById("dock-avatar-btn").addEventListener("click", () => {
-            launchAstroCatIntoZeroG();
-        });
-        document.getElementById("dock-decode-btn").addEventListener("click", () => {
-            showSimpleCatDialog("dmarc");
-        });
+
+        // Desktop Dock buttons
+        const dockLaunch = document.getElementById("dock-launch-btn");
+        if (dockLaunch) {
+            dockLaunch.addEventListener("click", () => {
+                launchAstroCatIntoZeroG();
+            });
+        }
+        const dockTour = document.getElementById("dock-tour-btn");
+        if (dockTour) {
+            dockTour.addEventListener("click", () => {
+                startSiteTour();
+            });
+        }
+        const dockTreats = document.getElementById("dock-treats-btn");
+        if (dockTreats) {
+            dockTreats.addEventListener("click", () => {
+                toggleTreatsGame();
+            });
+        }
+        const dockDecode = document.getElementById("dock-decode-btn");
+        if (dockDecode) {
+            dockDecode.addEventListener("click", () => {
+                showSimpleCatDialog("dmarc");
+            });
+        }
 
         // Copilot HUD buttons
         const hudPet = document.getElementById("hud-pet-btn");
@@ -1387,6 +1663,20 @@
             hudPet.addEventListener("click", (e) => {
                 e.stopPropagation();
                 petAstroCat();
+            });
+        }
+        const hudTour = document.getElementById("hud-tour-btn");
+        if (hudTour) {
+            hudTour.addEventListener("click", (e) => {
+                e.stopPropagation();
+                startSiteTour();
+            });
+        }
+        const hudTreats = document.getElementById("hud-treats-btn");
+        if (hudTreats) {
+            hudTreats.addEventListener("click", (e) => {
+                e.stopPropagation();
+                toggleTreatsGame();
             });
         }
         const hudLaser = document.getElementById("hud-laser-btn");
@@ -1417,6 +1707,23 @@
                 dockAstroCat();
             });
         }
+
+        // Tour speech bubble buttons
+        const tourNextBtn = document.getElementById("tour-next-btn");
+        if (tourNextBtn) {
+            tourNextBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                nextTourStep();
+            });
+        }
+        const tourExitBtn = document.getElementById("tour-exit-btn");
+        if (tourExitBtn) {
+            tourExitBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                exitSiteTour();
+            });
+        }
+
         const bubbleClose = document.getElementById("astro-bubble-close");
         if (bubbleClose) {
             bubbleClose.addEventListener("click", (e) => {
@@ -1463,22 +1770,35 @@
             });
         }
 
-        // Click ANYWHERE to disengage laser chase easily!
+        // Click ANYWHERE to disengage laser chase easily! Or drop Cosmic Treats when active!
         window.addEventListener("pointerdown", (e) => {
             if (copilot.laserActive) {
-                // If user clicks anywhere on the screen (except clicking the start laser button itself)
                 if (!e.target.closest('#hud-laser-btn') && !e.target.closest('#dock-laser-stop-btn') && !e.target.closest('#simple-cat-modal')) {
                     stopLaserChase();
                 }
             }
+            if (copilot.treatsActive) {
+                if (!e.target.closest('button, a, input, select, textarea, #astro-cat-hud, #station-touch-drawer, #simple-cat-modal, #pdfFlipbookModal, #astro-speech-bubble, #simple-cat-dock, #cat-avatar-box')) {
+                    dropCosmicTreat(e.clientX, e.clientY);
+                }
+            }
         }, true);
 
-        // Escape or L key stops laser
+        // Escape or L key stops laser / tour / treats
         window.addEventListener("keydown", (e) => {
             if (e.key === "Escape" || e.key === "l" || e.key === "L") {
                 if (copilot.laserActive) {
                     stopLaserChase();
                 }
+            }
+            if (e.key === "Escape") {
+                if (copilot.state === 'tour') {
+                    exitSiteTour();
+                }
+                if (copilot.treatsActive) {
+                    stopTreatsGame();
+                }
+                closeTouchDrawer();
             }
         });
 
@@ -1553,6 +1873,12 @@
         copilot.state = 'floating';
         dockEl.classList.add("opacity-50", "hover:opacity-100");
         copilotEl.classList.remove("hidden");
+
+        const statusPill = document.getElementById("station-status-pill");
+        if (statusPill) {
+            statusPill.textContent = "DOCK EMPTY";
+            statusPill.className = "text-[8px] font-mono px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30";
+        }
         
         // Spawn smoothly above dock
         copilot.x = window.innerWidth - 180;
@@ -1571,18 +1897,278 @@
         copilot.state = 'docked';
         copilot.laserActive = false;
         copilot.patrolActive = false;
+        copilot.treatsActive = false;
         clearTimeout(copilot.laserAutoStopTimer);
         const dockLaserStop = document.getElementById("dock-laser-stop-btn");
         if (dockLaserStop) dockLaserStop.classList.add("hidden");
         const laserHudBtn = document.getElementById("hud-laser-btn");
         if (laserHudBtn) laserHudBtn.classList.remove("astro-hud-btn-active");
+        const treatsHudBtn = document.getElementById("hud-treats-btn");
+        if (treatsHudBtn) treatsHudBtn.classList.remove("astro-hud-btn-active");
         if (laserDotEl) laserDotEl.classList.add("hidden");
         clearPatrolThreats();
+
+        if (copilot.treatsList) {
+            copilot.treatsList.forEach(t => {
+                if (t.el && t.el.parentElement) t.el.parentElement.removeChild(t.el);
+            });
+            copilot.treatsList = [];
+        }
+
+        const tourControls = document.getElementById("astro-tour-controls");
+        if (tourControls) tourControls.classList.add("hidden");
+
+        const statusPill = document.getElementById("station-status-pill");
+        if (statusPill) {
+            statusPill.textContent = "DOCK OCCUPIED";
+            statusPill.className = "text-[8px] font-mono px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+        }
+
         hideSpeechBubble();
 
         playBoing();
         copilotEl.classList.add("hidden");
         dockEl.classList.remove("opacity-50");
+    }
+
+    function petStationCat() {
+        const pod = document.getElementById("space-station-pod");
+        if (pod) {
+            pod.style.transform = "scale(1.1)";
+            setTimeout(() => { pod.style.transform = ""; }, 220);
+            const rect = pod.getBoundingClientRect();
+            spawnHearts(rect.left + 48, rect.top + 28, 4);
+        }
+        const isMeow = Math.random() > 0.4;
+        if (isMeow) {
+            playMeow();
+        } else {
+            playPurr();
+        }
+        showSpeechBubble("Purrrrr... Station shields 100%! All orbital sensors nominal! 🐾", 4500);
+    }
+
+    function toggleTouchDrawer() {
+        const drawer = document.getElementById("station-touch-drawer");
+        if (!drawer) return;
+        if (drawer.classList.contains("hidden")) {
+            drawer.classList.remove("hidden");
+            playHoverTick();
+        } else {
+            drawer.classList.add("hidden");
+        }
+    }
+
+    function closeTouchDrawer() {
+        const drawer = document.getElementById("station-touch-drawer");
+        if (drawer) drawer.classList.add("hidden");
+    }
+
+    // =========================================================================
+    // 6. ASTRO-CAT GUIDED SITE TOUR (AGENCY CONVERSION LANDMARKS)
+    // =========================================================================
+    const TOUR_STEPS = [
+        {
+            targetId: "audit-terminal",
+            title: "1/4 🛰️ PASSIVE DOH RADAR",
+            text: "RFC 8484 DNS-over-HTTPS audits run 100% inside your browser. Zero servers, 0ms backend latency, and zero tracing packets!",
+            btnText: "Next: Sentinels ➔"
+        },
+        {
+            targetId: "sentinels",
+            title: "2/4 🛡️ AUTONOMOUS SENTINELS",
+            text: "Our 24/7 sentinels inspect DNS records, dangling CNAMEs, SPF deliverability, and DMARC spoofing before attackers strike!",
+            btnText: "Next: Retainers ➔"
+        },
+        {
+            targetId: "pricing",
+            title: "3/4 💎 AGENCY RETAINERS & ROI",
+            text: "Agencies package these verified audits into $250–$1,500/mo high-margin recurring client care plans. Instant MRR boost!",
+            btnText: "Next: Jargon Decoder ➔"
+        },
+        {
+            targetId: "simple-cat",
+            title: "4/4 🐱 SIMPLE CAT JARGON DECODER",
+            text: "We translate complex CVEs, DNS, and header policies into plain-English stories non-technical clients understand! Ready to explore! 🐾",
+            btnText: "🎉 Finish Tour!"
+        }
+    ];
+
+    let currentTourStep = 0;
+
+    function startSiteTour() {
+        if (copilot.state === 'docked') {
+            launchAstroCatIntoZeroG();
+        }
+        copilot.state = 'tour';
+        copilot.laserActive = false;
+        copilot.patrolActive = false;
+        copilot.treatsActive = false;
+        currentTourStep = 0;
+        playPowerUp();
+        executeTourStep(0);
+    }
+
+    function executeTourStep(stepIndex) {
+        if (stepIndex >= TOUR_STEPS.length) {
+            finishSiteTour();
+            return;
+        }
+        currentTourStep = stepIndex;
+        const step = TOUR_STEPS[stepIndex];
+        const targetEl = document.getElementById(step.targetId);
+
+        if (targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        const targetX = window.innerWidth > 640 ? Math.min(window.innerWidth - 220, Math.max(80, window.innerWidth * 0.7)) : 24;
+        const targetY = 140;
+        copilot.x = targetX;
+        copilot.y = targetY;
+        copilot.vx = 0;
+        copilot.vy = 0;
+        copilot.rot = 0;
+
+        spawnSparks(copilot.x + 32, copilot.y + 54, 8, '#38bdf8');
+        playChirp();
+
+        const bubbleTitle = document.getElementById("astro-bubble-title");
+        if (bubbleTitle) bubbleTitle.textContent = step.title;
+
+        const nextBtn = document.getElementById("tour-next-btn");
+        if (nextBtn) nextBtn.textContent = step.btnText;
+
+        showSpeechBubble(step.text, 60000, true);
+    }
+
+    function nextTourStep() {
+        executeTourStep(currentTourStep + 1);
+    }
+
+    function finishSiteTour() {
+        copilot.state = 'floating';
+        const tourControls = document.getElementById("astro-tour-controls");
+        if (tourControls) tourControls.classList.add("hidden");
+
+        const catBody = document.getElementById("astro-cat-body");
+        if (catBody) {
+            catBody.classList.remove("astro-flip");
+            void catBody.offsetWidth;
+            catBody.classList.add("astro-flip");
+        }
+
+        playPowerUp();
+        playMeow();
+        spawnSparks(copilot.x + 32, copilot.y + 32, 16, '#10b981');
+        showSpeechBubble("🎉 Tour Complete! Enjoy exploring Orbit Security, or toss me around in zero-G! 😸", 8000, false);
+    }
+
+    function exitSiteTour() {
+        copilot.state = 'floating';
+        const tourControls = document.getElementById("astro-tour-controls");
+        if (tourControls) tourControls.classList.add("hidden");
+        hideSpeechBubble();
+        playPurr();
+    }
+
+    // =========================================================================
+    // 6a. COSMIC TREATS & MINI-GAMES ("STARFISH CHOMP")
+    // =========================================================================
+    function toggleTreatsGame() {
+        if (copilot.treatsActive) {
+            stopTreatsGame();
+            return;
+        }
+        startTreatsGame();
+    }
+
+    function startTreatsGame() {
+        if (copilot.state === 'docked') {
+            launchAstroCatIntoZeroG();
+        }
+        copilot.treatsActive = true;
+        copilot.state = 'treats';
+        copilot.treatsScore = 0;
+        copilot.treatsCount = 0;
+        copilot.treatsList = [];
+
+        const treatsBtn = document.getElementById("hud-treats-btn");
+        if (treatsBtn) treatsBtn.classList.add("astro-hud-btn-active");
+
+        playPowerUp();
+        showSpeechBubble("🐟 Treat Mode Active! Tap anywhere on screen to drop cosmic fish snacks! 🐾", 10000);
+    }
+
+    function stopTreatsGame() {
+        copilot.treatsActive = false;
+        if (copilot.state === 'treats') {
+            copilot.state = 'floating';
+        }
+        const treatsBtn = document.getElementById("hud-treats-btn");
+        if (treatsBtn) treatsBtn.classList.remove("astro-hud-btn-active");
+
+        if (copilot.treatsList) {
+            copilot.treatsList.forEach(t => {
+                if (t.el && t.el.parentElement) {
+                    t.el.parentElement.removeChild(t.el);
+                }
+            });
+            copilot.treatsList = [];
+        }
+        playPurr();
+        showSpeechBubble(`Whew! Astro-Cat ate ${copilot.treatsCount || 0} treats (+${copilot.treatsScore || 0} PTS)! Floating happy in zero-g. 😸`, 6000);
+    }
+
+    function dropCosmicTreat(x, y) {
+        if (!copilot.treatsList) copilot.treatsList = [];
+        if (copilot.treatsList.length >= 8) return;
+        const treatId = 'treat-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+        const treatEl = document.createElement("div");
+        treatEl.id = treatId;
+        treatEl.className = "astro-cosmic-treat";
+        treatEl.style.left = `${x - 14}px`;
+        treatEl.style.top = `${y - 14}px`;
+        treatEl.innerHTML = `
+            <span class="treat-icon">🐟</span>
+        `;
+        document.body.appendChild(treatEl);
+        copilot.treatsList.push({ id: treatId, x, y, el: treatEl, spawnedAt: Date.now() });
+
+        playChirp();
+        spawnSparks(x, y, 4, '#38bdf8');
+
+        if (copilot.state === 'docked') {
+            launchAstroCatIntoZeroG();
+            copilot.treatsActive = true;
+            copilot.state = 'treats';
+        }
+    }
+
+    function showFloatingScore(x, y, text) {
+        const scoreEl = document.createElement("div");
+        scoreEl.className = "astro-floating-score";
+        scoreEl.style.left = `${x}px`;
+        scoreEl.style.top = `${y}px`;
+        scoreEl.textContent = text;
+        document.body.appendChild(scoreEl);
+        setTimeout(() => {
+            if (scoreEl.parentElement) scoreEl.parentElement.removeChild(scoreEl);
+        }, 1200);
+    }
+
+    function spawnHearts(x, y, count = 3) {
+        for (let i = 0; i < count; i++) {
+            const heartEl = document.createElement("div");
+            heartEl.className = "astro-floating-heart";
+            heartEl.style.left = `${x + (Math.random() * 24 - 12)}px`;
+            heartEl.style.top = `${y + (Math.random() * 16 - 8)}px`;
+            heartEl.textContent = "💖";
+            document.body.appendChild(heartEl);
+            setTimeout(() => {
+                if (heartEl.parentElement) heartEl.parentElement.removeChild(heartEl);
+            }, 1100);
+        }
     }
 
     function petAstroCat() {
@@ -1852,13 +2438,22 @@
         if (patrolBtn) patrolBtn.classList.remove("astro-hud-btn-active");
     }
 
-    function showSpeechBubble(text, duration = 7500) {
+    function showSpeechBubble(text, duration = 7500, isTour = false) {
         const bubble = document.getElementById("astro-speech-bubble");
         const bubbleText = document.getElementById("astro-bubble-text");
+        const tourControls = document.getElementById("astro-tour-controls");
         if (!bubble || !bubbleText) return;
 
         bubbleText.innerText = text;
         bubble.classList.remove("hidden");
+
+        if (tourControls) {
+            if (isTour) {
+                tourControls.classList.remove("hidden");
+            } else {
+                tourControls.classList.add("hidden");
+            }
+        }
 
         clearTimeout(copilot.speechTimer);
         if (duration > 0 && isFinite(duration)) {
@@ -1983,6 +2578,64 @@
                         }
                     }
                 }
+                copilot.x += copilot.vx;
+                copilot.y += copilot.vy;
+
+            } else if (copilot.state === 'treats' || (copilot.treatsList && copilot.treatsList.length > 0)) {
+                let closestDist = Infinity;
+                let closestTreat = null;
+                let closestIndex = -1;
+                for (let i = 0; i < copilot.treatsList.length; i++) {
+                    const t = copilot.treatsList[i];
+                    const d = Math.hypot(t.x - (copilot.x + 32), t.y - (copilot.y + 32));
+                    if (d < closestDist) {
+                        closestDist = d;
+                        closestTreat = t;
+                        closestIndex = i;
+                    }
+                }
+
+                if (closestTreat) {
+                    const tx = closestTreat.x - 32;
+                    const ty = closestTreat.y - 32;
+                    const dx = tx - copilot.x;
+                    const dy = ty - copilot.y;
+                    const dist = Math.hypot(dx, dy);
+
+                    if (dist > 34) {
+                        copilot.vx += (dx / dist) * 0.95;
+                        copilot.vy += (dy / dist) * 0.95;
+                        copilot.vx *= 0.93;
+                        copilot.vy *= 0.93;
+                        copilot.rot = Math.atan2(copilot.vy, copilot.vx) * (180 / Math.PI) * 0.35;
+                        if (Math.random() > 0.4) spawnSparks(copilot.x + 32, copilot.y + 54, 1, '#f59e0b');
+                    } else {
+                        // Chomp!
+                        playCoin();
+                        spawnSparks(closestTreat.x, closestTreat.y, 14, '#fbbf24');
+                        spawnSparks(closestTreat.x, closestTreat.y, 6, '#ec4899');
+                        if (closestTreat.el && closestTreat.el.parentElement) {
+                            closestTreat.el.parentElement.removeChild(closestTreat.el);
+                        }
+                        copilot.treatsList.splice(closestIndex, 1);
+                        copilot.treatsScore = (copilot.treatsScore || 0) + 100;
+                        copilot.treatsCount = (copilot.treatsCount || 0) + 1;
+
+                        showFloatingScore(closestTreat.x, closestTreat.y, "+100 YUM! 🐟");
+
+                        if (copilot.treatsCount % 3 === 0) {
+                            petAstroCat();
+                            showSpeechBubble(`Nom nom nom! 🐟 Score: ${copilot.treatsScore} PTS! You're the best! 😻`, 4000);
+                        }
+                    }
+                }
+                copilot.x += copilot.vx;
+                copilot.y += copilot.vy;
+
+            } else if (copilot.state === 'tour') {
+                copilot.vx *= 0.85;
+                copilot.vy *= 0.85;
+                copilot.rot *= 0.9;
                 copilot.x += copilot.vx;
                 copilot.y += copilot.vy;
 
@@ -2337,6 +2990,97 @@
                 opacity: 0 !important;
                 pointer-events: none !important;
                 transform: translateY(24px) scale(0.95) !important;
+            }
+
+            /* Space Station Docking Pod */
+            #space-station-pod {
+                position: relative;
+                cursor: pointer;
+                user-select: none;
+                -webkit-user-select: none;
+                transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.25s ease;
+            }
+            #space-station-pod:hover {
+                transform: scale(1.05);
+            }
+            #space-station-pod:active {
+                transform: scale(0.96);
+            }
+            .space-station-svg .station-beacon {
+                animation: stationBeaconPing 1.2s infinite ease-in-out;
+                transform-origin: 48px 6px;
+            }
+            @keyframes stationBeaconPing {
+                0%, 100% { opacity: 0.6; transform: scale(0.9); }
+                50% { opacity: 1; transform: scale(1.25); filter: drop-shadow(0 0 6px #34d399); }
+            }
+            .space-station-svg .ion-glow-left,
+            .space-station-svg .ion-glow-right {
+                animation: ionGlow 0.8s infinite alternate ease-in-out;
+            }
+            @keyframes ionGlow {
+                0% { opacity: 0.4; }
+                100% { opacity: 0.95; filter: drop-shadow(0 0 4px #38bdf8); }
+            }
+
+            /* Mobile Touchscreen Action Drawer */
+            #station-touch-drawer {
+                animation: drawerPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            }
+            @keyframes drawerPop {
+                0% { opacity: 0; transform: translateY(16px) scale(0.92); }
+                100% { opacity: 1; transform: translateY(0) scale(1); }
+            }
+
+            /* Floating Treats & Scores */
+            .astro-cosmic-treat {
+                position: fixed !important;
+                width: 28px;
+                height: 28px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                pointer-events: none;
+                z-index: 99980 !important;
+                animation: treatBob 1.2s infinite ease-in-out alternate;
+            }
+            .astro-cosmic-treat .treat-icon {
+                font-size: 20px;
+                filter: drop-shadow(0 0 8px #38bdf8);
+            }
+            @keyframes treatBob {
+                0% { transform: translateY(0px) rotate(-6deg); }
+                100% { transform: translateY(-8px) rotate(6deg); }
+            }
+            .astro-floating-score {
+                position: fixed !important;
+                transform: translate(-50%, -50%);
+                font-family: monospace, sans-serif;
+                font-size: 11px;
+                font-weight: 900;
+                color: #fbbf24;
+                text-shadow: 0 0 8px rgba(251, 191, 36, 0.8), 2px 2px 0px #020617;
+                pointer-events: none;
+                z-index: 99999 !important;
+                animation: floatScore 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+            }
+            @keyframes floatScore {
+                0% { transform: translate(-50%, 0) scale(0.8); opacity: 0; }
+                20% { transform: translate(-50%, -15px) scale(1.15); opacity: 1; }
+                80% { transform: translate(-50%, -35px) scale(1); opacity: 0.9; }
+                100% { transform: translate(-50%, -50px) scale(0.9); opacity: 0; }
+            }
+            .astro-floating-heart {
+                position: fixed !important;
+                font-size: 15px;
+                pointer-events: none;
+                z-index: 99999 !important;
+                animation: floatHeart 1.1s ease-out forwards;
+            }
+            @keyframes floatHeart {
+                0% { transform: translate(-50%, 0) scale(0.7); opacity: 0; }
+                25% { transform: translate(-50%, -12px) scale(1.2); opacity: 1; }
+                100% { transform: translate(-50%, -40px) scale(0.9); opacity: 0; }
             }
 
             /* Horizontal Scroll Indicators & Edge Gradients */
@@ -2719,14 +3463,23 @@
         dock: dockAstroCat,
         laserChase: toggleLaserChase,
         stopLaser: stopLaserChase,
+        startTour: startSiteTour,
+        nextTourStep: nextTourStep,
+        exitTour: exitSiteTour,
+        startTreats: startTreatsGame,
+        stopTreats: stopTreatsGame,
+        toggleTreats: toggleTreatsGame,
+        dropTreat: dropCosmicTreat,
         recordClip: toggleScreenRecording,
         stopRecording: stopScreenRecording,
         patrol: startSpacePatrol,
         pet: petAstroCat,
+        petStation: petStationCat,
         say: showSpeechBubble,
         hideBubble: hideSpeechBubble,
         getPixelCatSVG: getPixelCatSVG,
         getAstroCatSVG: getAstroCatSVG,
+        getSpaceStationSVG: getSpaceStationSVG,
         bindHelperChips: bindTactileInteractions,
         initBackground: initArcadeBackground
     };

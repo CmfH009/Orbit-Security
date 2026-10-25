@@ -160,6 +160,66 @@ test('Flipbook modal footer clean Tailwind classes without malformed inline styl
     assert(!docsIndexHtml.includes('sm:flex-direction:row'), 'Malformed inline style sm:flex-direction:row must be removed');
 });
 
+// 7b. SIMPLECAT CLOSE BUTTON & ARCADE STYLING
+test('SimpleCat dialog close button (#cat-close-btn) matches flipbook 38x38px arcade styling', () => {
+    assert(docsCatJs.includes('id="cat-close-btn"'), 'Missing #cat-close-btn');
+    assert(docsCatJs.includes('min-w-[38px] min-h-[38px]'), 'cat-close-btn must be 38x38px');
+    assert(docsCatJs.includes('font-arcade text-xs'), 'cat-close-btn must use font-arcade text-xs');
+});
+
+// 7c. RETRO 16-BIT ORBITAL SPACE STATION DOCK
+test('Space Station Dock (#space-station-pod) contains observation dome and solar wings', () => {
+    assert(docsCatJs.includes('id="space-station-pod"'), 'Missing #space-station-pod');
+    assert(docsCatJs.includes('getSpaceStationSVG'), 'Missing getSpaceStationSVG helper');
+    assert(docsCatJs.includes('station-cat-pilot'), 'Missing station-cat-pilot in space station SVG');
+    assert(docsCatJs.includes('solar-wing-left'), 'Missing solar wings in space station SVG');
+    assert(docsCatJs.includes('station-beacon'), 'Missing antenna beacon in space station SVG');
+});
+
+// 7d. MOBILE TOUCHSCREEN ACTION DRAWER (>=44PX TOUCH TARGETS)
+test('Mobile touchscreen action drawer (#station-touch-drawer) provides ergonomic >=44px touch targets', () => {
+    assert(docsCatJs.includes('station-touch-drawer'), 'Missing #station-touch-drawer');
+    assert(docsCatJs.includes('id="touch-launch-btn"'), 'Missing #touch-launch-btn');
+    assert(docsCatJs.includes('id="touch-tour-btn"'), 'Missing #touch-tour-btn');
+    assert(docsCatJs.includes('id="touch-treats-btn"'), 'Missing #touch-treats-btn');
+    assert(docsCatJs.includes('id="touch-pet-btn"'), 'Missing #touch-pet-btn');
+    assert(docsCatJs.includes('id="touch-patrol-btn"'), 'Missing #touch-patrol-btn');
+    assert(docsCatJs.includes('id="touch-decode-btn"'), 'Missing #touch-decode-btn');
+    assert(docsCatJs.includes('min-h-[46px]'), 'Touch drawer buttons must enforce ergonomic >=44px touch targets');
+});
+
+// 7e. ASTRO-CAT GUIDED SITE TOUR
+test('Astro-Cat guided site tour (startTour) defined with 4 conversion landmarks and bubble controls', () => {
+    assert(docsCatJs.includes('startSiteTour'), 'Missing startSiteTour');
+    assert(docsCatJs.includes('TOUR_STEPS'), 'Missing TOUR_STEPS definition');
+    assert(docsCatJs.includes('audit-terminal'), 'Tour must visit audit-terminal');
+    assert(docsCatJs.includes('sentinels'), 'Tour must visit sentinels');
+    assert(docsCatJs.includes('pricing'), 'Tour must visit pricing');
+    assert(docsCatJs.includes('simple-cat'), 'Tour must visit simple-cat');
+    assert(docsCatJs.includes('id="astro-tour-controls"'), 'Missing astro-tour-controls in speech bubble');
+    assert(docsCatJs.includes('id="tour-next-btn"'), 'Missing tour-next-btn');
+    assert(docsCatJs.includes('id="tour-exit-btn"'), 'Missing tour-exit-btn');
+});
+
+// 7f. COSMIC TREATS MINI-GAME & TOUCH-SCREEN PETTING
+test('Cosmic treats mini-game (startTreats) enables tap-to-feed interaction with score tracking', () => {
+    assert(docsCatJs.includes('startTreatsGame'), 'Missing startTreatsGame');
+    assert(docsCatJs.includes('dropCosmicTreat'), 'Missing dropCosmicTreat');
+    assert(docsCatJs.includes('showFloatingScore'), 'Missing showFloatingScore');
+    assert(docsCatJs.includes('spawnHearts'), 'Missing spawnHearts');
+    assert(docsCatJs.includes('petStationCat'), 'Missing petStationCat');
+    assert(docsCatJs.includes('astro-cosmic-treat'), 'Missing astro-cosmic-treat styling');
+    assert(docsCatJs.includes('astro-floating-score'), 'Missing astro-floating-score styling');
+});
+
+// 7g. PUBLIC API EXPORTS
+test('SimpleCat public API exports startTour, startTreats, petStation, and getSpaceStationSVG', () => {
+    assert(docsCatJs.includes('startTour: startSiteTour'), 'Missing startTour export');
+    assert(docsCatJs.includes('startTreats: startTreatsGame'), 'Missing startTreats export');
+    assert(docsCatJs.includes('petStation: petStationCat'), 'Missing petStation export');
+    assert(docsCatJs.includes('getSpaceStationSVG: getSpaceStationSVG'), 'Missing getSpaceStationSVG export');
+});
+
 // 8. STRICT 100% BYTE-FOR-BYTE SHA-256 PARITY BETWEEN DOCS/ AND LANDING/
 test('docs/index.html and landing/index.html have 100% SHA-256 parity', () => {
     const hDocs = sha256(docsIndexPath);
