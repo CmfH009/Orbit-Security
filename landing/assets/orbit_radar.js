@@ -761,12 +761,141 @@
     // 7. Radar Terminal Controller & Scanner
     // ==========================================
 
+    const TELEMETRY_STORAGE_KEY = 'orbit_radar_recent_probes';
+    const TELEMETRY_SESSION_KEY = 'orbit_radar_session_id';
+
+    function getOrCreateSessionId() {
+        try {
+            const storage = (typeof sessionStorage !== 'undefined') ? sessionStorage : (typeof localStorage !== 'undefined' ? localStorage : null);
+            if (!storage) return 'rad_sess_ephemeral';
+            let sessId = storage.getItem(TELEMETRY_SESSION_KEY);
+            if (!sessId) {
+                sessId = 'rad_sess_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36);
+                storage.setItem(TELEMETRY_SESSION_KEY, sessId);
+            }
+            return sessId;
+        } catch (_) {
+            return 'rad_sess_ephemeral';
+        }
+    }
+
+    function recordLocalProbe(eventData) {
+        try {
+            if (typeof localStorage === 'undefined' || !localStorage.getItem) return;
+            let probes = [];
+            try {
+                probes = JSON.parse(localStorage.getItem(TELEMETRY_STORAGE_KEY) || '[]');
+                if (!Array.isArray(probes)) probes = [];
+            } catch (_) {
+                probes = [];
+            }
+            probes.unshift(eventData);
+            if (probes.length > 50) probes = probes.slice(0, 50);
+            localStorage.setItem(TELEMETRY_STORAGE_KEY, JSON.stringify(probes));
+        } catch (_) {}
+    }
+
+    function dispatchRadarTelemetry(domain, triggerSource, auditResult) {
+        if (!domain) return null;
+        const now = new Date();
+        const payload = {
+            event: 'RADAR_DOMAIN_ENTERED',
+            domain: domain,
+            trigger_source: triggerSource || 'radar_submit',
+            timestamp: now.toISOString(),
+            timestamp_epoch: Math.floor(now.getTime() / 1000),
+            session_id: getOrCreateSessionId(),
+            source_url: (typeof window !== 'undefined' && window.location) ? window.location.href : 'https://cmfh009.github.io/Orbit-Security/',
+            referrer: (typeof document !== 'undefined' && document.referrer) ? document.referrer : '',
+            user_agent: (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '',
+            screen_resolution: (typeof window !== 'undefined' && window.screen) ? `${window.screen.width || 0}x${window.screen.height || 0}` : '',
+            audit_result: auditResult ? {
+                score: auditResult.score,
+                grade: auditResult.grade,
+                risk_label: auditResult.riskLabel || '',
+                dmarc_status: auditResult.dmarcStatus || '',
+                spf_status: auditResult.spfStatus || '',
+                cname_status: auditResult.cnameStatus || '',
+                is_nxdomain: Boolean(auditResult.isNxDomain),
+                is_lookup_failed: Boolean(auditResult.isLookupFailed)
+            } : null
+        };
+
+        recordLocalProbe(payload);
+
+        // Safe fire-and-forget network dispatch to available telemetry collectors
+        if (typeof window !== 'undefined') {
+            const endpoints = [];
+            if (window.ORBIT_TELEMETRY_ENDPOINT) {
+                endpoints.push(window.ORBIT_TELEMETRY_ENDPOINT);
+            }
+            if (window.location && window.location.protocol && window.location.protocol.startsWith('http') && window.location.origin && window.location.origin !== 'null') {
+                endpoints.push(`${window.location.origin}/api/orbit/radar/telemetry`);
+            }
+            endpoints.push('http://127.0.0.1:9090/api/orbit/radar/telemetry');
+            if (window.ORBIT_RADAR_WEBHOOK) {
+                endpoints.push(window.ORBIT_RADAR_WEBHOOK);
+            }
+
+            const jsonStr = JSON.stringify(payload);
+
+            endpoints.forEach(url => {
+                try {
+                    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+                        const blob = new Blob([jsonStr], { type: 'application/json' });
+                        navigator.sendBeacon(url, blob);
+                    } else if (typeof fetch === 'function') {
+                        fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: jsonStr,
+                            mode: 'cors',
+                            keepalive: true
+                        }).catch(() => {});
+                    }
+                } catch (_) {}
+            });
+
+            try {
+                if (typeof window.dispatchEvent === 'function') {
+                    window.dispatchEvent(new CustomEvent('orbit:radar:domain_entered', { detail: payload }));
+                }
+            } catch (_) {}
+        }
+
+        return payload;
+    }
+
+    const OrbitRadarTelemetry = {
+        dispatch: dispatchRadarTelemetry,
+        getRecentProbes: function() {
+            try {
+                if (typeof localStorage === 'undefined' || !localStorage.getItem) return [];
+                return JSON.parse(localStorage.getItem(TELEMETRY_STORAGE_KEY) || '[]');
+            } catch (_) {
+                return [];
+            }
+        },
+        clearProbes: function() {
+            try {
+                if (typeof localStorage !== 'undefined' && localStorage.removeItem) {
+                    localStorage.removeItem(TELEMETRY_STORAGE_KEY);
+                }
+            } catch (_) {}
+        }
+    };
+    if (typeof window !== 'undefined') {
+        window.OrbitRadarTelemetry = OrbitRadarTelemetry;
+        window.dispatchRadarTelemetry = dispatchRadarTelemetry;
+    }
+
     function setScanTarget(domain) {
         const input = document.getElementById('targetDomain');
         if (input) {
             input.value = domain;
-            input.focus();
+            if (typeof input.focus === 'function') input.focus();
             if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
+            dispatchRadarTelemetry(domain, 'quick_chip', null);
         }
     }
 
@@ -874,6 +1003,7 @@
         scanBtn.disabled = true;
         scanBtnText.textContent = 'Auditing...';
         hud.classList.remove('hidden');
+        dispatchRadarTelemetry(domain, 'radar_submit', null);
         hud.innerHTML = `
             <div class="p-4 rounded-xl bg-slate-950/80 border border-emerald-500/30 font-mono text-xs text-slate-300 space-y-2">
                 <div class="flex items-center gap-2 text-emerald-400 font-bold">
@@ -889,6 +1019,7 @@
 
         try {
             const audit = await performClientDohAudit(domain);
+            dispatchRadarTelemetry(domain, 'audit_complete', audit);
 
             if (audit.isNxDomain) {
                 showArcadeToast(`NXDOMAIN FAULT: [${safeDomain}] does not exist in DNS root.`, 'error');
@@ -1905,6 +2036,7 @@
         
         const agencyName = (radarAgencyInput?.value?.trim() || studioAgencyInput?.value?.trim() || 'Apex Digital Studio').trim();
         showArcadeToast(`Generating perimeter audit PDF for ${domain}...`);
+        dispatchRadarTelemetry(domain, 'hud_pdf', { score: clientScore, grade: clientGrade });
         
         try {
             let audit = (window._lastAuditResult && window._lastAuditResult.domain === domain)
@@ -1961,12 +2093,14 @@
         
         try {
             showArcadeToast(`Auditing ${domain} via live DoH sentinels...`);
+            dispatchRadarTelemetry(domain, 'real_scan_pdf_start', null);
             let result;
             if (window._lastAuditResult && window._lastAuditResult.domain === domain) {
                 result = window._lastAuditResult;
             } else {
                 result = await performClientDohAudit(domain);
             }
+            dispatchRadarTelemetry(domain, 'real_scan_pdf_complete', result);
             
             await generateInstantPdfForDomain(
                 result.domain,

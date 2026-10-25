@@ -82,11 +82,16 @@ const mockNav = {
     }
 };
 
+const mockStorage = {};
 const sandbox = {
     window: {},
     document: mockDoc,
     navigator: mockNav,
-    localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+    localStorage: {
+        getItem: (k) => mockStorage[k] || null,
+        setItem: (k, v) => { mockStorage[k] = String(v); },
+        removeItem: (k) => { delete mockStorage[k]; }
+    },
     location: { search: '', pathname: '/' },
     history: { replaceState: () => {} },
     addEventListener: () => {},
@@ -302,6 +307,36 @@ async function runTests() {
     assert(hudHtml.includes('📋 Copy Client Summary'), 'Button 3 (Copy Client Summary) is present');
     assert(hudHtml.includes('whitespace-nowrap'), 'Buttons enforce whitespace-nowrap');
     assert(!hudHtml.includes('overflow-hidden') || hudHtml.includes('min-w-0'), 'Card prevents button clipping');
+
+    // =========================================================================
+    // Scenario 7: Real-Time Radar Telemetry & Inbound Probe Observer
+    // =========================================================================
+    console.log('\nTesting Scenario 7: Real-Time Radar Telemetry & Probe Ingestion');
+    assert(typeof sandbox.window.OrbitRadarTelemetry === 'object', 'window.OrbitRadarTelemetry is exposed');
+    assert(typeof sandbox.window.dispatchRadarTelemetry === 'function', 'window.dispatchRadarTelemetry is exposed');
+
+    // Test explicit telemetry dispatch
+    const telemEvent = sandbox.window.dispatchRadarTelemetry('shopify.com', 'test_chip', {
+        score: 85,
+        grade: 'B',
+        riskLabel: 'LOW RISK',
+        dmarcStatus: 'pass',
+        spfStatus: 'pass'
+    });
+    assert(telemEvent && telemEvent.event === 'RADAR_DOMAIN_ENTERED', 'Telemetry event type is RADAR_DOMAIN_ENTERED');
+    assert(telemEvent.domain === 'shopify.com', 'Telemetry domain is shopify.com');
+    assert(telemEvent.audit_result && telemEvent.audit_result.score === 85, 'Telemetry audit score is 85');
+    assert(telemEvent.audit_result.grade === 'B', 'Telemetry audit grade is B');
+
+    // Test local probe history retrieval
+    const recentProbes = sandbox.window.OrbitRadarTelemetry.getRecentProbes();
+    assert(Array.isArray(recentProbes) && recentProbes.length > 0, 'getRecentProbes returns array of probe records');
+    assert(recentProbes[0].domain === 'shopify.com', 'Latest probe in storage is shopify.com');
+
+    // Test setScanTarget triggers telemetry dispatch
+    sandbox.window.setScanTarget('cmfh009.github.io');
+    const updatedProbes = sandbox.window.OrbitRadarTelemetry.getRecentProbes();
+    assert(updatedProbes[0].domain === 'cmfh009.github.io', 'setScanTarget dispatched probe telemetry for cmfh009.github.io');
 
     console.log(`\n========================================`);
     console.log(`ALL ${passed}/${total} AUDIT ENGINE & PDF PARITY TESTS PASSED!`);

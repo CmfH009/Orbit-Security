@@ -29,6 +29,7 @@ dist/
 *.log
 *.log.*
 data/roast_f_grades_post_log.jsonl
+data/radar_queries.jsonl
 data/leads_state.json
 data/prospects.json
 data/dispatched_campaigns.json

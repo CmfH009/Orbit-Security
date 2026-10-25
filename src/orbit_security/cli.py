@@ -477,6 +477,18 @@ def main():
         "pr-gate", help="Run AST Code Sentinel and CISA KEV Pull Request Security Gate"
     )
 
+    # Radar-telemetry command: Real-time domain query telemetry and observation
+    telem_parser = subparsers.add_parser(
+        "radar-telemetry", help="Inspect and tail live inbound domain queries from ORBIT Radar Terminal"
+    )
+    telem_parser.add_argument("--tail", action="store_true", help="Live stream inbound radar queries")
+    telem_parser.add_argument("--stats", action="store_true", help="Display aggregate domain query statistics")
+    telem_parser.add_argument("--limit", type=int, default=20, help="Number of queries to list (default: 20)")
+    telem_parser.add_argument("--json", action="store_true", help="Output queries as JSON")
+    telem_parser.add_argument("--probe", help="Emit a test domain query")
+    telem_parser.add_argument("--serve", action="store_true", help="Run standalone telemetry ingestion server")
+    telem_parser.add_argument("--port", type=int, default=9095, help="Port for server (default: 9095)")
+
     args = parser.parse_args()
 
     if args.command == "scan":
@@ -685,6 +697,59 @@ def main():
             f"[bold cyan]CISA KEV PR Gate:[/bold cyan] {kev_res.get('verdict')}"
         )
         return 0 if (ast_res.get("ok") and kev_res.get("passed")) else 1
+    elif args.command == "radar-telemetry":
+        from orbit_security.radar_telemetry import (
+            RadarTelemetryService,
+            run_server,
+            run_stats,
+            run_tail,
+        )
+        import json as _json
+
+        if args.probe:
+            service = RadarTelemetryService()
+            res = service.record_query({"domain": args.probe, "trigger_source": "cli_probe"})
+            print(_json.dumps(res, indent=2))
+            return 0
+        if args.serve:
+            run_server(port=args.port)
+            return 0
+        if args.tail:
+            run_tail()
+            return 0
+        if args.stats:
+            run_stats()
+            return 0
+
+        service = RadarTelemetryService()
+        queries = service.get_recent_queries(limit=args.limit)
+        if args.json:
+            print(_json.dumps(queries, indent=2))
+            return 0
+
+        table = Table(title=f"Recent ORBIT Radar Queries ({len(queries)} shown)", border_style="cyan")
+        table.add_column("Timestamp", style="dim")
+        table.add_column("Grade", style="bold")
+        table.add_column("Score", style="yellow")
+        table.add_column("Domain", style="bold cyan")
+        table.add_column("Trigger", style="magenta")
+        table.add_column("DMARC", style="white")
+        table.add_column("SPF", style="white")
+        for q in queries:
+            score_s = f"{q.get('score')}/100" if q.get("score") is not None else "--"
+            grade_s = q.get("grade") or "--"
+            ts = q.get("timestamp", "")[:19].replace("T", " ")
+            table.add_row(
+                ts,
+                grade_s,
+                score_s,
+                q.get("domain", ""),
+                q.get("trigger_source", ""),
+                q.get("dmarc_status") or "--",
+                q.get("spf_status") or "--",
+            )
+        console.print(table)
+        return 0
 
 
 def main_recon():
