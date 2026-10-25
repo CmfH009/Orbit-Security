@@ -5,7 +5,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'projects/orbit-security/**'
+      - 'src/**'
+      - 'Dockerfile'
+      - 'pyproject.toml'
   workflow_dispatch:
 
 permissions:
@@ -49,8 +51,8 @@ jobs:
         id: build
         uses: docker/build-push-action@v5
         with:
-          context: ./projects/orbit-security
-          file: ./projects/orbit-security/Dockerfile
+          context: .
+          file: ./Dockerfile
           push: true
           tags: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/orbit-api:${{ github.sha }}
           provenance: true
