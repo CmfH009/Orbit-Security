@@ -373,6 +373,14 @@
             background-size: 100% 4px;
         }
 
+        body.crt-lines-disabled .scanlines {
+            background: none !important;
+            background-image: none !important;
+        }
+        body.crt-lines-disabled #retro-scanlines {
+            display: none !important;
+        }
+
         /* Guaranteed 3-Column Pricing Grid & Pro Tier Elevation */
         .pricing-grid {
             display: grid;
@@ -1842,8 +1850,8 @@ Apex Digital Studio</pre>
                     <p class="text-[11px] text-slate-400 font-mono">Hardware-accelerated phosphor scanline &amp; radar sweep shader (automatically pauses when tab is idle).</p>
                 </div>
             </div>
-            <button type="button" onclick="toggleCrtArcadeShader()" class="px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-bold cursor-pointer transition">
-                Toggle CRT Phosphor HUD
+            <button id="crtShaderToggleBtn" type="button" onclick="toggleCrtArcadeShader()" aria-pressed="true" class="px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-bold cursor-pointer transition">
+                Disable CRT Scanlines
             </button>
         </div>
     </section>

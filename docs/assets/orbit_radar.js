@@ -2742,9 +2742,11 @@
     // 15. Project #21: 32-Bit Cyber Arcade CRT Shader Canvas
     // ==========================================
 
-    let _crtShaderEnabled = true;
+    let _crtShaderEnabled = typeof localStorage !== 'undefined' ? localStorage.getItem('orbit_crt_lines_enabled') !== 'false' : true;
+    let _crtAnimFrameId = null;
+    let _crtPhase = 0;
 
-    function initCrtArcadeShaderCanvas() {
+    function renderCrtArcadeCanvas() {
         const canvas = document.getElementById('crt-arcade-shader-canvas');
         if (!canvas || !canvas.getContext) return;
         const ctx = canvas.getContext('2d');
@@ -2757,7 +2759,7 @@
 
         if (_crtShaderEnabled) {
             // Phosphor scanlines
-            ctx.fillStyle = 'rgba(16, 185, 129, 0.14)';
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.16)';
             for (let y = 0; y < h; y += 3) {
                 ctx.fillRect(0, y, w, 1);
             }
@@ -2765,27 +2767,77 @@
             ctx.strokeStyle = '#10b981';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
+            _crtPhase += 0.08;
             for (let x = 0; x < w; x += 4) {
-                const y = (h / 2) + Math.sin(x * 0.15) * 10;
+                const y = (h / 2) + Math.sin(x * 0.15 + _crtPhase) * 10;
                 if (x === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             }
             ctx.stroke();
+
+            if (!document.hidden) {
+                _crtAnimFrameId = requestAnimationFrame(renderCrtArcadeCanvas);
+            }
         }
     }
 
-    function toggleCrtArcadeShader() {
-        _crtShaderEnabled = !_crtShaderEnabled;
+    function initCrtArcadeShaderCanvas() {
+        if (_crtAnimFrameId) {
+            cancelAnimationFrame(_crtAnimFrameId);
+            _crtAnimFrameId = null;
+        }
+
+        // Synchronize body class for CSS scanlines
+        if (document.body) {
+            document.body.classList.toggle('crt-lines-disabled', !_crtShaderEnabled);
+        }
+
+        // Synchronize full-screen retro scanlines overlay
+        const scanlinesEl = document.getElementById('retro-scanlines');
+        if (scanlinesEl) {
+            scanlinesEl.style.display = _crtShaderEnabled ? 'block' : 'none';
+        }
+
         const btn = document.getElementById('crtShaderToggleBtn');
-        if (btn) btn.setAttribute('aria-pressed', _crtShaderEnabled ? 'true' : 'false');
+        if (btn) {
+            btn.setAttribute('aria-pressed', _crtShaderEnabled ? 'true' : 'false');
+            btn.textContent = _crtShaderEnabled ? 'Disable CRT Scanlines' : 'Enable CRT Scanlines';
+        }
         const badge = document.getElementById('crtShaderStatusBadge');
         if (badge) {
-            badge.textContent = _crtShaderEnabled ? 'ACTIVE // 0% IDLE GOVERNOR' : 'PAUSED // CLEAN MODE';
+            badge.textContent = _crtShaderEnabled ? 'ACTIVE // PHOSPHOR SCANLINES ON' : 'PAUSED // CLEAN MODE (LINES OFF)';
             badge.className = _crtShaderEnabled
                 ? 'px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-[10px]'
                 : 'px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400 font-mono text-[10px]';
         }
+
+        renderCrtArcadeCanvas();
+    }
+
+    function toggleCrtArcadeShader() {
+        _crtShaderEnabled = !_crtShaderEnabled;
+        try {
+            localStorage.setItem('orbit_crt_lines_enabled', _crtShaderEnabled ? 'true' : 'false');
+        } catch (_) {}
+
+        if (window.SimpleCat && typeof window.SimpleCat.playBlip === 'function') {
+            window.SimpleCat.playBlip();
+        }
+
         initCrtArcadeShaderCanvas();
+    }
+
+    if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && _crtShaderEnabled) {
+                if (!_crtAnimFrameId) {
+                    renderCrtArcadeCanvas();
+                }
+            } else if (document.hidden && _crtAnimFrameId) {
+                cancelAnimationFrame(_crtAnimFrameId);
+                _crtAnimFrameId = null;
+            }
+        });
     }
 
     if (document.readyState === 'loading') {

@@ -86,3 +86,12 @@ main, footer {
   position: relative;
   z-index: 10;
 }
+
+/* CRT Scanline Disabling Mode */
+body.crt-lines-disabled .scanlines {
+    background: none !important;
+    background-image: none !important;
+}
+body.crt-lines-disabled #retro-scanlines {
+    display: none !important;
+}

@@ -1081,7 +1081,11 @@
         const scanlines = document.createElement("div");
         scanlines.id = "retro-scanlines";
         scanlines.className = "fixed inset-0 pointer-events-none";
-        scanlines.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; opacity: 0.12; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.45) 50%); background-size: 100% 4px;";
+        scanlines.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 40; pointer-events: none; opacity: 0.15; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.45) 50%); background-size: 100% 4px;";
+        if (typeof localStorage !== "undefined" && localStorage.getItem("orbit_crt_lines_enabled") === "false") {
+            scanlines.style.display = "none";
+            document.body.classList.add("crt-lines-disabled");
+        }
         document.body.prepend(scanlines);
 
         const ctx = canvas.getContext("2d");
@@ -3032,8 +3036,15 @@
                 left: 0 !important;
                 width: 100% !important;
                 height: 100% !important;
-                z-index: 1 !important;
+                z-index: 40 !important;
                 pointer-events: none !important;
+            }
+            body.crt-lines-disabled #retro-scanlines {
+                display: none !important;
+            }
+            body.crt-lines-disabled .scanlines {
+                background: none !important;
+                background-image: none !important;
             }
             #simple-cat-modal {
                 display: none;
