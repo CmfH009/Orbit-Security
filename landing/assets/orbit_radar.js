@@ -681,9 +681,11 @@
                 }
             ];
 
-            const findings = Array.isArray(customFindings) && customFindings.length === 5 
+            const findings = (Array.isArray(customFindings) && customFindings.length === 5)
                 ? customFindings 
-                : defaultFindings;
+                : ((window._lastAuditResult && window._lastAuditResult.domain === cleanDomain && Array.isArray(window._lastAuditResult.findings) && window._lastAuditResult.findings.length === 5)
+                    ? window._lastAuditResult.findings
+                    : defaultFindings);
 
             let startY = height - 175;
             for (const item of findings) {
@@ -886,31 +888,9 @@
             </div>`;
 
         try {
-            const labels = domain.split('.');
-            const isSubdomain = labels.length > 2;
-            const orgDomain = isSubdomain ? labels.slice(-2).join('.') : domain;
-            const subdomainsToProbe = isSubdomain ? [domain] : ['www', 'shop', 'promo', 'app', 'dev'].map(s => `${s}.${domain}`);
+            const audit = await performClientDohAudit(domain);
 
-            const [dmarcDirect, dmarcOrg, spfRes, spfOrg, mxRes, apexA, ...subProbes] = await Promise.all([
-                DoHService.query(`_dmarc.${domain}`, 16),
-                isSubdomain ? DoHService.query(`_dmarc.${orgDomain}`, 16) : Promise.resolve(null),
-                DoHService.query(domain, 16),
-                isSubdomain ? DoHService.query(orgDomain, 16) : Promise.resolve(null),
-                DoHService.query(domain, 15),
-                DoHService.query(domain, 1),
-                ...subdomainsToProbe.map(sub => DoHService.query(sub, 5))
-            ]);
-
-            // -----------------------------------------------------------------
-            // A. NXDOMAIN & DoH Network Failure Detection
-            // -----------------------------------------------------------------
-            const isNxDomain = (apexA && apexA.status === 3) ||
-                               (spfRes && spfRes.status === 3 && mxRes && mxRes.status === 3);
-
-            const isLookupFailed = (!apexA?.success && !mxRes?.success && !spfRes?.success && !dmarcDirect?.success) ||
-                                  (apexA?.status === -1 && mxRes?.status === -1);
-
-            if (isNxDomain) {
+            if (audit.isNxDomain) {
                 showArcadeToast(`NXDOMAIN FAULT: [${safeDomain}] does not exist in DNS root.`, 'error');
                 if (window.SimpleCat && SimpleCat.playBoing) SimpleCat.playBoing();
                 hud.innerHTML = `
@@ -932,7 +912,7 @@
                 return;
             }
 
-            if (isLookupFailed) {
+            if (audit.isLookupFailed) {
                 showArcadeToast(`RESOLVER FAULT: DoH queries for [${safeDomain}] timed out.`, 'warn');
                 if (window.SimpleCat && SimpleCat.playBoing) SimpleCat.playBoing();
                 hud.innerHTML = `
@@ -954,275 +934,58 @@
                 return;
             }
 
-            // -----------------------------------------------------------------
-            // B. Verified Apex Resolvability & Static Perimeter Evaluation
-            // -----------------------------------------------------------------
-            const isApexResolvable = Boolean(
-                apexA && 
-                apexA.success && 
-                apexA.status === 0 && 
-                Array.isArray(apexA.answer) && 
-                apexA.answer.length > 0
-            );
-
-            const STATIC_HOST_SUFFIXES = [
-                '.github.io',
-                '.pages.dev',
-                '.vercel.app',
-                '.netlify.app',
-                '.gitlab.io',
-                '.azurewebsites.net',
-                '.render.com',
-                '.onrender.com',
-                '.fly.dev',
-                '.webflow.io',
-                '.surge.sh',
-                '.firebaseapp.com',
-                '.web.app'
-            ];
-            const isStaticHost = isApexResolvable && (
-                STATIC_HOST_SUFFIXES.some(suffix => domain.endsWith(suffix)) || domain === 'github.io'
-            );
-
-            // RFC 7505 Null-MX & Static Perimeter Non-Sending Host:
-            // MUST verify apex resolvability before allowing hasNoMx fallback!
-            const hasNoMx = isApexResolvable && (!mxRes || !mxRes.answer || mxRes.answer.length === 0);
-
-            // SPF Evaluation
-            let spfResult = DnsParser.parseSpf(DnsParser.extractTxt(spfRes.answer));
-            let spfInherited = false;
-            if ((!spfResult.raw || spfResult.status === 'missing') && isSubdomain && spfOrg && spfOrg.answer) {
-                const orgSpf = DnsParser.parseSpf(DnsParser.extractTxt(spfOrg.answer));
-                if (orgSpf && orgSpf.raw) {
-                    spfResult = orgSpf;
-                    spfInherited = true;
-                }
-            }
-
-            let spfStatus = spfResult.status;
-            let spfPolicy = spfResult.policy;
-            let spfScore = spfResult.score;
-
-            if (spfInherited && spfResult.raw) {
-                spfPolicy = `${spfResult.raw} (Strict Hard Fail inherited from ${orgDomain})`;
-            } else if (spfStatus === 'missing' && (isStaticHost || hasNoMx)) {
-                // Static web perimeters that route no mail and reside on protected edge
-                spfStatus = 'pass';
-                spfPolicy = 'v=spf1 a -all (Strict Hard Fail via static edge isolation)';
-                spfScore = 35;
-            }
-
-            // DMARC Evaluation
-            let dmarcParsed = DnsParser.parseDmarc(DnsParser.extractTxt(dmarcDirect.answer));
-            let inherited = false;
-            if (!dmarcParsed && isSubdomain && dmarcOrg && dmarcOrg.answer) {
-                dmarcParsed = DnsParser.parseDmarc(DnsParser.extractTxt(dmarcOrg.answer));
-                if (dmarcParsed) inherited = true;
-            }
-
-            let dmarcStatus = 'missing';
-            let dmarcPolicy = 'None detected (Vulnerable to Spoofing)';
-            let dmarcScore = 0;
-
-            if (dmarcParsed) {
-                const effectiveP = (inherited ? dmarcParsed.sp : dmarcParsed.p);
-                if (effectiveP === 'reject') {
-                    dmarcStatus = 'pass';
-                    dmarcPolicy = `p=reject (Strict Rejection${inherited ? ' via Apex' : ''})`;
-                    dmarcScore = dmarcParsed.pct === 100 ? 35 : 25;
-                } else if (effectiveP === 'quarantine') {
-                    dmarcStatus = 'pass';
-                    dmarcPolicy = `p=quarantine (Spam Quarantine${inherited ? ' via Apex' : ''})`;
-                    dmarcScore = 28;
-                } else {
-                    dmarcStatus = 'warn';
-                    dmarcPolicy = `p=none (Monitoring Only — Spoofs Delivered)`;
-                    dmarcScore = 10;
-                }
-            } else if (isStaticHost || (hasNoMx && spfStatus === 'pass' && (spfResult.raw || spfPolicy || '').includes('-all'))) {
-                // RFC 7505 Null-MX & Static Perimeter Non-Sending Host Spoof Isolation:
-                // When a domain publishes zero MX records and inherits strict -all SPF,
-                // outbound mail forgery is blocked by mail agents on SPF hard-fail.
-                dmarcStatus = 'pass';
-                dmarcPolicy = `Protected: Non-Sending Static Perimeter (RFC 7505 Null-MX Isolation)`;
-                dmarcScore = 35;
-            }
-
-            // CNAME & Perimeter Evaluation
-            let cnameStatus = 'pass';
-            let cnameTarget = isSubdomain ? (isStaticHost ? `${domain} → Anycast Edge (${orgDomain})` : 'Subdomain Direct') : 'Apex Route (A/AAAA)';
-            let cnameScore = 30;
-            let takeoverWarning = null;
-            const detectedSaaS = [];
-
-            subdomainsToProbe.forEach((subName, idx) => {
-                const probeRes = subProbes[idx];
-                if (probeRes && probeRes.answer && probeRes.answer.length > 0) {
-                    for (const ans of probeRes.answer) {
-                        if (ans.type === 5) {
-                            const cname = (ans.data || '').replace(/\.+$/, '').toLowerCase();
-                            cnameTarget = `${subName} → ${cname}`;
-                            for (const s of SAAS_TAKEOVER_PATTERNS) {
-                                if (cname.includes(s.pattern)) {
-                                    detectedSaaS.push({ sub: subName, saas: s.name, target: cname });
-                                    if (probeRes.status === 3) {
-                                        cnameStatus = 'critical';
-                                        takeoverWarning = `Dangling pointer detected on ${subName} (${s.name})!`;
-                                        cnameScore = 0;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-
-            if (cnameStatus !== 'critical') {
-                if (detectedSaaS.length > 0) {
-                    takeoverWarning = `Active SaaS routing: ${detectedSaaS.map(d => `${d.sub} (${d.saas})`).join(', ')}`;
-                    cnameScore = 30;
-                } else {
-                    takeoverWarning = isStaticHost
-                        ? `Perimeter verified: Protected Anycast Static Edge (${orgDomain}). Zero orphaned pointers.`
-                        : 'Perimeter clean: Zero orphaned SaaS CNAME pointers detected.';
-                    cnameScore = 30;
-                }
-            }
-
-            // Total Score & Grade
-            const totalScore = Math.max(0, Math.min(100, dmarcScore + spfScore + cnameScore));
-            let grade = 'F';
-            let gradeTextColor = 'text-red-400';
-            let gaugeStrokeColor = 'text-red-500';
-            let riskLabel = 'CRITICAL DRIFT';
-            let riskBadgeClass = 'bg-red-500/20 text-red-400 border border-red-500/40';
-
-            if (totalScore >= 90) {
-                grade = 'A+';
-                gradeTextColor = 'text-emerald-400';
-                gaugeStrokeColor = 'text-emerald-400';
-                riskLabel = 'HARDENED';
-                riskBadgeClass = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
-            } else if (totalScore >= 75) {
-                grade = 'B';
-                gradeTextColor = 'text-cyan-400';
-                gaugeStrokeColor = 'text-cyan-400';
-                riskLabel = 'MONITORED';
-                riskBadgeClass = 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40';
-            } else if (totalScore >= 50) {
-                grade = 'C';
-                gradeTextColor = 'text-yellow-400';
-                gaugeStrokeColor = 'text-yellow-400';
-                riskLabel = 'ELEVATED RISK';
-                riskBadgeClass = 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40';
-            }
-
             const badge = (status) => {
                 if (status === 'pass') return '<span class="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold text-[10px]">PASS</span>';
                 if (status === 'warn') return '<span class="px-2 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 font-bold text-[10px]">WARN</span>';
                 return '<span class="px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 font-bold text-[10px]">CRITICAL</span>';
             };
 
-            const rawTelemetry = {
-                domain,
-                org_domain: orgDomain,
-                hygiene_score: totalScore,
-                grade,
-                dmarc: { status: dmarcStatus, policy: dmarcPolicy, parsed: dmarcParsed, inherited },
-                spf: { status: spfStatus, policy: spfPolicy, result: spfResult },
-                perimeter: { status: cnameStatus, target: cnameTarget, saas_detected: detectedSaaS },
-                timestamp: new Date().toISOString()
-            };
-
-            // Construct 5-point findings aligned with PDF engine
-            const pdfFindings = [
-                {
-                    category: "SUBDOMAIN TAKEOVER SENTINEL",
-                    desc: cnameStatus === 'critical' ? (takeoverWarning || 'Dangling CNAME pointer detected!') : `${subdomainsToProbe.length} perimeter SaaS routes audited via RFC 8484 DoH. Zero dangling CNAMEs.`,
-                    status: cnameStatus === 'critical' ? 'FAIL' : 'PASS'
-                },
-                {
-                    category: "EMAIL SPOOFING PROTECTION (DMARC)",
-                    desc: dmarcParsed ? `RFC 7489 DMARC policy (${dmarcPolicy}) verified active.` : (dmarcStatus === 'pass' ? dmarcPolicy : 'No RFC 7489 DMARC policy found in authoritative DNS.'),
-                    status: dmarcStatus === 'pass' ? 'PASS' : (dmarcStatus === 'warn' ? 'WARN' : 'FAIL')
-                },
-                {
-                    category: "SENDER POLICY FRAMEWORK (SPF)",
-                    desc: spfPolicy ? `SPF TXT record configured: ${spfPolicy}` : 'Missing or invalid SPF record.',
-                    status: spfStatus === 'pass' ? 'PASS' : (spfStatus === 'warn' ? 'WARN' : 'FAIL')
-                },
-                {
-                    category: "SENSITIVE EXPOSURE SENTINEL",
-                    desc: "Passive DoH reconnaissance only. Direct HTTP file probes (.env, .git) require authenticated server-side probe engagement.",
-                    status: "N/A"
-                },
-                {
-                    category: "TLS / SSL CERTIFICATE EXPIRY",
-                    desc: isApexResolvable ? `Apex DNS resolution verified (${apexA.answer?.[0]?.data || 'Active IP'}). Edge TLS transport active.` : "DNS resolution failed.",
-                    status: isApexResolvable ? "PASS" : "WARN"
-                }
-            ];
-
-            window._lastAuditResult = {
-                domain,
-                score: totalScore,
-                grade,
-                dmarcStatus,
-                spfStatus,
-                findings: pdfFindings,
-                subdomainsScanned: subdomainsToProbe
-            };
-
-            // Save to Local Persistence
-            AuditStore.saveScan(domain, totalScore, grade, rawTelemetry);
-
-            const strokeDashoffset = Math.round(251 - (251 * totalScore / 100));
-            const safeDmarcPolicy = escapeHtml(dmarcPolicy);
-            const safeSpfPolicy = escapeHtml(spfPolicy);
-            const safeTakeoverWarning = escapeHtml(takeoverWarning);
-            const safeCnameTarget = escapeHtml(cnameTarget);
+            const safeDmarcPolicy = escapeHtml(audit.dmarcPolicy);
+            const safeSpfPolicy = escapeHtml(audit.spfPolicy);
+            const safeTakeoverWarning = escapeHtml(audit.takeoverWarning);
+            const safeCnameTarget = escapeHtml(audit.cnameTarget);
 
             hud.innerHTML = `
-                <div class="p-4 sm:p-5 rounded-xl bg-slate-950/95 border border-slate-800 shadow-2xl text-xs space-y-4 overflow-hidden">
-                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
-                        <div class="flex items-center gap-3.5 sm:gap-4 w-full sm:w-auto">
+                <div class="p-4 sm:p-5 rounded-xl bg-slate-950/95 border border-slate-800 shadow-2xl text-xs space-y-4">
+                    <div class="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
+                        <div class="flex items-center gap-3.5 sm:gap-4 w-full xl:w-auto">
                             <div class="relative w-16 h-16 flex items-center justify-center flex-shrink-0">
                                 <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                                     <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="7" class="text-slate-800" fill="transparent" />
-                                    <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="7" class="${gaugeStrokeColor}" 
+                                    <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="7" class="${audit.gaugeStrokeColor}" 
                                             stroke-dasharray="251" 
-                                            stroke-dashoffset="${strokeDashoffset}" 
+                                            stroke-dashoffset="${audit.strokeDashoffset}" 
                                             stroke-linecap="round" fill="transparent" 
                                             style="transition: stroke-dashoffset 1s ease-in-out; filter: drop-shadow(0 0 6px currentColor);" />
                                 </svg>
-                                <div class="absolute inset-0 flex flex-col items-center justify-center font-extrabold ${gradeTextColor}">
-                                    <span class="text-lg leading-none font-pixel">${escapeHtml(grade)}</span>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center font-extrabold ${audit.gradeTextColor}">
+                                    <span class="text-lg leading-none font-pixel">${escapeHtml(audit.grade)}</span>
                                 </div>
                             </div>
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-center gap-2 flex-wrap">
                                     <span class="text-sm sm:text-base font-bold text-white font-mono truncate max-w-[170px] xs:max-w-[220px] sm:max-w-none">${safeDomain}</span>
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${riskBadgeClass}">${escapeHtml(riskLabel)}</span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${audit.riskBadgeClass}">${escapeHtml(audit.riskLabel)}</span>
                                 </div>
-                                <div class="text-[11px] text-slate-400 mt-1">Perimeter Hygiene: <span class="text-white font-bold">${totalScore}</span>/100</div>
+                                <div class="text-[11px] text-slate-400 mt-1">Perimeter Hygiene: <span class="text-white font-bold">${audit.score}</span>/100</div>
                             </div>
                         </div>
-                        <div class="w-full sm:w-auto flex flex-col sm:flex-row gap-2">
+                        <div class="w-full xl:w-auto flex flex-wrap items-center gap-2.5 min-w-0">
                             <button type="button" 
-                                    onclick="generateInstantPdfForDomain('${safeDomain}', ${totalScore}, '${escapeHtml(grade)}', null, window._lastAuditResult ? window._lastAuditResult.findings : null)" 
-                                    class="w-full sm:w-auto min-h-[48px] px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer pixel-btn">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                <span>Download Co-Branded PDF (Demo)</span>
+                                    onclick="generateInstantPdfForDomain('${safeDomain}', ${audit.score}, '${escapeHtml(audit.grade)}', null, window._lastAuditResult ? window._lastAuditResult.findings : null)" 
+                                    class="flex-1 sm:flex-none min-h-[44px] px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer pixel-btn whitespace-nowrap">
+                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                <span>Download PDF (Demo)</span>
                             </button>
                             <button type="button" 
-                                    onclick="runRealScanAndGeneratePdfFromHUD('${safeDomain}', ${totalScore}, '${escapeHtml(grade)}')" 
-                                    class="w-full sm:w-auto min-h-[48px] px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide shadow-md shadow-cyan-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer pixel-btn">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                                <span>Generate Real Audit PDF (API)</span>
+                                    onclick="runRealScanAndGeneratePdfFromHUD('${safeDomain}', ${audit.score}, '${escapeHtml(audit.grade)}')" 
+                                    class="flex-1 sm:flex-none min-h-[44px] px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide shadow-md shadow-cyan-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer pixel-btn whitespace-nowrap">
+                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                <span>Live DoH PDF (API)</span>
                             </button>
                             <button type="button" 
-                                    onclick="copyShareableBadge('${safeDomain}', ${totalScore}, '${escapeHtml(grade)}', '${dmarcStatus}', '${spfStatus}')" 
-                                    class="w-full sm:w-auto min-h-[48px] px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs uppercase font-sans tracking-wide transition-all flex items-center justify-center gap-2 cursor-pointer pixel-btn">
+                                    onclick="copyShareableBadge('${safeDomain}', ${audit.score}, '${escapeHtml(audit.grade)}', '${audit.dmarcStatus}', '${audit.spfStatus}')" 
+                                    class="w-full sm:w-auto min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs uppercase font-sans tracking-wide transition-all flex items-center justify-center gap-2 cursor-pointer pixel-btn whitespace-nowrap">
                                 <span>📋 Copy Client Summary</span>
                             </button>
                         </div>
@@ -1246,12 +1009,12 @@
                                     </div>
                                     <div class="text-[11px] text-slate-400 mt-0.5 break-all">${safeDmarcPolicy}</div>
                                 </div>
-                                ${badge(dmarcStatus)}
+                                ${badge(audit.dmarcStatus)}
                             </div>
                             <div class="mt-2 text-[11px] text-emerald-400 font-sans flex flex-col xs:flex-row xs:items-center justify-between gap-2 bg-slate-950/80 p-2.5 rounded-lg border border-emerald-500/20 cursor-pointer hover:border-emerald-500/50 transition-all group" onclick="SimpleCat.explain('dmarc')">
                                 <div class="flex items-start gap-1.5 flex-1 min-w-0">
                                     <span class="font-bold font-pixel flex-shrink-0">🐱 Simple Cat:</span>
-                                    <span class="text-slate-200 leading-relaxed">${dmarcStatus === 'pass' ? '"VIP bouncer on duty! Fake emails get tackled at the door."' : '"Bouncer is off duty! Anyone can send fake emails wearing your name tag."'}</span>
+                                    <span class="text-slate-200 leading-relaxed">${audit.dmarcStatus === 'pass' ? '"VIP bouncer on duty! Fake emails get tackled at the door."' : '"Bouncer is off duty! Anyone can send fake emails wearing your name tag."'}</span>
                                 </div>
                                 <span class="pixel-btn min-h-[32px] px-2.5 py-1 text-[9px] font-arcade rounded bg-slate-900 border border-emerald-500/40 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all flex items-center justify-center self-end xs:self-auto flex-shrink-0">INFO &rarr;</span>
                             </div>
@@ -1265,12 +1028,12 @@
                                     </div>
                                     <div class="text-[11px] text-slate-400 mt-0.5 break-all">${safeSpfPolicy}</div>
                                 </div>
-                                ${badge(spfStatus)}
+                                ${badge(audit.spfStatus)}
                             </div>
                             <div class="mt-2 text-[11px] text-emerald-400 font-sans flex flex-col xs:flex-row xs:items-center justify-between gap-2 bg-slate-950/80 p-2.5 rounded-lg border border-emerald-500/20 cursor-pointer hover:border-emerald-500/50 transition-all group" onclick="SimpleCat.explain('spf')">
                                 <div class="flex items-start gap-1.5 flex-1 min-w-0">
                                     <span class="font-bold font-pixel flex-shrink-0">🐱 Simple Cat:</span>
-                                    <span class="text-slate-200 leading-relaxed">${spfStatus === 'pass' ? '"Mail guest list verified. Only authorized servers send mail."' : '"Guest list not configured. Shady servers can send mail."'}</span>
+                                    <span class="text-slate-200 leading-relaxed">${audit.spfStatus === 'pass' ? '"Mail guest list verified. Only authorized servers send mail."' : '"Guest list not configured. Shady servers can send mail."'}</span>
                                 </div>
                                 <span class="pixel-btn min-h-[32px] px-2.5 py-1 text-[9px] font-arcade rounded bg-slate-900 border border-emerald-500/40 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all flex items-center justify-center self-end xs:self-auto flex-shrink-0">INFO &rarr;</span>
                             </div>
@@ -1284,12 +1047,12 @@
                                     </div>
                                     <div class="text-[11px] text-slate-400 mt-0.5 break-all">${safeTakeoverWarning}</div>
                                 </div>
-                                ${badge(cnameStatus)}
+                                ${badge(audit.cnameStatus)}
                             </div>
                             <div class="mt-2 text-[11px] text-emerald-400 font-sans flex flex-col xs:flex-row xs:items-center justify-between gap-2 bg-slate-950/80 p-2.5 rounded-lg border border-emerald-500/20 cursor-pointer hover:border-emerald-500/50 transition-all group" onclick="SimpleCat.explain('cname')">
                                 <div class="flex items-start gap-1.5 flex-1 min-w-0">
                                     <span class="font-bold font-pixel flex-shrink-0">🐱 Simple Cat:</span>
-                                    <span class="text-slate-200 leading-relaxed">${cnameStatus === 'pass' ? '"No abandoned lockers found. Pointers resolved cleanly."' : '"Danger! Abandoned locker detected—someone could claim your subdomain in 30 seconds!"'}</span>
+                                    <span class="text-slate-200 leading-relaxed">${audit.cnameStatus === 'pass' ? '"No abandoned lockers found. Pointers resolved cleanly."' : '"Danger! Abandoned locker detected—someone could claim your subdomain in 30 seconds!"'}</span>
                                 </div>
                                 <span class="pixel-btn min-h-[32px] px-2.5 py-1 text-[9px] font-arcade rounded bg-slate-900 border border-emerald-500/40 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all flex items-center justify-center self-end xs:self-auto flex-shrink-0">INFO &rarr;</span>
                             </div>
@@ -1300,11 +1063,11 @@
                     <div id="tabPane-email" class="hud-tab-pane hidden space-y-2.5 font-mono">
                         <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-xs">
                             <span class="text-slate-400 block mb-1">DMARC Record (RFC 7489 / RFC 7505):</span>
-                            <code class="text-emerald-400 break-all">${dmarcParsed ? escapeHtml(dmarcParsed.raw) : (dmarcStatus === 'pass' ? `RFC 7505 Non-Sending Host (Spoof Isolated via ${escapeHtml(orgDomain)} Parent -all)` : 'No DMARC record found')}</code>
+                            <code class="text-emerald-400 break-all">${audit.dmarcParsed ? escapeHtml(audit.dmarcParsed.raw) : (audit.dmarcStatus === 'pass' ? `RFC 7505 Non-Sending Host (Spoof Isolated via ${escapeHtml(audit.orgDomain)} Parent -all)` : 'No DMARC record found')}</code>
                         </div>
                         <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-xs">
                             <span class="text-slate-400 block mb-1">SPF Mechanism Query:</span>
-                            <code class="text-emerald-400 break-all">${escapeHtml(spfResult.raw || spfPolicy)}</code>
+                            <code class="text-emerald-400 break-all">${escapeHtml(audit.spfResult.raw || audit.spfPolicy)}</code>
                         </div>
                     </div>
 
@@ -1332,7 +1095,7 @@
 
             const rawTelemetryEl = document.getElementById('rawTelemetryJson');
             if (rawTelemetryEl) {
-                rawTelemetryEl.textContent = JSON.stringify(rawTelemetry, null, 2);
+                rawTelemetryEl.textContent = JSON.stringify(audit.rawTelemetry, null, 2);
             }
 
             if (window.SimpleCat) {
@@ -1778,6 +1541,7 @@
     window.hideKeyboardHud = hideKeyboardHud;
     window.toggleKeyboardHud = toggleKeyboardHud;
     window.AuditStore = AuditStore;
+    window.DoHService = DoHService;
 
     // Expose for HUD button
     window.runRealScanAndGeneratePdfFromHUD = runRealScanAndGeneratePdfFromHUD;
@@ -1786,7 +1550,20 @@
     // Real Client-Side DoH Scan Engine & PDF Integration
     // ==========================================
 
-    async function performClientDohAudit(domain) {
+    async function performClientDohAudit(rawDomain) {
+        if (!rawDomain) throw new Error('No domain provided');
+
+        let domain = String(rawDomain).trim().toLowerCase()
+            .replace(/^https?:\/\//, '')
+            .replace(/\/.*$/, '')
+            .replace(/\?.*$/, '')
+            .replace(/:\d+$/, '')
+            .replace(/\.+$/, '');
+
+        if (!isValidDomain(domain)) {
+            throw new Error(`SYNTAX FAULT: [${rawDomain}] is not a valid domain name.`);
+        }
+
         const labels = domain.split('.');
         const isSubdomain = labels.length > 2;
         const orgDomain = isSubdomain ? labels.slice(-2).join('.') : domain;
@@ -1802,7 +1579,90 @@
             ...subdomainsToProbe.map(sub => DoHService.query(sub, 5))
         ]);
 
-        // Resolvability & Static Edge Detection
+        // A. NXDOMAIN & DoH Network Failure Detection
+        const isNxDomain = (apexA && apexA.status === 3) ||
+                           (spfRes && spfRes.status === 3 && mxRes && mxRes.status === 3);
+
+        const isLookupFailed = (!apexA?.success && !mxRes?.success && !spfRes?.success && !dmarcDirect?.success) ||
+                              (apexA?.status === -1 && mxRes?.status === -1);
+
+        if (isNxDomain) {
+            const result = {
+                domain,
+                orgDomain,
+                isSubdomain,
+                isNxDomain: true,
+                isLookupFailed: false,
+                score: 0,
+                grade: 'F',
+                gradeTextColor: 'text-red-400',
+                gaugeStrokeColor: 'text-red-500',
+                riskLabel: 'NXDOMAIN',
+                riskBadgeClass: 'bg-red-500/20 text-red-400 border border-red-500/40',
+                strokeDashoffset: 251,
+                dmarcStatus: 'missing',
+                dmarcPolicy: 'None detected (NXDOMAIN)',
+                dmarcScore: 0,
+                spfStatus: 'missing',
+                spfPolicy: 'None detected (NXDOMAIN)',
+                spfScore: 0,
+                cnameStatus: 'critical',
+                cnameTarget: 'NXDOMAIN',
+                cnameScore: 0,
+                takeoverWarning: 'Unregistered or expired domain',
+                findings: [
+                    { category: "SUBDOMAIN TAKEOVER SENTINEL", desc: "Domain does not exist in DNS root (NXDOMAIN).", status: "FAIL" },
+                    { category: "EMAIL SPOOFING PROTECTION (DMARC)", desc: "Zero active DMARC records found.", status: "FAIL" },
+                    { category: "SENDER POLICY FRAMEWORK (SPF)", desc: "Zero active SPF records found.", status: "FAIL" },
+                    { category: "SENSITIVE EXPOSURE SENTINEL", desc: "Passive DoH reconnaissance only.", status: "N/A" },
+                    { category: "TLS / SSL CERTIFICATE EXPIRY", desc: "DNS resolution failed (NXDOMAIN).", status: "FAIL" }
+                ],
+                subdomainsScanned: subdomainsToProbe,
+                timestamp: new Date().toISOString()
+            };
+            window._lastAuditResult = result;
+            return result;
+        }
+
+        if (isLookupFailed) {
+            const result = {
+                domain,
+                orgDomain,
+                isSubdomain,
+                isNxDomain: false,
+                isLookupFailed: true,
+                score: 0,
+                grade: 'OFFLINE',
+                gradeTextColor: 'text-amber-400',
+                gaugeStrokeColor: 'text-amber-400',
+                riskLabel: 'TIMEOUT',
+                riskBadgeClass: 'bg-amber-500/20 text-amber-400 border border-amber-500/40',
+                strokeDashoffset: 251,
+                dmarcStatus: 'missing',
+                dmarcPolicy: 'DoH query timed out',
+                dmarcScore: 0,
+                spfStatus: 'missing',
+                spfPolicy: 'DoH query timed out',
+                spfScore: 0,
+                cnameStatus: 'warn',
+                cnameTarget: 'DoH Timeout',
+                cnameScore: 0,
+                takeoverWarning: 'DoH queries timed out or network blocked',
+                findings: [
+                    { category: "SUBDOMAIN TAKEOVER SENTINEL", desc: "DoH query timed out.", status: "WARN" },
+                    { category: "EMAIL SPOOFING PROTECTION (DMARC)", desc: "DoH query timed out.", status: "WARN" },
+                    { category: "SENDER POLICY FRAMEWORK (SPF)", desc: "DoH query timed out.", status: "WARN" },
+                    { category: "SENSITIVE EXPOSURE SENTINEL", desc: "Passive DoH reconnaissance only.", status: "N/A" },
+                    { category: "TLS / SSL CERTIFICATE EXPIRY", desc: "DoH query timed out.", status: "WARN" }
+                ],
+                subdomainsScanned: subdomainsToProbe,
+                timestamp: new Date().toISOString()
+            };
+            window._lastAuditResult = result;
+            return result;
+        }
+
+        // B. Verified Apex Resolvability & Static Perimeter Evaluation
         const isApexResolvable = Boolean(
             apexA && 
             apexA.success && 
@@ -1821,98 +1681,150 @@
         );
         const hasNoMx = isApexResolvable && (!mxRes || !mxRes.answer || mxRes.answer.length === 0);
 
-        // SPF Evaluation
-        const spfTxt = DnsParser.extractTxt(spfRes?.answer?.length ? spfRes.answer : (spfOrg?.answer || []));
-        let spfResult = DnsParser.parseSpf(spfTxt);
-        let spfScore = spfResult?.score || 0;
-        let spfStatus = (spfResult?.status === 'pass') ? 'PASS' : ((spfResult?.status === 'warn') ? 'WARN' : 'FAIL');
-        let spfPolicy = spfResult?.policy;
-        let spfDesc = spfPolicy ? `SPF TXT record configured: ${spfPolicy}` : 'Missing or invalid SPF record.';
+        // C. SPF Evaluation
+        let spfResult = DnsParser.parseSpf(DnsParser.extractTxt(spfRes?.answer || []));
+        let spfInherited = false;
+        if ((!spfResult.raw || spfResult.status === 'missing') && isSubdomain && spfOrg && spfOrg.answer) {
+            const orgSpf = DnsParser.parseSpf(DnsParser.extractTxt(spfOrg.answer));
+            if (orgSpf && orgSpf.raw) {
+                spfResult = orgSpf;
+                spfInherited = true;
+            }
+        }
 
-        if (spfStatus === 'FAIL' && (isStaticHost || hasNoMx)) {
-            spfStatus = 'PASS';
-            spfDesc = 'SPF TXT record configured: v=spf1 a -all (Strict Hard Fail via static edge isolation)';
+        let spfStatus = spfResult.status;
+        let spfPolicy = spfResult.policy;
+        let spfScore = spfResult.score;
+
+        if (spfInherited && spfResult.raw) {
+            spfPolicy = `${spfResult.raw} (Strict Hard Fail inherited from ${orgDomain})`;
+        } else if (spfStatus === 'missing' && (isStaticHost || hasNoMx)) {
+            // Static web perimeters that route no mail and reside on protected edge
+            spfStatus = 'pass';
+            spfPolicy = 'v=spf1 a -all (Strict Hard Fail via static edge isolation)';
             spfScore = 35;
         }
 
-        // DMARC Evaluation
-        const dmarcTxt = DnsParser.extractTxt(dmarcDirect?.answer?.length ? dmarcDirect.answer : (dmarcOrg?.answer || []));
-        const dmarc = DnsParser.parseDmarc(dmarcTxt);
-        let dmarcScore = 0;
-        let dmarcStatus = 'FAIL';
-        let dmarcDesc = 'No RFC 7489 DMARC policy found in authoritative DNS.';
+        // D. DMARC Evaluation
+        let dmarcParsed = DnsParser.parseDmarc(DnsParser.extractTxt(dmarcDirect?.answer || []));
+        let inherited = false;
+        if (!dmarcParsed && isSubdomain && dmarcOrg && dmarcOrg.answer) {
+            dmarcParsed = DnsParser.parseDmarc(DnsParser.extractTxt(dmarcOrg.answer));
+            if (dmarcParsed) inherited = true;
+        }
 
-        if (dmarc) {
-            const effectiveP = dmarc.p;
+        let dmarcStatus = 'missing';
+        let dmarcPolicy = 'None detected (Vulnerable to Spoofing)';
+        let dmarcScore = 0;
+
+        if (dmarcParsed) {
+            const effectiveP = (inherited ? (dmarcParsed.sp || dmarcParsed.p) : dmarcParsed.p);
             if (effectiveP === 'reject') {
-                dmarcScore = (dmarc.pct === 100 || dmarc.pct === undefined) ? 35 : 25;
-                dmarcStatus = 'PASS';
-                dmarcDesc = 'RFC 7489 DMARC policy (p=reject) verified active. Unauthorized sender forging blocked.';
+                dmarcStatus = 'pass';
+                dmarcPolicy = `p=reject (Strict Rejection${inherited ? ' via Apex' : ''})`;
+                dmarcScore = (dmarcParsed.pct === 100 || dmarcParsed.pct === undefined) ? 35 : 25;
             } else if (effectiveP === 'quarantine') {
+                dmarcStatus = 'pass';
+                dmarcPolicy = `p=quarantine (Spam Quarantine${inherited ? ' via Apex' : ''})`;
                 dmarcScore = 28;
-                dmarcStatus = 'PASS';
-                dmarcDesc = 'RFC 7489 DMARC policy (p=quarantine) verified active. Suspicious messages isolated.';
             } else {
+                dmarcStatus = 'warn';
+                dmarcPolicy = `p=none (Monitoring Only — Spoofs Delivered)`;
                 dmarcScore = 10;
-                dmarcStatus = 'WARN';
-                dmarcDesc = 'RFC 7489 DMARC policy (p=none) active in monitoring mode only.';
             }
-        } else if (isStaticHost || (hasNoMx && spfStatus === 'PASS' && (spfResult?.raw || spfDesc || '').includes('-all'))) {
-            dmarcStatus = 'PASS';
-            dmarcDesc = 'Protected: Non-Sending Static Perimeter (RFC 7505 Null-MX Isolation)';
+        } else if (isStaticHost || (hasNoMx && spfStatus === 'pass' && (spfResult.raw || spfPolicy || '').includes('-all'))) {
+            dmarcStatus = 'pass';
+            dmarcPolicy = `Protected: Non-Sending Static Perimeter (RFC 7505 Null-MX Isolation)`;
             dmarcScore = 35;
         }
 
-        // Subdomain & SaaS CNAME Takeover Check
-        let takeoverIssues = [];
-        for (let i = 0; i < subdomainsToProbe.length; i++) {
-            const probe = subProbes[i];
-            const sub = subdomainsToProbe[i];
-            if (probe?.answer?.length) {
-                for (const ans of probe.answer) {
+        // E. CNAME & Perimeter Evaluation
+        let cnameStatus = 'pass';
+        let cnameTarget = isSubdomain ? (isStaticHost ? `${domain} → Anycast Edge (${orgDomain})` : 'Subdomain Direct') : 'Apex Route (A/AAAA)';
+        let cnameScore = 30;
+        let takeoverWarning = null;
+        const detectedSaaS = [];
+
+        subdomainsToProbe.forEach((subName, idx) => {
+            const probeRes = subProbes[idx];
+            if (probeRes && probeRes.answer && probeRes.answer.length > 0) {
+                for (const ans of probeRes.answer) {
                     if (ans.type === 5) {
-                        const cname = (ans.data || '').toLowerCase();
-                        if (cname.includes('unbouncepages.com') || cname.includes('github.io') || cname.includes('myshopify.com') || cname.includes('s3.amazonaws.com')) {
-                            if (probe.status === 3) {
-                                takeoverIssues.push(`${sub} -> ${cname} (dangling)`);
+                        const cname = (ans.data || '').replace(/\.+$/, '').toLowerCase();
+                        cnameTarget = `${subName} → ${cname}`;
+                        for (const s of SAAS_TAKEOVER_PATTERNS) {
+                            if (cname.includes(s.pattern)) {
+                                detectedSaaS.push({ sub: subName, saas: s.name, target: cname });
+                                if (probeRes.status === 3) {
+                                    cnameStatus = 'critical';
+                                    takeoverWarning = `Dangling pointer detected on ${subName} (${s.name})!`;
+                                    cnameScore = 0;
+                                }
                             }
                         }
                     }
                 }
             }
-        }
-        let cnameScore = takeoverIssues.length === 0 ? 30 : 0;
-        let cnameStatus = takeoverIssues.length === 0 ? 'PASS' : 'FAIL';
-        let cnameDesc = takeoverIssues.length === 0
-            ? `${subdomainsToProbe.length} perimeter SaaS routes audited via RFC 8484 DoH. Zero dangling CNAMEs.`
-            : `Dangling CNAME pointer(s) detected: ${takeoverIssues.join(', ')}`;
+        });
 
-        // Symmetrically Weighted 100-Point Score: DMARC (35) + SPF (35) + CNAME (30) = 100
+        if (cnameStatus !== 'critical') {
+            if (detectedSaaS.length > 0) {
+                takeoverWarning = `Active SaaS routing: ${detectedSaaS.map(d => `${d.sub} (${d.saas})`).join(', ')}`;
+                cnameScore = 30;
+            } else {
+                takeoverWarning = isStaticHost
+                    ? `Perimeter verified: Protected Anycast Static Edge (${orgDomain}). Zero orphaned pointers.`
+                    : 'Perimeter clean: Zero orphaned SaaS CNAME pointers detected.';
+                cnameScore = 30;
+            }
+        }
+
+        // F. Symmetrically Weighted 100-Point Total Score: DMARC (35) + SPF (35) + CNAME (30) = 100
         const totalScore = Math.max(0, Math.min(100, dmarcScore + spfScore + cnameScore));
         let grade = 'F';
+        let gradeTextColor = 'text-red-400';
+        let gaugeStrokeColor = 'text-red-500';
+        let riskLabel = 'CRITICAL DRIFT';
+        let riskBadgeClass = 'bg-red-500/20 text-red-400 border border-red-500/40';
+
         if (totalScore >= 90) {
             grade = 'A+';
+            gradeTextColor = 'text-emerald-400';
+            gaugeStrokeColor = 'text-emerald-400';
+            riskLabel = 'HARDENED';
+            riskBadgeClass = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
         } else if (totalScore >= 75) {
             grade = 'B';
+            gradeTextColor = 'text-cyan-400';
+            gaugeStrokeColor = 'text-cyan-400';
+            riskLabel = 'MONITORED';
+            riskBadgeClass = 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40';
         } else if (totalScore >= 50) {
             grade = 'C';
+            gradeTextColor = 'text-yellow-400';
+            gaugeStrokeColor = 'text-yellow-400';
+            riskLabel = 'ELEVATED RISK';
+            riskBadgeClass = 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40';
         }
 
+        const strokeDashoffset = Math.round(251 - (251 * totalScore / 100));
+
+        // G. 5-Point Findings Aligned with PDF Engine
         const pdfFindings = [
             {
                 category: "SUBDOMAIN TAKEOVER SENTINEL",
-                desc: cnameDesc,
-                status: cnameStatus
+                desc: cnameStatus === 'critical' ? (takeoverWarning || 'Dangling CNAME pointer detected!') : `${subdomainsToProbe.length} perimeter SaaS routes audited via RFC 8484 DoH. Zero dangling CNAMEs.`,
+                status: cnameStatus === 'critical' ? 'FAIL' : 'PASS'
             },
             {
                 category: "EMAIL SPOOFING PROTECTION (DMARC)",
-                desc: dmarcDesc,
-                status: dmarcStatus
+                desc: dmarcParsed ? `RFC 7489 DMARC policy (${dmarcPolicy}) verified active.` : (dmarcStatus === 'pass' ? dmarcPolicy : 'No RFC 7489 DMARC policy found in authoritative DNS.'),
+                status: dmarcStatus === 'pass' ? 'PASS' : (dmarcStatus === 'warn' ? 'WARN' : 'FAIL')
             },
             {
                 category: "SENDER POLICY FRAMEWORK (SPF)",
-                desc: spfDesc,
-                status: spfStatus
+                desc: spfPolicy ? `SPF TXT record configured: ${spfPolicy}` : 'Missing or invalid SPF record.',
+                status: spfStatus === 'pass' ? 'PASS' : (spfStatus === 'warn' ? 'WARN' : 'FAIL')
             },
             {
                 category: "SENSITIVE EXPOSURE SENTINEL",
@@ -1921,19 +1833,61 @@
             },
             {
                 category: "TLS / SSL CERTIFICATE EXPIRY",
-                desc: apexA?.success ? `Apex DNS resolution verified (${apexA.answer?.[0]?.data || 'Active IP'}). Edge TLS transport active.` : "DNS resolution failed.",
-                status: apexA?.success ? "PASS" : "WARN"
+                desc: isApexResolvable ? `Apex DNS resolution verified (${apexA?.answer?.[0]?.data || 'Active IP'}). Edge TLS transport active.` : "DNS resolution failed.",
+                status: isApexResolvable ? "PASS" : "WARN"
             }
         ];
 
+        const rawTelemetry = {
+            domain,
+            org_domain: orgDomain,
+            hygiene_score: totalScore,
+            grade,
+            dmarc: { status: dmarcStatus, policy: dmarcPolicy, parsed: dmarcParsed, inherited },
+            spf: { status: spfStatus, policy: spfPolicy, result: spfResult, inherited: spfInherited },
+            perimeter: { status: cnameStatus, target: cnameTarget, saas_detected: detectedSaaS },
+            timestamp: new Date().toISOString()
+        };
+
         const auditResult = {
             domain,
+            orgDomain,
+            isSubdomain,
+            isNxDomain: false,
+            isLookupFailed: false,
             score: totalScore,
             grade,
+            gradeTextColor,
+            gaugeStrokeColor,
+            riskLabel,
+            riskBadgeClass,
+            strokeDashoffset,
+            dmarcStatus,
+            dmarcPolicy,
+            dmarcScore,
+            dmarcParsed,
+            dmarcInherited: inherited,
+            spfStatus,
+            spfPolicy,
+            spfScore,
+            spfResult,
+            spfInherited,
+            cnameStatus,
+            cnameTarget,
+            cnameScore,
+            takeoverWarning,
+            detectedSaaS,
+            isApexResolvable,
+            isStaticHost,
+            hasNoMx,
             findings: pdfFindings,
-            subdomainsScanned: subdomainsToProbe
+            subdomainsScanned: subdomainsToProbe,
+            rawTelemetry,
+            timestamp: rawTelemetry.timestamp
         };
+
         window._lastAuditResult = auditResult;
+        AuditStore.saveScan(domain, totalScore, grade, rawTelemetry);
         return auditResult;
     }
 
@@ -1950,21 +1904,18 @@
         showArcadeToast(`Generating perimeter audit PDF for ${domain}...`);
         
         try {
-            let findings = (window._lastAuditResult && window._lastAuditResult.domain === domain)
-                ? window._lastAuditResult.findings
-                : null;
-            if (!findings) {
-                const scan = await performClientDohAudit(domain);
-                findings = scan.findings;
-            }
+            let audit = (window._lastAuditResult && window._lastAuditResult.domain === domain)
+                ? window._lastAuditResult
+                : await performClientDohAudit(domain);
+                
             await generateInstantPdfForDomain(
                 domain,
-                clientScore,
-                clientGrade,
+                audit.score,
+                audit.grade,
                 agencyName,
-                findings
+                audit.findings
             );
-            showArcadeToast(`✓ Audit PDF complete: ${domain} — Grade ${clientGrade} (${clientScore}/100)`);
+            showArcadeToast(`✓ Audit PDF complete: ${domain} — Grade ${audit.grade} (${audit.score}/100)`);
         } catch (err) {
             console.error('PDF generation error:', err);
             showArcadeToast('PDF generation failed: ' + err.message);
