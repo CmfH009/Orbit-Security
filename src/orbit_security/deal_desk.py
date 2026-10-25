@@ -18,9 +18,10 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-WORKSPACE_ROOT = Path("A:/") if Path("A:/").exists() else Path("C:/AgyHut")
-ORBIT_SEC_DIR = WORKSPACE_ROOT / "projects" / "orbit-security"
-PORTALS_OUTPUT_DIR = ORBIT_SEC_DIR / "docs" / "portals"
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+WORKSPACE_ROOT = Path("A:/") if Path("A:/").exists() else REPO_ROOT.parent
+ORBIT_SEC_DIR = REPO_ROOT
+PORTALS_OUTPUT_DIR = REPO_ROOT / "docs" / "portals"
 PORTALS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Standard Orbit Retainer Pricing Tiers (wired to live production Stripe links)
@@ -52,9 +53,15 @@ RETAINER_PRICING_TIERS = {
 class RetainerDealDeskConcierge:
     """Manages commercial intake, negotiation drafts, co-branded portal provisioning, and Stripe checkouts."""
 
-    def __init__(self, workspace_root: Optional[Path] = None):
-        self.workspace_root = workspace_root or WORKSPACE_ROOT
-        self.portals_dir = self.workspace_root / "projects" / "orbit-security" / "docs" / "portals"
+    def __init__(self, workspace_root: Optional[Path] = None, portals_dir: Optional[Path] = None):
+        if workspace_root:
+            self.workspace_root = Path(workspace_root)
+            self.portals_dir = portals_dir or (self.workspace_root / "projects" / "orbit-security" / "docs" / "portals")
+            self._is_repo_workspace = False
+        else:
+            self.workspace_root = REPO_ROOT
+            self.portals_dir = portals_dir or PORTALS_OUTPUT_DIR
+            self._is_repo_workspace = (self.portals_dir == PORTALS_OUTPUT_DIR)
         self.portals_dir.mkdir(parents=True, exist_ok=True)
 
     def generate_portal_for_agency(
@@ -261,6 +268,10 @@ class RetainerDealDeskConcierge:
 </html>
 """
         portal_file.write_text(portal_html, encoding="utf-8")
+        if getattr(self, "_is_repo_workspace", False):
+            landing_portal_file = REPO_ROOT / "landing" / "portals" / portal_file.name
+            if landing_portal_file.parent.exists():
+                landing_portal_file.write_text(portal_html, encoding="utf-8")
 
         # Publish event to blackboard
         try:

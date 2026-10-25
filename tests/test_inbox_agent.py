@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 import tempfile
 from unittest.mock import MagicMock, patch
 import pytest
@@ -261,6 +262,7 @@ def test_classify_intent_unclear():
 
 
 def test_process_inbound_lead_provisions_portal_and_blackboard():
+    portal_created = None
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
         state_file = f.name
     try:
@@ -269,16 +271,25 @@ def test_process_inbound_lead_provisions_portal_and_blackboard():
             "sender": "austin@alley.com",
             "subject": "Re: White-label security audits for Alley Interactive's client portfolio",
             "body": "Hi Carson, we want to buy the Scale remediation retainer for 15 domains. Send payment link.",
-            "agency_name": "Alley Interactive"
+            "agency_name": "Alley Interactive Test"
         }
         res = agent.process_inbound_lead(lead_input)
         assert res["ok"] is True
         assert res["intent"] == "READY_TO_BUY"
         assert res["tier"] == "remediation"
-        assert "alley_interactive.html" in res["portal_path"]
+        assert "alley_interactive_test.html" in res["portal_path"]
         assert "https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800" in res["checkout_url"]
         assert os.path.exists(res["portal_path"])
+        portal_created = res["portal_path"]
     finally:
+        if portal_created and os.path.exists(portal_created):
+            try:
+                os.remove(portal_created)
+                landing_copy = Path(portal_created).resolve().parents[2] / "landing" / "portals" / Path(portal_created).name
+                if landing_copy.exists():
+                    landing_copy.unlink()
+            except Exception:
+                pass
         if os.path.exists(state_file):
             os.remove(state_file)
 

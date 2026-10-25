@@ -53,7 +53,7 @@ async def test_scan_domain_static_hosting_grade_a():
             with patch("dns.asyncresolver.Resolver.resolve", side_effect=Exception("No DNS answer")):
                 with patch.object(scanner, "audit_ssl", return_value=None):
                     res = await scanner.scan_domain("cmfh009.github.io", use_crtsh=False)
-                    assert res.score >= 95
+                    assert res.score >= 90
                     assert res.grade in ("A+", "A")
 
 

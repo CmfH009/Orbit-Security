@@ -38,7 +38,7 @@ jobs:
           #   pywin32  -> src/orbit_security/desktop_x_bridge.py (Windows clipboard)
           # Both are now declared in pyproject.toml; installed explicitly here
           # as belt-and-braces so CI never depends on the lock resolving them.
-          python -m pip install edge-tts pywin32 pillow
+          python -m pip install edge-tts pywin32 pillow duckdb
 
       - name: Install ffmpeg
         shell: bash

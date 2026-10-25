@@ -581,8 +581,8 @@ class InboxAgent:
     def poll_inbox(self, max_messages: int = 15) -> List[Dict]:
 
         """Polls Gmail IMAP for unread responses, handles conversation, and logs state."""
-        smtp_user = os.getenv("SMTP_USER")
-        smtp_password = os.getenv("SMTP_PASSWORD")
+        smtp_user = os.getenv("SMTP_USER") or os.getenv("IMAP_USER")
+        smtp_password = os.getenv("SMTP_PASSWORD") or os.getenv("IMAP_PASSWORD")
 
         if not smtp_user or not smtp_password:
             print("[!] IMAP credentials missing in .env")
