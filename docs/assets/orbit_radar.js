@@ -827,7 +827,10 @@
                 addEp(`${window.location.origin}/api/orbit/radar/telemetry`);
             }
 
-            // 3. Localhost collector fallbacks (Cockpit on 9090, Standalone CLI Receiver on 9095)
+            // 3. Public HTTPS Telemetry Tunnel
+            addEp('https://2d3b864264210d.lhr.life/api/orbit/radar/telemetry');
+
+            // 4. Localhost collector fallbacks (Cockpit on 9090, Standalone CLI Receiver on 9095)
             addEp('http://127.0.0.1:9090/api/orbit/radar/telemetry');
             addEp('http://127.0.0.1:9095/api/orbit/radar/telemetry');
 
