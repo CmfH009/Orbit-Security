@@ -241,6 +241,43 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+        /* Universal Horizontal Scroll Mask & Indication Suite */
+        .scroll-indicate-x {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            scroll-behavior: smooth;
+        }
+        .scroll-fade-r {
+            mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%) !important;
+            -webkit-mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%) !important;
+        }
+        .scroll-fade-l {
+            mask-image: linear-gradient(to right, transparent 0%, black 32px, black 100%) !important;
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 32px, black 100%) !important;
+        }
+        .scroll-fade-both {
+            mask-image: linear-gradient(to right, transparent 0%, black 32px, black calc(100% - 32px), transparent 100%) !important;
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 32px, black calc(100% - 32px), transparent 100%) !important;
+        }
+        .scroll-cyber-x {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(16, 185, 129, 0.4) rgba(15, 23, 42, 0.6);
+        }
+        .scroll-cyber-x::-webkit-scrollbar {
+            height: 4px;
+        }
+        .scroll-cyber-x::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 9999px;
+        }
+        .scroll-cyber-x::-webkit-scrollbar-thumb {
+            background: rgba(16, 185, 129, 0.4);
+            border-radius: 9999px;
+        }
+        .scroll-cyber-x::-webkit-scrollbar-thumb:hover {
+            background: rgba(16, 185, 129, 0.8);
+        }
+
         .font-arcade { font-family: 'Press Start 2P', monospace, cursive; }
         .font-pixel { font-family: 'Silkscreen', monospace; }
         
@@ -348,16 +385,23 @@
             }
         }
 
-        /* Guaranteed Floating Simple Cat Companion */
-        #simple-cat-floating {
+        /* Guaranteed Floating Simple Cat Companion & Mobile Collision Guards */
+        #simple-cat-dock {
             position: fixed !important;
-            bottom: 20px !important;
-            right: 20px !important;
+            bottom: max(16px, env(safe-area-inset-bottom, 16px)) !important;
+            right: max(16px, env(safe-area-inset-right, 16px)) !important;
             left: auto !important;
             top: auto !important;
-            z-index: 99999 !important;
+            z-index: 45 !important;
             display: flex !important;
             align-items: center !important;
+            transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        body.drawer-open #simple-cat-dock,
+        body.modal-open #simple-cat-dock {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transform: translateY(24px) scale(0.95) !important;
         }
         /* Advisory Banner, Header Nav, ROI Calculator Sliders & White-Label Flipbook Sheet Styles */
         header nav a {
@@ -846,7 +890,7 @@
             <div class="bg-slate-900/90 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden card-glass">
                 <!-- Studio Toolbar / Tabs with Horizontal Momentum Scroll -->
                 <div class="px-4 sm:px-6 py-4 bg-slate-950/80 border-b border-slate-800 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-                    <div class="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 -mx-2 px-2 no-scrollbar" style="-webkit-overflow-scrolling: touch;">
+                    <div class="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 -mx-2 px-2 no-scrollbar scroll-indicate-x scroll-fade-r scroll-cyber-x" style="-webkit-overflow-scrolling: touch;">
                         <span class="text-xs font-mono text-slate-400 uppercase tracking-wider flex-shrink-0 hidden sm:inline">Views:</span>
                         <button type="button" onclick="switchReportView('radar')" id="viewBtn-radar" class="report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Subdomain Radar</button>
                         <button type="button" onclick="switchReportView('dmarc')" id="viewBtn-dmarc" class="report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Email Spoofing (DMARC)</button>
@@ -1111,7 +1155,7 @@
                         <h3 class="text-lg sm:text-xl font-bold text-white">Ready-to-Send Client Upgrade Emails</h3>
                         <p class="text-xs text-slate-400 mt-0.5">Send one of these plain-English emails to your client roster today to close $250/mo security care retainers.</p>
                     </div>
-                    <div class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
+                    <div class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 no-scrollbar scroll-indicate-x scroll-fade-r scroll-cyber-x" style="-webkit-overflow-scrolling: touch;">
                         <button type="button" onclick="switchPitchTemplate('cve')" id="pitchTab-cve" class="pitch-tab-btn min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-bold bg-red-500/20 text-red-300 border border-red-500/40 cursor-pointer whitespace-nowrap">🚨 Breaking CVE Alert</button>
                         <button type="button" onclick="switchPitchTemplate('quarterly')" id="pitchTab-quarterly" class="pitch-tab-btn min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap">🛡️ Quarterly Checkup</button>
                         <button type="button" onclick="switchPitchTemplate('handover')" id="pitchTab-handover" class="pitch-tab-btn min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap">🚀 Post-Launch Care</button>
@@ -1127,7 +1171,7 @@
                             <span id="copyPitchBtnText">Copy Email Pitch</span>
                         </button>
                     </div>
-                    <pre id="pitchBodyDisplay" class="p-4 rounded-xl bg-slate-950/90 border border-slate-800 font-mono text-xs text-slate-200 whitespace-pre-wrap leading-relaxed select-all overflow-x-auto">Hi [Client Name],
+                    <pre id="pitchBodyDisplay" class="p-4 rounded-xl bg-slate-950/90 border border-slate-800 font-mono text-xs text-slate-200 whitespace-pre-wrap leading-relaxed select-all overflow-x-auto scroll-cyber-x">Hi [Client Name],
 
 With the wave of DNS and subdomain takeover vulnerabilities disclosed this week, our engineering team at Apex Digital Studio ran a passive external check on your domain perimeter.
 
@@ -2466,7 +2510,7 @@ Apex Digital Studio</pre>
 
                             <!-- 5 Clients Tier (Sweet Spot) -->
                             <div class="p-3.5 rounded-xl bg-slate-950/80 border border-emerald-500/50 relative shadow-lg shadow-emerald-500/10">
-                                <div class="absolute right-2 px-1.5 py-0.5 rounded bg-emerald-500 text-slate-950 font-arcade text-[7px] font-bold uppercase" style="top: -10px; right: 8px;">SWEET SPOT</div>
+                                <div class="absolute -top-2.5 right-2 px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-arcade text-[8px] font-bold uppercase shadow-sm">SWEET SPOT</div>
                                 <div class="text-[9px] font-arcade text-emerald-400 uppercase mb-1">5 Clients Enrolled</div>
                                 <div class="text-xl sm:text-2xl font-extrabold text-emerald-400 font-sans">$15,000<span class="text-xs text-slate-300 font-normal">/yr</span></div>
                                 <div class="text-xs text-emerald-300 font-mono mt-0.5 font-semibold">+$14,292/yr Net</div>
@@ -2994,19 +3038,22 @@ Apex Digital Studio</pre>
                 </div>
             </div>
             <!-- Modal Header -->
-            <div class="px-5 py-3.5 bg-slate-950 border-b border-emerald-500/30 flex items-center justify-between gap-4 relative" style="display:flex; flex-direction:row; align-items:center; justify-content:space-between; z-index: 20;">
-                <div class="flex items-center gap-3" style="flex-shrink:0;">
-                    <span class="text-xl">📖</span>
-                    <div>
-                        <h3 id="flipbookTitle" class="font-pixel text-emerald-400 text-xs sm:text-sm tracking-wide" style="margin:0; white-space:nowrap;">WHITE-LABEL EXECUTIVE AUDIT PREVIEW</h3>
-                        <p class="text-[11px] text-amber-400 font-mono" style="margin:0; white-space:nowrap;">&#9888; DEMO MODE &mdash; Example Data Only &bull; Not a Real Audit</p>
+            <div class="px-4 sm:px-6 py-3.5 bg-slate-950 border-b border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-20">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-xl flex-shrink-0">📖</span>
+                        <div>
+                            <h3 id="flipbookTitle" class="font-pixel text-emerald-400 text-xs sm:text-sm tracking-wide" style="margin:0; white-space:nowrap;">WHITE-LABEL EXECUTIVE AUDIT PREVIEW</h3>
+                            <p class="text-[10px] sm:text-[11px] text-amber-400 font-mono" style="margin:0; white-space:nowrap;">&#9888; DEMO MODE &mdash; Example Data Only &bull; Not a Real Audit</p>
+                        </div>
                     </div>
+                    <button type="button" onclick="closePdfFlipbookModal()" class="sm:hidden text-slate-400 hover:text-white font-arcade text-xs min-w-[40px] min-h-[40px] px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 cursor-pointer flex items-center justify-center">✕</button>
                 </div>
-                <div class="flex items-center gap-2" style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-                    <button type="button" onclick="setFlipbookPage(1)" id="flipBtn-1" class="flip-page-btn px-3 py-1.5 rounded bg-emerald-500 text-slate-950 font-mono text-xs font-bold cursor-pointer">Page 1: Scorecard</button>
-                    <button type="button" onclick="setFlipbookPage(2)" id="flipBtn-2" class="flip-page-btn px-3 py-1.5 rounded bg-slate-900 text-slate-300 border border-slate-700 hover:border-emerald-400 font-mono text-xs cursor-pointer">Page 2: Takeover Matrix</button>
-                    <button type="button" onclick="setFlipbookPage(3)" id="flipBtn-3" class="flip-page-btn px-3 py-1.5 rounded bg-slate-900 text-slate-300 border border-slate-700 hover:border-emerald-400 font-mono text-xs cursor-pointer">Page 3: DMARC &amp; Headers</button>
-                    <button type="button" onclick="closePdfFlipbookModal()" class="text-slate-400 hover:text-white font-arcade text-xs min-w-[38px] min-h-[38px] px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 cursor-pointer">✕</button>
+                <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar scroll-indicate-x scroll-fade-r scroll-cyber-x" style="flex-shrink:0;">
+                    <button type="button" onclick="setFlipbookPage(1)" id="flipBtn-1" class="flip-page-btn px-3 py-1.5 rounded bg-emerald-500 text-slate-950 font-mono text-xs font-bold cursor-pointer whitespace-nowrap">Page 1: Scorecard</button>
+                    <button type="button" onclick="setFlipbookPage(2)" id="flipBtn-2" class="flip-page-btn px-3 py-1.5 rounded bg-slate-900 text-slate-300 border border-slate-700 hover:border-emerald-400 font-mono text-xs cursor-pointer whitespace-nowrap">Page 2: Takeover Matrix</button>
+                    <button type="button" onclick="setFlipbookPage(3)" id="flipBtn-3" class="flip-page-btn px-3 py-1.5 rounded bg-slate-900 text-slate-300 border border-slate-700 hover:border-emerald-400 font-mono text-xs cursor-pointer whitespace-nowrap">Page 3: DMARC &amp; Headers</button>
+                    <button type="button" onclick="closePdfFlipbookModal()" class="hidden sm:inline-flex text-slate-400 hover:text-white font-arcade text-xs min-w-[38px] min-h-[38px] px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 cursor-pointer items-center justify-center">✕</button>
                 </div>
             </div>
 
@@ -3066,7 +3113,7 @@ Apex Digital Studio</pre>
                         </div>
                         <span class="px-3 py-1 rounded bg-slate-100 text-slate-700 font-mono text-xs font-bold">Page 2 of 3</span>
                     </div>
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto scroll-indicate-x scroll-fade-r scroll-cyber-x">
                         <table class="w-full text-left border-collapse text-xs">
                             <thead>
                                 <tr class="border-b-2 border-slate-200 text-slate-600 font-mono uppercase text-[10px]">
@@ -3124,11 +3171,11 @@ Apex Digital Studio</pre>
             </div>
 
             <!-- Modal Footer -->
-            <div class="px-5 py-3.5 bg-slate-950 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3" style="display:flex; flex-direction:column; align-items:stretch; sm:flex-direction:row; align-items:center; justify-content:space-between;">
-                <span class="text-xs text-amber-400 font-mono">⚠ DEMO PREVIEW — Not a real scan. Example data only.</span>
-                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2" style="display:flex; align-items:center; gap:10px; flex-shrink:0; width: 100%;">
-                    <a href="sample_audit.pdf" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono font-bold transition-colors text-center" style="white-space:nowrap;">Download Sample PDF</a>
-                    <button type="button" onclick="closePdfFlipbookModal(); generateInstantPdf();" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold uppercase tracking-wide cursor-pointer pixel-btn" style="white-space:nowrap;" title="Generates a DEMO PREVIEW PDF with example data — not a real scan">Export Demo PDF Preview</button>
+            <div class="px-4 sm:px-6 py-3.5 bg-slate-950 border-t border-slate-800 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                <span class="text-xs text-amber-400 font-mono text-center md:text-left">⚠ DEMO PREVIEW — Not a real scan. Example data only.</span>
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-wrap">
+                    <a href="sample_audit.pdf" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono font-bold transition-colors text-center whitespace-nowrap">Download Sample PDF</a>
+                    <button type="button" onclick="closePdfFlipbookModal(); generateInstantPdf();" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold uppercase tracking-wide cursor-pointer pixel-btn whitespace-nowrap" title="Generates a DEMO PREVIEW PDF with example data — not a real scan">Export Demo PDF Preview</button>
                     <div class="flex items-center gap-2 w-full sm:w-auto">
                         <input 
                             type="text" 
@@ -3137,7 +3184,7 @@ Apex Digital Studio</pre>
                             class="bg-slate-950 border border-slate-700 rounded-lg min-h-[42px] px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-cyan-400 flex-1 min-w-[180px]"
                             value=""
                         />
-                        <button type="button" onclick="closePdfFlipbookModal(); runRealScanFromFlipbook();" class="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold uppercase tracking-wide cursor-pointer pixel-btn" style="white-space:nowrap;" title="Runs a real perimeter scan via API and generates a branded PDF with actual findings">Generate Real Audit PDF</button>
+                        <button type="button" onclick="closePdfFlipbookModal(); runRealScanFromFlipbook();" class="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold uppercase tracking-wide cursor-pointer pixel-btn whitespace-nowrap" title="Runs a real perimeter scan via API and generates a branded PDF with actual findings">Generate Real Audit PDF</button>
                     </div>
                 </div>
             </div>
@@ -3444,6 +3491,10 @@ ${body}`;
             });
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+            document.body.classList.add('modal-open');
+            if (window.SimpleCat && SimpleCat.initScrollIndicators) {
+                setTimeout(SimpleCat.initScrollIndicators, 40);
+            }
             setFlipbookPage(1);
         }
 
@@ -3452,6 +3503,7 @@ ${body}`;
             if (!modal) return;
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+            document.body.classList.remove('modal-open');
         }
 
         function setFlipbookPage(pageNum) {
@@ -3495,7 +3547,12 @@ ${body}`;
             }
         }
         window.addEventListener('hashchange', handleHashTriggers);
-        window.addEventListener('DOMContentLoaded', () => { setTimeout(handleHashTriggers, 150); });
+        window.addEventListener('DOMContentLoaded', () => { 
+            setTimeout(handleHashTriggers, 150); 
+            if (window.SimpleCat && SimpleCat.initScrollIndicators) {
+                setTimeout(SimpleCat.initScrollIndicators, 200);
+            }
+        });
     </script>
 </body>
 </html>

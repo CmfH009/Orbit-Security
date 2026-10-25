@@ -992,7 +992,7 @@
                     </div>
 
                     <!-- HUD Tabs -->
-                    <div class="flex border-b border-slate-800/80 gap-1.5 overflow-x-auto pb-1.5 -mx-1 px-1 no-scrollbar">
+                    <div class="flex border-b border-slate-800/80 gap-1.5 overflow-x-auto pb-1.5 -mx-1 px-1 no-scrollbar scroll-indicate-x scroll-fade-r scroll-cyber-x">
                         <button type="button" id="tabBtn-overview" onclick="switchHudTab('overview')" class="hud-tab-btn min-h-[48px] px-4 py-2.5 font-mono text-xs font-semibold rounded-lg border-b-2 border-emerald-500 text-emerald-400 bg-emerald-500/10 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Overview</button>
                         <button type="button" id="tabBtn-email" onclick="switchHudTab('email')" class="hud-tab-btn min-h-[48px] px-4 py-2.5 font-mono text-xs font-semibold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Email Auth</button>
                         <button type="button" id="tabBtn-dns" onclick="switchHudTab('dns')" class="hud-tab-btn min-h-[48px] px-4 py-2.5 font-mono text-xs font-semibold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">SaaS CNAMEs</button>
@@ -1086,7 +1086,7 @@
                             <span class="text-[11px] font-mono text-slate-400">DNS-over-HTTPS (RFC 8484) Raw Responses</span>
                             <button type="button" id="copyRawBtn" onclick="copyRawTelemetry()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-mono cursor-pointer">Copy JSON</button>
                         </div>
-                        <div class="relative bg-slate-900/90 rounded-lg p-3 font-mono text-[11px] text-emerald-300 overflow-x-auto max-h-48 border border-slate-800">
+                        <div class="relative bg-slate-900/90 rounded-lg p-3 font-mono text-[11px] text-emerald-300 overflow-x-auto max-h-48 border border-slate-800 scroll-indicate-x scroll-fade-r scroll-cyber-x">
                             <pre id="rawTelemetryJson"></pre>
                         </div>
                     </div>
@@ -1101,6 +1101,7 @@
             if (window.SimpleCat) {
                 SimpleCat.playPowerUp();
                 SimpleCat.bindHelperChips();
+                if (SimpleCat.initScrollIndicators) SimpleCat.initScrollIndicators();
             }
         } catch (err) {
             console.error('DoH scan error:', err);
@@ -1236,6 +1237,7 @@
         if (modal) {
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+            document.body.classList.add('modal-open');
             if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
         }
     }
@@ -1245,6 +1247,7 @@
         if (modal) {
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+            document.body.classList.remove('modal-open');
             if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
         }
     }

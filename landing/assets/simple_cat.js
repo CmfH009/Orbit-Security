@@ -594,7 +594,7 @@
 
                 <!-- Header with pixel cat avatar and quick term switcher -->
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 pb-4 border-b border-slate-800">
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3 pr-12 sm:pr-0">
                         <div id="cat-avatar-box" class="p-2 bg-slate-950 border border-emerald-500/40 rounded-xl flex-shrink-0">
                             ${getPixelCatSVG(44)}
                         </div>
@@ -638,7 +638,7 @@
                 </div>
 
                 <!-- Quick-Jump Term Chips Row -->
-                <div id="cat-quick-chips" class="flex items-center gap-1.5 py-2.5 overflow-x-auto border-b border-slate-800 text-[10px] font-mono no-scrollbar">
+                <div id="cat-quick-chips" class="flex items-center gap-1.5 py-2.5 overflow-x-auto border-b border-slate-800 text-[10px] font-mono no-scrollbar scroll-indicate-x scroll-fade-r scroll-cyber-x" style="-webkit-overflow-scrolling: touch;">
                     <button type="button" onclick="SimpleCat.explain('dmarc')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="dmarc">DMARC</button>
                     <button type="button" onclick="SimpleCat.explain('spf')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="spf">SPF</button>
                     <button type="button" onclick="SimpleCat.explain('dkim')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="dkim">DKIM</button>
@@ -653,9 +653,10 @@
                 </div>
 
                 <!-- Navigation Tabs with ARIA Tablist Semantics -->
-                <div class="flex items-center gap-1.5 pt-3 pb-2 border-b border-slate-800 overflow-x-auto text-xs font-mono" 
+                <div class="flex items-center gap-1.5 pt-3 pb-2 border-b border-slate-800 overflow-x-auto text-xs font-mono no-scrollbar scroll-indicate-x scroll-fade-r scroll-cyber-x" 
                      role="tablist" 
-                     aria-label="Security Term Breakdown Tabs">
+                     aria-label="Security Term Breakdown Tabs"
+                     style="-webkit-overflow-scrolling: touch;">
                     <button type="button" 
                             id="cat-tab-story" 
                             role="tab" 
@@ -699,7 +700,7 @@
                 </div>
 
                 <!-- Scrollable Tab Content Container -->
-                <div class="py-4 overflow-y-auto flex-1 text-sm text-slate-300 leading-relaxed font-sans pr-1">
+                <div class="py-4 overflow-y-auto flex-1 text-sm text-slate-300 leading-relaxed font-sans pr-1 scroll-cyber-x" style="-webkit-overflow-scrolling: touch;">
                     
                     <!-- Tab 1: Layman Story -->
                     <div id="pane-story" role="tabpanel" aria-labelledby="cat-tab-story" tabindex="0" class="space-y-3">
@@ -917,6 +918,14 @@
         modal.style.display = 'flex';
         modal.classList.add('cat-modal-open');
         modal.classList.remove('hidden');
+        document.body.classList.add('modal-open');
+
+        // Refresh horizontal scroll indicator masks for chips & tablist
+        setTimeout(() => {
+            updateScrollMask(document.getElementById('cat-quick-chips'));
+            const tablist = modal ? modal.querySelector('[role="tablist"]') : null;
+            if (tablist) updateScrollMask(tablist);
+        }, 50);
 
         // Initial focus management
         const searchInput = document.getElementById("cat-glossary-search");
@@ -935,6 +944,7 @@
             modal.style.display = 'none';
             modal.classList.remove('cat-modal-open');
             modal.classList.add('hidden');
+            document.body.classList.remove('modal-open');
         }
         if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
             lastFocusedElement.focus();
@@ -1314,7 +1324,7 @@
         // 5. Corner Docking Station
         dockEl = document.createElement("div");
         dockEl.id = "simple-cat-dock";
-        dockEl.className = "fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex items-center gap-2";
+        dockEl.className = "fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-45 flex items-center gap-2";
         dockEl.innerHTML = `
             <div class="w-[52px] h-[52px] min-w-[52px] min-h-[52px] rounded-full p-0 flex items-center justify-center sm:w-auto sm:h-auto sm:rounded-xl sm:px-3 sm:py-2 bg-slate-900/95 border-2 border-emerald-500 shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:border-emerald-400 transition-all sm:gap-2.5 backdrop-blur-md" style="box-shadow: 4px 4px 0px #064e3b;">
                 <div class="relative flex-shrink-0 cursor-pointer min-w-[48px] min-h-[48px] flex items-center justify-center" id="dock-avatar-btn" title="Astro-Cat Copilot">
@@ -2030,6 +2040,28 @@
                 if (catBody && !catBody.classList.contains("astro-flip")) {
                     catBody.style.transform = `rotate(${copilot.rot}deg)`;
                 }
+
+                // HUD Boundary & Collision Guard (Dynamic Flip & Horizontal Clamping)
+                const hud = document.getElementById("astro-cat-hud");
+                if (hud) {
+                    const flipAbove = (visualY > window.innerHeight - 130);
+                    if (flipAbove) {
+                        hud.classList.add("astro-hud-above");
+                    } else {
+                        hud.classList.remove("astro-hud-above");
+                    }
+
+                    // Keep HUD buttons within screen boundaries
+                    const catCenterX = copilot.x + 32;
+                    const hudHalfWidth = 135;
+                    let hudOffset = 0;
+                    if (catCenterX - hudHalfWidth < 12) {
+                        hudOffset = 12 - (catCenterX - hudHalfWidth);
+                    } else if (catCenterX + hudHalfWidth > window.innerWidth - 12) {
+                        hudOffset = (window.innerWidth - 12) - (catCenterX + hudHalfWidth);
+                    }
+                    hud.style.transform = `translateX(calc(-50% + ${hudOffset}px))`;
+                }
             }
 
             // Render Independent Fixed Speech Bubble (Never tilts, clamped to screen)
@@ -2042,22 +2074,21 @@
 
                 let bubbleY;
                 const tail = document.getElementById("astro-bubble-tail");
-                if (visualY > 120) {
+                if (visualY > 120 && visualY < window.innerHeight - 80) {
                     // Position bubble above the cat
                     bubbleY = visualY - bubbleH - 12;
-                    if (tail) {
-                        tail.className = "astro-bubble-tail-down";
-                        const tailLeft = Math.max(16, Math.min(bubbleW - 16, (copilot.x + 32) - bubbleX));
-                        tail.style.left = `${tailLeft}px`;
-                    }
+                    if (tail) tail.className = "astro-bubble-tail-down";
                 } else {
-                    // Position bubble below the cat (if cat is near top edge)
-                    bubbleY = visualY + 74;
-                    if (tail) {
-                        tail.className = "astro-bubble-tail-up";
-                        const tailLeft = Math.max(16, Math.min(bubbleW - 16, (copilot.x + 32) - bubbleX));
-                        tail.style.left = `${tailLeft}px`;
-                    }
+                    // Position bubble below the cat (if cat is near top edge or near bottom)
+                    bubbleY = (visualY >= window.innerHeight - 80) ? visualY - bubbleH - 12 : visualY + 74;
+                    if (tail) tail.className = (visualY >= window.innerHeight - 80) ? "astro-bubble-tail-down" : "astro-bubble-tail-up";
+                }
+                // Strictly clamp bubbleY within viewport boundaries (never off-screen)
+                bubbleY = Math.max(12, Math.min(window.innerHeight - bubbleH - 12, bubbleY));
+
+                if (tail) {
+                    const tailLeft = Math.max(16, Math.min(bubbleW - 16, (copilot.x + 32) - bubbleX));
+                    tail.style.left = `${tailLeft}px`;
                 }
                 bubble.style.transform = `translate3d(${bubbleX}px, ${bubbleY}px, 0px)`;
             }
@@ -2200,6 +2231,8 @@
             });
         });
 
+        initAllScrollIndicators();
+
         // Specular mouse cursor spotlight on glass cards (rAF throttled)
         const glassCards = document.querySelectorAll(".card-glass, .card-glass-emerald, .card-glass-cyan, .pricing-grid > div");
         glassCards.forEach(card => {
@@ -2289,6 +2322,58 @@
             }
             #simple-cat-modal.cat-modal-open {
                 display: flex !important;
+            }
+
+            /* Floating Corner Dock Z-Index & Mobile Collision Guards */
+            #simple-cat-dock {
+                position: fixed !important;
+                bottom: max(16px, env(safe-area-inset-bottom, 16px)) !important;
+                right: max(16px, env(safe-area-inset-right, 16px)) !important;
+                z-index: 45 !important;
+                transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            }
+            body.modal-open #simple-cat-dock,
+            body.drawer-open #simple-cat-dock {
+                opacity: 0 !important;
+                pointer-events: none !important;
+                transform: translateY(24px) scale(0.95) !important;
+            }
+
+            /* Horizontal Scroll Indicators & Edge Gradients */
+            .scroll-indicate-x {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                scroll-behavior: smooth;
+            }
+            .scroll-fade-r {
+                mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%) !important;
+                -webkit-mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%) !important;
+            }
+            .scroll-fade-l {
+                mask-image: linear-gradient(to right, transparent 0%, black 32px, black 100%) !important;
+                -webkit-mask-image: linear-gradient(to right, transparent 0%, black 32px, black 100%) !important;
+            }
+            .scroll-fade-both {
+                mask-image: linear-gradient(to right, transparent 0%, black 32px, black calc(100% - 32px), transparent 100%) !important;
+                -webkit-mask-image: linear-gradient(to right, transparent 0%, black 32px, black calc(100% - 32px), transparent 100%) !important;
+            }
+            .scroll-cyber-x {
+                scrollbar-width: thin;
+                scrollbar-color: rgba(16, 185, 129, 0.4) rgba(15, 23, 42, 0.6);
+            }
+            .scroll-cyber-x::-webkit-scrollbar {
+                height: 4px;
+            }
+            .scroll-cyber-x::-webkit-scrollbar-track {
+                background: rgba(15, 23, 42, 0.6);
+                border-radius: 9999px;
+            }
+            .scroll-cyber-x::-webkit-scrollbar-thumb {
+                background: rgba(16, 185, 129, 0.4);
+                border-radius: 9999px;
+            }
+            .scroll-cyber-x::-webkit-scrollbar-thumb:hover {
+                background: rgba(16, 185, 129, 0.8);
             }
 
             /* Specular Mouse-Tracking Spotlight on Cards */
@@ -2445,6 +2530,10 @@
                 backdrop-filter: blur(8px);
                 -webkit-backdrop-filter: blur(8px);
             }
+            .astro-hud.astro-hud-above {
+                top: -44px !important;
+                bottom: auto !important;
+            }
             .astro-cat-wrapper:hover .astro-hud {
                 opacity: 1;
                 transform: translateX(-50%) scale(1.04);
@@ -2559,6 +2648,42 @@
     }
 
     // =========================================================================
+    // 9b. HORIZONTAL SCROLL MASKS & TOUCH ERGONOMICS
+    // =========================================================================
+    function updateScrollMask(el) {
+        if (!el) return;
+        const maxScroll = el.scrollWidth - el.clientWidth;
+        if (maxScroll <= 2) {
+            el.classList.remove("scroll-fade-r", "scroll-fade-l", "scroll-fade-both");
+            return;
+        }
+        const atStart = el.scrollLeft <= 4;
+        const atEnd = el.scrollLeft >= maxScroll - 4;
+        if (atStart && !atEnd) {
+            el.classList.add("scroll-fade-r");
+            el.classList.remove("scroll-fade-l", "scroll-fade-both");
+        } else if (!atStart && atEnd) {
+            el.classList.add("scroll-fade-l");
+            el.classList.remove("scroll-fade-r", "scroll-fade-both");
+        } else {
+            el.classList.add("scroll-fade-both");
+            el.classList.remove("scroll-fade-r", "scroll-fade-l");
+        }
+    }
+
+    function bindScrollIndicator(el) {
+        if (!el || el._scrollIndicatorBound) return;
+        el._scrollIndicatorBound = true;
+        el.addEventListener("scroll", () => updateScrollMask(el), { passive: true });
+        window.addEventListener("resize", () => updateScrollMask(el), { passive: true });
+        updateScrollMask(el);
+    }
+
+    function initAllScrollIndicators() {
+        document.querySelectorAll(".scroll-indicate-x, #cat-quick-chips, [data-scroll-cue]").forEach(bindScrollIndicator);
+    }
+
+    // =========================================================================
     // 10. PUBLIC API & LIFECYCLE
     // =========================================================================
     window.SimpleCat = {
@@ -2588,6 +2713,8 @@
             stopBgAnimation();
             stopCopilotAnimation();
         },
+        initScrollIndicators: initAllScrollIndicators,
+        updateScrollMask: updateScrollMask,
         launchZeroG: launchAstroCatIntoZeroG,
         dock: dockAstroCat,
         laserChase: toggleLaserChase,
@@ -2672,6 +2799,7 @@
         createAstroCatCopilot();
         createSoundToggle();
         bindTactileInteractions();
+        initAllScrollIndicators();
     }
 
     if (document.readyState === "loading") {
