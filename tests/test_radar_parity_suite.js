@@ -333,6 +333,18 @@ async function runTests() {
     assert(Array.isArray(recentProbes) && recentProbes.length > 0, 'getRecentProbes returns array of probe records');
     assert(recentProbes[0].domain === 'shopify.com', 'Latest probe in storage is shopify.com');
 
+    // Test endpoint discovery and multi-collector fallbacks
+    const endpoints = sandbox.window.OrbitRadarTelemetry.getEndpoints();
+    assert(Array.isArray(endpoints) && endpoints.length >= 2, 'getEndpoints returns list of collectors');
+    assert(endpoints.includes('http://127.0.0.1:9090/api/orbit/radar/telemetry'), 'Endpoints includes port 9090 Cockpit collector');
+    assert(endpoints.includes('http://127.0.0.1:9095/api/orbit/radar/telemetry'), 'Endpoints includes port 9095 Standalone CLI receiver');
+
+    // Test dynamic endpoint and webhook setters
+    sandbox.window.OrbitRadarTelemetry.setEndpoint('https://collector.example.com/api/telemetry');
+    assert(sandbox.window.OrbitRadarTelemetry.getEndpoints().includes('https://collector.example.com/api/telemetry'), 'setEndpoint updates active endpoints');
+    sandbox.window.OrbitRadarTelemetry.setWebhook('https://discord.com/api/webhooks/test/123');
+    assert(sandbox.window.OrbitRadarTelemetry.getEndpoints().includes('https://discord.com/api/webhooks/test/123'), 'setWebhook updates active endpoints');
+
     // Test setScanTarget triggers telemetry dispatch
     sandbox.window.setScanTarget('cmfh009.github.io');
     const updatedProbes = sandbox.window.OrbitRadarTelemetry.getRecentProbes();

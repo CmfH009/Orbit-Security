@@ -763,6 +763,8 @@
 
     const TELEMETRY_STORAGE_KEY = 'orbit_radar_recent_probes';
     const TELEMETRY_SESSION_KEY = 'orbit_radar_session_id';
+    const TELEMETRY_ENDPOINT_STORAGE_KEY = 'orbit_telemetry_endpoint';
+    const TELEMETRY_WEBHOOK_STORAGE_KEY = 'orbit_radar_webhook';
 
     function getOrCreateSessionId() {
         try {
@@ -795,6 +797,57 @@
         } catch (_) {}
     }
 
+    function getTelemetryEndpoints() {
+        const endpoints = [];
+        const seen = new Set();
+        function addEp(url) {
+            if (url && typeof url === 'string' && !seen.has(url)) {
+                seen.add(url);
+                endpoints.push(url);
+            }
+        }
+
+        if (typeof window !== 'undefined') {
+            // 1. Explicit window or localStorage custom telemetry endpoint
+            if (window.ORBIT_TELEMETRY_ENDPOINT) addEp(window.ORBIT_TELEMETRY_ENDPOINT);
+            try {
+                const storedEp = localStorage.getItem(TELEMETRY_ENDPOINT_STORAGE_KEY);
+                if (storedEp) addEp(storedEp);
+                if (window.location && window.location.search) {
+                    const u = new URLSearchParams(window.location.search).get('telemetry');
+                    if (u) {
+                        addEp(u);
+                        localStorage.setItem(TELEMETRY_ENDPOINT_STORAGE_KEY, u);
+                    }
+                }
+            } catch (_) {}
+
+            // 2. Relative origin backend (when running non-GitHub Pages web server)
+            if (window.location && window.location.protocol && window.location.protocol.startsWith('http') && window.location.origin && window.location.origin !== 'null' && !window.location.hostname.endsWith('github.io')) {
+                addEp(`${window.location.origin}/api/orbit/radar/telemetry`);
+            }
+
+            // 3. Localhost collector fallbacks (Cockpit on 9090, Standalone CLI Receiver on 9095)
+            addEp('http://127.0.0.1:9090/api/orbit/radar/telemetry');
+            addEp('http://127.0.0.1:9095/api/orbit/radar/telemetry');
+
+            // 4. Webhook collector (window, localStorage, or ?webhook= URL param)
+            if (window.ORBIT_RADAR_WEBHOOK) addEp(window.ORBIT_RADAR_WEBHOOK);
+            try {
+                const storedWh = localStorage.getItem(TELEMETRY_WEBHOOK_STORAGE_KEY);
+                if (storedWh) addEp(storedWh);
+                if (window.location && window.location.search) {
+                    const wh = new URLSearchParams(window.location.search).get('webhook');
+                    if (wh) {
+                        addEp(wh);
+                        localStorage.setItem(TELEMETRY_WEBHOOK_STORAGE_KEY, wh);
+                    }
+                }
+            } catch (_) {}
+        }
+        return endpoints;
+    }
+
     function dispatchRadarTelemetry(domain, triggerSource, auditResult) {
         if (!domain) return null;
         const now = new Date();
@@ -825,33 +878,29 @@
 
         // Safe fire-and-forget network dispatch to available telemetry collectors
         if (typeof window !== 'undefined') {
-            const endpoints = [];
-            if (window.ORBIT_TELEMETRY_ENDPOINT) {
-                endpoints.push(window.ORBIT_TELEMETRY_ENDPOINT);
-            }
-            if (window.location && window.location.protocol && window.location.protocol.startsWith('http') && window.location.origin && window.location.origin !== 'null') {
-                endpoints.push(`${window.location.origin}/api/orbit/radar/telemetry`);
-            }
-            endpoints.push('http://127.0.0.1:9090/api/orbit/radar/telemetry');
-            if (window.ORBIT_RADAR_WEBHOOK) {
-                endpoints.push(window.ORBIT_RADAR_WEBHOOK);
-            }
-
+            const endpoints = getTelemetryEndpoints();
             const jsonStr = JSON.stringify(payload);
 
             endpoints.forEach(url => {
                 try {
-                    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-                        const blob = new Blob([jsonStr], { type: 'application/json' });
-                        navigator.sendBeacon(url, blob);
-                    } else if (typeof fetch === 'function') {
+                    if (typeof fetch === 'function') {
                         fetch(url, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: jsonStr,
                             mode: 'cors',
                             keepalive: true
-                        }).catch(() => {});
+                        }).catch(() => {
+                            try {
+                                if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+                                    const blob = new Blob([jsonStr], { type: 'application/json' });
+                                    navigator.sendBeacon(url, blob);
+                                }
+                            } catch (_) {}
+                        });
+                    } else if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+                        const blob = new Blob([jsonStr], { type: 'application/json' });
+                        navigator.sendBeacon(url, blob);
                     }
                 } catch (_) {}
             });
@@ -882,7 +931,28 @@
                     localStorage.removeItem(TELEMETRY_STORAGE_KEY);
                 }
             } catch (_) {}
-        }
+        },
+        setEndpoint: function(url) {
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    if (url) localStorage.setItem(TELEMETRY_ENDPOINT_STORAGE_KEY, url);
+                    else localStorage.removeItem(TELEMETRY_ENDPOINT_STORAGE_KEY);
+                }
+            } catch (_) {}
+            if (typeof window !== 'undefined') window.ORBIT_TELEMETRY_ENDPOINT = url;
+            return url;
+        },
+        setWebhook: function(url) {
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    if (url) localStorage.setItem(TELEMETRY_WEBHOOK_STORAGE_KEY, url);
+                    else localStorage.removeItem(TELEMETRY_WEBHOOK_STORAGE_KEY);
+                }
+            } catch (_) {}
+            if (typeof window !== 'undefined') window.ORBIT_RADAR_WEBHOOK = url;
+            return url;
+        },
+        getEndpoints: getTelemetryEndpoints
     };
     if (typeof window !== 'undefined') {
         window.OrbitRadarTelemetry = OrbitRadarTelemetry;
@@ -2288,12 +2358,14 @@
         
         try {
             showArcadeToast(`Auditing ${domain} via live DoH sentinels...`);
+            dispatchRadarTelemetry(domain, 'flipbook_scan', null);
             let result;
             if (window._lastAuditResult && window._lastAuditResult.domain === domain) {
                 result = window._lastAuditResult;
             } else {
                 result = await performClientDohAudit(domain);
             }
+            dispatchRadarTelemetry(domain, 'flipbook_complete', result);
             
             await generateInstantPdfForDomain(
                 result.domain,

@@ -413,6 +413,7 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
             "Access-Control-Allow-Headers",
             "Content-Type, Authorization, X-Orbit-Session, X-Requested-With",
         )
+        self.send_header("Access-Control-Allow-Private-Network", "true")
         self.send_header("Access-Control-Max-Age", "86400")
 
     def do_OPTIONS(self):

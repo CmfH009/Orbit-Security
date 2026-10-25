@@ -225,13 +225,17 @@ class TestRadarTelemetryHTTPServer:
         base_url, _ = test_server
         req = urllib.request.Request(
             f"{base_url}/api/orbit/radar/telemetry",
-            headers={"Origin": "https://cmfh009.github.io"},
+            headers={
+                "Origin": "https://cmfh009.github.io",
+                "Access-Control-Request-Private-Network": "true",
+            },
             method="OPTIONS",
         )
         with urllib.request.urlopen(req, timeout=3.0) as resp:
             assert resp.status == 200
             assert resp.headers.get("Access-Control-Allow-Origin") in ("https://cmfh009.github.io", "*")
             assert "POST" in resp.headers.get("Access-Control-Allow-Methods", "")
+            assert resp.headers.get("Access-Control-Allow-Private-Network") == "true"
 
     def test_post_query_telemetry(self, test_server):
         base_url, srv_service = test_server
