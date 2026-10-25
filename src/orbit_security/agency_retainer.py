@@ -705,11 +705,16 @@ class AgencyPortalRenderer:
             f.write(html_content)
 
         landing_path: Optional[Path] = None
-        target_landing = Path(landing_dir or DEFAULT_LANDING_PORTALS_DIR)
-        if landing_dir is not None or target_landing.parent.exists():
-            target_landing.mkdir(parents=True, exist_ok=True)
-            landing_path = target_landing / f"{agency.agency_id}.html"
+        if landing_dir is not None:
+            landing_dir.mkdir(parents=True, exist_ok=True)
+            landing_path = landing_dir / f"{agency.agency_id}.html"
             with open(landing_path, "w", encoding="utf-8") as f:
                 f.write(html_content)
+        elif output_dir is None or Path(output_dir) == DEFAULT_PORTALS_OUTPUT_DIR:
+            if DEFAULT_LANDING_PORTALS_DIR.parent.exists():
+                DEFAULT_LANDING_PORTALS_DIR.mkdir(parents=True, exist_ok=True)
+                landing_path = DEFAULT_LANDING_PORTALS_DIR / f"{agency.agency_id}.html"
+                with open(landing_path, "w", encoding="utf-8") as f:
+                    f.write(html_content)
 
         return file_path, landing_path

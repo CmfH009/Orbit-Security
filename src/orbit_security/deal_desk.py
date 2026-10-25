@@ -272,9 +272,14 @@ class RetainerDealDeskConcierge:
 </html>
 """
         portal_file.write_text(portal_html, encoding="utf-8")
-        landing_portal_file = REPO_ROOT / "landing" / "portals" / portal_file.name
-        if landing_portal_file.parent.exists():
-            landing_portal_file.write_text(portal_html, encoding="utf-8")
+        if self.workspace_root == REPO_ROOT or self.portals_dir == PORTALS_OUTPUT_DIR:
+            landing_portal_file = REPO_ROOT / "landing" / "portals" / portal_file.name
+            if landing_portal_file.parent.exists():
+                landing_portal_file.write_text(portal_html, encoding="utf-8")
+        elif self.workspace_root:
+            landing_portal_file = self.workspace_root / "landing" / "portals" / portal_file.name
+            if landing_portal_file.parent.exists():
+                landing_portal_file.write_text(portal_html, encoding="utf-8")
 
         # Publish event to blackboard
         try:
