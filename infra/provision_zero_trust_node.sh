@@ -40,13 +40,28 @@ apt-get update -qq
 apt-get install -y -qq ufw curl git ca-certificates python3-venv python3-pip unattended-upgrades
 
 # Step 2: Zero-Trust UFW Firewall Configuration
+log_info "Flushing conflicting Oracle Cloud netfilter-persistent rules..."
+systemctl stop netfilter-persistent 2>/dev/null || true
+systemctl disable netfilter-persistent 2>/dev/null || true
+iptables -F 2>/dev/null || true
+iptables -X 2>/dev/null || true
+iptables -t nat -F 2>/dev/null || true
+iptables -t nat -X 2>/dev/null || true
+iptables -t mangle -F 2>/dev/null || true
+iptables -t mangle -X 2>/dev/null || true
+iptables -P INPUT ACCEPT 2>/dev/null || true
+iptables -P FORWARD ACCEPT 2>/dev/null || true
+iptables -P OUTPUT ACCEPT 2>/dev/null || true
+
 log_info "Enforcing Zero Ingress UFW Firewall..."
 ufw default deny incoming
 ufw default allow outgoing
 # Allow traffic on Tailscale mesh VPN only
 ufw allow in on tailscale0 comment "Orbit Private Tailscale Mesh"
+# Direct WireGuard P2P bypasses DERP relay
+ufw allow 41641/udp comment "Tailscale WireGuard Direct P2P"
 ufw --force enable
-log_ok "Firewall active: All public internet ports blocked. Only Tailscale mesh allowed."
+log_ok "Firewall active: All public internet ports blocked. Only Tailscale mesh and Direct P2P allowed."
 
 # Step 3: Install Tailscale if not present
 if ! command -v tailscale &> /dev/null; then
@@ -55,6 +70,14 @@ if ! command -v tailscale &> /dev/null; then
     log_ok "Tailscale installed successfully."
 else
     log_ok "Tailscale already present on host."
+fi
+
+if [ -n "${TAILSCALE_AUTHKEY:-}" ]; then
+    log_info "Connecting node to Tailnet via pre-authorized authkey..."
+    tailscale up --authkey="${TAILSCALE_AUTHKEY}" --ssh --accept-routes
+    log_ok "Node joined Tailscale mesh."
+else
+    log_info "TAILSCALE_AUTHKEY not set. Run 'sudo tailscale up' manually after boot."
 fi
 
 # Step 4: Create isolated 'orbit' system user

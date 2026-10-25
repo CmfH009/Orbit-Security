@@ -127,14 +127,32 @@ write_files:
       Unattended-Upgrade::Automatic-Reboot "false";
 
 runcmd:
-  # 1. Install Tailscale for Zero-Trust Private Mesh
+  # 1. Disable conflicting Oracle default netfilter-persistent rules
+  - systemctl stop netfilter-persistent || true
+  - systemctl disable netfilter-persistent || true
+  - iptables -F || true
+  - iptables -X || true
+  - iptables -t nat -F || true
+  - iptables -t nat -X || true
+  - iptables -P INPUT ACCEPT || true
+  - iptables -P FORWARD ACCEPT || true
+  - iptables -P OUTPUT ACCEPT || true
+
+  # 2. Install Tailscale for Zero-Trust Private Mesh
   - curl -fsSL https://tailscale.com/install.sh | sh
 
-  # 2. ZERO INGRESS FIREWALL: All public ports blocked, only Tailscale permitted
+  # 3. ZERO INGRESS FIREWALL: All public ports blocked, only Tailscale permitted
   - ufw default deny incoming
   - ufw default allow outgoing
   - ufw allow in on tailscale0
+  - ufw allow 41641/udp comment "Tailscale WireGuard Direct P2P"
   - ufw --force enable
+
+  # 4. Zero-touch First Boot: Connect to Tailnet if auth key is present
+  - |
+    if [ -n "${TAILSCALE_AUTHKEY:-}" ]; then
+      tailscale up --authkey="${TAILSCALE_AUTHKEY}" --ssh --accept-routes
+    fi
 
   # 3. Clone Orbit Security repository and configure isolated Python environment
   - mkdir -p /opt/orbit-security/data /opt/orbit-security/logs
