@@ -35,6 +35,7 @@ from orbit_security.bounty_radar import (
     DEFAULT_BOUNTY_DATA_PATH,
     DEFAULT_RADAR_STATE_PATH,
 )
+from orbit_security.cert_transparency import CtStreamDaemon
 
 LOGS_DIR = WORKSPACE_ROOT / "system" / "logs"
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
@@ -49,6 +50,7 @@ class BountyRollingDaemon:
         interval_sec: float = 1800.0,
         programs_path: Optional[Path] = None,
         state_file: Optional[Path] = None,
+        ct_watermark_file: Optional[Path] = None,
         offline: bool = False,
     ):
         self.interval_sec = interval_sec
@@ -61,6 +63,7 @@ class BountyRollingDaemon:
             programs_path=self.programs_path,
             sweep_interval_sec=self.interval_sec,
         )
+        self.ct_daemon = CtStreamDaemon(watermark_file=ct_watermark_file)
         self.running = False
 
     def setup_logging(self, verbose: bool = False):
@@ -74,6 +77,35 @@ class BountyRollingDaemon:
             ],
         )
 
+    def sweep_ct_logs_for_program(self, program_id: str) -> Optional[Dict[str, Any]]:
+        """Polls Certificate Transparency streams for all in-scope apex domains of a program."""
+        programs = self.worker.load_programs()
+        target = next((p for p in programs if p.program_id == program_id), None)
+        if not target:
+            logger.error(f"Program ID '{program_id}' not found in active catalog.")
+            return None
+
+        poll_results = self.ct_daemon.poll_domains(target.in_scope)
+        new_subdomains: List[str] = []
+        takeover_findings: List[Dict[str, Any]] = []
+        new_certificates = 0
+
+        for res in poll_results:
+            new_certificates += int(res.get("new_certificates", 0))
+            for sub in res.get("new_subdomains", []):
+                if sub not in new_subdomains:
+                    new_subdomains.append(sub)
+            takeover_findings.extend(res.get("takeover_findings", []))
+
+        return {
+            "program_id": target.program_id,
+            "program_name": target.name,
+            "domains_polled": len(poll_results),
+            "new_certificates": new_certificates,
+            "new_subdomains": new_subdomains,
+            "takeover_findings": takeover_findings,
+        }
+
     def sweep_program(self, program_id: str) -> Optional[Dict[str, Any]]:
         """Executes targeted sweep for a single specified program."""
         programs = self.worker.load_programs()
@@ -83,12 +115,14 @@ class BountyRollingDaemon:
             return None
 
         logger.info(f"Executing focused sweep for program: {target.name} ({target.program_id})")
+        ct_summary = self.sweep_ct_logs_for_program(program_id)
         confirmed = self.worker.execute_single_program_sweep(target, offline=self.offline)
         return {
             "program_id": target.program_id,
             "program_name": target.name,
             "confirmed_count": len(confirmed),
             "findings": confirmed,
+            "ct_discovery": ct_summary,
         }
 
     def sweep_one_cycle(self) -> Optional[Dict[str, Any]]:

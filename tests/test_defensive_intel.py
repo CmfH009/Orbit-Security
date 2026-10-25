@@ -254,3 +254,109 @@ def test_passive_cname_takeover_nxdomain_detection(tmp_path):
     assert finding is not None
     assert finding.provider == "AWS Elastic Beanstalk"
     assert "NXDOMAIN" in finding.fingerprint_matched
+
+
+# ==============================================================================
+# 4. Project #6: Continuous CT Stream Daemon & Takeover Chaining Tests
+# ==============================================================================
+
+def test_ct_stream_daemon_watermark_persistence_across_restarts(tmp_path):
+    from orbit_security.cert_transparency import CtStreamDaemon
+
+    db_path = tmp_path / "ct_daemon_bb.db"
+    watermark_file = tmp_path / "ct_watermark.json"
+    cache_file = tmp_path / "ct_cache.json"
+    bb = Blackboard(db_path=db_path)
+
+    daemon1 = CtStreamDaemon(
+        watermark_file=watermark_file,
+        cache_file=cache_file,
+        blackboard=bb,
+    )
+    res1 = daemon1.poll_domain("example.com")
+    assert res1["new_certificates"] == 2
+    assert "api.example.com" in res1["new_subdomains"]
+    assert "staging.example.com" in res1["new_subdomains"]
+    assert watermark_file.exists()
+
+    # Restart daemon with same watermark file: no duplicate discoveries
+    daemon2 = CtStreamDaemon(
+        watermark_file=watermark_file,
+        cache_file=cache_file,
+        blackboard=bb,
+    )
+    res2 = daemon2.poll_domain("example.com")
+    assert res2["new_certificates"] == 0
+    assert res2["new_subdomains"] == []
+
+
+def test_ct_stream_daemon_automatic_cname_takeover_chaining(tmp_path):
+    from orbit_security.cert_transparency import CtStreamDaemon
+
+    db_path = tmp_path / "ct_chain_bb.db"
+    watermark_file = tmp_path / "ct_chain_watermark.json"
+    bb = Blackboard(db_path=db_path)
+
+    # Provide simulated DNS/HTTP resolution for newly discovered CT subdomains
+    cname_probe_map = {
+        "staging.example.com": {
+            "cname": "orphaned-staging-bucket.s3.amazonaws.com",
+            "body_snippet": "<Code>NoSuchBucket</Code><Message>The specified bucket does not exist</Message>",
+        },
+        "api.example.com": {
+            "cname": "safe-lb.cloudflare.net",
+            "body_snippet": "OK",
+        },
+    }
+
+    daemon = CtStreamDaemon(
+        watermark_file=watermark_file,
+        blackboard=bb,
+        cname_probe_map=cname_probe_map,
+    )
+    res = daemon.poll_domain("example.com")
+    assert len(res["takeover_findings"]) == 1
+    assert res["takeover_findings"][0]["domain"] == "staging.example.com"
+    assert res["takeover_findings"][0]["provider"] == "AWS S3"
+
+    takeover_events = bb.get_recent(limit=10, event_type="SUBDOMAIN_TAKEOVER_DETECTED")
+    assert len(takeover_events) == 1
+    assert takeover_events[0]["payload"]["domain"] == "staging.example.com"
+
+
+def test_bounty_rolling_daemon_ct_sweep_integration(tmp_path):
+    from orbit_security.bounty_rolling_daemon import BountyRollingDaemon
+
+    programs_file = tmp_path / "test_programs.json"
+    programs_file.write_text(
+        json.dumps({
+            "programs": [
+                {
+                    "program_id": "example_bbp",
+                    "name": "Example Corp BBP",
+                    "platform": "hackerone",
+                    "policy_url": "https://hackerone.com/example",
+                    "in_scope": ["*.example.com", "example.com"],
+                    "out_of_scope": [],
+                    "bounty_tier": "cash",
+                    "max_bounty": 10000,
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+    state_file = tmp_path / "radar_state.json"
+    watermark_file = tmp_path / "ct_watermark.json"
+
+    daemon = BountyRollingDaemon(
+        programs_path=programs_file,
+        state_file=state_file,
+        ct_watermark_file=watermark_file,
+        offline=True,
+    )
+    ct_res = daemon.sweep_ct_logs_for_program("example_bbp")
+    assert ct_res is not None
+    assert ct_res["program_id"] == "example_bbp"
+    assert ct_res["domains_polled"] >= 1
+    assert "api.example.com" in ct_res["new_subdomains"]
+

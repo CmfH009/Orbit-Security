@@ -198,6 +198,105 @@ class BountyAttackGraph:
 
         return vuln_id
 
+    def ingest_shuttle_events(
+        self,
+        events: List[Dict[str, Any]],
+        save_disk: bool = False,
+    ) -> Dict[str, Any]:
+        """Projects incoming Tailscale shuttle threat events directly into the 3D attack surface graph."""
+        processed = 0
+        for ev in events:
+            ev_type = str(ev.get("event_type", "")).upper()
+            payload = ev.get("payload") if isinstance(ev.get("payload"), dict) else {}
+            origin = str(
+                payload.get("_shuttle_origin")
+                or ev.get("origin_node")
+                or ev.get("source")
+                or "oracle-cloud-sentinel"
+            ).replace("shuttle:", "").strip()
+
+            sentinel_id = f"sentinel:{origin.lower()}"
+            self.add_node(
+                node_id=sentinel_id,
+                label=f"Sentinel ({origin})",
+                node_type="TAILSCALE_SENTINEL",
+                meta={"origin_node": origin},
+            )
+
+            domain = (
+                payload.get("domain")
+                or payload.get("subdomain")
+                or payload.get("target")
+                or ""
+            ).strip().lower()
+
+            if domain:
+                domain_id = f"domain:{domain}"
+                self.add_node(
+                    node_id=domain_id,
+                    label=domain,
+                    node_type="PERIMETER_DOMAIN",
+                    meta={
+                        "shuttle_origin": origin,
+                        "apex_domain": payload.get("apex_domain", domain),
+                    },
+                )
+                self.add_edge(sentinel_id, domain_id, relation="OBSERVED_OVER_TAILSCALE")
+
+                if ev_type in ("CISA_KEV_MATCH_DETECTED", "CRITICAL_0DAY_CORRELATED", "EPSS_SCORE_EVALUATED"):
+                    cve_id = str(payload.get("cve_id", "CVE-UNKNOWN")).upper()
+                    vuln_id = f"vuln:shuttle:{domain}:{cve_id.lower()}"
+                    self.add_node(
+                        node_id=vuln_id,
+                        label=f"{cve_id} (CRITICAL)",
+                        node_type="VULNERABILITY",
+                        meta={
+                            "flaw_type": ev_type.lower(),
+                            "severity": "CRITICAL",
+                            "cve_id": cve_id,
+                            "bounty_viability": "HIGH_CONFIDENCE",
+                            "shuttle_origin": origin,
+                        },
+                    )
+                    self.add_edge(domain_id, vuln_id, relation="HAS_EXPOSURE", weight=2.5)
+                    processed += 1
+
+                elif ev_type == "SUBDOMAIN_TAKEOVER_DETECTED":
+                    provider = str(payload.get("provider") or payload.get("service") or "Cloud Provider")
+                    cname = str(payload.get("cname_target") or "").strip().lower()
+                    vuln_id = f"vuln:shuttle:{domain}:subdomain_takeover"
+                    self.add_node(
+                        node_id=vuln_id,
+                        label=f"Subdomain Takeover ({provider})",
+                        node_type="VULNERABILITY",
+                        meta={
+                            "flaw_type": "subdomain_takeover",
+                            "severity": "CRITICAL",
+                            "provider": provider,
+                            "cname_target": cname,
+                            "bounty_viability": "HIGH_CONFIDENCE",
+                            "shuttle_origin": origin,
+                        },
+                    )
+                    self.add_edge(domain_id, vuln_id, relation="HAS_EXPOSURE", weight=2.5)
+                    if cname:
+                        cname_id = f"cname:{cname}"
+                        self.add_node(node_id=cname_id, label=cname, node_type="CNAME_TARGET")
+                        self.add_edge(domain_id, cname_id, relation="POINTS_TO_CNAME")
+                    processed += 1
+
+                elif ev_type in ("CT_LOG_NEW_SUBDOMAIN", "CT_LOG_CERTIFICATE_DISCOVERED", "TRIAGE_COMPLETED"):
+                    processed += 1
+
+        if save_disk and processed > 0:
+            self.save()
+
+        return {
+            "events_processed": processed,
+            "total_nodes": len(self.nodes),
+            "total_edges": len(self.edges),
+        }
+
     def calculate_centrality(self) -> List[Tuple[str, int, str]]:
         """Calculates degree centrality and identifies critical shared infrastructure nodes.
         
@@ -245,6 +344,7 @@ class BountyAttackGraph:
 
         type_meta = {
             "BOUNTY_PROGRAM": {"cat": "Bounty Fleet", "color": "#818cf8", "base_r": 120.0, "size": 18.0},
+            "TAILSCALE_SENTINEL": {"cat": "Tailscale Sentinel", "color": "#10b981", "base_r": 90.0, "size": 20.0},
             "PERIMETER_DOMAIN": {"cat": "Perimeter Asset", "color": "#38bdf8", "base_r": 210.0, "size": 10.0},
             "CNAME_TARGET": {"cat": "CNAME Target", "color": "#f59e0b", "base_r": 280.0, "size": 12.0},
             "CLOUD_PROVIDER": {"cat": "Cloud Infrastructure", "color": "#c084fc", "base_r": 160.0, "size": 14.0},

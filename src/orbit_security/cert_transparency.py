@@ -29,6 +29,7 @@ logger = logging.getLogger("orbit_security.cert_transparency")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_CT_CACHE_PATH = REPO_ROOT / "data" / "ct_cache.json"
+DEFAULT_CT_WATERMARK_PATH = REPO_ROOT / "data" / "ct_watermark.json"
 CRTSH_BASE_URL = "https://crt.sh/?q=%.{domain}&output=json"
 
 BUILTIN_CT_FALLBACK: Dict[str, List[Dict[str, Any]]] = {
@@ -249,3 +250,163 @@ class CertificateTransparencyMonitor:
             "new_subdomains": new_discoveries,
             "subdomains": sorted(list(all_subdomains)),
         }
+
+
+class CtStreamDaemon:
+    """Continuous Certificate Transparency log daemon with persistent watermark state and CNAME takeover chaining."""
+
+    def __init__(
+        self,
+        watermark_file: Optional[Path] = None,
+        cache_file: Optional[Path] = None,
+        blackboard: Any = None,
+        takeover_detector: Any = None,
+        cname_probe_map: Optional[Dict[str, Dict[str, Any]]] = None,
+        offline_fixtures: Optional[Dict[str, List[Dict[str, Any]]]] = None,
+    ):
+        self.watermark_file = Path(watermark_file or DEFAULT_CT_WATERMARK_PATH)
+        self.monitor = CertificateTransparencyMonitor(
+            cache_file=cache_file,
+            offline_fixtures=offline_fixtures,
+        )
+        self.blackboard = blackboard
+        if takeover_detector is None:
+            from orbit_security.cname_takeover import PassiveTakeoverDetector
+            self.takeover_detector = PassiveTakeoverDetector()
+        else:
+            self.takeover_detector = takeover_detector
+
+        self.cname_probe_map = cname_probe_map or {}
+        self.seen_cert_ids: Dict[str, Set[int]] = {}
+        self.known_subdomains: Dict[str, Set[str]] = {}
+        self.load_watermark()
+
+    def load_watermark(self):
+        """Loads persistent CT certificate ID and subdomain watermarks from disk."""
+        if not self.watermark_file.exists():
+            return
+        try:
+            raw = json.loads(self.watermark_file.read_text(encoding="utf-8"))
+            domains_data = raw.get("domains", {})
+            for dom, state in domains_data.items():
+                self.seen_cert_ids[dom] = {int(cid) for cid in state.get("seen_cert_ids", [])}
+                self.known_subdomains[dom] = {str(s).lower() for s in state.get("known_subdomains", [])}
+                self.monitor.known_subdomains[dom] = set(self.known_subdomains[dom])
+        except Exception as ex:
+            logger.debug(f"Failed to load CT watermark from {self.watermark_file}: {ex}")
+
+    def save_watermark(self):
+        """Persists CT certificate ID and subdomain watermarks atomically to disk."""
+        try:
+            self.watermark_file.parent.mkdir(parents=True, exist_ok=True)
+            domains_payload: Dict[str, Any] = {}
+            all_domains = set(self.seen_cert_ids.keys()) | set(self.known_subdomains.keys())
+            for dom in sorted(all_domains):
+                domains_payload[dom] = {
+                    "seen_cert_ids": sorted(list(self.seen_cert_ids.get(dom, set()))),
+                    "known_subdomains": sorted(list(self.known_subdomains.get(dom, set()))),
+                    "updated_at": time.time(),
+                }
+            tmp_path = self.watermark_file.with_suffix(".tmp")
+            tmp_path.write_text(json.dumps({"domains": domains_payload}, indent=2), encoding="utf-8")
+            tmp_path.replace(self.watermark_file)
+        except Exception as ex:
+            logger.debug(f"Failed to save CT watermark to {self.watermark_file}: {ex}")
+
+    def poll_domain(self, domain: str, force_refresh: bool = False) -> Dict[str, Any]:
+        """Polls CT log feed for domain, computes delta against persistent watermark, and chains takeover checks."""
+        clean_domain = domain.strip().lower().lstrip("*.")
+        certs = self.monitor.fetch_certificates(clean_domain, force_refresh=force_refresh)
+
+        seen_certs = self.seen_cert_ids.setdefault(clean_domain, set())
+        known_subs = self.known_subdomains.setdefault(clean_domain, set())
+
+        new_certs: List[CertificateEntry] = []
+        all_subdomains: Set[str] = set()
+
+        for cert in certs:
+            if cert.cert_id and cert.cert_id not in seen_certs:
+                new_certs.append(cert)
+                seen_certs.add(cert.cert_id)
+                if self.blackboard:
+                    try:
+                        self.blackboard.publish(
+                            event_type="CT_LOG_CERTIFICATE_DISCOVERED",
+                            payload={
+                                "cert_id": cert.cert_id,
+                                "common_name": cert.common_name,
+                                "issuer": cert.issuer,
+                                "san_domains": cert.san_domains,
+                                "apex_domain": clean_domain,
+                            },
+                            source="ct_stream_daemon",
+                            topic="threat_intel",
+                        )
+                    except Exception as ex:
+                        logger.debug(f"Failed to publish CT cert event: {ex}")
+            for san in cert.san_domains:
+                all_subdomains.add(san)
+
+        new_subdomains = sorted(list(all_subdomains - known_subs))
+        known_subs.update(all_subdomains)
+        self.monitor.known_subdomains[clean_domain] = set(known_subs)
+
+        takeover_findings: List[Dict[str, Any]] = []
+        for sub in new_subdomains:
+            if self.blackboard:
+                try:
+                    self.blackboard.publish(
+                        event_type="CT_LOG_NEW_SUBDOMAIN",
+                        payload={
+                            "subdomain": sub,
+                            "apex_domain": clean_domain,
+                            "source_feed": "certificate_transparency",
+                            "discovered_at": time.time(),
+                        },
+                        source="ct_stream_daemon",
+                        topic="threat_intel",
+                    )
+                except Exception as ex:
+                    logger.debug(f"Failed to publish CT subdomain event: {ex}")
+
+            # Automatic CNAME takeover evaluation chain
+            probe_info = self.cname_probe_map.get(sub)
+            if probe_info and self.takeover_detector:
+                cname_target = probe_info.get("cname") or probe_info.get("cname_target") or ""
+                body_snippet = probe_info.get("body_snippet", "")
+                is_nxdomain = bool(probe_info.get("is_nxdomain", False))
+                if cname_target:
+                    finding = self.takeover_detector.evaluate_cname(
+                        domain=sub,
+                        cname_target=cname_target,
+                        body_snippet=body_snippet,
+                        is_nxdomain=is_nxdomain,
+                        blackboard=self.blackboard,
+                    )
+                    if finding:
+                        takeover_findings.append(asdict(finding))
+
+        self.save_watermark()
+
+        return {
+            "domain": clean_domain,
+            "total_certificates": len(certs),
+            "new_certificates": len(new_certs),
+            "total_subdomains": len(all_subdomains),
+            "new_subdomains": new_subdomains,
+            "takeover_findings": takeover_findings,
+            "subdomains": sorted(list(all_subdomains)),
+        }
+
+    def poll_domains(self, domains: List[str], force_refresh: bool = False) -> List[Dict[str, Any]]:
+        """Polls a list of apex domains and returns CT delta results."""
+        results = []
+        seen_apex: Set[str] = set()
+        for d in domains:
+            clean = d.strip().lower().lstrip("*.")
+            if not clean or clean in seen_apex:
+                continue
+            seen_apex.add(clean)
+            results.append(self.poll_domain(clean, force_refresh=force_refresh))
+        return results
+

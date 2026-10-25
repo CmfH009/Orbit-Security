@@ -396,3 +396,103 @@ def test_shuttle_live_tcp_loopback_end_to_end(tmp_path):
         server.shutdown()
         server.server_close()
 
+
+# ==============================================================================
+# Project #10: Local Cockpit HUD 3D Constellation Tailscale Event Sync
+# ==============================================================================
+
+def test_bounty_attack_graph_ingest_shuttle_events_and_3d_constellation(tmp_path):
+    from orbit_security.bounty_graph import BountyAttackGraph
+
+    graph = BountyAttackGraph(output_dir=tmp_path)
+    shuttle_events = [
+        {
+            "event_type": "CISA_KEV_MATCH_DETECTED",
+            "payload": {
+                "cve_id": "CVE-2026-104935",
+                "domain": "vpn.client.example",
+                "product": "Edge SSL VPN",
+                "_shuttle_origin": "oracle-cloud-arm64-1",
+            },
+        },
+        {
+            "event_type": "SUBDOMAIN_TAKEOVER_DETECTED",
+            "payload": {
+                "domain": "cdn.client.example",
+                "cname_target": "orphaned-cdn.s3.amazonaws.com",
+                "provider": "AWS S3",
+                "_shuttle_origin": "oracle-cloud-arm64-1",
+            },
+        },
+        {
+            "event_type": "CT_LOG_NEW_SUBDOMAIN",
+            "payload": {
+                "subdomain": "staging-api.client.example",
+                "apex_domain": "client.example",
+                "_shuttle_origin": "oracle-cloud-arm64-1",
+            },
+        },
+    ]
+
+    summary = graph.ingest_shuttle_events(shuttle_events)
+    assert summary["events_processed"] == 3
+    assert summary["total_nodes"] >= 5
+
+    constellation = graph.export_constellation_hubs()
+    assert constellation["ok"] is True
+    hub_ids = {h["id"] for h in constellation["hubs"]}
+    assert "sentinel:oracle-cloud-arm64-1" in hub_ids
+    assert "domain:vpn.client.example" in hub_ids
+    assert "domain:cdn.client.example" in hub_ids
+    assert "domain:staging-api.client.example" in hub_ids
+    assert any(h["category"] == "Vulnerability" for h in constellation["hubs"])
+
+
+def test_shuttle_receiver_auto_syncs_3d_constellation_and_emits_sse_event(tmp_path):
+    from orbit_security.bounty_graph import BountyAttackGraph
+
+    db_path = tmp_path / "constellation_bb.db"
+    bb = Blackboard(db_path=db_path)
+    graph = BountyAttackGraph(output_dir=tmp_path)
+    secret = "constellation-sync-secret"
+
+    receiver = EventShuttleReceiver(blackboard=bb, secret=secret, attack_graph=graph)
+    now = time.time()
+    batch = {
+        "origin_node": "oracle-cloud-arm64-1",
+        "timestamp": now,
+        "events_count": 1,
+        "events": [
+            {
+                "id": 501,
+                "topic": "perimeter",
+                "event_type": "SUBDOMAIN_TAKEOVER_DETECTED",
+                "source": "ct_stream_daemon",
+                "payload": {
+                    "domain": "dev.target.io",
+                    "cname_target": "unused-dev.github.io",
+                    "provider": "GitHub Pages",
+                },
+                "created_at": now,
+            }
+        ],
+    }
+    raw_body = json.dumps(batch).encode("utf-8")
+    sig = ShuttleAuth.sign_payload(raw_body, secret, now)
+
+    res = receiver.ingest_batch(
+        raw_body=raw_body,
+        signature=sig,
+        timestamp=now,
+        node_id="oracle-cloud-arm64-1",
+    )
+    assert res["ok"] is True
+    assert res["constellation_synced"] is True
+    assert (tmp_path / "bounty_attack_surface.json").exists()
+
+    sync_events = bb.get_recent(limit=5, event_type="CONSTELLATION_SYNC_UPDATED")
+    assert len(sync_events) == 1
+    assert sync_events[0]["payload"]["origin_node"] == "oracle-cloud-arm64-1"
+    assert sync_events[0]["payload"]["total_nodes"] >= 3
+
+

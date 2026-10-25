@@ -66,6 +66,12 @@ class PrivateAlertSentinel:
         signing_secret: Optional[str] = None,
         dedup_ttl_seconds: float = 3600.0,
         enable_desktop_notifications: bool = True,
+        discord_webhook_url: Optional[str] = None,
+        telegram_bot_token: Optional[str] = None,
+        telegram_chat_id: Optional[str] = None,
+        matrix_homeserver_url: Optional[str] = None,
+        matrix_room_id: Optional[str] = None,
+        matrix_access_token: Optional[str] = None,
     ):
         if blackboard is None:
             from orbit_security.blackboard import get_blackboard
@@ -77,6 +83,14 @@ class PrivateAlertSentinel:
         self.signing_secret = signing_secret or os.environ.get("ORBIT_ALERT_SECRET", "orbit-private-alert-secret-v1")
         self.dedup_ttl = dedup_ttl_seconds
         self.enable_desktop_notifications = enable_desktop_notifications
+
+        self.discord_webhook_url = discord_webhook_url or os.environ.get("ORBIT_DISCORD_WEBHOOK_URL")
+        self.telegram_bot_token = telegram_bot_token or os.environ.get("ORBIT_TELEGRAM_BOT_TOKEN")
+        self.telegram_chat_id = telegram_chat_id or os.environ.get("ORBIT_TELEGRAM_CHAT_ID")
+        self.matrix_homeserver_url = matrix_homeserver_url or os.environ.get("ORBIT_MATRIX_HOMESERVER_URL")
+        self.matrix_room_id = matrix_room_id or os.environ.get("ORBIT_MATRIX_ROOM_ID")
+        self.matrix_access_token = matrix_access_token or os.environ.get("ORBIT_MATRIX_ACCESS_TOKEN")
+
         self._sent_hashes: Dict[str, float] = {}
 
     def _compute_hash(self, event_type: str, domain: str, key_token: str) -> str:
@@ -166,8 +180,69 @@ class PrivateAlertSentinel:
         msg = f"{int(timestamp)}:".encode("utf-8") + body_bytes
         return hmac.new(self.signing_secret.encode("utf-8"), msg, hashlib.sha256).hexdigest()
 
+    def format_discord_payload(self, alert: PrivateDefensiveAlert) -> Dict[str, Any]:
+        """Formats alert as a Discord Rich Embed webhook payload."""
+        sev = alert.severity.upper()
+        color = 0xEF4444 if sev == "CRITICAL" else (0xF59E0B if sev == "HIGH" else 0x38BDF8)
+        return {
+            "username": "Orbit Defensive Sentinel",
+            "embeds": [
+                {
+                    "title": f"[{sev}] {alert.target_domain} — {alert.event_type}",
+                    "description": alert.summary,
+                    "color": color,
+                    "fields": [
+                        {"name": "Target Domain", "value": f"`{alert.target_domain}`", "inline": True},
+                        {"name": "Severity", "value": f"`{sev}`", "inline": True},
+                        {"name": "Event Type", "value": f"`{alert.event_type}`", "inline": True},
+                        {"name": "Action Required", "value": alert.action_required, "inline": False},
+                    ],
+                    "footer": {"text": f"Orbit Private Alert ID: {alert.alert_id}"},
+                }
+            ],
+        }
+
+    def format_telegram_payload(
+        self, alert: PrivateDefensiveAlert, chat_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Formats alert as a Telegram Bot API sendMessage payload (HTML mode)."""
+        target_chat = chat_id or self.telegram_chat_id or ""
+        text = (
+            f"🛡️ <b>Orbit Defensive Alert [{alert.severity}]</b>\n"
+            f"<b>Target Domain:</b> <code>{alert.target_domain}</code>\n"
+            f"<b>Event:</b> <code>{alert.event_type}</code>\n\n"
+            f"{alert.summary}\n\n"
+            f"<b>Action Required:</b> {alert.action_required}"
+        )
+        return {
+            "chat_id": target_chat,
+            "text": text,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        }
+
+    def format_matrix_payload(self, alert: PrivateDefensiveAlert) -> Dict[str, Any]:
+        """Formats alert as a Matrix Client-Server m.room.message payload."""
+        plain_body = (
+            f"[Orbit Defensive Alert - {alert.severity}] {alert.target_domain}: "
+            f"{alert.summary} | Action Required: {alert.action_required}"
+        )
+        html_body = (
+            f"<strong>🛡️ Orbit Defensive Alert [{alert.severity}]</strong><br/>"
+            f"<strong>Target Domain:</strong> <code>{alert.target_domain}</code><br/>"
+            f"<strong>Event:</strong> <code>{alert.event_type}</code><br/>"
+            f"<p>{alert.summary}</p>"
+            f"<strong>Action Required:</strong> {alert.action_required}"
+        )
+        return {
+            "msgtype": "m.text",
+            "body": plain_body,
+            "format": "org.matrix.custom.html",
+            "formatted_body": html_body,
+        }
+
     def dispatch_alert(self, alert: PrivateDefensiveAlert, force: bool = False) -> Dict[str, Any]:
-        """Dispatches alert to private webhook and desktop notification with deduplication."""
+        """Dispatches alert to private webhook, Discord, Telegram, Matrix, and desktop notification with deduplication."""
         # Commercial guard: assert frozen
         if not COMMERCIAL_OUTREACH_FROZEN:
             raise OutreachFrozenViolation("Commercial outreach must be strictly frozen.")
@@ -184,6 +259,9 @@ class PrivateAlertSentinel:
             "dispatched": True,
             "alert_id": alert.alert_id,
             "webhook_sent": False,
+            "discord_sent": False,
+            "telegram_sent": False,
+            "matrix_sent": False,
             "desktop_notified": False,
         }
 
@@ -196,7 +274,7 @@ class PrivateAlertSentinel:
             except Exception as ex:
                 logger.debug(f"Desktop notification failed: {ex}")
 
-        # 2. Private Webhook
+        # 2. Private HMAC Webhook
         if self.webhook_url:
             now_ts = time.time()
             envelope = asdict(alert)
@@ -215,7 +293,67 @@ class PrivateAlertSentinel:
             except Exception as ex:
                 logger.warning(f"Private webhook alert failed: {ex}")
 
-        # 3. Publish private alert log to Blackboard WAL
+        # 3. Discord Rich Embed Webhook
+        if self.discord_webhook_url:
+            discord_bytes = json.dumps(self.format_discord_payload(alert)).encode("utf-8")
+            try:
+                req = urllib.request.Request(
+                    self.discord_webhook_url,
+                    data=discord_bytes,
+                    headers={
+                        "Content-Type": "application/json",
+                        "User-Agent": "OrbitSecurity-DiscordBridge/1.0",
+                    },
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=5.0) as resp:
+                    results["discord_sent"] = resp.status in (200, 204)
+            except Exception as ex:
+                logger.warning(f"Discord bridge alert failed: {ex}")
+
+        # 4. Telegram Bot API Bridge
+        if self.telegram_bot_token and self.telegram_chat_id:
+            tg_url = f"https://api.telegram.org/bot{self.telegram_bot_token}/sendMessage"
+            tg_bytes = json.dumps(self.format_telegram_payload(alert)).encode("utf-8")
+            try:
+                req = urllib.request.Request(
+                    tg_url,
+                    data=tg_bytes,
+                    headers={
+                        "Content-Type": "application/json",
+                        "User-Agent": "OrbitSecurity-TelegramBridge/1.0",
+                    },
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=5.0) as resp:
+                    results["telegram_sent"] = resp.status in (200, 204)
+            except Exception as ex:
+                logger.warning(f"Telegram bridge alert failed: {ex}")
+
+        # 5. Matrix Client-Server Room Bridge
+        if self.matrix_homeserver_url and self.matrix_room_id and self.matrix_access_token:
+            hs = self.matrix_homeserver_url.rstrip("/")
+            encoded_room = urllib.parse.quote(self.matrix_room_id)
+            txn_id = urllib.parse.quote(alert.alert_id)
+            mtx_url = f"{hs}/_matrix/client/v3/rooms/{encoded_room}/send/m.room.message/{txn_id}"
+            mtx_bytes = json.dumps(self.format_matrix_payload(alert)).encode("utf-8")
+            try:
+                req = urllib.request.Request(
+                    mtx_url,
+                    data=mtx_bytes,
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {self.matrix_access_token}",
+                        "User-Agent": "OrbitSecurity-MatrixBridge/1.0",
+                    },
+                    method="PUT",
+                )
+                with urllib.request.urlopen(req, timeout=5.0) as resp:
+                    results["matrix_sent"] = resp.status in (200, 204)
+            except Exception as ex:
+                logger.warning(f"Matrix bridge alert failed: {ex}")
+
+        # 6. Publish private alert log to Blackboard WAL
         if self.bb:
             try:
                 self.bb.publish(
@@ -228,6 +366,9 @@ class PrivateAlertSentinel:
                         "summary": alert.summary,
                         "desktop_notified": results["desktop_notified"],
                         "webhook_sent": results["webhook_sent"],
+                        "discord_sent": results["discord_sent"],
+                        "telegram_sent": results["telegram_sent"],
+                        "matrix_sent": results["matrix_sent"],
                     },
                     source="private_alert_sentinel",
                     topic="telemetry",

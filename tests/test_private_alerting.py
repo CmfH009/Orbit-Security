@@ -196,3 +196,108 @@ def test_private_webhook_dispatch_success(tmp_path):
         assert req.get_full_url() == webhook_url
         assert "X-orbit-alert-signature" in req.headers or "X-Orbit-Alert-Signature" in req.headers
         assert "X-orbit-timestamp" in req.headers or "X-Orbit-Timestamp" in req.headers
+
+
+# ==============================================================================
+# Project #8: Real-Time Threat Notification Bridge (Discord / Telegram / Matrix)
+# ==============================================================================
+
+def test_discord_embed_payload_formatting():
+    sentinel = PrivateAlertSentinel()
+    alert = PrivateDefensiveAlert(
+        alert_id="alert-disc-1",
+        event_type="CISA_KEV_MATCH_DETECTED",
+        target_domain="vpn.example.com",
+        severity="CRITICAL",
+        summary="CISA KEV Weaponized 0-Day detected on vpn.example.com: CVE-2024-21887",
+        action_required="Apply vendor patch immediately.",
+        details={"cve_id": "CVE-2024-21887"},
+    )
+
+    payload = sentinel.format_discord_payload(alert)
+    assert "embeds" in payload
+    assert len(payload["embeds"]) == 1
+    embed = payload["embeds"][0]
+    assert "vpn.example.com" in embed["title"]
+    assert embed["color"] == 0xEF4444
+    field_names = [f["name"] for f in embed["fields"]]
+    assert "Target Domain" in field_names
+    assert "Action Required" in field_names
+
+
+def test_telegram_bot_payload_formatting():
+    sentinel = PrivateAlertSentinel(telegram_chat_id="-100123456789")
+    alert = PrivateDefensiveAlert(
+        alert_id="alert-tg-1",
+        event_type="SUBDOMAIN_TAKEOVER_DETECTED",
+        target_domain="cdn.example.com",
+        severity="CRITICAL",
+        summary="High-Confidence Subdomain Takeover on cdn.example.com via AWS S3",
+        action_required="Remove orphaned CNAME record.",
+        details={"service": "AWS S3"},
+    )
+
+    payload = sentinel.format_telegram_payload(alert)
+    assert payload["chat_id"] == "-100123456789"
+    assert payload["parse_mode"] == "HTML"
+    assert "cdn.example.com" in payload["text"]
+    assert "AWS S3" in payload["text"]
+
+
+def test_matrix_room_message_payload_formatting():
+    sentinel = PrivateAlertSentinel()
+    alert = PrivateDefensiveAlert(
+        alert_id="alert-mtx-1",
+        event_type="CRITICAL_0DAY_CORRELATED",
+        target_domain="auth.example.com",
+        severity="CRITICAL",
+        summary="Fused KEV+EPSS Threat on auth.example.com: CVE-2024-21887",
+        action_required="Emergency vendor remediation mandated.",
+        details={"cve_id": "CVE-2024-21887", "epss_score": 0.974},
+    )
+
+    payload = sentinel.format_matrix_payload(alert)
+    assert payload["msgtype"] == "m.text"
+    assert payload["format"] == "org.matrix.custom.html"
+    assert "auth.example.com" in payload["body"]
+    assert "<strong>" in payload["formatted_body"]
+
+
+def test_multi_channel_bridge_dispatch_discord_telegram_matrix(tmp_path):
+    db_path = tmp_path / "bridge_bb.db"
+    bb = Blackboard(db_path=db_path)
+
+    sentinel = PrivateAlertSentinel(
+        blackboard=bb,
+        discord_webhook_url="https://discord.com/api/webhooks/111/222",
+        telegram_bot_token="123456:ABC-DEF",
+        telegram_chat_id="-100987654",
+        matrix_homeserver_url="https://matrix.example.org",
+        matrix_room_id="!secops:example.org",
+        matrix_access_token="syt_secret_token",
+        enable_desktop_notifications=False,
+    )
+
+    alert = PrivateDefensiveAlert(
+        alert_id="alert-bridge-all",
+        event_type="CISA_KEV_MATCH_DETECTED",
+        target_domain="edge.example.com",
+        severity="CRITICAL",
+        summary="CISA KEV Match on edge.example.com",
+        action_required="Isolate appliance",
+        details={"cve_id": "CVE-2026-104935"},
+    )
+
+    mock_resp = MagicMock()
+    mock_resp.status = 200
+    mock_resp.__enter__.return_value = mock_resp
+
+    with patch("urllib.request.urlopen", return_value=mock_resp) as mock_urlopen:
+        res = sentinel.dispatch_alert(alert)
+        assert res["dispatched"] is True
+        assert res["discord_sent"] is True
+        assert res["telegram_sent"] is True
+        assert res["matrix_sent"] is True
+        assert mock_urlopen.call_count == 3
+        assert COMMERCIAL_OUTREACH_FROZEN is True
+

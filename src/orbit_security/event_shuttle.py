@@ -239,7 +239,12 @@ class EventShuttleSender:
 class EventShuttleReceiver:
     """Receiver ingesting shuttled events into local blackboard with deduplication."""
 
-    def __init__(self, blackboard: Any = None, secret: Optional[str] = None):
+    def __init__(
+        self,
+        blackboard: Any = None,
+        secret: Optional[str] = None,
+        attack_graph: Any = None,
+    ):
         if blackboard is None:
             from orbit_security.blackboard import get_blackboard
             self.bb = get_blackboard()
@@ -247,6 +252,7 @@ class EventShuttleReceiver:
             self.bb = blackboard
 
         self.secret = secret or ShuttleAuth.get_secret()
+        self.attack_graph = attack_graph
         self._seen_hashes: OrderedDict[str, float] = OrderedDict()
         self._lock = threading.Lock()
 
@@ -323,6 +329,8 @@ class EventShuttleReceiver:
                     "created_at": ev.get("created_at") or time.time(),
                 })
 
+            constellation_synced = False
+            constellation_nodes = 0
             if to_publish:
                 if hasattr(self.bb, "publish_batch"):
                     self.bb.publish_batch(to_publish)
@@ -336,12 +344,37 @@ class EventShuttleReceiver:
                         )
                 ingested_count = len(to_publish)
 
+                if self.attack_graph is not None:
+                    try:
+                        sync_summary = self.attack_graph.ingest_shuttle_events(
+                            to_publish,
+                            save_disk=True,
+                        )
+                        if sync_summary.get("events_processed", 0) > 0:
+                            constellation_synced = True
+                            constellation_nodes = sync_summary.get("total_nodes", 0)
+                            self.bb.publish(
+                                event_type="CONSTELLATION_SYNC_UPDATED",
+                                payload={
+                                    "origin_node": origin_node,
+                                    "events_processed": sync_summary["events_processed"],
+                                    "total_nodes": constellation_nodes,
+                                    "total_edges": sync_summary.get("total_edges", 0),
+                                },
+                                source="shuttle_constellation_sync",
+                                topic="telemetry",
+                            )
+                    except Exception as ex:
+                        logger.debug(f"Constellation sync skipped: {ex}")
+
         logger.info(f"Ingested {ingested_count} events from node {origin_node} ({skipped_count} skipped)")
         return {
             "ok": True,
             "origin_node": origin_node,
             "ingested_count": ingested_count,
             "skipped_count": skipped_count,
+            "constellation_synced": constellation_synced,
+            "constellation_nodes": constellation_nodes,
         }
 
 
