@@ -72,6 +72,20 @@ jobs:
       - name: Check landing/ -> docs/ parity
         run: python scripts/sync_landing_to_docs.py --check
 
+      - name: AST Code Sentinel & CISA KEV PR Security Gate
+        run: |
+          python src/orbit_security/ast_sentinel.py --check src/orbit_security
+          python - <<'PY'
+          import subprocess, sys
+          sys.path.insert(0, "src")
+          from orbit_security.github_sentinel import GitHubPRAuditor
+          diff_out = subprocess.run(["git", "diff", "HEAD~1..HEAD"], capture_output=True, text=True).stdout
+          res = GitHubPRAuditor().audit_pr_against_cisa_kev(diff_out)
+          print(f"CISA KEV PR Verdict: {res['verdict']}")
+          if not res["passed"]:
+              sys.exit(1)
+          PY
+
   post-assets:
     name: Public Asset Availability
     runs-on: ubuntu-latest

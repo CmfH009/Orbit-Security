@@ -53,7 +53,23 @@ jobs:
 
       - name: "Unit & Security Invariant Verification"
         run: |
-          PYTHONPATH=src pytest tests/test_input_sanitizer.py tests/test_orbit_recon.py -v
+          PYTHONPATH=src pytest tests/test_input_sanitizer.py tests/test_orbit_recon.py tests/test_infra_validation.py tests/test_tier2_roadmap.py tests/test_tier3_roadmap.py -v
+
+      - name: "Refresh Compacted CISA KEV + EPSS Radar Feed & Email/TLS Posture"
+        run: |
+          PYTHONPATH=src python - <<'PY'
+          from orbit_security.tools.compact_radar_feed import build_compact_radar_feed
+          from orbit_security.cloud_sentinels import EmailAuthPolicyAnalyzer, PassiveTlsCipherSentinel
+          feed = build_compact_radar_feed()
+          print(f"Compacted KEV+EPSS radar entries: {len(feed.get('entries', []))}")
+          email_check = EmailAuthPolicyAnalyzer.analyze_email_security_posture(
+              domain="orbit-security.io",
+              spf_record="v=spf1 include:_spf.google.com -all",
+              dmarc_record="v=DMARC1; p=reject; rua=mailto:dmarc@orbit-security.io; pct=100",
+              dkim_selectors={"google": "v=DKIM1; k=rsa; p=" + ("A" * 360)},
+          )
+          print(f"Email Posture Check: {email_check['severity']}")
+          PY
 
       - name: "Autonomous Perimeter Recon & DNS Hygiene Audit"
         run: |
