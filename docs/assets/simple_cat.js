@@ -2261,16 +2261,36 @@
             }
 
             // Target 720p / 1080p @ 30fps: Recommended Twitter/X specs.
-            // Drastically slashes CPU & RAM overhead by 80%+ compared to uncapped 60fps VP9!
-            recStream = await navigator.mediaDevices.getDisplayMedia({
+            // Explicitly set preferCurrentTab & selfBrowserSurface: "include" so Chrome displays the "Chrome Tab"
+            // selector with the current tab pre-selected and visible, plus tab-switching controls.
+            const captureOptions = {
                 video: {
                     displaySurface: "browser",
                     width: { ideal: 1280, max: 1920 },
                     height: { ideal: 720, max: 1080 },
                     frameRate: { ideal: 30, max: 30 }
                 },
-                audio: true
-            });
+                audio: true,
+                preferCurrentTab: true,
+                selfBrowserSurface: "include",
+                surfaceSwitching: "include",
+                systemAudio: "include"
+            };
+
+            try {
+                recStream = await navigator.mediaDevices.getDisplayMedia(captureOptions);
+            } catch (captureErr) {
+                // If strict parameters fail on older browser builds, fallback to resilient permissive capture
+                if (captureErr.name === 'TypeError' || captureErr.name === 'OverconstrainedError') {
+                    recStream = await navigator.mediaDevices.getDisplayMedia({
+                        video: true,
+                        audio: true,
+                        selfBrowserSurface: "include"
+                    });
+                } else {
+                    throw captureErr;
+                }
+            }
 
             recordedChunks = [];
 

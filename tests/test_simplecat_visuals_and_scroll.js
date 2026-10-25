@@ -220,6 +220,13 @@ test('SimpleCat public API exports startTour, startTreats, petStation, and getSp
     assert(docsCatJs.includes('getSpaceStationSVG: getSpaceStationSVG'), 'Missing getSpaceStationSVG export');
 });
 
+// 7h. SCREEN RECORDER FOR X TABS & SURFACE CONSTRAINTS
+test('Screen recorder (startScreenRecording) includes preferCurrentTab and selfBrowserSurface: include for Chrome tabs', () => {
+    assert(docsCatJs.includes('preferCurrentTab: true'), 'Missing preferCurrentTab in getDisplayMedia');
+    assert(docsCatJs.includes('selfBrowserSurface: "include"'), 'Missing selfBrowserSurface in getDisplayMedia');
+    assert(docsCatJs.includes('surfaceSwitching: "include"'), 'Missing surfaceSwitching in getDisplayMedia');
+});
+
 // 8. STRICT 100% BYTE-FOR-BYTE SHA-256 PARITY BETWEEN DOCS/ AND LANDING/
 test('docs/index.html and landing/index.html have 100% SHA-256 parity', () => {
     const hDocs = sha256(docsIndexPath);
