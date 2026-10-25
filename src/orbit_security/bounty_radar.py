@@ -589,6 +589,35 @@ class BountyScopeIngester:
     def list_programs(self) -> List[BountyProgram]:
         return list(self.programs.values())
 
+    def export_public_statuspage_snapshot(self) -> Dict[str, Any]:
+        """Exports a public Bug Bounty & Perimeter Sentinel statuspage telemetry snapshot (Project #19)."""
+        from orbit_security.private_alerting import COMMERCIAL_OUTREACH_FROZEN
+
+        progs = self.list_programs()
+        active_progs = [p for p in progs if getattr(p, "state", "active") == "active"]
+        total_wildcards = sum(len(p.in_scope) for p in active_progs)
+
+        return {
+            "status": "OPERATIONAL",
+            "safe_harbor_enforced": True,
+            "commercial_outreach_frozen": bool(COMMERCIAL_OUTREACH_FROZEN),
+            "total_programs": len(active_progs),
+            "total_in_scope_roots": total_wildcards,
+            "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "programs": [
+                {
+                    "program_id": p.program_id,
+                    "name": p.name,
+                    "platform": p.platform,
+                    "in_scope_count": len(p.in_scope),
+                    "bounty_tier": p.bounty_tier,
+                    "max_bounty": p.max_bounty,
+                    "state": p.state,
+                }
+                for p in active_progs[:15]
+            ],
+        }
+
 
 class BountyTakeoverSweeper:
     """Expands wildcard scopes and tests targets for dangling SaaS CNAMEs and mail-spoofing vectors."""

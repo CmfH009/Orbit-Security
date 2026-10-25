@@ -203,6 +203,87 @@ class ThreatRadarSwarm:
         }
 
 
+class LogAnomalyDetector:
+    """Local Vectorized / GPU-Ready Log Analysis & Anomaly Detection Engine (Project #20)."""
+
+    SCANNER_UA_TOKENS = ("sqlmap", "nikto", "nuclei", "nmap", "masscan", "gobuster", "dirbuster", "zgrab")
+
+    def __init__(self, blackboard: Any = None):
+        self.blackboard = blackboard
+
+    def analyze_access_logs(
+        self,
+        log_entries: List[Dict[str, Any]],
+        z_threshold: float = 2.0,
+    ) -> Dict[str, Any]:
+        """Performs statistical z-score & credential-stuffing burst detection across access logs."""
+        import math
+
+        if not log_entries:
+            return {"total_logs": 0, "anomalous_ip_count": 0, "anomalies": []}
+
+        ip_stats: Dict[str, Dict[str, Any]] = {}
+        for entry in log_entries:
+            ip = str(entry.get("ip", "0.0.0.0") or "0.0.0.0").strip()
+            status = int(entry.get("status", 200) or 200)
+            ua = str(entry.get("ua", "") or "").lower()
+            rec = ip_stats.setdefault(
+                ip,
+                {"count": 0, "auth_failures": 0, "scanner_ua_hits": 0, "paths": set()},
+            )
+            rec["count"] += 1
+            if status in (401, 403, 429):
+                rec["auth_failures"] += 1
+            if any(tok in ua for tok in self.SCANNER_UA_TOKENS):
+                rec["scanner_ua_hits"] += 1
+            rec["paths"].add(str(entry.get("path", "/")))
+
+        counts = [v["count"] for v in ip_stats.values()]
+        mean_cnt = sum(counts) / len(counts)
+        variance = sum((c - mean_cnt) ** 2 for c in counts) / max(1, len(counts))
+        std_cnt = math.sqrt(variance) if variance > 0 else 1.0
+
+        anomalies: List[Dict[str, Any]] = []
+        for ip, st in ip_stats.items():
+            z_score = (st["count"] - mean_cnt) / std_cnt if std_cnt > 0 else 0.0
+            reasons: List[str] = []
+            if z_score >= z_threshold:
+                reasons.append(f"z_score_burst({z_score:.2f})")
+            if st["auth_failures"] >= 10:
+                reasons.append(f"credential_stuffing_401_403({st['auth_failures']})")
+            if st["scanner_ua_hits"] > 0:
+                reasons.append(f"scanner_ua_signature({st['scanner_ua_hits']})")
+
+            if reasons:
+                anom = {
+                    "ip": ip,
+                    "request_count": st["count"],
+                    "auth_failures": st["auth_failures"],
+                    "scanner_ua_hits": st["scanner_ua_hits"],
+                    "z_score": round(z_score, 3),
+                    "reasons": reasons,
+                    "severity": "CRITICAL" if st["scanner_ua_hits"] > 0 or st["auth_failures"] >= 25 else "HIGH",
+                }
+                anomalies.append(anom)
+                if self.blackboard is not None:
+                    try:
+                        self.blackboard.publish(
+                            event_type="LOG_ANOMALY_DETECTED",
+                            payload=anom,
+                            source="log_anomaly_detector",
+                            topic=TOPIC_THREAT_INTEL,
+                        )
+                    except Exception:
+                        pass
+
+        return {
+            "total_logs": len(log_entries),
+            "unique_ips": len(ip_stats),
+            "anomalous_ip_count": len(anomalies),
+            "anomalies": anomalies,
+        }
+
+
 def main():
     swarm = ThreatRadarSwarm()
     sample_alert = {

@@ -315,6 +315,62 @@ class BountyActiveProber:
         except Exception:
             pass
 
+    def extract_dom_error_signatures(self, domain: str, html_body: str) -> Dict[str, Any]:
+        """Headless Browser-Free DOM Error & Hydration Leak Signature Extractor (Project #16).
+
+        Operates strictly on raw HTTP/DOM strings in pure Python without spawning any browser process.
+        """
+        import re as _re
+
+        clean_domain = (domain or "").strip().lower()
+        body = html_body or ""
+        signatures: List[Dict[str, Any]] = []
+
+        patterns = [
+            (
+                "stack_trace_leak",
+                "HIGH",
+                _re.compile(r"(Traceback \(most recent call last\)|at [A-Za-z0-9_$.]+\s*\([^)]+:\d+:\d+\)|Whoops,\s*looks like something went wrong|Exception Value:)", _re.IGNORECASE),
+                "Application runtime stack trace exposed in HTTP response DOM.",
+            ),
+            (
+                "sql_database_error",
+                "CRITICAL",
+                _re.compile(r"(SQL syntax.*MySQL|psycopg2\.errors\.|sqlalchemy\.exc\.|ORA-\d{5}|SQLite3::SQLException|Unclosed quotation mark after the character string)", _re.IGNORECASE),
+                "Raw SQL / database driver error leaked in DOM.",
+            ),
+            (
+                "sourcemap_exposure",
+                "MEDIUM",
+                _re.compile(r"sourceMappingURL=([^\s\"'<>]+\.map)", _re.IGNORECASE),
+                "Production JavaScript/CSS sourceMap URL exposed.",
+            ),
+            (
+                "ssr_hydration_leak",
+                "HIGH",
+                _re.compile(r"(__NEXT_DATA__|window\.__NUXT__|__APOLLO_STATE__).*(secret|private|api_key|sk_live_|password|token)", _re.IGNORECASE | _re.DOTALL),
+                "Sensitive secret or private runtime config leaked in SSR hydration payload.",
+            ),
+        ]
+
+        for category, sev, pat, desc in patterns:
+            m = pat.search(body)
+            if m:
+                signatures.append({
+                    "category": category,
+                    "severity": sev,
+                    "matched_snippet": m.group(0)[:160],
+                    "description": desc,
+                })
+
+        return {
+            "domain": clean_domain,
+            "browser_spawned": False,
+            "vulnerable": len(signatures) > 0,
+            "signature_count": len(signatures),
+            "signatures": signatures,
+        }
+
 
 class BountyRollingWorker:
     """Autonomous rolling round-robin background worker for continuous bounty scanning."""

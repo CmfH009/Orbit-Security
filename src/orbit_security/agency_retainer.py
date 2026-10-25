@@ -741,3 +741,57 @@ class AgencyPortalRenderer:
                     f.write(html_content)
 
         return file_path, landing_path
+
+    @staticmethod
+    def provision_all_enrolled_portals(
+        manager: AgencyRetainerManager,
+        docs_dir: Optional[Path] = None,
+        landing_dir: Optional[Path] = None,
+    ) -> Dict[str, Any]:
+        """Batch provisions co-branded HTML portals and partner directory index for all enrolled agencies (Project #14)."""
+        out_docs = Path(docs_dir or DEFAULT_PORTALS_OUTPUT_DIR)
+        out_landing = Path(landing_dir or DEFAULT_LANDING_PORTALS_DIR)
+        out_docs.mkdir(parents=True, exist_ok=True)
+        out_landing.mkdir(parents=True, exist_ok=True)
+
+        agencies = manager.list_agencies()
+        provisioned: List[str] = []
+        directory_cards: List[str] = []
+
+        for agency in agencies:
+            AgencyPortalRenderer.save_portal(agency, output_dir=out_docs, landing_dir=out_landing)
+            provisioned.append(agency.agency_id)
+            dom_count = len(agency.client_domains)
+            avg_score = int(sum(d.last_score for d in agency.client_domains) / dom_count) if dom_count else 100
+            directory_cards.append(
+                f'<a href="{html.escape(agency.agency_id)}.html" class="block p-5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 transition">'
+                f'<div class="flex items-center justify-between mb-2">'
+                f'<span class="font-bold text-white text-base">{html.escape(agency.agency_name)}</span>'
+                f'<span class="px-2 py-0.5 rounded text-xs font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">{avg_score}/100</span>'
+                f'</div>'
+                f'<p class="text-xs text-slate-400 mb-3">{html.escape(agency.agency_tagline)}</p>'
+                f'<div class="text-[11px] font-mono text-cyan-400">{dom_count} Enrolled Domains &bull; {html.escape(agency.tier.value)} Tier &rarr;</div>'
+                f'</a>'
+            )
+
+        index_html = (
+            "<!DOCTYPE html>\n<html lang=\"en\" class=\"dark\">\n<head>\n"
+            "<meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+            "<title>Orbit Security | Enrolled Agency White-Label Portals</title>\n"
+            "<script src=\"https://cdn.tailwindcss.com\"></script>\n"
+            "</head>\n<body class=\"bg-[#0b0f17] text-slate-200 min-h-screen p-8 font-sans\">\n"
+            "<div class=\"max-w-5xl mx-auto space-y-6\">\n"
+            "<h1 class=\"text-2xl font-extrabold text-white\">Enrolled Agency Partner Portals</h1>\n"
+            "<div class=\"grid grid-cols-1 md:grid-cols-2 gap-4\">\n"
+            + "\n".join(directory_cards)
+            + "\n</div>\n</div>\n</body>\n</html>\n"
+        )
+        (out_docs / "index.html").write_text(index_html, encoding="utf-8")
+        (out_landing / "index.html").write_text(index_html, encoding="utf-8")
+
+        return {
+            "provisioned_count": len(provisioned),
+            "agency_ids": provisioned,
+            "docs_dir": str(out_docs),
+            "landing_dir": str(out_landing),
+        }

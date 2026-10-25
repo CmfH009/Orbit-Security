@@ -430,6 +430,42 @@ class Blackboard:
             "size_bytes": self.db_path.stat().st_size if self.db_path.exists() else 0
         }
 
+    def create_litestream_snapshot(self, snapshot_dir: Optional[Path] = None) -> Dict[str, Any]:
+        """Performs a WAL checkpoint and writes an atomic SQLite online backup + SHA-256 manifest (Project #18)."""
+        import hashlib
+
+        snap_root = Path(snapshot_dir or (self.db_path.parent / "snapshots"))
+        snap_root.mkdir(parents=True, exist_ok=True)
+        chk = self.checkpoint("TRUNCATE")
+
+        ts_slug = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        snap_file = snap_root / f"{self.db_path.stem}_snapshot_{ts_slug}.db"
+
+        with self._connection() as src_conn:
+            dst_conn = sqlite3.connect(str(snap_file))
+            try:
+                src_conn.backup(dst_conn)
+            finally:
+                dst_conn.close()
+
+        raw_bytes = snap_file.read_bytes()
+        sha256_hex = hashlib.sha256(raw_bytes).hexdigest()
+        stats = self.get_stats()
+
+        manifest = {
+            "ok": True,
+            "source_db": str(self.db_path),
+            "snapshot_path": str(snap_file),
+            "size_bytes": len(raw_bytes),
+            "sha256": sha256_hex,
+            "total_events": stats["total_events"],
+            "checkpoint": chk,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        manifest_file = snap_root / f"{snap_file.stem}.manifest.json"
+        manifest_file.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        return manifest
+
 
 # Singleton accessor
 _GLOBAL_BLACKBOARD: Optional[Blackboard] = None

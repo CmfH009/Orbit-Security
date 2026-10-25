@@ -184,6 +184,159 @@ class CloudBucketTakeoverSentinel:
 
         return None
 
+    @classmethod
+    def sweep_cloud_fleet(
+        cls,
+        targets: List[Dict[str, Any]],
+        blackboard: Any = None,
+    ) -> Dict[str, Any]:
+        """Autonomous Dangling Cloud Resource Sweeper across a multi-domain fleet (Project #11)."""
+        findings: List[Dict[str, Any]] = []
+        for item in targets or []:
+            domain = str(item.get("domain", "") or "").strip()
+            if not domain:
+                continue
+            cname_target = item.get("cname_target")
+            mock_body = item.get("mock_body")
+            mock_status = item.get("mock_status")
+            res = cls.audit_target(
+                target_domain=domain,
+                cname_target=cname_target,
+                mock_body=mock_body,
+                mock_status=mock_status,
+            )
+            if res and res.get("vulnerable"):
+                findings.append(res)
+                if blackboard is not None:
+                    try:
+                        blackboard.publish(
+                            event_type="DANGLING_CLOUD_RESOURCE_DETECTED",
+                            payload={
+                                "domain": domain,
+                                "provider": res.get("provider"),
+                                "cname_target": cname_target,
+                                "flaw_type": res.get("flaw_type"),
+                                "severity": str(getattr(res.get("severity"), "value", res.get("severity"))),
+                                "evidence": res.get("evidence"),
+                            },
+                            source="cloud_resource_sweeper",
+                            topic="perimeter",
+                        )
+                    except Exception as exc:
+                        logger.debug(f"Blackboard publish error in sweep_cloud_fleet: {exc}")
+
+        return {
+            "total_swept": len(targets or []),
+            "vulnerable_count": len(findings),
+            "findings": findings,
+        }
+
+
+class PassiveTlsCipherSentinel:
+    """Passive TLS / SSL Cipher Suite & Expiry Sentinel (Project #15)."""
+
+    DEPRECATED_PROTOCOLS = {"SSLv2", "SSLv3", "TLSv1", "TLSv1.0", "TLSv1.1"}
+    WEAK_CIPHER_TOKENS = ("RC4", "3DES", "DES", "NULL", "EXPORT", "MD5", "ANON")
+
+    @classmethod
+    def _hostname_matches_san(cls, domain: str, san_domains: List[str]) -> bool:
+        clean_dom = (domain or "").strip().lower()
+        for san in san_domains or []:
+            s = san.strip().lower()
+            if s == clean_dom:
+                return True
+            if s.startswith("*."):
+                suffix = s[2:]
+                if clean_dom.endswith(f".{suffix}") and clean_dom.count(".") == suffix.count(".") + 1:
+                    return True
+        return False
+
+    @classmethod
+    def evaluate_tls_posture(
+        cls,
+        domain: str,
+        tls_version: str = "TLSv1.3",
+        cipher_suite: str = "TLS_AES_256_GCM_SHA384",
+        days_remaining: Optional[int] = 90,
+        san_domains: Optional[List[str]] = None,
+        blackboard: Any = None,
+    ) -> Dict[str, Any]:
+        """Evaluates a host's TLS version, negotiated cipher suite, expiry window, and SAN coverage."""
+        clean_domain = (domain or "").strip().lower()
+        issues: List[Dict[str, Any]] = []
+
+        proto = (tls_version or "").strip()
+        if proto in cls.DEPRECATED_PROTOCOLS:
+            issues.append({
+                "code": "DEPRECATED_TLS_PROTOCOL",
+                "severity": "HIGH",
+                "detail": f"Host negotiated deprecated protocol '{proto}'. Enforce TLSv1.2 minimum and prefer TLSv1.3.",
+            })
+
+        cipher_up = (cipher_suite or "").upper()
+        if any(tok in cipher_up for tok in cls.WEAK_CIPHER_TOKENS):
+            issues.append({
+                "code": "WEAK_CIPHER_SUITE",
+                "severity": "HIGH",
+                "detail": f"Weak cipher suite '{cipher_suite}' negotiated. Disable legacy stream/block ciphers and require ECDHE + AEAD (AES-GCM / CHACHA20-POLY1305).",
+            })
+
+        if days_remaining is not None:
+            if days_remaining < 0:
+                issues.append({
+                    "code": "CERTIFICATE_EXPIRED",
+                    "severity": "CRITICAL",
+                    "detail": f"TLS certificate expired {abs(days_remaining)} day(s) ago.",
+                })
+            elif days_remaining <= 14:
+                issues.append({
+                    "code": "CERTIFICATE_EXPIRING_CRITICAL",
+                    "severity": "HIGH",
+                    "detail": f"TLS certificate expires in {days_remaining} day(s) (<= 14d threshold).",
+                })
+            elif days_remaining <= 30:
+                issues.append({
+                    "code": "CERTIFICATE_EXPIRING_SOON",
+                    "severity": "MEDIUM",
+                    "detail": f"TLS certificate expires in {days_remaining} day(s) (<= 30d threshold).",
+                })
+
+        if san_domains is not None and not cls._hostname_matches_san(clean_domain, san_domains):
+            issues.append({
+                "code": "SAN_HOSTNAME_MISMATCH",
+                "severity": "HIGH",
+                "detail": f"Domain '{clean_domain}' is not covered by certificate SANs: {san_domains}.",
+            })
+
+        severities = {i["severity"] for i in issues}
+        overall_sev = (
+            "CRITICAL" if "CRITICAL" in severities
+            else ("HIGH" if "HIGH" in severities else ("MEDIUM" if "MEDIUM" in severities else "SAFE"))
+        )
+
+        result = {
+            "domain": clean_domain,
+            "vulnerable": len(issues) > 0,
+            "severity": overall_sev,
+            "tls_version": proto,
+            "cipher_suite": cipher_suite,
+            "days_remaining": days_remaining,
+            "issues": issues,
+        }
+
+        if issues and blackboard is not None:
+            try:
+                blackboard.publish(
+                    event_type="TLS_POSTURE_ANOMALY",
+                    payload=result,
+                    source="passive_tls_sentinel",
+                    topic="perimeter",
+                )
+            except Exception as exc:
+                logger.debug(f"Blackboard publish error in evaluate_tls_posture: {exc}")
+
+        return result
+
 
 class GraphQLIntrospectionSentinel:
     """Audits targets for publicly accessible GraphQL schema introspection endpoints."""

@@ -1,0 +1,45 @@
+# ============================================================================
+# Project ORBIT — Litestream Continuous SQLite WAL Replication (Project #18)
+# ============================================================================
+# Continuously replicates the autonomous sentinel SQLite WAL databases
+# (blackboard.db and orbit_events.db) to S3-compatible object storage
+# (Oracle Object Storage / Cloudflare R2) and local rolling snapshots.
+
+addr: "127.0.0.1:9091"
+
+dbs:
+  - path: /opt/orbit-security/data/blackboard.db
+    meta-path: /opt/orbit-security/data/blackboard.db-litestream
+    monitor-interval: 1s
+    checkpoint-interval: 1m
+    min-checkpoint-page-count: 1000
+    max-checkpoint-page-count: 10000
+    replicas:
+      - type: file
+        path: /var/backups/orbit-litestream/blackboard
+        retention: 168h
+        snapshot-interval: 6h
+      - type: s3
+        bucket: ${ORBIT_LITESTREAM_BUCKET}
+        path: replicas/blackboard.db
+        endpoint: ${ORBIT_LITESTREAM_ENDPOINT}
+        region: ${ORBIT_LITESTREAM_REGION}
+        sync-interval: 10s
+        retention: 720h
+
+  - path: /opt/orbit-security/data/orbit_events.db
+    meta-path: /opt/orbit-security/data/orbit_events.db-litestream
+    monitor-interval: 5s
+    checkpoint-interval: 5m
+    replicas:
+      - type: file
+        path: /var/backups/orbit-litestream/orbit_events
+        retention: 168h
+        snapshot-interval: 12h
+      - type: s3
+        bucket: ${ORBIT_LITESTREAM_BUCKET}
+        path: replicas/orbit_events.db
+        endpoint: ${ORBIT_LITESTREAM_ENDPOINT}
+        region: ${ORBIT_LITESTREAM_REGION}
+        sync-interval: 30s
+        retention: 720h

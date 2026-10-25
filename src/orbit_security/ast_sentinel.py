@@ -204,6 +204,114 @@ class ASTCodeSentinel:
             pass
         return payload
 
+    def build_security_vulnerability_matrix(self, dir_path: Path, max_files: int = 200) -> Dict[str, Any]:
+        """Builds a GraphRAG-compatible AST Security Vulnerability Matrix across a directory (Project #13)."""
+        import re as _re
+
+        dir_p = Path(dir_path)
+        py_files = [dir_p] if dir_p.is_file() else list(dir_p.rglob("*.py"))[:max_files]
+        nodes: List[Dict[str, Any]] = []
+        edges: List[Dict[str, Any]] = []
+        findings: List[Dict[str, Any]] = []
+        secret_var_re = _re.compile(r"(secret|api_key|token|password|aws_secret)", _re.IGNORECASE)
+
+        for f in py_files:
+            if any(part.startswith(".") or part in ("__pycache__", "venv", "node_modules") for part in f.parts):
+                continue
+            try:
+                src = f.read_text(encoding="utf-8")
+                tree = ast.parse(src, filename=str(f))
+            except Exception:
+                continue
+
+            file_node_id = f"file:{f.name}"
+            nodes.append({"id": file_node_id, "type": "file", "label": f.name, "path": str(f)})
+
+            for node in ast.walk(tree):
+                # 1. Dangerous Call Sinks: eval(), exec(), subprocess(..., shell=True), pickle.loads()
+                if isinstance(node, ast.Call):
+                    lineno = getattr(node, "lineno", 0)
+                    if isinstance(node.func, ast.Name) and node.func.id in ("eval", "exec"):
+                        vuln_id = f"vuln:{f.name}:{lineno}:{node.func.id}"
+                        finding = {
+                            "id": vuln_id,
+                            "file": str(f),
+                            "lineno": lineno,
+                            "sink_type": "dangerous_eval_exec",
+                            "symbol": node.func.id,
+                            "severity": "CRITICAL",
+                            "cwe": "CWE-95",
+                        }
+                        findings.append(finding)
+                        nodes.append({"id": vuln_id, "type": "vulnerability", "label": f"{node.func.id}() L{lineno}", "severity": "CRITICAL"})
+                        edges.append({"source": file_node_id, "target": vuln_id, "relation": "CONTAINS_SINK"})
+
+                    elif isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
+                        mod_name = node.func.value.id
+                        attr_name = node.func.attr
+                        if mod_name == "subprocess" and attr_name in ("run", "Popen", "call", "check_output"):
+                            has_shell_true = any(
+                                kw.arg == "shell" and isinstance(kw.value, ast.Constant) and kw.value.value is True
+                                for kw in node.keywords
+                            )
+                            if has_shell_true:
+                                vuln_id = f"vuln:{f.name}:{lineno}:subprocess_shell"
+                                finding = {
+                                    "id": vuln_id,
+                                    "file": str(f),
+                                    "lineno": lineno,
+                                    "sink_type": "subprocess_shell_true",
+                                    "symbol": f"subprocess.{attr_name}(shell=True)",
+                                    "severity": "HIGH",
+                                    "cwe": "CWE-78",
+                                }
+                                findings.append(finding)
+                                nodes.append({"id": vuln_id, "type": "vulnerability", "label": f"shell=True L{lineno}", "severity": "HIGH"})
+                                edges.append({"source": file_node_id, "target": vuln_id, "relation": "CONTAINS_SINK"})
+
+                        elif mod_name in ("pickle", "marshal", "yaml") and attr_name in ("loads", "load"):
+                            vuln_id = f"vuln:{f.name}:{lineno}:{mod_name}_{attr_name}"
+                            finding = {
+                                "id": vuln_id,
+                                "file": str(f),
+                                "lineno": lineno,
+                                "sink_type": "unsafe_deserialization",
+                                "symbol": f"{mod_name}.{attr_name}",
+                                "severity": "CRITICAL",
+                                "cwe": "CWE-502",
+                            }
+                            findings.append(finding)
+                            nodes.append({"id": vuln_id, "type": "vulnerability", "label": f"{mod_name}.{attr_name} L{lineno}", "severity": "CRITICAL"})
+                            edges.append({"source": file_node_id, "target": vuln_id, "relation": "CONTAINS_SINK"})
+
+                # 2. Hardcoded Secret Assignments
+                elif isinstance(node, ast.Assign):
+                    lineno = getattr(node, "lineno", 0)
+                    if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str) and len(node.value.value) >= 12:
+                        for target in node.targets:
+                            if isinstance(target, ast.Name) and secret_var_re.search(target.id):
+                                vuln_id = f"vuln:{f.name}:{lineno}:hardcoded_secret"
+                                finding = {
+                                    "id": vuln_id,
+                                    "file": str(f),
+                                    "lineno": lineno,
+                                    "sink_type": "hardcoded_secret_literal",
+                                    "symbol": target.id,
+                                    "severity": "HIGH",
+                                    "cwe": "CWE-798",
+                                }
+                                findings.append(finding)
+                                nodes.append({"id": vuln_id, "type": "vulnerability", "label": f"Secret {target.id} L{lineno}", "severity": "HIGH"})
+                                edges.append({"source": file_node_id, "target": vuln_id, "relation": "CONTAINS_SECRET"})
+
+        return {
+            "files_scanned": len(py_files),
+            "total_vulnerabilities": len(findings),
+            "findings": findings,
+            "nodes": nodes,
+            "edges": edges,
+        }
+
 
 def main():
     import argparse

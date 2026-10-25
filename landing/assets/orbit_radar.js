@@ -2210,6 +2210,7 @@
             if (verEl && data.generated_at) verEl.textContent = String(data.generated_at);
 
             filterKevEpssRadar();
+            renderEpssHorizonChart();
             const elapsed = (performance.now() - t0).toFixed(1);
             const latBadge = document.getElementById('kevRadarLatencyBadge');
             if (latBadge) latBadge.textContent = `${elapsed}ms`;
@@ -2671,10 +2672,83 @@
         showArcadeToast('Exported signed Zero-Knowledge Agency Scorecard JSON');
     }
 
+    // ==========================================
+    // 14. Project #12 & #19: EPSS Probability Horizon Visualizer & Public Bug Bounty Radar Statuspage
+    // ==========================================
+
+    function renderEpssHorizonChart() {
+        const container = document.getElementById('epssHorizonChartCanvas');
+        if (!container) return;
+
+        const fallbackVulns = [
+            { cve: 'CVE-2024-21887', vendor: 'Ivanti', product: 'Connect Secure', epss: 0.9421, percentile: 0.996, is_cisa_kev: true },
+            { cve: 'CVE-2024-3400', vendor: 'Palo Alto', product: 'PAN-OS GlobalProtect', epss: 0.9310, percentile: 0.994, is_cisa_kev: true },
+            { cve: 'CVE-2023-4966', vendor: 'Citrix', product: 'NetScaler ADC', epss: 0.9185, percentile: 0.992, is_cisa_kev: true },
+            { cve: 'CVE-2024-1709', vendor: 'ConnectWise', product: 'ScreenConnect', epss: 0.8940, percentile: 0.989, is_cisa_kev: true },
+            { cve: 'CVE-2024-4577', vendor: 'PHP', product: 'CGI Windows RCE', epss: 0.8650, percentile: 0.985, is_cisa_kev: true },
+            { cve: 'CVE-2024-27198', vendor: 'JetBrains', product: 'TeamCity Auth Bypass', epss: 0.8410, percentile: 0.981, is_cisa_kev: true }
+        ];
+
+        const rawList = (_kevRadarDataset && Array.isArray(_kevRadarDataset.vulnerabilities) && _kevRadarDataset.vulnerabilities.length > 0)
+            ? _kevRadarDataset.vulnerabilities.slice(0, 6)
+            : fallbackVulns;
+
+        container.innerHTML = rawList.map(item => {
+            const epssPct = ((item.epss || 0) * 100).toFixed(1);
+            const percPct = ((item.percentile || 0.95) * 100).toFixed(1);
+            const width = Math.max(8, Math.min(100, Math.round((item.epss || 0.1) * 100)));
+            const barClass = (item.epss || 0) >= 0.50
+                ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-red-500'
+                : 'bg-gradient-to-r from-cyan-500 to-purple-500';
+            return `
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between text-[11px]">
+                        <span class="font-bold text-white">${escapeHtml(item.cve)} <span class="text-slate-400 font-normal">(${escapeHtml(item.vendor)})</span></span>
+                        <span class="text-purple-300 font-bold">${epssPct}% <span class="text-slate-500 text-[10px]">| P${percPct}</span></span>
+                    </div>
+                    <div class="w-full h-2 rounded-full bg-slate-900 overflow-hidden border border-slate-800">
+                        <div class="h-full ${barClass}" style="width: ${width}%"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function initBountyRadarStatuspage() {
+        const grid = document.getElementById('bountyStatuspageGrid');
+        if (!grid) return;
+
+        const sentinels = [
+            { name: 'CT Log Stream Watermark Daemon', scope: 'crt.sh SAN Delta Monitor', status: '99.98% UP', badge: 'ACTIVE' },
+            { name: 'Passive Dangling CNAME Detector', scope: '35 Cloud SaaS Signatures', status: '100% PASSIVE', badge: 'SAFE HARBOR' },
+            { name: 'Public BBP Wildcard Scope Coverage', scope: '27 Programs (Shopify, GitHub, Cloudflare)', status: 'SYNCHRONIZED', badge: 'CASH TIER' },
+            { name: 'Tailscale Event Shuttle (:9090)', scope: 'HMAC-SHA256 Replay Guard', status: 'ENCRYPTED P2P', badge: 'VERIFIED' },
+            { name: 'Commercial Outreach Safety Gate', scope: 'COMMERCIAL_OUTREACH_FROZEN = True', status: 'STRICTLY FROZEN', badge: 'LOCKED' }
+        ];
+
+        grid.innerHTML = sentinels.map(s => `
+            <div class="flex items-center justify-between py-1.5 px-2.5 rounded bg-slate-900/90 border border-slate-800">
+                <div>
+                    <div class="font-bold text-white text-[11px]">${escapeHtml(s.name)}</div>
+                    <div class="text-[10px] text-slate-400">${escapeHtml(s.scope)}</div>
+                </div>
+                <span class="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-bold text-[10px]">${escapeHtml(s.badge)}</span>
+            </div>
+        `).join('');
+    }
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initKevEpssRadar);
+        document.addEventListener('DOMContentLoaded', () => {
+            initKevEpssRadar();
+            renderEpssHorizonChart();
+            initBountyRadarStatuspage();
+        });
     } else {
-        setTimeout(initKevEpssRadar, 50);
+        setTimeout(() => {
+            initKevEpssRadar();
+            renderEpssHorizonChart();
+            initBountyRadarStatuspage();
+        }, 50);
     }
 
     // Expose to window
@@ -2694,5 +2768,7 @@
     window.copyTakeoverRemediation = copyTakeoverRemediation;
     window.runZeroKnowledgeBatchScorecard = runZeroKnowledgeBatchScorecard;
     window.exportZeroKnowledgeScorecardJson = exportZeroKnowledgeScorecardJson;
+    window.renderEpssHorizonChart = renderEpssHorizonChart;
+    window.initBountyRadarStatuspage = initBountyRadarStatuspage;
 
 })();
