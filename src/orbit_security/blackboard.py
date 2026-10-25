@@ -184,6 +184,55 @@ class Blackboard:
         self.broadcast(event_dict)
         return ev_id
 
+    def publish_batch(
+        self,
+        events: List[Dict[str, Any]],
+        default_source: str = "shuttle",
+        default_topic: str = "telemetry",
+    ) -> List[int]:
+        """Atomically publishes a list of events to the blackboard in a single transaction."""
+        if not events:
+            return []
+        now = time.time()
+        to_insert = []
+        parsed_events = []
+        for e in events:
+            ev_topic = str(e.get("topic") or default_topic).strip()
+            ev_type = str(e.get("event_type") or "EVENT").strip()
+            ev_source = str(e.get("source") or default_source).strip()
+            payload = e.get("payload") or {}
+            payload_json = json.dumps(payload, default=str)
+            created_at = float(e.get("created_at") or now)
+            to_insert.append((ev_topic, ev_type, ev_source, payload_json, created_at))
+            parsed_events.append({
+                "topic": ev_topic,
+                "event_type": ev_type,
+                "source": ev_source,
+                "payload": payload,
+                "created_at": created_at,
+            })
+
+        inserted_ids = []
+        with self._connection() as conn:
+            cur = conn.cursor()
+            for item in to_insert:
+                cur.execute("""
+                    INSERT INTO blackboard_events (topic, event_type, source, payload, created_at, processed)
+                    VALUES (?, ?, ?, ?, ?, 0);
+                """, item)
+                inserted_ids.append(cur.lastrowid)
+            conn.commit()
+
+        for idx, ev_id in enumerate(inserted_ids):
+            event_dict = {
+                "id": ev_id,
+                **parsed_events[idx],
+                "processed": False
+            }
+            self.broadcast(event_dict)
+
+        return inserted_ids
+
     def get_recent(
         self,
         limit: int = 50,

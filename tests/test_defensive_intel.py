@@ -226,3 +226,31 @@ def test_passive_cname_takeover_handles_recon_lowercase_dict():
     assert len(findings) == 1
     assert findings[0].provider == "AWS S3"
     assert findings[0].severity == "CRITICAL"
+
+
+def test_passive_cname_takeover_rejects_subdomain_spoofing():
+    detector = PassiveTakeoverDetector()
+    # Attacker host has "github.io" as a subdomain prefix, not the suffix
+    finding = detector.evaluate_cname(
+        domain="sub.victim.com",
+        cname_target="github.io.attacker-controlled.net",
+        is_nxdomain=True,
+    )
+    assert finding is None
+
+
+def test_passive_cname_takeover_nxdomain_detection(tmp_path):
+    db_path = tmp_path / "nx_bb.db"
+    bb = Blackboard(db_path=db_path)
+    detector = PassiveTakeoverDetector()
+
+    # AWS Elastic Beanstalk is an nxdomain=True provider
+    finding = detector.evaluate_cname(
+        domain="static.example.com",
+        cname_target="orphaned-app.elasticbeanstalk.com",
+        is_nxdomain=True,
+        blackboard=bb,
+    )
+    assert finding is not None
+    assert finding.provider == "AWS Elastic Beanstalk"
+    assert "NXDOMAIN" in finding.fingerprint_matched

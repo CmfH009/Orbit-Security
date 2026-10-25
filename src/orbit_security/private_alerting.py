@@ -93,8 +93,11 @@ class PrivateAlertSentinel:
         return False
 
     def mark_dispatched(self, alert_hash: str):
-        """Records alert hash into deduplication cache."""
-        self._sent_hashes[alert_hash] = time.time()
+        """Records alert hash into deduplication cache and prunes expired hashes."""
+        now = time.time()
+        self._sent_hashes[alert_hash] = now
+        if len(self._sent_hashes) > 1000:
+            self._sent_hashes = {h: ts for h, ts in self._sent_hashes.items() if (now - ts) < self.dedup_ttl}
 
     def format_alert(self, event_type: str, payload: Dict[str, Any]) -> Optional[PrivateDefensiveAlert]:
         """Synthesizes structured alert from defensive Blackboard event."""

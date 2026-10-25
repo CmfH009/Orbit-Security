@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import time
+import urllib.error
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -63,22 +64,36 @@ def test_shuttle_auth_replay_protection():
     assert "Timestamp expired or excessive clock drift" in msg
 
 
-def test_shuttle_auth_boundary_drift_tolerance():
+def test_shuttle_auth_boundary_drift_tolerance(monkeypatch):
     secret = "test-secret-key-12345"
     payload = b'{"hello": "boundary_test"}'
-    now = time.time()
+    fixed_now = 1700000000.0
+    monkeypatch.setattr(time, "time", lambda: fixed_now)
 
-    # 299s drift should be ACCEPTED (inside 300s window)
-    ts_299 = now - 299.0
-    sig_299 = ShuttleAuth.sign_payload(payload, secret, ts_299)
-    valid, msg = ShuttleAuth.verify_signature(payload, sig_299, secret, ts_299, max_drift_seconds=300.0)
+    # 299s past drift should be ACCEPTED (inside 300s window)
+    ts_past_299 = fixed_now - 299.0
+    sig_past_299 = ShuttleAuth.sign_payload(payload, secret, ts_past_299)
+    valid, msg = ShuttleAuth.verify_signature(payload, sig_past_299, secret, ts_past_299, max_drift_seconds=300.0)
     assert valid is True
     assert msg == "Valid"
 
-    # 301s drift should be REJECTED (outside 300s window)
-    ts_301 = now - 301.0
-    sig_301 = ShuttleAuth.sign_payload(payload, secret, ts_301)
-    valid, msg = ShuttleAuth.verify_signature(payload, sig_301, secret, ts_301, max_drift_seconds=300.0)
+    # 301s past drift should be REJECTED (outside 300s window)
+    ts_past_301 = fixed_now - 301.0
+    sig_past_301 = ShuttleAuth.sign_payload(payload, secret, ts_past_301)
+    valid, msg = ShuttleAuth.verify_signature(payload, sig_past_301, secret, ts_past_301, max_drift_seconds=300.0)
+    assert valid is False
+    assert "excessive clock drift" in msg
+
+    # 299s future drift should be ACCEPTED (inside 300s window)
+    ts_future_299 = fixed_now + 299.0
+    sig_future_299 = ShuttleAuth.sign_payload(payload, secret, ts_future_299)
+    valid, msg = ShuttleAuth.verify_signature(payload, sig_future_299, secret, ts_future_299, max_drift_seconds=300.0)
+    assert valid is True
+
+    # 301s future drift should be REJECTED (outside 300s window)
+    ts_future_301 = fixed_now + 301.0
+    sig_future_301 = ShuttleAuth.sign_payload(payload, secret, ts_future_301)
+    valid, msg = ShuttleAuth.verify_signature(payload, sig_future_301, secret, ts_future_301, max_drift_seconds=300.0)
     assert valid is False
     assert "excessive clock drift" in msg
 
@@ -247,3 +262,44 @@ def test_shuttle_sender_successful_http_post(tmp_path):
         assert req.headers["X-orbit-node-id"] == "oracle-cloud-arm64"
         assert "X-orbit-signature" in req.headers
         assert "X-orbit-timestamp" in req.headers
+
+
+def test_shuttle_sender_cursor_rollback_on_http_failure(tmp_path):
+    db_path = tmp_path / "sender_fail_bb.db"
+    cursor_file = tmp_path / "cursor_fail.json"
+    bb = Blackboard(db_path=db_path)
+    bb.publish(event_type="FAIL_TEST_EVENT", payload={"k": "v"}, source="test")
+
+    sender = EventShuttleSender(
+        blackboard=bb,
+        cursor_file=cursor_file,
+        target_url="http://127.0.0.1:9090/api/orbit/blackboard/shuttle",
+        secret="secret-123",
+    )
+
+    mock_err = urllib.error.HTTPError(
+        url="http://127.0.0.1:9090",
+        code=500,
+        msg="Internal Server Error",
+        hdrs={},
+        fp=MagicMock(read=lambda: b'{"ok": false, "error": "db lock"}'),
+    )
+
+    with patch("urllib.request.urlopen", side_effect=mock_err):
+        res = sender.send_batch()
+        assert res["ok"] is False
+        assert "HTTP 500" in res["error"]
+        assert sender.load_cursor() == 0  # Watermark must not advance on failure
+
+
+def test_shuttle_receiver_fifo_eviction():
+    receiver = EventShuttleReceiver(secret="secret-123")
+    # Simulate inserting 10,001 items
+    for i in range(10001):
+        receiver._seen_hashes[f"hash_{i}"] = time.time()
+        if len(receiver._seen_hashes) > 10000:
+            receiver._seen_hashes.popitem(last=False)
+
+    assert len(receiver._seen_hashes) == 10000
+    assert "hash_0" not in receiver._seen_hashes  # Oldest evicted FIFO
+    assert "hash_10000" in receiver._seen_hashes

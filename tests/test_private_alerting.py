@@ -157,3 +157,42 @@ def test_blackboard_audit_event_logged(tmp_path):
     assert len(recent) == 1
     assert recent[0]["payload"]["alert_id"] == "test-audit-alert"
     assert recent[0]["payload"]["domain"] == "orphaned.example.com"
+
+
+def test_private_webhook_dispatch_success(tmp_path):
+    db_path = tmp_path / "alert_bb.db"
+    bb = Blackboard(db_path=db_path)
+    webhook_url = "https://hooks.slack.com/services/T00/B00/X00"
+    secret = "wh-secret-key"
+
+    sentinel = PrivateAlertSentinel(
+        blackboard=bb,
+        webhook_url=webhook_url,
+        signing_secret=secret,
+        enable_desktop_notifications=False,
+    )
+
+    alert = PrivateDefensiveAlert(
+        alert_id="alert-wh-1",
+        event_type="CISA_KEV_MATCH_DETECTED",
+        target_domain="gateway.target.corp",
+        severity="CRITICAL",
+        summary="CISA KEV Match",
+        action_required="Emergency patch",
+        details={"cve_id": "CVE-2024-21887"},
+    )
+
+    mock_resp = MagicMock()
+    mock_resp.status = 200
+    mock_resp.__enter__.return_value = mock_resp
+
+    with patch("urllib.request.urlopen", return_value=mock_resp) as mock_urlopen:
+        res = sentinel.dispatch_alert(alert)
+        assert res["dispatched"] is True
+        assert res["webhook_sent"] is True
+
+        mock_urlopen.assert_called_once()
+        req = mock_urlopen.call_args[0][0]
+        assert req.get_full_url() == webhook_url
+        assert "X-orbit-alert-signature" in req.headers or "X-Orbit-Alert-Signature" in req.headers
+        assert "X-orbit-timestamp" in req.headers or "X-Orbit-Timestamp" in req.headers

@@ -13,6 +13,7 @@ import re
 from pathlib import Path
 
 import pytest
+import yaml
 
 INFRA_DIR = Path(__file__).resolve().parent.parent / "infra"
 CLOUD_INIT_FILE = INFRA_DIR / "cloud_init_oracle_free.yaml"
@@ -27,11 +28,16 @@ def test_cloud_init_file_exists():
 def test_cloud_init_content_structure():
     content = CLOUD_INIT_FILE.read_text(encoding="utf-8")
     assert content.startswith("#cloud-config"), "Cloud-Init must start with #cloud-config header"
-    assert "packages:" in content
-    assert "ufw" in content
-    assert "tailscale" in content
-    assert "users:" in content
-    assert "orbit" in content
+
+    data = yaml.safe_load(content)
+    assert isinstance(data, dict), "Cloud-init must parse to a valid YAML dictionary"
+    assert "packages" in data
+    assert "users" in data
+    assert "write_files" in data
+    assert "runcmd" in data
+
+    users = [u["name"] for u in data["users"] if isinstance(u, dict) and "name" in u]
+    assert "orbit" in users
 
 
 def test_zero_ingress_firewall_rules():

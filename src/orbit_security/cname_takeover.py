@@ -58,7 +58,13 @@ class PassiveTakeoverDetector:
 
         for sig in self.signatures:
             # Check if CNAME matches provider pattern (e.g. s3.amazonaws.com, github.io)
-            matches_pattern = any(p.lower() in clean_cname for p in sig.cname_patterns)
+            # using strict exact or dot-prefixed suffix matching to prevent substring spoofing
+            matches_pattern = False
+            for p in sig.cname_patterns:
+                p_clean = p.lower().lstrip(".")
+                if clean_cname == p_clean or clean_cname.endswith(f".{p_clean}"):
+                    matches_pattern = True
+                    break
             if not matches_pattern:
                 continue
 
@@ -91,21 +97,6 @@ class PassiveTakeoverDetector:
                         )
                         self._publish_if_connected(finding, blackboard)
                         return finding
-
-            # Condition 3: If no body is provided but target is an unmistakable unallocated bucket/tenant
-            # (e.g. s3 bucket or unbounce page that is known dangling)
-            if is_nxdomain:
-                finding = TakeoverFinding(
-                    domain=clean_domain,
-                    provider=sig.name,
-                    cname_target=clean_cname,
-                    fingerprint_matched="Dangling CNAME points to unresolvable provider host",
-                    remediation=sig.remediation,
-                    severity="CRITICAL",
-                    timestamp=time.time(),
-                )
-                self._publish_if_connected(finding, blackboard)
-                return finding
 
         return None
 

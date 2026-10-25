@@ -234,6 +234,7 @@ def check_headers_and_exposures(domain: str) -> Dict[str, Any]:
                 try:
                     resp = client.get(url)
                     report["status_code"] = resp.status_code
+                    report["body_snippet"] = resp.text[:4096] if resp.text else ""
                     headers_dict = {k.lower(): v for k, v in resp.headers.items()}
                 except Exception as e:
                     report["error"] = str(e)
@@ -260,6 +261,8 @@ def check_headers_and_exposures(domain: str) -> Dict[str, Any]:
             req = urllib.request.Request(url, headers={"User-Agent": "Orbit-Recon/1.0"})
             with urllib.request.urlopen(req, timeout=6.0) as resp:
                 report["status_code"] = resp.status
+                body_raw = resp.read(4096)
+                report["body_snippet"] = body_raw.decode("utf-8", errors="replace")
                 headers_dict = {k.lower(): v for k, v in resp.headers.items()}
     except Exception as e:
         report["error"] = str(e)
@@ -444,7 +447,7 @@ def run_recon(target: str, json_output: bool = False, remediate: bool = False) -
     takeover_findings = takeover_detector.evaluate_dns_records(
         domain=domain,
         records=dns_res,
-        body_snippet=web_res.get("error") or "",
+        body_snippet=web_res.get("body_snippet") or web_res.get("error") or "",
         is_nxdomain=bool(dns_res.get("cname") and not dns_res.get("a_records")),
     )
 

@@ -142,18 +142,24 @@ class CertificateTransparencyMonitor:
 
         # 3. Live network pull if no cache or fixture
         if records is None:
-            url = CRTSH_BASE_URL.format(domain=clean_domain)
-            req = urllib.request.Request(
-                url,
-                headers={"User-Agent": "OrbitSecurity-CTMonitor/1.0", "Accept": "application/json"},
-            )
-            try:
-                with urllib.request.urlopen(req, timeout=6.0) as resp:
-                    if resp.status == 200:
-                        records = json.loads(resp.read().decode("utf-8"))
-                        self.save_to_cache(clean_domain, records)
-            except Exception as ex:
-                logger.warning(f"Live CT pull failed for {clean_domain}: {ex}; checking fallback")
+            domain_regex = re.compile(r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$")
+            if not domain_regex.match(clean_domain):
+                logger.warning(f"Invalid domain rejected for CT scan: {clean_domain}")
+                records = []
+            else:
+                encoded_domain = urllib.parse.quote(clean_domain)
+                url = f"https://crt.sh/?q=%.{encoded_domain}&output=json"
+                req = urllib.request.Request(
+                    url,
+                    headers={"User-Agent": "OrbitSecurity-CTMonitor/1.0", "Accept": "application/json"},
+                )
+                try:
+                    with urllib.request.urlopen(req, timeout=6.0) as resp:
+                        if resp.status == 200:
+                            records = json.loads(resp.read().decode("utf-8"))
+                            self.save_to_cache(clean_domain, records)
+                except Exception as ex:
+                    logger.warning(f"Live CT pull failed for {clean_domain}: {ex}; checking fallback")
 
         # 4. Fallback if network failed
         if records is None:
@@ -182,7 +188,7 @@ class CertificateTransparencyMonitor:
                         sans.append(clean_item)
 
             entry = CertificateEntry(
-                cert_id=int(r.get("id", 0)),
+                cert_id=int(r.get("id") or 0),
                 common_name=str(r.get("common_name", "")),
                 issuer=str(r.get("issuer_name", "")),
                 logged_at=str(r.get("entry_timestamp", r.get("logged_at", ""))),

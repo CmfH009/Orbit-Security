@@ -14,6 +14,7 @@ Features:
 from __future__ import annotations
 
 import argparse
+from collections import OrderedDict
 import hashlib
 import hmac
 import json
@@ -126,17 +127,17 @@ class EventShuttleSender:
             return 0
 
     def save_cursor(self, last_id: int):
-        """Persists replicated event ID watermark to disk."""
+        """Persists replicated event ID watermark to disk atomically."""
         try:
             self.cursor_file.parent.mkdir(parents=True, exist_ok=True)
-            self.cursor_file.write_text(
-                json.dumps({
-                    "last_synced_id": int(last_id),
-                    "node_id": self.node_id,
-                    "updated_at": time.time(),
-                }, indent=2),
-                encoding="utf-8",
-            )
+            tmp_file = self.cursor_file.with_suffix(".tmp")
+            content = json.dumps({
+                "last_synced_id": int(last_id),
+                "node_id": self.node_id,
+                "updated_at": time.time(),
+            }, indent=2)
+            tmp_file.write_text(content, encoding="utf-8")
+            os.replace(tmp_file, self.cursor_file)
         except Exception as ex:
             logger.warning(f"Failed to persist shuttle cursor: {ex}")
 
@@ -236,7 +237,7 @@ class EventShuttleReceiver:
             self.bb = blackboard
 
         self.secret = secret or ShuttleAuth.get_secret()
-        self._seen_hashes: set[str] = set()
+        self._seen_hashes: OrderedDict[str, float] = OrderedDict()
         self._lock = threading.Lock()
 
     def _event_fingerprint(self, origin_node: str, ev: Dict[str, Any]) -> str:
@@ -276,17 +277,16 @@ class EventShuttleReceiver:
         skipped_count = 0
 
         with self._lock:
+            to_publish = []
             for ev in events:
                 fp = self._event_fingerprint(origin_node, ev)
                 if fp in self._seen_hashes:
                     skipped_count += 1
                     continue
 
-                self._seen_hashes.add(fp)
+                self._seen_hashes[fp] = time.time()
                 if len(self._seen_hashes) > 10000:
-                    # Bound memory usage by discarding oldest
-                    self._seen_hashes.clear()
-                    self._seen_hashes.add(fp)
+                    self._seen_hashes.popitem(last=False)
 
                 ev_type = ev.get("event_type", "SHUTTLE_EVENT")
                 payload = ev.get("payload", {})
@@ -305,14 +305,26 @@ class EventShuttleReceiver:
                 source = f"shuttle:{origin_node}"
                 topic = ev.get("topic", "telemetry")
 
-                # Ingest into local Blackboard WAL and broadcast to Cockpit HUD
-                self.bb.publish(
-                    event_type=ev_type,
-                    payload=payload_enriched,
-                    source=source,
-                    topic=topic,
-                )
-                ingested_count += 1
+                to_publish.append({
+                    "event_type": ev_type,
+                    "payload": payload_enriched,
+                    "source": source,
+                    "topic": topic,
+                    "created_at": ev.get("created_at") or time.time(),
+                })
+
+            if to_publish:
+                if hasattr(self.bb, "publish_batch"):
+                    self.bb.publish_batch(to_publish)
+                else:
+                    for item in to_publish:
+                        self.bb.publish(
+                            event_type=item["event_type"],
+                            payload=item["payload"],
+                            source=item["source"],
+                            topic=item["topic"],
+                        )
+                ingested_count = len(to_publish)
 
         logger.info(f"Ingested {ingested_count} events from node {origin_node} ({skipped_count} skipped)")
         return {
