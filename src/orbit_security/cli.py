@@ -451,6 +451,32 @@ def main():
         help="Preview what would be swept without probing external targets",
     )
 
+    # TUI command (Project #29: Retro 80x24 ASCII TUI Cockpit)
+    tui_parser = subparsers.add_parser(
+        "tui", help="Render 84-column Retro TUI ASCII Cockpit dashboard for SSH/Termux"
+    )
+    tui_parser.add_argument("--width", type=int, default=84, help="Terminal frame width (default: 84)")
+
+    # Radar command (Project #3: Compacted CISA KEV + EPSS Public Intelligence Feed)
+    radar_parser = subparsers.add_parser(
+        "radar", help="Refresh and inspect compacted CISA KEV + EPSS intelligence feed"
+    )
+    radar_parser.add_argument("--limit", type=int, default=15, help="Rows to display (default: 15)")
+    radar_parser.add_argument("--json", action="store_true", help="Output raw compacted JSON")
+
+    # Email-audit command (Project #22: Autonomous SPF/DKIM/DMARC Spoofing Analyzer)
+    email_parser = subparsers.add_parser(
+        "email-audit", help="Audit domain SPF, DMARC, and DKIM spoofing posture"
+    )
+    email_parser.add_argument("domain", help="Target domain to audit")
+    email_parser.add_argument("--spf", default="v=spf1 include:_spf.google.com ~all", help="Optional SPF record override")
+    email_parser.add_argument("--dmarc", default="v=DMARC1; p=quarantine; pct=100", help="Optional DMARC record override")
+
+    # PR-gate command (Project #13 & #24: AST Code Sentinel + CISA KEV PR Security Reviewer)
+    pr_gate_parser = subparsers.add_parser(
+        "pr-gate", help="Run AST Code Sentinel and CISA KEV Pull Request Security Gate"
+    )
+
     args = parser.parse_args()
 
     if args.command == "scan":
@@ -587,6 +613,69 @@ def main():
     elif args.command == "disclose":
         exit_code = asyncio.run(run_disclose(args))
         return exit_code
+    elif args.command == "tui":
+        from orbit_security.blackboard import get_blackboard
+        bb = get_blackboard()
+        print(bb.render_retro_tui_dashboard(width=args.width))
+        return 0
+    elif args.command == "radar":
+        import json as _json
+        from orbit_security.tools.compact_radar_feed import DEFAULT_OUTPUT_FILE, compact_radar_dataset
+        if DEFAULT_OUTPUT_FILE.exists():
+            feed = _json.loads(DEFAULT_OUTPUT_FILE.read_text(encoding="utf-8"))
+        else:
+            from orbit_security.cisa_kev import CisaKevCatalog
+            feed = compact_radar_dataset(cisa_kev_data=CisaKevCatalog().catalog_data or {}, epss_data={})
+        if args.json:
+            print(_json.dumps(feed, indent=2))
+            return 0
+        entries = feed.get("vulnerabilities", [])[: args.limit]
+        table = Table(title=f"Orbit CISA KEV + EPSS Compact Radar ({feed.get('total_tracked', len(entries))} total)", border_style="cyan")
+        table.add_column("CVE ID", style="bold red")
+        table.add_column("Vendor / Product", style="white")
+        table.add_column("EPSS", style="bold yellow")
+        table.add_column("Due Date", style="magenta")
+        for item in entries:
+            table.add_row(
+                str(item.get("cve", "")),
+                f"{item.get('vendor', '')} {item.get('product', '')}".strip(),
+                f"{float(item.get('epss', 0.0)) * 100:.1f}%",
+                str(item.get("due_date", "N/A")),
+            )
+        console.print(table)
+        return 0
+    elif args.command == "email-audit":
+        from orbit_security.cloud_sentinels import EmailAuthPolicyAnalyzer
+        res = EmailAuthPolicyAnalyzer.analyze_email_security_posture(
+            domain=args.domain,
+            spf_record=args.spf,
+            dmarc_record=args.dmarc,
+            dkim_selectors={},
+        )
+        table = Table(title=f"Email Spoofing Posture Audit: {args.domain}", border_style="cyan")
+        table.add_column("Field", style="bold cyan")
+        table.add_column("Value", style="bold white")
+        table.add_row("Spoofable", str(res.get("spoofable")))
+        table.add_row("Severity", str(res.get("severity")))
+        table.add_row("SPF Lookups", str(res.get("spf_lookup_count", 0)))
+        table.add_row("Findings", ", ".join(f["code"] for f in res.get("findings", [])) or "NONE")
+        console.print(table)
+        return 0
+    elif args.command == "pr-gate":
+        import subprocess
+        from orbit_security.ast_sentinel import ASTCodeSentinel
+        from orbit_security.github_sentinel import GitHubPRAuditor
+        src_dir = Path(__file__).resolve().parent
+        sentinel = ASTCodeSentinel(workspace_root=src_dir.parent.parent)
+        ast_res = sentinel.inspect_directory(src_dir)
+        diff_out = subprocess.run(["git", "-C", str(src_dir.parent.parent), "diff", "HEAD~1..HEAD"], capture_output=True, text=True).stdout
+        kev_res = GitHubPRAuditor().audit_pr_against_cisa_kev(diff_out)
+        console.print(
+            f"[bold green]✔ AST Sentinel:[/bold green] {ast_res.get('files_scanned', 0)} files scanned, "
+            f"{ast_res.get('total_missing_imports', 0)} issues | "
+            f"[bold cyan]CISA KEV PR Gate:[/bold cyan] {kev_res.get('verdict')}"
+        )
+        return 0 if (ast_res.get("ok") and kev_res.get("passed")) else 1
 
 
 def main_recon():

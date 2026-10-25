@@ -58,10 +58,11 @@ jobs:
       - name: "Refresh Compacted CISA KEV + EPSS Radar Feed & Email/TLS Posture"
         run: |
           PYTHONPATH=src python - <<'PY'
-          from orbit_security.tools.compact_radar_feed import build_compact_radar_feed
-          from orbit_security.cloud_sentinels import EmailAuthPolicyAnalyzer, PassiveTlsCipherSentinel
-          feed = build_compact_radar_feed()
-          print(f"Compacted KEV+EPSS radar entries: {len(feed.get('entries', []))}")
+          from orbit_security.cisa_kev import CisaKevCatalog
+          from orbit_security.tools.compact_radar_feed import compact_radar_dataset
+          from orbit_security.cloud_sentinels import EmailAuthPolicyAnalyzer
+          feed = compact_radar_dataset(cisa_kev_data=CisaKevCatalog().catalog_data or {}, epss_data={})
+          print(f"Compacted KEV+EPSS radar entries: {len(feed.get('vulnerabilities', []))}")
           email_check = EmailAuthPolicyAnalyzer.analyze_email_security_posture(
               domain="orbit-security.io",
               spf_record="v=spf1 include:_spf.google.com -all",
