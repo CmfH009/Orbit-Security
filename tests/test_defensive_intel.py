@@ -360,3 +360,153 @@ def test_bounty_rolling_daemon_ct_sweep_integration(tmp_path):
     assert ct_res["domains_polled"] >= 1
     assert "api.example.com" in ct_res["new_subdomains"]
 
+
+# ==============================================================================
+# 5. Wave B (Projects #4, #7, #9): White-Label Fleet PDF, Takeover Playground,
+#    and Zero-Knowledge Agency Scorecard Tests
+# ==============================================================================
+
+def test_white_label_fleet_pdf_generation(tmp_path):
+    from orbit_security.agency_retainer import AgencyRetainerManager
+    from orbit_security.reporter import ReportGenerator
+
+    retainers_json = tmp_path / "agency_retainers.json"
+    mgr = AgencyRetainerManager(data_path=retainers_json)
+
+    # Trigger two scans on candykittens.co.uk so score_delta is populated (+4 improved)
+    mgr.update_site_audit("eastside-co", "candykittens.co.uk", score=85, grade="B", critical_count=0, high_count=1)
+    mgr.update_site_audit("eastside-co", "candykittens.co.uk", score=89, grade="A", critical_count=0, high_count=0)
+
+    agency = mgr.get_agency("eastside-co")
+    assert agency is not None
+
+    pdf_out = tmp_path / "eastside_fleet_posture.pdf"
+    highlights = [
+        {
+            "cve": "CVE-2024-21887",
+            "vendor": "Ivanti",
+            "product": "Connect Secure",
+            "epss": 0.9421,
+            "is_cisa_kev": True,
+        }
+    ]
+    res_path = ReportGenerator.generate_white_label_fleet_pdf(
+        agency=agency,
+        output_path=str(pdf_out),
+        kev_epss_highlights=highlights,
+    )
+    assert Path(res_path).exists()
+    raw_bytes = Path(res_path).read_bytes()
+    assert raw_bytes.startswith(b"%PDF-")
+    assert len(raw_bytes) > 1500
+
+    # Also test AgencyRetainerManager convenience method
+    exported_pdf = mgr.export_agency_posture_pdf("eastside-co", output_dir=tmp_path)
+    assert exported_pdf.exists()
+    assert exported_pdf.read_bytes().startswith(b"%PDF-")
+
+
+def test_takeover_poc_simulator_and_presets():
+    detector = PassiveTakeoverDetector()
+
+    presets = detector.export_playground_presets()
+    assert len(presets) >= 5
+    preset_ids = {p["id"] for p in presets}
+    assert "aws_s3" in preset_ids
+    assert "github_pages" in preset_ids
+
+    # Simulate vulnerable S3 takeover PoC
+    poc_vuln = detector.simulate_poc_scenario(
+        domain="media.client-store.com",
+        cname_target="orphaned-client-media.s3.amazonaws.com",
+        http_response_body="<Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist</Message></Error>",
+        is_nxdomain=False,
+    )
+    assert poc_vuln["vulnerable"] is True
+    assert poc_vuln["provider"] == "AWS S3"
+    assert poc_vuln["severity"] == "CRITICAL"
+    assert poc_vuln["cvss_score"] >= 8.0
+    assert "dig +short CNAME media.client-store.com" in poc_vuln["dig_command"]
+    assert "NoSuchBucket" in poc_vuln["fingerprint_matched"]
+    assert len(poc_vuln["remediation_steps"]) >= 2
+
+    # Simulate safe CNAME
+    poc_safe = detector.simulate_poc_scenario(
+        domain="shop.client-store.com",
+        cname_target="shops.myshopify.com",
+        http_response_body="<html>Welcome to Active Store</html>",
+        is_nxdomain=False,
+    )
+    assert poc_safe["vulnerable"] is False
+    assert poc_safe["severity"] == "SAFE"
+
+
+def test_zero_knowledge_fleet_scorecard_evaluation():
+    from orbit_security.scoring import evaluate_zero_knowledge_fleet_scorecard
+
+    domains_payload = [
+        {
+            "domain": "flagship.brand.com",
+            "findings": [
+                {"title": "Missing BIMI Record", "severity": "LOW"},
+                {"title": "Missing Content Security Policy (CSP)", "severity": "LOW"},
+            ],
+        },
+        {
+            "domain": "legacy-promo.brand.com",
+            "findings": [
+                {
+                    "title": "Dangling CNAME / Subdomain Takeover Risk (AWS S3)",
+                    "severity": "CRITICAL",
+                    "class_key": "dangling-cname-takeover",
+                }
+            ],
+        },
+        {
+            "domain": "mail-gateway.brand.com",
+            "findings": [
+                {"title": "DMARC Policy Set to p=none (Monitoring Only)", "severity": "MEDIUM"},
+            ],
+        },
+    ]
+
+    scorecard = evaluate_zero_knowledge_fleet_scorecard(
+        domains_payload=domains_payload,
+        agency_name="Eastside Co",
+    )
+    assert scorecard["agency_name"] == "Eastside Co"
+    assert scorecard["zero_knowledge_mode"] is True
+    assert scorecard["total_domains"] == 3
+    assert scorecard["at_risk_domains"] == 1
+    assert len(scorecard["zk_verification_sha256"]) == 64
+
+    by_domain = {d["domain"]: d for d in scorecard["domain_results"]}
+    # R1: Hygiene-only domain still scores 100 / A+
+    assert by_domain["flagship.brand.com"]["score"] == 100
+    assert by_domain["flagship.brand.com"]["grade"] == "A+"
+    # R2: Critical takeover finding caps domain at <= 59 (D)
+    assert by_domain["legacy-promo.brand.com"]["score"] <= 59
+    assert by_domain["legacy-promo.brand.com"]["grade"] == "D"
+    # Medium DMARC finding scores 90 / A
+    assert by_domain["mail-gateway.brand.com"]["score"] == 90
+    assert by_domain["mail-gateway.brand.com"]["grade"] == "A"
+
+
+def test_takeover_playground_and_zk_scorecard_web_ui_parity():
+    root = Path(__file__).resolve().parent.parent
+    landing_html = (root / "landing" / "index.html").read_text(encoding="utf-8")
+    docs_html = (root / "docs" / "index.html").read_text(encoding="utf-8")
+    landing_js = (root / "landing" / "assets" / "orbit_radar.js").read_text(encoding="utf-8")
+    docs_js = (root / "docs" / "assets" / "orbit_radar.js").read_text(encoding="utf-8")
+
+    assert 'id="takeover-poc-playground"' in landing_html
+    assert 'id="zk-agency-scorecard"' in landing_html
+    assert landing_html == docs_html
+
+    assert "function runTakeoverPocSimulation" in landing_js
+    assert "function loadTakeoverPreset" in landing_js
+    assert "function runZeroKnowledgeBatchScorecard" in landing_js
+    assert "function exportZeroKnowledgeScorecardJson" in landing_js
+    assert landing_js == docs_js
+
+

@@ -386,3 +386,247 @@ class ReportGenerator:
 
         doc.build(story)
         return output_path
+
+    @staticmethod
+    def generate_white_label_fleet_pdf(
+        agency: object,
+        output_path: str,
+        kev_epss_highlights: list | None = None,
+    ) -> str:
+        """Generates a multi-domain White-Label Executive Fleet Posture PDF for an AgencyRetainer (Project #4)."""
+        import datetime as _dt
+
+        os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+        doc = SimpleDocTemplate(
+            output_path,
+            pagesize=letter,
+            rightMargin=36,
+            leftMargin=36,
+            topMargin=36,
+            bottomMargin=36,
+        )
+
+        styles = getSampleStyleSheet()
+        raw_primary = getattr(agency, "primary_color", "#0B132B") or "#0B132B"
+        raw_accent = getattr(agency, "accent_color", "#48CAE4") or "#48CAE4"
+        primary_hex = raw_primary if raw_primary.startswith("#") else f"#{raw_primary}"
+        accent_hex = raw_accent if raw_accent.startswith("#") else f"#{raw_accent}"
+        primary_col = colors.HexColor(primary_hex)
+        accent_col = colors.HexColor(accent_hex)
+
+        agency_name = html.escape(str(getattr(agency, "agency_name", "Agency Partner")))
+        agency_tagline = html.escape(str(getattr(agency, "agency_tagline", "Managed Web & Security Operations")))
+        support_email = html.escape(str(getattr(agency, "support_email", "security@agency.example.com")))
+        website = html.escape(str(getattr(agency, "website", "https://agency.example.com")))
+        tier_obj = getattr(agency, "tier", "Scale")
+        tier_label = html.escape(str(getattr(tier_obj, "value", tier_obj)))
+        sla_guarantee = html.escape(str(getattr(agency, "sla_guarantee", "99.9% Perimeter Uptime & <15-Min Takeover Alert Guarantee")))
+
+        title_style = ParagraphStyle(
+            "FleetTitle",
+            parent=styles["Heading1"],
+            fontSize=20,
+            leading=24,
+            textColor=primary_col,
+            fontName="Helvetica-Bold",
+        )
+        subtitle_style = ParagraphStyle(
+            "FleetSubTitle",
+            parent=styles["Normal"],
+            fontSize=9.5,
+            leading=13,
+            textColor=colors.HexColor("#64748B"),
+            fontName="Helvetica",
+        )
+        h2_style = ParagraphStyle(
+            "FleetH2",
+            parent=styles["Heading2"],
+            fontSize=13,
+            leading=17,
+            textColor=primary_col,
+            fontName="Helvetica-Bold",
+            spaceBefore=12,
+            spaceAfter=6,
+        )
+        body_style = ParagraphStyle(
+            "FleetBody",
+            parent=styles["Normal"],
+            fontSize=9,
+            leading=13,
+            textColor=colors.HexColor("#334155"),
+            fontName="Helvetica",
+        )
+        th_style = ParagraphStyle(
+            "FleetTH",
+            parent=styles["Normal"],
+            fontSize=8.5,
+            leading=11,
+            fontName="Helvetica-Bold",
+            textColor=colors.white,
+        )
+
+        story = []
+
+        logo_path = os.path.join(
+            os.path.dirname(__file__), "..", "..", "landing", "assets", "orbit_cats_square.jpg"
+        )
+        logo_cell = RLImage(logo_path, width=36, height=36) if os.path.exists(logo_path) else ""
+
+        header_data = [
+            [
+                logo_cell if logo_cell else "",
+                Paragraph(f"<b>{agency_name}</b><br/>{agency_tagline}", subtitle_style),
+                Paragraph(
+                    f"<b>WHITE-LABEL FLEET POSTURE BRIEF</b><br/><font size=8>{tier_label} Retainer Tier</font>",
+                    ParagraphStyle("FleetRight", parent=subtitle_style, alignment=2, textColor=accent_col),
+                ),
+            ]
+        ]
+        t_header = Table(header_data, colWidths=[46, 264, 230] if logo_cell else [300, 240])
+        t_header.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        story.append(t_header)
+        story.append(HRFlowable(width="100%", thickness=1.5, color=primary_col, spaceBefore=6, spaceAfter=12))
+
+        now_str = _dt.datetime.now(_dt.timezone.utc).strftime("%B %d, %Y at %H:%M UTC")
+        story.append(Paragraph(f"Executive Multi-Domain Security Posture: {agency_name}", title_style))
+        story.append(Paragraph(f"Compiled {now_str} | SLA: {sla_guarantee}", subtitle_style))
+        story.append(Spacer(1, 10))
+
+        client_domains = list(getattr(agency, "client_domains", []) or [])
+        total_domains = len(client_domains)
+        avg_score = int(sum(getattr(d, "last_score", 100) for d in client_domains) / total_domains) if total_domains else 100
+        fleet_grade = "A+" if avg_score >= 95 else ("A" if avg_score >= 88 else ("B" if avg_score >= 75 else ("C" if avg_score >= 60 else "D")))
+        crit_total = sum(int(getattr(d, "critical_findings", 0)) for d in client_domains)
+        high_total = sum(int(getattr(d, "high_findings", 0)) for d in client_domains)
+
+        grade_bg = colors.HexColor("#10B981") if avg_score >= 88 else (
+            colors.HexColor("#F59E0B") if avg_score >= 70 else colors.HexColor("#EF4444")
+        )
+        summary_data = [
+            [
+                Paragraph(
+                    f"<font size=26 color='white'><b>{fleet_grade}</b></font><br/><font size=8 color='white'>FLEET GRADE</font>",
+                    ParagraphStyle("FleetGradeCell", alignment=1),
+                ),
+                Paragraph(
+                    f"<b>Portfolio Average Score:</b> {avg_score} / 100<br/>"
+                    f"<b>Enrolled Client Perimeters:</b> {total_domains} domains<br/>"
+                    f"<b>Critical / High Findings:</b> {crit_total} Critical, {high_total} High<br/>"
+                    f"<b>Scoring Model:</b> R1-R5 Exploitability-Aware Engine",
+                    body_style,
+                ),
+                Paragraph(
+                    f"<b>Managed By:</b> {agency_name}<br/>"
+                    f"<b>Operations Desk:</b> {support_email}<br/>"
+                    f"<b>Portal Web:</b> {website}<br/>"
+                    f"<b>Billing Cycle:</b> Active Retainer",
+                    body_style,
+                ),
+            ]
+        ]
+        t_summary = Table(summary_data, colWidths=[100, 240, 200])
+        t_summary.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (0, 0), grade_bg),
+            ("BACKGROUND", (1, 0), (-1, 0), colors.HexColor("#F8FAFC")),
+            ("BOX", (0, 0), (-1, 0), 1, colors.HexColor("#E2E8F0")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("PADDING", (0, 0), (-1, -1), 8),
+        ]))
+        story.append(t_summary)
+        story.append(Spacer(1, 14))
+
+        # Section 1: Enrolled Client Domain Matrix
+        story.append(Paragraph("1. Enrolled Client Domain Posture & Trend Telemetry", h2_style))
+        story.append(HRFlowable(width="100%", thickness=0.75, color=colors.HexColor("#CBD5E1"), spaceBefore=2, spaceAfter=8))
+
+        rows = [[
+            Paragraph("Client & Domain", th_style),
+            Paragraph("Score / Grade", th_style),
+            Paragraph("Delta Trend", th_style),
+            Paragraph("Crit / High", th_style),
+            Paragraph("Status", th_style),
+        ]]
+        for site in client_domains:
+            c_name = html.escape(str(getattr(site, "client_name", "")))
+            c_dom = html.escape(str(getattr(site, "domain", "")))
+            s_val = int(getattr(site, "last_score", 100))
+            g_val = html.escape(str(getattr(site, "last_grade", "A+")))
+            crit_v = int(getattr(site, "critical_findings", 0))
+            high_v = int(getattr(site, "high_findings", 0))
+            trend = site.get_score_trend() if hasattr(site, "get_score_trend") else "baseline"
+            delta_val = getattr(site, "score_delta", None)
+            if trend == "baseline" or delta_val is None:
+                trend_str = "Baseline"
+            elif delta_val > 0:
+                trend_str = f"Improved (+{delta_val})"
+            elif delta_val < 0:
+                trend_str = f"Declined ({delta_val})"
+            else:
+                trend_str = "Stable (0)"
+
+            status_label = "SECURE" if s_val >= 88 and crit_v == 0 else ("WARNING" if s_val >= 70 and crit_v == 0 else "AT RISK")
+            rows.append([
+                Paragraph(f"<b>{c_name}</b><br/><font face='Courier' size=8>{c_dom}</font>", body_style),
+                Paragraph(f"<b>{s_val}/100</b> ({g_val})", body_style),
+                Paragraph(trend_str, body_style),
+                Paragraph(f"{crit_v} Crit / {high_v} High", body_style),
+                Paragraph(f"<b>{status_label}</b>", body_style),
+            ])
+
+        t_fleet = Table(rows, colWidths=[180, 90, 95, 95, 80])
+        t_fleet.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), primary_col),
+            ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#F8FAFC")),
+            ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+            ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#E2E8F0")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("PADDING", (0, 0), (-1, -1), 6),
+        ]))
+        story.append(t_fleet)
+        story.append(Spacer(1, 14))
+
+        # Section 2: CISA KEV + EPSS Threat Intelligence Highlights
+        if kev_epss_highlights:
+            story.append(Paragraph("2. Active CISA KEV & 30-Day EPSS Threat Radar Watchlist", h2_style))
+            story.append(HRFlowable(width="100%", thickness=0.75, color=colors.HexColor("#CBD5E1"), spaceBefore=2, spaceAfter=8))
+            kev_rows = [[
+                Paragraph("CVE Advisory", th_style),
+                Paragraph("Vendor / Product", th_style),
+                Paragraph("30-Day EPSS", th_style),
+                Paragraph("Classification", th_style),
+            ]]
+            for item in kev_epss_highlights[:8]:
+                cve_id = html.escape(str(item.get("cve", "CVE-UNKNOWN")))
+                vendor = html.escape(str(item.get("vendor", "Vendor")))
+                product = html.escape(str(item.get("product", "Product")))
+                epss_pct = f"{float(item.get('epss', 0.0)) * 100:.1f}%"
+                cls_tag = "CISA KEV (Active Exploit)" if item.get("is_cisa_kev") else "High-Velocity EPSS"
+                kev_rows.append([
+                    Paragraph(f"<font face='Courier'><b>{cve_id}</b></font>", body_style),
+                    Paragraph(f"{vendor} — {product}", body_style),
+                    Paragraph(f"<b>{epss_pct}</b>", body_style),
+                    Paragraph(cls_tag, body_style),
+                ])
+            t_kev = Table(kev_rows, colWidths=[120, 180, 90, 150])
+            t_kev.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), primary_col),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#F8FAFC")),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+                ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#E2E8F0")),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("PADDING", (0, 0), (-1, -1), 5),
+            ]))
+            story.append(t_kev)
+            story.append(Spacer(1, 12))
+
+        story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#CBD5E1"), spaceBefore=6, spaceAfter=6))
+        story.append(Paragraph(
+            f"Confidential White-Label Executive Deliverable compiled by {agency_name} ({support_email}).",
+            subtitle_style,
+        ))
+
+        doc.build(story)
+        return output_path

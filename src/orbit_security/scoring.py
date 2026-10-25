@@ -434,6 +434,111 @@ def exposure_severity(path: str) -> Severity:
     return EXPOSURE_SEVERITY.get(path, DEFAULT_EXPOSURE_SEVERITY)
 
 
+def evaluate_zero_knowledge_fleet_scorecard(
+    domains_payload: Sequence[Dict[str, Any]],
+    agency_name: str = "Agency Partner",
+) -> Dict[str, Any]:
+    """Evaluates a multi-domain agency portfolio in-memory under R1-R5 rules (Project #9).
+
+    Zero-Knowledge Guarantee:
+    - Operates purely on in-memory domain/finding payloads.
+    - Writes zero state, logs, or PII to disk.
+    - Returns a deterministic SHA-256 verification digest over the normalized scorecard.
+    """
+    import hashlib
+    import json
+
+    clean_agency = (agency_name or "Agency Partner").strip()
+    domain_results: List[Dict[str, Any]] = []
+
+    for entry in domains_payload or []:
+        dom = str(entry.get("domain", "") or "").strip().lower()
+        if not dom:
+            continue
+        raw_findings = entry.get("findings") or []
+        score_items: List[ScoreItem] = []
+        for f in raw_findings:
+            if isinstance(f, ScoreItem):
+                score_items.append(f)
+            elif isinstance(f, dict):
+                score_items.append(
+                    ScoreItem(
+                        title=str(f.get("title", "")),
+                        severity=coerce_severity(f.get("severity", "INFO")),
+                        category=str(f.get("category", "")),
+                        target=str(f.get("target", dom)),
+                        class_key=f.get("class_key"),
+                        hygiene=bool(f.get("hygiene", False)),
+                    )
+                )
+            else:
+                score_items.append(
+                    ScoreItem(
+                        title=str(getattr(f, "title", "")),
+                        severity=coerce_severity(getattr(f, "severity", "INFO")),
+                        category=str(getattr(f, "category", "")),
+                        target=str(getattr(f, "target", dom)),
+                        class_key=getattr(f, "class_key", None),
+                        hygiene=bool(getattr(f, "hygiene", False)),
+                    )
+                )
+
+        audit_score = score_findings(score_items)
+        domain_results.append(
+            {
+                "domain": dom,
+                "score": audit_score.score,
+                "grade": audit_score.grade,
+                "penalty": audit_score.penalty,
+                "has_critical": audit_score.has_critical,
+                "has_high": audit_score.has_high,
+                "floor_applied": audit_score.floor_applied,
+                "scored_findings": audit_score.scored_findings,
+                "hygiene_only_findings": audit_score.ignored_findings,
+            }
+        )
+
+    total_domains = len(domain_results)
+    avg_score = int(round(sum(d["score"] for d in domain_results) / total_domains)) if total_domains else 100
+    fleet_grade = grade_from_score(avg_score)
+    at_risk_domains = sum(
+        1 for d in domain_results if d["has_critical"] or d["has_high"] or d["score"] < 75
+    )
+
+    canonical_digest_payload = json.dumps(
+        {
+            "agency_name": clean_agency,
+            "total_domains": total_domains,
+            "fleet_score": avg_score,
+            "fleet_grade": fleet_grade,
+            "domains": [
+                {
+                    "domain": d["domain"],
+                    "score": d["score"],
+                    "grade": d["grade"],
+                    "scored_findings": d["scored_findings"],
+                }
+                for d in domain_results
+            ],
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    zk_hash = hashlib.sha256(canonical_digest_payload.encode("utf-8")).hexdigest()
+
+    return {
+        "agency_name": clean_agency,
+        "zero_knowledge_mode": True,
+        "server_storage_persisted": False,
+        "total_domains": total_domains,
+        "fleet_score": avg_score,
+        "fleet_grade": fleet_grade,
+        "at_risk_domains": at_risk_domains,
+        "domain_results": domain_results,
+        "zk_verification_sha256": zk_hash,
+    }
+
+
 __all__: Sequence[str] = (
     "AuditScore",
     "CLASS_PENALTY_CAP",
@@ -454,6 +559,7 @@ __all__: Sequence[str] = (
     "TAKEOVER_TITLE",
     "calculate_score_and_grade",
     "coerce_severity",
+    "evaluate_zero_knowledge_fleet_scorecard",
     "exposure_severity",
     "finding_class",
     "grade_from_score",

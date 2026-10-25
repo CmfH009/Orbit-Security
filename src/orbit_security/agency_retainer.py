@@ -15,7 +15,7 @@ import json
 import logging
 from pathlib import Path
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from orbit_security.models import AgencyBranding, DomainAuditResult, Severity
 
@@ -421,6 +421,29 @@ class AgencyRetainerManager:
                 self.save()
                 return True
         return False
+
+    def export_agency_posture_pdf(
+        self,
+        agency_id: str,
+        output_dir: Optional[Path] = None,
+        kev_epss_highlights: Optional[List[Dict[str, Any]]] = None,
+    ) -> Path:
+        """Generates a White-Label Executive Fleet Posture PDF for an enrolled agency (Project #4)."""
+        from orbit_security.reporter import ReportGenerator
+
+        agency = self.get_agency(agency_id)
+        if not agency:
+            raise KeyError(f"Agency '{agency_id}' not found.")
+
+        out_dir = Path(output_dir or (DEFAULT_RETAINERS_DATA_PATH.parent / "reports"))
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / f"{agency.agency_id}_security_posture.pdf"
+        ReportGenerator.generate_white_label_fleet_pdf(
+            agency=agency,
+            output_path=str(out_path),
+            kev_epss_highlights=kev_epss_highlights,
+        )
+        return out_path
 
 
 class AgencyPortalRenderer:

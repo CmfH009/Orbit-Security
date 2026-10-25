@@ -153,3 +153,115 @@ class PassiveTakeoverDetector:
             )
         except Exception as ex:
             logger.debug(f"Failed to publish takeover blackboard event: {ex}")
+
+    def export_playground_presets(self) -> List[Dict[str, Any]]:
+        """Returns canonical Subdomain Takeover PoC Playground presets (Project #7)."""
+        return [
+            {
+                "id": "aws_s3",
+                "label": "AWS S3 Orphaned Bucket",
+                "domain": "media.client-store.com",
+                "cname_target": "orphaned-client-media.s3.amazonaws.com",
+                "http_response_body": "<Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist</Message></Error>",
+                "is_nxdomain": False,
+                "provider": "AWS S3",
+            },
+            {
+                "id": "github_pages",
+                "label": "GitHub Pages Unclaimed Repo",
+                "domain": "docs.agency-client.io",
+                "cname_target": "legacy-org.github.io",
+                "http_response_body": "There isn't a GitHub Pages site here.",
+                "is_nxdomain": False,
+                "provider": "GitHub Pages",
+            },
+            {
+                "id": "vercel",
+                "label": "Vercel Deleted Deployment",
+                "domain": "preview.brand-campaign.com",
+                "cname_target": "cname.vercel-dns.com",
+                "http_response_body": "The deployment could not be found on Vercel. DEPLOYMENT_NOT_FOUND",
+                "is_nxdomain": False,
+                "provider": "Vercel",
+            },
+            {
+                "id": "shopify",
+                "label": "Shopify Expired Storefront",
+                "domain": "outlet.dtc-retailer.com",
+                "cname_target": "shops.myshopify.com",
+                "http_response_body": "Sorry, this shop is currently unavailable.",
+                "is_nxdomain": False,
+                "provider": "Shopify",
+            },
+            {
+                "id": "azure_nxdomain",
+                "label": "Azure App Service NXDOMAIN",
+                "domain": "portal.enterprise-client.net",
+                "cname_target": "retired-app-prod.azurewebsites.net",
+                "http_response_body": "",
+                "is_nxdomain": True,
+                "provider": "Microsoft Azure",
+            },
+        ]
+
+    def simulate_poc_scenario(
+        self,
+        domain: str,
+        cname_target: str,
+        http_response_body: str = "",
+        is_nxdomain: bool = False,
+    ) -> Dict[str, Any]:
+        """Simulates a non-destructive Subdomain Takeover Proof-of-Concept trace (Project #7)."""
+        clean_domain = (domain or "sub.example.com").strip().lower()
+        clean_cname = (cname_target or "").strip().lower().rstrip(".")
+
+        finding = self.evaluate_cname(
+            domain=clean_domain,
+            cname_target=clean_cname,
+            body_snippet=http_response_body,
+            is_nxdomain=is_nxdomain,
+            blackboard=None,
+        )
+
+        dig_cmd = f"dig +short CNAME {clean_domain}"
+        curl_cmd = f"curl -sIL https://{clean_domain} | head -n 20"
+
+        if finding:
+            return {
+                "vulnerable": True,
+                "domain": clean_domain,
+                "cname_target": clean_cname,
+                "provider": finding.provider,
+                "severity": finding.severity,
+                "cvss_score": 8.2,
+                "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:H/A:N",
+                "fingerprint_matched": finding.fingerprint_matched,
+                "dig_command": dig_cmd,
+                "curl_command": curl_cmd,
+                "remediation": finding.remediation,
+                "remediation_steps": [
+                    f"1. Immediate DNS Lockdown: Delete the dangling CNAME record `{clean_domain} -> {clean_cname}` in your DNS zone (Cloudflare / Route53).",
+                    f"2. Vendor Tenant Claim: {finding.remediation}",
+                    f"3. Verification: Run `{dig_cmd}` and confirm empty response before closing incident ticket.",
+                ],
+                "safe_harbor_notice": "100% Passive Simulation — Zero third-party cloud buckets or tenants were registered.",
+            }
+
+        return {
+            "vulnerable": False,
+            "domain": clean_domain,
+            "cname_target": clean_cname,
+            "provider": "None / Protected",
+            "severity": "SAFE",
+            "cvss_score": 0.0,
+            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N",
+            "fingerprint_matched": "No unclaimed cloud tenant signature detected",
+            "dig_command": dig_cmd,
+            "curl_command": curl_cmd,
+            "remediation": "No action required. Target CNAME resolves to an active or non-vulnerable endpoint.",
+            "remediation_steps": [
+                f"1. Verified `{clean_domain} -> {clean_cname}` does not match unclaimed SaaS takeover signatures.",
+                "2. Continue automated 24/7 CT log and CNAME drift surveillance.",
+            ],
+            "safe_harbor_notice": "100% Passive Simulation — Zero third-party cloud buckets or tenants were registered.",
+        }
