@@ -624,20 +624,39 @@ class BountyScopeIngester:
         platform: str = "auto",
     ) -> Dict[str, Any]:
         """Autonomous Bug Bounty Program Scope Parser across HackerOne, Bugcrowd & Chaos (Project #27)."""
-        data = json.loads(raw_payload) if isinstance(raw_payload, str) else dict(raw_payload or {})
+        if isinstance(raw_payload, str):
+            try:
+                parsed_json = json.loads(raw_payload)
+                data = parsed_json if isinstance(parsed_json, dict) else {}
+            except Exception as ex:
+                raise ValueError(f"Malformed JSON program scope payload: {ex}") from ex
+        elif isinstance(raw_payload, dict):
+            data = dict(raw_payload)
+        else:
+            data = {}
 
-        detected = platform.lower().strip()
+        def _norm_host(raw_uri: str) -> str:
+            s = str(raw_uri or "").strip().lower()
+            if "://" in s:
+                s = s.split("://", 1)[1]
+            s = s.split("/", 1)[0].split("?", 1)[0].split("#", 1)[0].split(":", 1)[0]
+            return s.strip()
+
+        detected = (platform or "auto").lower().strip()
         if detected == "auto":
             if "relationships" in data or "structured_scopes" in str(data) or "handle" in data:
                 detected = "hackerone"
-            elif "targets" in data or "max_payout" in data:
+            elif "targets" in data or "target_groups" in data or "max_payout" in data:
                 detected = "bugcrowd"
             else:
                 detected = "chaos"
 
         in_scope_all: List[str] = []
         out_of_scope: List[str] = []
-        max_bounty = int(data.get("max_bounty") or data.get("max_payout") or 10000)
+        try:
+            max_bounty = int(data.get("max_bounty") or data.get("max_payout") or 10000)
+        except (ValueError, TypeError):
+            max_bounty = 10000
         prog_name = str(data.get("name") or data.get("handle") or data.get("code") or "bounty_program")
 
         if detected == "hackerone":
@@ -648,7 +667,7 @@ class BountyScopeIngester:
             )
             for item in scopes:
                 attrs = item.get("attributes", item) if isinstance(item, dict) else {}
-                ident = str(attrs.get("asset_identifier", "")).strip().lower()
+                ident = _norm_host(attrs.get("asset_identifier", ""))
                 if not ident:
                     continue
                 eligible_sub = attrs.get("eligible_for_submission", True)
@@ -658,15 +677,42 @@ class BountyScopeIngester:
                 else:
                     out_of_scope.append(ident)
         elif detected == "bugcrowd":
-            for t in data.get("targets", []) or data.get("in_scope", []):
-                uri = t.get("uri") or t.get("name") if isinstance(t, dict) else str(t)
-                if uri:
-                    in_scope_all.append(str(uri).strip().lower())
-            for o in data.get("out_of_scope", []):
-                out_of_scope.append(str(o).strip().lower())
+            targets_field = data.get("targets")
+            if isinstance(targets_field, dict):
+                raw_targets = list(targets_field.get("in_scope", []) or [])
+                for o_item in targets_field.get("out_of_scope", []) or []:
+                    o_uri = o_item.get("uri") or o_item.get("name") or o_item.get("target") if isinstance(o_item, dict) else str(o_item)
+                    norm_o = _norm_host(o_uri)
+                    if norm_o:
+                        out_of_scope.append(norm_o)
+            elif isinstance(targets_field, list):
+                raw_targets = list(targets_field)
+            else:
+                raw_targets = list(data.get("in_scope", []) or [])
+            for tg in data.get("target_groups", []) or []:
+                if isinstance(tg, dict):
+                    tg_targets = tg.get("targets", []) or []
+                    if tg.get("in_scope", True):
+                        raw_targets.extend(tg_targets)
+                    else:
+                        for o_item in tg_targets:
+                            o_uri = o_item.get("uri") or o_item.get("name") or o_item.get("target") if isinstance(o_item, dict) else str(o_item)
+                            norm_o = _norm_host(o_uri)
+                            if norm_o:
+                                out_of_scope.append(norm_o)
+            for t in raw_targets:
+                uri = (t.get("uri") or t.get("name") or t.get("target")) if isinstance(t, dict) else str(t)
+                norm_u = _norm_host(uri)
+                if norm_u:
+                    in_scope_all.append(norm_u)
+            for o in data.get("out_of_scope", []) or []:
+                o_uri = (o.get("uri") or o.get("name") or o.get("target")) if isinstance(o, dict) else str(o)
+                norm_o = _norm_host(o_uri)
+                if norm_o:
+                    out_of_scope.append(norm_o)
         else:
             for d in data.get("domains", []) or data.get("in_scope", []):
-                d_clean = str(d).strip().lower()
+                d_clean = _norm_host(d)
                 if d_clean:
                     in_scope_all.append(d_clean if d_clean.startswith("*.") else f"*.{d_clean}")
 
@@ -677,6 +723,7 @@ class BountyScopeIngester:
             "platform_detected": detected,
             "program_name": prog_name,
             "max_bounty": max_bounty,
+            "in_scope_domains": list(dict.fromkeys(in_scope_all)),
             "in_scope_wildcards": wildcards,
             "in_scope_hosts": exact_hosts,
             "out_of_scope": out_of_scope,

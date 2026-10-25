@@ -213,6 +213,21 @@ def test_project_17_one_click_verification_sandbox_receipt():
         receipt, secret_key="orbit-test-signing-key"
     ) is True
 
+    # Adversarial / Tampered Receipt Verification Tests (Agent 3 Audit)
+    tampered = dict(receipt)
+    tampered["is_confirmed"] = False
+    assert OperatorExploitSandbox.verify_receipt_signature(
+        tampered, secret_key="orbit-test-signing-key"
+    ) is False
+    assert OperatorExploitSandbox.verify_receipt_signature(
+        receipt, secret_key="wrong-signing-key"
+    ) is False
+    malformed = dict(receipt)
+    malformed["confidence_score"] = "not-a-float"
+    assert OperatorExploitSandbox.verify_receipt_signature(
+        malformed, secret_key="orbit-test-signing-key"
+    ) is False
+
 
 def test_project_20_local_gpu_accelerated_log_anomaly_detector(tmp_path):
     from orbit_security.threat_radar import LogAnomalyDetector

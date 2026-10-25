@@ -254,3 +254,55 @@ def test_project_21_crt_arcade_shader_canvas_web_ui_parity():
     assert "function toggleCrtArcadeShader" in landing_js
     assert landing_html == docs_html
     assert landing_js == docs_js
+
+
+def test_swarm_audit_adversarial_edge_cases(tmp_path):
+    """Verify negative/adversarial edge-cases identified by the 5-Agent Audit Swarm."""
+    import pytest
+    from orbit_security.bounty_radar import BountyScopeIngester
+    from orbit_security.cloud_sentinels import EmailAuthPolicyAnalyzer
+    from orbit_security.threat_radar import AudioDspThreatTelegraph
+
+    # 1. Bugcrowd URL/scheme stripping and malformed JSON error handling
+    bc_payload = {
+        "name": "Bugcrowd URL Edge Case",
+        "targets": {
+            "in_scope": [
+                {"uri": "https://*.bc-target.com/api/v1:8443", "type": "website"},
+                {"target": "http://portal.bc-target.com/login", "category": "api"},
+            ]
+        },
+    }
+    ingester = BountyScopeIngester(data_path=tmp_path / "bounty_edge.json")
+    parsed = ingester.parse_unified_program_scope(bc_payload, platform="bugcrowd")
+    assert "*.bc-target.com" in parsed["in_scope_domains"]
+    assert "portal.bc-target.com" in parsed["in_scope_domains"]
+
+    with pytest.raises(ValueError, match="Malformed JSON"):
+        ingester.parse_unified_program_scope("{bad json", platform="hackerone")
+
+    # 2. Revoked DKIM key with trailing comment must be flagged as revoked, not valid
+    revoked_posture = EmailAuthPolicyAnalyzer.analyze_email_security_posture(
+        domain="revoked-dkim.example",
+        spf_record="v=spf1 include:_spf.google.com -all",
+        dmarc_record="v=DMARC1; p=reject",
+        dkim_selectors={
+            "default": "v=DKIM1; k=rsa; p=; n=revoked_key_with_very_long_comment_exceeding_sixty_four_bytes_total_length_1234567890"
+        },
+    )
+    assert revoked_posture["valid_dkim_selectors"] == []
+    assert "DKIM_NO_VALID_SELECTORS" in {f["code"] for f in revoked_posture["findings"]}
+
+    # 3. AudioDspThreatTelegraph MUTED profile & extreme sample_rate clamping
+    muted = AudioDspThreatTelegraph.synthesize_threat_telegraph(
+        severity="MUTED", sample_rate=999999
+    )
+    assert muted["severity"] == "MUTED"
+    assert muted["sample_rate"] == 48000
+    assert muted["wav_bytes"].startswith(b"RIFF")
+
+    # 4. Retro TUI width clamping
+    bb = Blackboard(db_path=tmp_path / "clamp_bb.db")
+    narrow_frame = bb.render_retro_tui_dashboard(width=10)
+    assert "ORBIT SECURITY // RETRO TUI COCKPIT" in narrow_frame
+

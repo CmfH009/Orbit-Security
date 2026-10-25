@@ -186,9 +186,10 @@ class ASTCodeSentinel:
                 results.append(res)
 
         payload = {
-            "ok": total_missing == 0,
+            "ok": len(results) == 0 and total_missing == 0,
             "files_scanned": len(py_files),
             "files_with_issues": len(results),
+            "total_missing_imports": total_missing,
             "issues": results,
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
         }

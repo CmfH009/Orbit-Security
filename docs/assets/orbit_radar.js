@@ -2224,6 +2224,7 @@
         const buttons = document.querySelectorAll('.kev-filter-btn');
         buttons.forEach(btn => {
             const isMatch = btn.getAttribute('data-kev-filter') === _kevRadarActiveFilter;
+            btn.setAttribute('aria-pressed', isMatch ? 'true' : 'false');
             btn.className = isMatch
                 ? 'kev-filter-btn min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 cursor-pointer whitespace-nowrap'
                 : 'kev-filter-btn min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap';
@@ -2285,7 +2286,7 @@
             const barColor = (item.epss || 0) >= 0.50 ? 'bg-gradient-to-r from-amber-500 to-red-500' : 'bg-gradient-to-r from-cyan-500 to-emerald-500';
 
             return `
-                <div onclick="selectKevRadarCve('${escapeHtml(item.cve)}')" class="p-3.5 rounded-xl bg-slate-950/90 hover:bg-slate-900 border ${idx === 0 ? 'border-cyan-500/50' : 'border-slate-800'} hover:border-cyan-400/70 transition-all cursor-pointer group">
+                <div role="button" tabindex="0" onclick="selectKevRadarCve('${escapeHtml(item.cve)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectKevRadarCve('${escapeHtml(item.cve)}');}" class="p-3.5 rounded-xl bg-slate-950/90 hover:bg-slate-900 border ${idx === 0 ? 'border-cyan-500/50' : 'border-slate-800'} hover:border-cyan-400/70 transition-all cursor-pointer group">
                     <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
                         <div class="flex items-center gap-2">
                             <span class="font-mono font-bold text-sm text-white group-hover:text-cyan-300 transition-colors">${escapeHtml(item.cve)}</span>
@@ -2577,7 +2578,7 @@
 
         const rawDomains = inputEl.value
             .split(/[\n,;]+/)
-            .map(d => cleanDomainInput(d))
+            .map(d => normalizeDomain(d))
             .filter(Boolean)
             .slice(0, 8);
 
@@ -2597,8 +2598,8 @@
                     domain: res.domain,
                     score: res.score,
                     grade: res.grade,
-                    dmarc: res.dmarcRecord ? 'Present' : 'Missing',
-                    spf: res.spfRecord ? 'Present' : 'Missing',
+                    dmarc: (res.dmarcPolicy && res.dmarcPolicy !== 'missing') ? 'Present' : 'Missing',
+                    spf: (res.spfPolicy && res.spfPolicy !== 'missing') ? 'Present' : 'Missing',
                     findings_count: (res.findings || []).length
                 });
             } catch (e) {
@@ -2775,6 +2776,8 @@
 
     function toggleCrtArcadeShader() {
         _crtShaderEnabled = !_crtShaderEnabled;
+        const btn = document.getElementById('crtShaderToggleBtn');
+        if (btn) btn.setAttribute('aria-pressed', _crtShaderEnabled ? 'true' : 'false');
         const badge = document.getElementById('crtShaderStatusBadge');
         if (badge) {
             badge.textContent = _crtShaderEnabled ? 'ACTIVE // 0% IDLE GOVERNOR' : 'PAUSED // CLEAN MODE';

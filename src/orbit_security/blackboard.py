@@ -442,7 +442,7 @@ class Blackboard:
         snap_file = snap_root / f"{self.db_path.stem}_snapshot_{ts_slug}.db"
 
         with self._connection() as src_conn:
-            dst_conn = sqlite3.connect(str(snap_file))
+            dst_conn = sqlite3.connect(str(snap_file), timeout=10.0)
             try:
                 src_conn.backup(dst_conn)
             finally:
@@ -468,7 +468,10 @@ class Blackboard:
 
     def render_retro_tui_dashboard(self, width: int = 84) -> str:
         """Renders a Retro TUI Cockpit Terminal frame for SSH / Termux sessions (Project #29)."""
-        w = max(68, int(width))
+        try:
+            w = max(68, min(int(width), 200))
+        except (ValueError, TypeError):
+            w = 84
         border = "+" + ("-" * (w - 2)) + "+"
         stats = self.get_stats()
         recent = self.get_recent(limit=5)

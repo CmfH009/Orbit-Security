@@ -227,6 +227,7 @@ class GemmaTriageCopilot:
             "suggested_action": triage.suggested_action,
             "sandbox_replay_cmd": sandbox_cmd,
             "disclosure_markdown": disclosure_md,
+            "commercial_outreach_frozen": True,
             "QuickActions": [
                 {"id": "run_sandbox_verify", "label": "Run One-Click Sandbox Replay"},
                 {"id": "copy_h1_markdown", "label": "Copy HackerOne / RFC 9116 Report"},

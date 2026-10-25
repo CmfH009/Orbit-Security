@@ -57,17 +57,17 @@ def is_balancing_proxy_running(
     except Exception:
         # Fall back to quick TCP socket connection check
         try:
-            parsed = urllib.parse_url(proxy_url) if hasattr(urllib, "parse_url") else None
+            parsed = urllib.parse.urlparse(proxy_url)
+            host = parsed.hostname or "127.0.0.1"
+            port = parsed.port or 8989
         except Exception:
-            parsed = None
-        host = "127.0.0.1"
-        port = 8989
+            host = "127.0.0.1"
+            port = 8989
         try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.settimeout(timeout)
-            s.connect((host, port))
-            s.close()
-            return True
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(timeout)
+                s.connect((host, port))
+                return True
         except Exception:
             return False
 

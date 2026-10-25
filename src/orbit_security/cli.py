@@ -668,7 +668,16 @@ def main():
         src_dir = Path(__file__).resolve().parent
         sentinel = ASTCodeSentinel(workspace_root=src_dir.parent.parent)
         ast_res = sentinel.inspect_directory(src_dir)
-        diff_out = subprocess.run(["git", "-C", str(src_dir.parent.parent), "diff", "HEAD~1..HEAD"], capture_output=True, text=True).stdout
+        try:
+            diff_out = subprocess.run(
+                ["git", "-C", str(src_dir.parent.parent), "diff", "HEAD~1..HEAD"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            ).stdout
+        except Exception:
+            diff_out = ""
         kev_res = GitHubPRAuditor().audit_pr_against_cisa_kev(diff_out)
         console.print(
             f"[bold green]✔ AST Sentinel:[/bold green] {ast_res.get('files_scanned', 0)} files scanned, "

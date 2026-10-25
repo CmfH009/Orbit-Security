@@ -375,11 +375,11 @@ class EmailAuthPolicyAnalyzer:
         blackboard: Any = None,
     ) -> Dict[str, Any]:
         """Evaluates SPF, DMARC, DKIM, MTA-STS, and BIMI records for spoofing and RFC 7208/7489 flaws."""
-        clean_domain = (domain or "").strip().lower()
+        clean_domain = str(domain or "").strip().lower()[:253]
         findings: List[Dict[str, Any]] = []
-        spf = (spf_record or "").strip()
-        dmarc = (dmarc_record or "").strip()
-        dkim_map = dkim_selectors or {}
+        spf = str(spf_record or "").strip()[:2048] if spf_record is not None else ""
+        dmarc = str(dmarc_record or "").strip()[:2048] if dmarc_record is not None else ""
+        dkim_map = dkim_selectors if isinstance(dkim_selectors, dict) else {}
 
         # 1. SPF Analysis (RFC 7208)
         spf_lookups = cls._count_spf_lookups(spf) if spf else 0
@@ -434,7 +434,11 @@ class EmailAuthPolicyAnalyzer:
                 })
 
         # 3. DKIM Selector Verification
-        valid_dkim = [sel for sel, rec in dkim_map.items() if "p=" in (rec or "") and len((rec or "").split("p=")[-1].strip()) >= 64]
+        valid_dkim = [
+            str(sel)
+            for sel, rec in dkim_map.items()
+            if isinstance(rec, str) and "p=" in rec and len(rec.split("p=")[-1].split(";")[0].strip()) >= 64
+        ]
         if not valid_dkim:
             findings.append({
                 "code": "DKIM_NO_VALID_SELECTORS",
@@ -457,9 +461,10 @@ class EmailAuthPolicyAnalyzer:
             "spoofable": spoofable,
             "severity": overall_sev,
             "spf_dns_lookups": spf_lookups,
+            "spf_lookup_count": spf_lookups,
             "valid_dkim_selectors": valid_dkim,
-            "has_mta_sts": bool(mta_sts_record and "v=stsv1" in mta_sts_record.lower()),
-            "has_bimi": bool(bimi_record and "v=bimi1" in bimi_record.lower()),
+            "has_mta_sts": bool(isinstance(mta_sts_record, str) and "v=stsv1" in mta_sts_record.lower()),
+            "has_bimi": bool(isinstance(bimi_record, str) and "v=bimi1" in bimi_record.lower()),
             "findings": findings,
         }
 

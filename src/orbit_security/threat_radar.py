@@ -294,7 +294,10 @@ class AudioDspThreatTelegraph:
         "CRITICAL": {"base_freq_hz": 880.0, "end_freq_hz": 1320.0, "duration_ms": 180, "waveform": "sawtooth"},
         "HIGH": {"base_freq_hz": 660.0, "end_freq_hz": 880.0, "duration_ms": 140, "waveform": "square"},
         "MEDIUM": {"base_freq_hz": 440.0, "end_freq_hz": 550.0, "duration_ms": 100, "waveform": "triangle"},
+        "LOW": {"base_freq_hz": 330.0, "end_freq_hz": 440.0, "duration_ms": 75, "waveform": "sine"},
         "INFO": {"base_freq_hz": 330.0, "end_freq_hz": 440.0, "duration_ms": 75, "waveform": "sine"},
+        "MUTED": {"base_freq_hz": 0.0, "end_freq_hz": 0.0, "duration_ms": 60, "waveform": "silent"},
+        "SILENT": {"base_freq_hz": 0.0, "end_freq_hz": 0.0, "duration_ms": 60, "waveform": "silent"},
     }
 
     @classmethod
@@ -308,20 +311,39 @@ class AudioDspThreatTelegraph:
         import math
         import struct
 
-        sev_key = (severity or "HIGH").strip().upper()
-        profile = cls.SEVERITY_PROFILES.get(sev_key, cls.SEVERITY_PROFILES["HIGH"])
+        try:
+            sr = max(4000, min(int(sample_rate or 8000), 48000))
+        except (ValueError, TypeError):
+            sr = 8000
+
+        raw_key = str(severity or "HIGH").strip().upper()
+        sev_key = raw_key if raw_key in cls.SEVERITY_PROFILES else "HIGH"
+        profile = cls.SEVERITY_PROFILES[sev_key]
         f0 = float(profile["base_freq_hz"])
         f1 = float(profile["end_freq_hz"])
         dur_ms = int(profile["duration_ms"])
-        num_samples = max(64, int(sample_rate * (dur_ms / 1000.0)))
+        waveform = str(profile["waveform"])
+        num_samples = max(64, int(sr * (dur_ms / 1000.0)))
 
         pcm_frames = bytearray()
         for i in range(num_samples):
-            t = i / sample_rate
-            progress = i / max(1, num_samples - 1)
-            freq = f0 + (f1 - f0) * progress
-            env = 1.0 - (0.35 * progress)
-            sample_val = int(16000 * env * math.sin(2.0 * math.pi * freq * t))
+            if waveform == "silent" or f0 <= 0.0:
+                sample_val = 0
+            else:
+                t = i / sr
+                progress = i / max(1, num_samples - 1)
+                freq = f0 + (f1 - f0) * progress
+                env = 1.0 - (0.35 * progress)
+                phase = (freq * t) % 1.0
+                if waveform == "sawtooth":
+                    osc = 2.0 * phase - 1.0
+                elif waveform == "square":
+                    osc = 1.0 if phase < 0.5 else -1.0
+                elif waveform == "triangle":
+                    osc = 4.0 * abs(phase - 0.5) - 1.0
+                else:
+                    osc = math.sin(2.0 * math.pi * freq * t)
+                sample_val = int(16000 * env * osc)
             pcm_frames.extend(struct.pack("<h", max(-32767, min(32767, sample_val))))
 
         data_size = len(pcm_frames)
@@ -334,8 +356,8 @@ class AudioDspThreatTelegraph:
             16,
             1,  # PCM
             1,  # Mono
-            sample_rate,
-            sample_rate * 2,
+            sr,
+            sr * 2,
             2,
             16,
             b"data",
@@ -344,12 +366,12 @@ class AudioDspThreatTelegraph:
 
         return {
             "severity": sev_key,
-            "event_type": event_type,
+            "event_type": str(event_type or "THREAT_DETECTED")[:128],
             "base_freq_hz": f0,
             "end_freq_hz": f1,
             "duration_ms": dur_ms,
-            "waveform": profile["waveform"],
-            "sample_rate": sample_rate,
+            "waveform": waveform,
+            "sample_rate": sr,
             "wav_bytes": wav_header + bytes(pcm_frames),
         }
 

@@ -85,7 +85,10 @@ class ShuttleAuth:
         except Exception as ex:
             return False, f"Signature calculation failure: {ex}"
 
-        if not hmac.compare_digest(signature.strip().lower(), expected.strip().lower()):
+        if not hmac.compare_digest(
+            str(signature or "").strip().lower().encode("utf-8"),
+            expected.strip().lower().encode("utf-8"),
+        ):
             return False, "Invalid cryptographic HMAC signature"
 
         return True, "Valid"
@@ -287,14 +290,21 @@ class EventShuttleReceiver:
         except Exception as ex:
             return {"ok": False, "error": f"Malformed JSON: {ex}", "status": 400}
 
-        origin_node = data.get("origin_node") or node_id
+        if not isinstance(data, dict):
+            return {"ok": False, "error": "Malformed JSON: root must be an object", "status": 400}
+
+        origin_node = str(data.get("origin_node") or node_id)[:128]
         events = data.get("events", [])
+        if not isinstance(events, list):
+            return {"ok": False, "error": "Malformed JSON: 'events' must be a list", "status": 400}
         ingested_count = 0
         skipped_count = 0
 
         with self._lock:
             to_publish = []
             for ev in events:
+                if not isinstance(ev, dict):
+                    continue
                 fp = self._event_fingerprint(origin_node, ev)
                 if fp in self._seen_hashes:
                     skipped_count += 1

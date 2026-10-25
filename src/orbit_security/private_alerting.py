@@ -147,7 +147,10 @@ class PrivateAlertSentinel:
 
         elif event_type == "CRITICAL_0DAY_CORRELATED":
             cve = payload.get("cve_id", "Unknown CVE")
-            epss = payload.get("epss_score", 0.0)
+            try:
+                epss = float(payload.get("epss_score") or 0.0)
+            except (ValueError, TypeError):
+                epss = 0.0
             return PrivateDefensiveAlert(
                 alert_id=f"alert-fusion-{cve}-{int(time.time())}",
                 event_type=event_type,
@@ -162,7 +165,10 @@ class PrivateAlertSentinel:
             if not payload.get("high_threat"):
                 return None
             cve = payload.get("cve_id", "Unknown CVE")
-            epss = payload.get("epss_score", 0.0)
+            try:
+                epss = float(payload.get("epss_score") or 0.0)
+            except (ValueError, TypeError):
+                epss = 0.0
             return PrivateDefensiveAlert(
                 alert_id=f"alert-epss-{cve}-{int(time.time())}",
                 event_type=event_type,
@@ -206,13 +212,19 @@ class PrivateAlertSentinel:
         self, alert: PrivateDefensiveAlert, chat_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """Formats alert as a Telegram Bot API sendMessage payload (HTML mode)."""
+        import html
         target_chat = chat_id or self.telegram_chat_id or ""
+        sev = html.escape(str(alert.severity))
+        dom = html.escape(str(alert.target_domain))
+        ev = html.escape(str(alert.event_type))
+        summ = html.escape(str(alert.summary))
+        act = html.escape(str(alert.action_required))
         text = (
-            f"🛡️ <b>Orbit Defensive Alert [{alert.severity}]</b>\n"
-            f"<b>Target Domain:</b> <code>{alert.target_domain}</code>\n"
-            f"<b>Event:</b> <code>{alert.event_type}</code>\n\n"
-            f"{alert.summary}\n\n"
-            f"<b>Action Required:</b> {alert.action_required}"
+            f"🛡️ <b>Orbit Defensive Alert [{sev}]</b>\n"
+            f"<b>Target Domain:</b> <code>{dom}</code>\n"
+            f"<b>Event:</b> <code>{ev}</code>\n\n"
+            f"{summ}\n\n"
+            f"<b>Action Required:</b> {act}"
         )
         return {
             "chat_id": target_chat,
@@ -223,16 +235,22 @@ class PrivateAlertSentinel:
 
     def format_matrix_payload(self, alert: PrivateDefensiveAlert) -> Dict[str, Any]:
         """Formats alert as a Matrix Client-Server m.room.message payload."""
+        import html
+        sev = html.escape(str(alert.severity))
+        dom = html.escape(str(alert.target_domain))
+        ev = html.escape(str(alert.event_type))
+        summ = html.escape(str(alert.summary))
+        act = html.escape(str(alert.action_required))
         plain_body = (
             f"[Orbit Defensive Alert - {alert.severity}] {alert.target_domain}: "
             f"{alert.summary} | Action Required: {alert.action_required}"
         )
         html_body = (
-            f"<strong>🛡️ Orbit Defensive Alert [{alert.severity}]</strong><br/>"
-            f"<strong>Target Domain:</strong> <code>{alert.target_domain}</code><br/>"
-            f"<strong>Event:</strong> <code>{alert.event_type}</code><br/>"
-            f"<p>{alert.summary}</p>"
-            f"<strong>Action Required:</strong> {alert.action_required}"
+            f"<strong>🛡️ Orbit Defensive Alert [{sev}]</strong><br/>"
+            f"<strong>Target Domain:</strong> <code>{dom}</code><br/>"
+            f"<strong>Event:</strong> <code>{ev}</code><br/>"
+            f"<p>{summ}</p>"
+            f"<strong>Action Required:</strong> {act}"
         )
         return {
             "msgtype": "m.text",
