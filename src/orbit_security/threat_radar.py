@@ -284,6 +284,76 @@ class LogAnomalyDetector:
         }
 
 
+class AudioDspThreatTelegraph:
+    """Local Audio DSP Threat Telegraphs for Workstation & Cockpit HUD (Project #28).
+
+    Synthesizes deterministic 16-bit PCM RIFF/WAV audio envelopes calibrated by threat severity.
+    """
+
+    SEVERITY_PROFILES = {
+        "CRITICAL": {"base_freq_hz": 880.0, "end_freq_hz": 1320.0, "duration_ms": 180, "waveform": "sawtooth"},
+        "HIGH": {"base_freq_hz": 660.0, "end_freq_hz": 880.0, "duration_ms": 140, "waveform": "square"},
+        "MEDIUM": {"base_freq_hz": 440.0, "end_freq_hz": 550.0, "duration_ms": 100, "waveform": "triangle"},
+        "INFO": {"base_freq_hz": 330.0, "end_freq_hz": 440.0, "duration_ms": 75, "waveform": "sine"},
+    }
+
+    @classmethod
+    def synthesize_threat_telegraph(
+        cls,
+        severity: str = "HIGH",
+        event_type: str = "THREAT_DETECTED",
+        sample_rate: int = 8000,
+    ) -> Dict[str, Any]:
+        """Generates a deterministic 16-bit mono RIFF/WAV telegraph tone buffer and WebAudio envelope."""
+        import math
+        import struct
+
+        sev_key = (severity or "HIGH").strip().upper()
+        profile = cls.SEVERITY_PROFILES.get(sev_key, cls.SEVERITY_PROFILES["HIGH"])
+        f0 = float(profile["base_freq_hz"])
+        f1 = float(profile["end_freq_hz"])
+        dur_ms = int(profile["duration_ms"])
+        num_samples = max(64, int(sample_rate * (dur_ms / 1000.0)))
+
+        pcm_frames = bytearray()
+        for i in range(num_samples):
+            t = i / sample_rate
+            progress = i / max(1, num_samples - 1)
+            freq = f0 + (f1 - f0) * progress
+            env = 1.0 - (0.35 * progress)
+            sample_val = int(16000 * env * math.sin(2.0 * math.pi * freq * t))
+            pcm_frames.extend(struct.pack("<h", max(-32767, min(32767, sample_val))))
+
+        data_size = len(pcm_frames)
+        wav_header = struct.pack(
+            "<4sI4s4sIHHIIHH4sI",
+            b"RIFF",
+            36 + data_size,
+            b"WAVE",
+            b"fmt ",
+            16,
+            1,  # PCM
+            1,  # Mono
+            sample_rate,
+            sample_rate * 2,
+            2,
+            16,
+            b"data",
+            data_size,
+        )
+
+        return {
+            "severity": sev_key,
+            "event_type": event_type,
+            "base_freq_hz": f0,
+            "end_freq_hz": f1,
+            "duration_ms": dur_ms,
+            "waveform": profile["waveform"],
+            "sample_rate": sample_rate,
+            "wav_bytes": wav_header + bytes(pcm_frames),
+        }
+
+
 def main():
     swarm = ThreatRadarSwarm()
     sample_alert = {

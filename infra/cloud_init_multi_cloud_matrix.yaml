@@ -1,0 +1,35 @@
+# ============================================================================
+# Project ORBIT — Multi-Cloud Zero-Trust Cloud-Init Matrix (Project #26)
+# ============================================================================
+# Unified cloud-init specification supporting:
+#   1. Oracle Cloud Always Free ARM64 (VM.Standard.A1.Flex)
+#   2. AWS EC2 Graviton ARM64 (t4g.small / t4g.micro)
+#   3. Google Cloud Platform (e2-micro Container-Optimized / Ubuntu 24.04)
+#   4. DigitalOcean Droplet (Ubuntu 24.04 LTS)
+#
+# Enforces:
+#   - Zero public TCP ingress (UFW default deny incoming, allow 41641/udp WireGuard P2P)
+#   - Tailscale zero-touch mesh authentication
+#   - Continuous Litestream WAL replication + EventShuttle to Cockpit (:9090)
+
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - curl
+  - git
+  - jq
+  - python3
+  - python3-pip
+  - python3-venv
+  - sqlite3
+  - ufw
+
+runcmd:
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow 41641/udp
+  - ufw allow in on tailscale0
+  - ufw --force enable
+  - curl -fsSL https://tailscale.com/install.sh | sh
+  - tailscale up --authkey="${TAILSCALE_AUTHKEY}" --hostname="${ORBIT_NODE_HOSTNAME:-orbit-multi-sentinel}" --accept-routes

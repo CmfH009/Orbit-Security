@@ -2737,17 +2737,67 @@
         `).join('');
     }
 
+    // ==========================================
+    // 15. Project #21: 32-Bit Cyber Arcade CRT Shader Canvas
+    // ==========================================
+
+    let _crtShaderEnabled = true;
+
+    function initCrtArcadeShaderCanvas() {
+        const canvas = document.getElementById('crt-arcade-shader-canvas');
+        if (!canvas || !canvas.getContext) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.fillStyle = '#020617';
+        ctx.fillRect(0, 0, w, h);
+
+        if (_crtShaderEnabled) {
+            // Phosphor scanlines
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.14)';
+            for (let y = 0; y < h; y += 3) {
+                ctx.fillRect(0, y, w, 1);
+            }
+            // Phosphor waveform trace
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            for (let x = 0; x < w; x += 4) {
+                const y = (h / 2) + Math.sin(x * 0.15) * 10;
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+    }
+
+    function toggleCrtArcadeShader() {
+        _crtShaderEnabled = !_crtShaderEnabled;
+        const badge = document.getElementById('crtShaderStatusBadge');
+        if (badge) {
+            badge.textContent = _crtShaderEnabled ? 'ACTIVE // 0% IDLE GOVERNOR' : 'PAUSED // CLEAN MODE';
+            badge.className = _crtShaderEnabled
+                ? 'px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-[10px]'
+                : 'px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400 font-mono text-[10px]';
+        }
+        initCrtArcadeShaderCanvas();
+    }
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
             initKevEpssRadar();
             renderEpssHorizonChart();
             initBountyRadarStatuspage();
+            initCrtArcadeShaderCanvas();
         });
     } else {
         setTimeout(() => {
             initKevEpssRadar();
             renderEpssHorizonChart();
             initBountyRadarStatuspage();
+            initCrtArcadeShaderCanvas();
         }, 50);
     }
 
@@ -2770,5 +2820,7 @@
     window.exportZeroKnowledgeScorecardJson = exportZeroKnowledgeScorecardJson;
     window.renderEpssHorizonChart = renderEpssHorizonChart;
     window.initBountyRadarStatuspage = initBountyRadarStatuspage;
+    window.initCrtArcadeShaderCanvas = initCrtArcadeShaderCanvas;
+    window.toggleCrtArcadeShader = toggleCrtArcadeShader;
 
 })();

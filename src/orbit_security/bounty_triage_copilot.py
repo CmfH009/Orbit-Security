@@ -187,3 +187,49 @@ class GemmaTriageCopilot:
             reasoning=f"Valid finding on {vuln.target_domain} ({vuln.severity.value} severity).",
             suggested_action="Queue for review in Orbit Web Cockpit triage modal.",
         )
+
+    @classmethod
+    def build_cockpit_triage_modal_payload(
+        cls,
+        vuln: BountyVulnerability,
+        program: BountyProgram,
+        decision: Optional[TriageDecision] = None,
+    ) -> Dict[str, Any]:
+        """Builds the Interactive Executive Triage Modal payload for the Cockpit HUD (Project #23)."""
+        triage = decision or cls.audit_finding(vuln, program, use_ai=False)
+        cname_info = f" -> `{vuln.cname_target}`" if vuln.cname_target else ""
+        sandbox_cmd = f"curl -sIL https://{vuln.target_domain} | head -n 20"
+
+        disclosure_md = (
+            f"# [{program.name}] {vuln.flaw_type.replace('_', ' ').title()} on `{vuln.target_domain}`\n\n"
+            f"- **Platform**: {program.platform.upper()} (`{program.program_id}`)\n"
+            f"- **Target**: `{vuln.target_domain}`{cname_info}\n"
+            f"- **Severity**: {vuln.severity.value} (CVSS {vuln.cvss_score})\n"
+            f"- **Triage Verdict**: `{triage.verdict}` ({triage.confidence_score * 100:.0f}% confidence)\n\n"
+            f"## Technical Evidence\n"
+            f"`{vuln.evidence}`\n\n"
+            f"## Recommended Remediation\n"
+            f"{vuln.remediation}\n"
+        )
+
+        return {
+            "program_id": program.program_id,
+            "program_name": program.name,
+            "target_domain": vuln.target_domain,
+            "flaw_type": vuln.flaw_type,
+            "provider": vuln.provider,
+            "severity": vuln.severity.value,
+            "cvss_score": vuln.cvss_score,
+            "verdict": triage.verdict,
+            "confidence_score": triage.confidence_score,
+            "policy_compliance": triage.policy_compliance,
+            "reasoning": triage.reasoning,
+            "suggested_action": triage.suggested_action,
+            "sandbox_replay_cmd": sandbox_cmd,
+            "disclosure_markdown": disclosure_md,
+            "QuickActions": [
+                {"id": "run_sandbox_verify", "label": "Run One-Click Sandbox Replay"},
+                {"id": "copy_h1_markdown", "label": "Copy HackerOne / RFC 9116 Report"},
+                {"id": "quarantine_false_positive", "label": "Quarantine / Suppress"},
+            ],
+        }

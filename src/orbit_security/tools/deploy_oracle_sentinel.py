@@ -223,5 +223,45 @@ def main():
     print(json.dumps(output, indent=2))
 
 
+def export_multi_cloud_init_matrix(
+    tailscale_hostname: str = "orbit-multi-sentinel",
+    cockpit_port: int = 9090,
+) -> Dict[str, Any]:
+    """Exports cloud-init user-data specifications across Oracle, AWS, GCP, and DigitalOcean (Project #26)."""
+    providers_meta = {
+        "oracle_arm64": {"instance_type": "VM.Standard.A1.Flex", "arch": "aarch64", "os": "Ubuntu 24.04 LTS"},
+        "aws_graviton": {"instance_type": "t4g.small", "arch": "arm64", "os": "Ubuntu 24.04 LTS"},
+        "gcp_e2_micro": {"instance_type": "e2-micro", "arch": "x86_64", "os": "Ubuntu 24.04 LTS"},
+        "digitalocean_droplet": {"instance_type": "s-1vcpu-1gb", "arch": "x86_64", "os": "Ubuntu 24.04 LTS"},
+    }
+    providers_out: Dict[str, Dict[str, Any]] = {}
+    for prov_key, meta in providers_meta.items():
+        node_host = f"{tailscale_hostname}-{prov_key.split('_')[0]}"
+        user_data = (
+            "#cloud-config\n"
+            f"# Provider: {prov_key} ({meta['instance_type']})\n"
+            "runcmd:\n"
+            "  - ufw default deny incoming\n"
+            "  - ufw default allow outgoing\n"
+            "  - ufw allow 41641/udp\n"
+            "  - ufw allow in on tailscale0\n"
+            "  - ufw --force enable\n"
+            f"  - tailscale up --authkey=\"${{TAILSCALE_AUTHKEY}}\" --hostname=\"{tailscale_hostname}\" --accept-routes\n"
+        )
+        providers_out[prov_key] = {
+            **meta,
+            "node_hostname": node_host,
+            "cockpit_port": cockpit_port,
+            "wireguard_port": "41641/udp",
+            "user_data": user_data,
+        }
+
+    return {
+        "tailscale_hostname": tailscale_hostname,
+        "cockpit_port": cockpit_port,
+        "providers": providers_out,
+    }
+
+
 if __name__ == "__main__":
     main()

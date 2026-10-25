@@ -618,6 +618,70 @@ class BountyScopeIngester:
             ],
         }
 
+    def parse_unified_program_scope(
+        self,
+        raw_payload: Dict[str, Any] | str,
+        platform: str = "auto",
+    ) -> Dict[str, Any]:
+        """Autonomous Bug Bounty Program Scope Parser across HackerOne, Bugcrowd & Chaos (Project #27)."""
+        data = json.loads(raw_payload) if isinstance(raw_payload, str) else dict(raw_payload or {})
+
+        detected = platform.lower().strip()
+        if detected == "auto":
+            if "relationships" in data or "structured_scopes" in str(data) or "handle" in data:
+                detected = "hackerone"
+            elif "targets" in data or "max_payout" in data:
+                detected = "bugcrowd"
+            else:
+                detected = "chaos"
+
+        in_scope_all: List[str] = []
+        out_of_scope: List[str] = []
+        max_bounty = int(data.get("max_bounty") or data.get("max_payout") or 10000)
+        prog_name = str(data.get("name") or data.get("handle") or data.get("code") or "bounty_program")
+
+        if detected == "hackerone":
+            scopes = (
+                data.get("relationships", {})
+                .get("structured_scopes", {})
+                .get("data", [])
+            )
+            for item in scopes:
+                attrs = item.get("attributes", item) if isinstance(item, dict) else {}
+                ident = str(attrs.get("asset_identifier", "")).strip().lower()
+                if not ident:
+                    continue
+                eligible_sub = attrs.get("eligible_for_submission", True)
+                eligible_bounty = attrs.get("eligible_for_bounty", True)
+                if eligible_sub and eligible_bounty:
+                    in_scope_all.append(ident)
+                else:
+                    out_of_scope.append(ident)
+        elif detected == "bugcrowd":
+            for t in data.get("targets", []) or data.get("in_scope", []):
+                uri = t.get("uri") or t.get("name") if isinstance(t, dict) else str(t)
+                if uri:
+                    in_scope_all.append(str(uri).strip().lower())
+            for o in data.get("out_of_scope", []):
+                out_of_scope.append(str(o).strip().lower())
+        else:
+            for d in data.get("domains", []) or data.get("in_scope", []):
+                d_clean = str(d).strip().lower()
+                if d_clean:
+                    in_scope_all.append(d_clean if d_clean.startswith("*.") else f"*.{d_clean}")
+
+        wildcards = [h for h in in_scope_all if h.startswith("*.")]
+        exact_hosts = [h for h in in_scope_all if not h.startswith("*.")]
+
+        return {
+            "platform_detected": detected,
+            "program_name": prog_name,
+            "max_bounty": max_bounty,
+            "in_scope_wildcards": wildcards,
+            "in_scope_hosts": exact_hosts,
+            "out_of_scope": out_of_scope,
+        }
+
 
 class BountyTakeoverSweeper:
     """Expands wildcard scopes and tests targets for dangling SaaS CNAMEs and mail-spoofing vectors."""

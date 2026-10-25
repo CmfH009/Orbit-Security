@@ -15,7 +15,7 @@ import logging
 import os
 import socket
 import urllib.request
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import httpx
 
@@ -207,3 +207,76 @@ def create_bonded_http_client(
         return httpx.AsyncClient(**client_kwargs)
 
     return httpx.AsyncClient(**client_kwargs)
+
+
+class NetworkResiliencyGovernor:
+    """Dynamic Bandwidth & Network Failure Resiliency Engine (Project #25).
+
+    Tracks per-adapter probe latency and failure rates, quarantines degraded interfaces,
+    and dynamically scales concurrent worker limits using AIMD (Additive Increase / Multiplicative Decrease).
+    """
+
+    def __init__(
+        self,
+        base_concurrency: int = 32,
+        min_concurrency: int = 4,
+        max_concurrency: int = 64,
+        failure_rate_quarantine_threshold: float = 0.50,
+    ):
+        self.base_concurrency = base_concurrency
+        self.min_concurrency = min_concurrency
+        self.max_concurrency = max_concurrency
+        self.failure_threshold = failure_rate_quarantine_threshold
+        self.current_concurrency = base_concurrency
+        self._adapter_telemetry: Dict[str, Dict[str, Any]] = {}
+
+    def record_probe_outcome(self, adapter_name: str, success: bool, latency_ms: float) -> None:
+        """Records a network probe outcome and adjusts AIMD concurrency bounds."""
+        rec = self._adapter_telemetry.setdefault(
+            adapter_name,
+            {"successes": 0, "failures": 0, "latencies_ms": []},
+        )
+        if success:
+            rec["successes"] += 1
+            if latency_ms < 250.0:
+                self.current_concurrency = min(self.max_concurrency, self.current_concurrency + 1)
+        else:
+            rec["failures"] += 1
+            self.current_concurrency = max(self.min_concurrency, int(self.current_concurrency * 0.75))
+
+        rec["latencies_ms"].append(float(latency_ms))
+        if len(rec["latencies_ms"]) > 50:
+            rec["latencies_ms"] = rec["latencies_ms"][-50:]
+
+    def evaluate_transport_health(self) -> Dict[str, Any]:
+        """Returns healthy vs quarantined adapters, recommended route, and AIMD concurrency."""
+        healthy: List[Tuple[str, float]] = []
+        quarantined: List[str] = []
+        adapter_summaries: Dict[str, Dict[str, Any]] = {}
+
+        for name, st in self._adapter_telemetry.items():
+            total = st["successes"] + st["failures"]
+            fail_rate = (st["failures"] / total) if total > 0 else 0.0
+            lats = st["latencies_ms"]
+            avg_lat = (sum(lats) / len(lats)) if lats else 0.0
+            is_quarantined = total >= 3 and (fail_rate >= self.failure_threshold or avg_lat >= 1800.0)
+            adapter_summaries[name] = {
+                "total_probes": total,
+                "failure_rate": round(fail_rate, 3),
+                "avg_latency_ms": round(avg_lat, 1),
+                "quarantined": is_quarantined,
+            }
+            if is_quarantined:
+                quarantined.append(name)
+            else:
+                healthy.append((name, avg_lat))
+
+        healthy.sort(key=lambda x: x[1])
+        recommended = healthy[0][0] if healthy else None
+
+        return {
+            "recommended_adapter": recommended,
+            "quarantined_adapters": quarantined,
+            "recommended_concurrency": self.current_concurrency,
+            "adapters": adapter_summaries,
+        }

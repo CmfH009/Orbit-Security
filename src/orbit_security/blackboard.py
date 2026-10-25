@@ -466,6 +466,33 @@ class Blackboard:
         manifest_file.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
         return manifest
 
+    def render_retro_tui_dashboard(self, width: int = 84) -> str:
+        """Renders a Retro TUI Cockpit Terminal frame for SSH / Termux sessions (Project #29)."""
+        w = max(68, int(width))
+        border = "+" + ("-" * (w - 2)) + "+"
+        stats = self.get_stats()
+        recent = self.get_recent(limit=5)
+
+        def _pad(text: str) -> str:
+            inner = text[: w - 4]
+            return f"| {inner:<{w - 4}} |"
+
+        lines = [
+            border,
+            _pad("ORBIT SECURITY // RETRO TUI COCKPIT (SSH / TERMUX MODE)"),
+            _pad(f"WAL JOURNAL: {str(stats['journal_mode']).upper()} | EVENTS: {stats['total_events']} | OUTREACH FREEZE: LOCKED"),
+            border,
+            _pad("[RECENT TELEMETRY & SENTINEL STREAM]"),
+        ]
+        if not recent:
+            lines.append(_pad("  (No events recorded yet)"))
+        else:
+            for ev in recent:
+                ev_line = f"#{ev['id']} [{ev['iso_time'][-8:]}] {ev['event_type']} ({ev['source']})"
+                lines.append(_pad(ev_line))
+        lines.append(border)
+        return "\n".join(lines)
+
 
 # Singleton accessor
 _GLOBAL_BLACKBOARD: Optional[Blackboard] = None

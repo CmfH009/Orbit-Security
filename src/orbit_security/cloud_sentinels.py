@@ -338,6 +338,145 @@ class PassiveTlsCipherSentinel:
         return result
 
 
+class EmailAuthPolicyAnalyzer:
+    """Autonomous Email Security SPF / DKIM / DMARC / MTA-STS / BIMI Policy Analyzer (Project #22)."""
+
+    DNS_LOOKUP_MECHANISMS = ("include:", "a", "mx", "ptr", "exists:", "redirect=")
+
+    @classmethod
+    def _count_spf_lookups(cls, spf_record: str) -> int:
+        tokens = (spf_record or "").lower().split()
+        count = 0
+        for tok in tokens:
+            t = tok.lstrip("+-~?")
+            if (
+                t.startswith("include:")
+                or t.startswith("exists:")
+                or t.startswith("redirect=")
+                or t in ("a", "mx", "ptr")
+                or t.startswith("a:")
+                or t.startswith("a/")
+                or t.startswith("mx:")
+                or t.startswith("mx/")
+                or t.startswith("ptr:")
+            ):
+                count += 1
+        return count
+
+    @classmethod
+    def analyze_email_security_posture(
+        cls,
+        domain: str,
+        spf_record: Optional[str] = None,
+        dmarc_record: Optional[str] = None,
+        dkim_selectors: Optional[Dict[str, str]] = None,
+        mta_sts_record: Optional[str] = None,
+        bimi_record: Optional[str] = None,
+        blackboard: Any = None,
+    ) -> Dict[str, Any]:
+        """Evaluates SPF, DMARC, DKIM, MTA-STS, and BIMI records for spoofing and RFC 7208/7489 flaws."""
+        clean_domain = (domain or "").strip().lower()
+        findings: List[Dict[str, Any]] = []
+        spf = (spf_record or "").strip()
+        dmarc = (dmarc_record or "").strip()
+        dkim_map = dkim_selectors or {}
+
+        # 1. SPF Analysis (RFC 7208)
+        spf_lookups = cls._count_spf_lookups(spf) if spf else 0
+        if not spf or not spf.lower().startswith("v=spf1"):
+            findings.append({
+                "code": "SPF_MISSING",
+                "severity": "HIGH",
+                "detail": "No valid v=spf1 TXT record published on apex domain.",
+            })
+        else:
+            spf_lower = spf.lower()
+            if "+all" in spf_lower:
+                findings.append({
+                    "code": "SPF_PERMISSIVE_PLUS_ALL",
+                    "severity": "CRITICAL",
+                    "detail": "SPF record contains '+all', authorizing any IPv4/IPv6 host on the Internet to send mail as this domain.",
+                })
+            elif "?all" in spf_lower:
+                findings.append({
+                    "code": "SPF_NEUTRAL_QUESTION_ALL",
+                    "severity": "HIGH",
+                    "detail": "SPF record ends with neutral '?all', providing zero spoofing enforcement.",
+                })
+            if spf_lookups > 10:
+                findings.append({
+                    "code": "SPF_LOOKUP_LIMIT_EXCEEDED",
+                    "severity": "MEDIUM",
+                    "detail": f"SPF record requires {spf_lookups} DNS mechanisms (>10 RFC 7208 limit), causing PermError at receivers.",
+                })
+
+        # 2. DMARC Analysis (RFC 7489)
+        if not dmarc or "v=dmarc1" not in dmarc.lower():
+            findings.append({
+                "code": "DMARC_MISSING",
+                "severity": "HIGH",
+                "detail": "No _dmarc TXT record found. Domain is vulnerable to direct From-header spoofing.",
+            })
+        else:
+            dmarc_lower = dmarc.lower()
+            if re.search(r"\bp\s*=\s*none\b", dmarc_lower):
+                findings.append({
+                    "code": "DMARC_POLICY_NONE",
+                    "severity": "HIGH",
+                    "detail": "DMARC policy is set to 'p=none' (monitoring only); spoofed messages are not quarantined or rejected.",
+                })
+            pct_match = re.search(r"\bpct\s*=\s*(\d+)", dmarc_lower)
+            if pct_match and int(pct_match.group(1)) < 100:
+                findings.append({
+                    "code": "DMARC_PARTIAL_PCT",
+                    "severity": "MEDIUM",
+                    "detail": f"DMARC policy only applies to {pct_match.group(1)}% of messages (pct<100).",
+                })
+
+        # 3. DKIM Selector Verification
+        valid_dkim = [sel for sel, rec in dkim_map.items() if "p=" in (rec or "") and len((rec or "").split("p=")[-1].strip()) >= 64]
+        if not valid_dkim:
+            findings.append({
+                "code": "DKIM_NO_VALID_SELECTORS",
+                "severity": "MEDIUM",
+                "detail": "No active DKIM public key selectors verified.",
+            })
+
+        severities = {f["severity"] for f in findings}
+        overall_sev = (
+            "CRITICAL" if "CRITICAL" in severities
+            else ("HIGH" if "HIGH" in severities else ("MEDIUM" if "MEDIUM" in severities else "SAFE"))
+        )
+        spoofable = any(
+            f["code"] in ("SPF_MISSING", "SPF_PERMISSIVE_PLUS_ALL", "SPF_NEUTRAL_QUESTION_ALL", "DMARC_MISSING", "DMARC_POLICY_NONE")
+            for f in findings
+        )
+
+        result = {
+            "domain": clean_domain,
+            "spoofable": spoofable,
+            "severity": overall_sev,
+            "spf_dns_lookups": spf_lookups,
+            "valid_dkim_selectors": valid_dkim,
+            "has_mta_sts": bool(mta_sts_record and "v=stsv1" in mta_sts_record.lower()),
+            "has_bimi": bool(bimi_record and "v=bimi1" in bimi_record.lower()),
+            "findings": findings,
+        }
+
+        if blackboard is not None:
+            try:
+                blackboard.publish(
+                    event_type="EMAIL_AUTH_POSTURE_EVALUATED",
+                    payload=result,
+                    source="email_auth_analyzer",
+                    topic="perimeter",
+                )
+            except Exception as exc:
+                logger.debug(f"Blackboard publish error in analyze_email_security_posture: {exc}")
+
+        return result
+
+
 class GraphQLIntrospectionSentinel:
     """Audits targets for publicly accessible GraphQL schema introspection endpoints."""
 
