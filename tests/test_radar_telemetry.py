@@ -25,9 +25,15 @@ from orbit_security.radar_telemetry import (
     RadarQueryRecord,
     RadarTelemetryService,
     RadarTelemetryHTTPHandler,
+    parse_user_agent_summary,
+    format_discord_radar_embed,
 )
+from orbit_security.radar_lead_enricher import RadarLeadEnricher
+from orbit_security.radar_proposal_stager import RadarRetainerProposalStager
 from orbit_security.blackboard import (
     EVENT_RADAR_DOMAIN_ENTERED,
+    EVENT_RADAR_LEAD_ENRICHED,
+    EVENT_RADAR_PROPOSAL_STAGED,
     TOPIC_TELEMETRY,
     Blackboard,
     get_blackboard,
@@ -37,7 +43,14 @@ from orbit_security.blackboard import (
 @pytest.fixture
 def temp_service(tmp_path):
     log_file = tmp_path / "test_radar_queries.jsonl"
-    service = RadarTelemetryService(queries_file=log_file, dedup_window_seconds=1.0)
+    leads_file = tmp_path / "test_enriched_leads.json"
+    campaigns_dir = tmp_path / "outbound_campaigns"
+    service = RadarTelemetryService(
+        queries_file=log_file,
+        leads_file=leads_file,
+        campaigns_dir=campaigns_dir,
+        dedup_window_seconds=1.0,
+    )
     yield service
     service.clear_queries()
 
@@ -172,7 +185,11 @@ class TestBlackboardIntegration:
         sub_queue = bb.subscribe(maxsize=10)
 
         log_file = tmp_path / "bb_test_queries.jsonl"
-        service = RadarTelemetryService(queries_file=log_file)
+        service = RadarTelemetryService(
+            queries_file=log_file,
+            leads_file=tmp_path / "bb_leads.json",
+            campaigns_dir=tmp_path / "bb_campaigns",
+        )
 
         # Monkey-patch get_blackboard in blackboard module
         import orbit_security.blackboard as bb_mod
@@ -207,7 +224,11 @@ class TestRadarTelemetryHTTPServer:
     def test_server(self, tmp_path):
         import http.server
         log_file = tmp_path / "server_test_queries.jsonl"
-        srv_service = RadarTelemetryService(queries_file=log_file)
+        srv_service = RadarTelemetryService(
+            queries_file=log_file,
+            leads_file=tmp_path / "srv_leads.json",
+            campaigns_dir=tmp_path / "srv_campaigns",
+        )
 
         class CustomHandler(RadarTelemetryHTTPHandler):
             service = srv_service
@@ -277,3 +298,225 @@ class TestRadarTelemetryHTTPServer:
             assert data["count"] == 1
             assert data["queries"][0]["domain"] == "seeded.com"
             assert data["stats"]["total_probes"] == 1
+
+
+class TestUserAgentAndDiscordEmbeds:
+    """Tests User-Agent device parsing and Discord Rich Embed webhook alerts."""
+
+    def test_parse_android_chrome_mobile_ua(self):
+        ua = (
+            "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36"
+        )
+        info = parse_user_agent_summary(ua, screen_resolution="412x883")
+        assert info["device_type"] == "Mobile"
+        assert "Android" in info["os"]
+        assert "Chrome" in info["browser"]
+        assert info["screen"] == "412x883"
+        assert "412x883" in info["summary"]
+
+    def test_parse_iphone_safari_ua(self):
+        ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+        info = parse_user_agent_summary(ua, screen_resolution="390x844")
+        assert info["device_type"] == "Mobile"
+        assert "iOS" in info["os"]
+        assert "Safari" in info["browser"]
+
+    def test_format_discord_radar_embed_with_enrichment_and_proposal(self):
+        record = {
+            "id": "rad_1792970510_c3d7b9d1",
+            "domain": "smartmouseco.com",
+            "score": 65,
+            "grade": "C",
+            "risk_label": "MODERATE RISK",
+            "trigger_source": "audit_complete",
+            "dmarc_status": "missing",
+            "spf_status": "pass",
+            "cname_status": "pass",
+            "user_agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+            "screen_resolution": "412x883",
+            "timestamp": "2026-10-25T23:21:50+00:00",
+        }
+        enrichment = {
+            "domain": "smartmouseco.com",
+            "company_profile": {"company_name": "Smart Mouse Co"},
+            "registrar": "Cloudflare, Inc.",
+            "tech_stack": ["Shopify", "Cloudflare"],
+            "mx_provider": "Google Workspace",
+            "public_apis_osint": {"security_osint_count": 312, "total_catalog_apis": 1425},
+        }
+        proposal = {
+            "domain_slug": "smartmouseco_com",
+            "pdf_path": "outbound_campaigns/smartmouseco_com/smartmouseco_com_security_audit.pdf",
+            "remediation_path": "outbound_campaigns/smartmouseco_com/dns_remediation_plan.md",
+            "proposal_path": "outbound_campaigns/smartmouseco_com/retainer_proposal.md",
+        }
+        payload = format_discord_radar_embed(record, enrichment=enrichment, proposal=proposal)
+        assert "embeds" in payload
+        embed = payload["embeds"][0]
+        assert "smartmouseco.com" in embed["title"]
+        field_Map = {f["name"]: f["value"] for f in embed["fields"]}
+        assert any("smartmouseco.com" in v for v in field_Map.values())
+        assert any("65/100" in v and "C" in v for v in field_Map.values())
+        assert any("Android" in v and "412x883" in v for v in field_Map.values())
+        assert any("Shopify" in v and "Cloudflare" in v for v in field_Map.values())
+        assert any("smartmouseco_com_security_audit.pdf" in v for v in field_Map.values())
+
+    def test_discord_webhook_http_dispatch(self, tmp_path, monkeypatch):
+        import http.server
+
+        received = []
+
+        class MockWebhookHandler(http.server.BaseHTTPRequestHandler):
+            def do_POST(self):
+                length = int(self.headers.get("Content-Length", 0))
+                body = json.loads(self.rfile.read(length).decode("utf-8"))
+                received.append(body)
+                self.send_response(204)
+                self.end_headers()
+
+            def log_message(self, format_str, *args):
+                pass
+
+        httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), MockWebhookHandler)
+        port = httpd.server_address[1]
+        t = threading.Thread(target=httpd.serve_forever, daemon=True)
+        t.start()
+
+        try:
+            webhook_url = f"http://127.0.0.1:{port}/webhook"
+            monkeypatch.setenv("ORBIT_RADAR_WEBHOOK_URL", webhook_url)
+
+            service = RadarTelemetryService(
+                queries_file=tmp_path / "wh_queries.jsonl",
+                leads_file=tmp_path / "wh_leads.json",
+                campaigns_dir=tmp_path / "outbound_campaigns",
+            )
+            res = service.record_query(
+                {
+                    "domain": "smartmouseco.com",
+                    "score": 72,
+                    "grade": "C",
+                    "user_agent": "Mozilla/5.0 (Linux; Android 10; K) Chrome/155.0.0.0 Mobile",
+                    "screen_resolution": "412x883",
+                },
+                enrich_async=False,
+            )
+            assert res["ok"] is True
+            assert len(received) >= 1
+            payload = received[-1]
+            assert "embeds" in payload
+            embed = payload["embeds"][0]
+            assert "smartmouseco.com" in embed["title"]
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+
+    def test_submit_then_audit_complete_not_dropped(self, temp_service):
+        # 1. Initial radar_submit (score is None)
+        res1 = temp_service.record_query({
+            "domain": "smartmouseco.com",
+            "session_id": "sess_mobile_1",
+            "trigger_source": "radar_submit",
+            "score": None,
+            "grade": None,
+        })
+        assert res1["ok"] is True
+
+        # 2. Follow-up audit_complete 100ms later with score & grade
+        res2 = temp_service.record_query({
+            "domain": "smartmouseco.com",
+            "session_id": "sess_mobile_1",
+            "trigger_source": "audit_complete",
+            "score": 82,
+            "grade": "B",
+        })
+        assert res2["ok"] is True
+
+        queries = temp_service.get_recent_queries(domain="smartmouseco.com")
+        assert len(queries) == 2
+        assert any(q["score"] == 82 and q["grade"] == "B" for q in queries)
+
+
+class TestRadarLeadEnricherAndProposalStager:
+    """Tests OSINT lead enrichment (public_apis_osint.py) and automated retainer proposal staging."""
+
+    def test_lead_enricher_public_apis_osint(self, tmp_path):
+        leads_file = tmp_path / "enriched_leads.json"
+        enricher = RadarLeadEnricher(leads_file=leads_file)
+        profile = enricher.enrich_domain("avexdesigns.com", network_probe=False)
+
+        assert profile["domain"] == "avexdesigns.com"
+        assert "public_apis_osint" in profile
+        osint = profile["public_apis_osint"]
+        assert osint["bridge_available"] is True
+        assert osint["total_catalog_apis"] > 1000
+        assert osint["security_osint_count"] > 100
+        # Executive OSINT lookup for known agency
+        assert profile["leadership"]["resolved"] is True
+        assert profile["leadership"]["email"] == "john@avexdesigns.com"
+
+        # Verify persisted to leads_file
+        saved = enricher.get_enriched_lead("avexdesigns.com")
+        assert saved is not None
+        assert saved["domain"] == "avexdesigns.com"
+
+    def test_retainer_proposal_stager_generates_pdf_and_remediation(self, tmp_path):
+        campaigns_dir = tmp_path / "outbound_campaigns"
+        stager = RadarRetainerProposalStager(campaigns_dir=campaigns_dir)
+
+        enrichment = {
+            "domain": "smartmouseco.com",
+            "company_profile": {
+                "company_name": "Smart Mouse Co",
+                "title": "Smart Mouse Co — Ergonomic Precision Hardware",
+            },
+            "registrar": "Cloudflare, Inc.",
+            "dns_provider": "Cloudflare",
+            "tech_stack": ["Shopify", "Cloudflare"],
+            "mx_provider": "Google Workspace",
+            "dmarc_status": "missing",
+            "spf_status": "pass",
+            "computed_score": 68,
+            "computed_grade": "C",
+            "public_apis_osint": {
+                "bridge_available": True,
+                "total_catalog_apis": 1425,
+                "security_osint_count": 312,
+                "domain_matches": [],
+                "pivot_domains": ["api.securitytrails.com", "urlscan.io"],
+            },
+        }
+        res = stager.stage_campaign(
+            domain="smartmouseco.com",
+            query_record={"domain": "smartmouseco.com", "score": 68, "grade": "C"},
+            enrichment=enrichment,
+        )
+
+        assert res["ok"] is True
+        assert res["domain_slug"] == "smartmouseco_com"
+
+        pdf_path = Path(res["pdf_path"])
+        remediation_path = Path(res["remediation_path"])
+        proposal_path = Path(res["proposal_path"])
+        pitch_path = Path(res["pitch_path"])
+
+        assert pdf_path.exists()
+        assert pdf_path.read_bytes().startswith(b"%PDF-")
+        assert remediation_path.exists()
+        rem_text = remediation_path.read_text(encoding="utf-8")
+        assert "_dmarc" in rem_text
+        assert "v=DMARC1" in rem_text
+        assert "Cloudflare" in rem_text
+
+        assert proposal_path.exists()
+        prop_text = proposal_path.read_text(encoding="utf-8")
+        assert "Smart Mouse Co" in prop_text
+        assert "smartmouseco.com" in prop_text
+        assert "Shopify" in prop_text
+
+        assert pitch_path.exists()
+        pitch_text = pitch_path.read_text(encoding="utf-8")
+        assert "Subject:" in pitch_text
+        assert "smartmouseco.com" in pitch_text
+

@@ -1,22 +1,26 @@
 #!/usr/bin/env python3
 """orbit_security.radar_telemetry: Real-Time Radar Query Telemetry & Observer.
 =============================================================================
-Provides real-time visibility and telemetry ingestion whenever a domain is
-entered into the ORBIT // PERIMETER RADAR TERMINAL (https://cmfh009.github.io/Orbit-Security/).
+Provides real-time visibility, OSINT enrichment, retainer proposal staging, and
+webhook alerting whenever a domain is entered into the ORBIT // PERIMETER RADAR TERMINAL
+(https://cmfh009.github.io/Orbit-Security/).
 
 Key Features:
 - Structured JSONL persistence (data/radar_queries.jsonl) with atomic append.
 - Decoupled SQLite WAL Blackboard event bus dispatch (RADAR_DOMAIN_ENTERED)
   for real-time streaming to the Orbit Aerospace Cockpit HUD / SSE stream (<500ms).
-- Rich webhook alerting to Discord and Slack via WebhookDispatcher.
-- Standalone zero-dependency HTTP server with full CORS support.
-- CLI streaming monitor (--tail) and aggregate statistics (--stats).
+- Rich Discord & Slack webhook alerting with parsed device User-Agent, hygiene
+  score/grade, OSINT tech stack, registrar, and staged deliverable paths.
+- Background OSINT & Lead Enrichment via `RadarLeadEnricher` (`public_apis_osint.py`).
+- Automated Retainer Proposal & PDF Audit staging in `outbound_campaigns/<domain_slug>/`.
+- Standalone zero-dependency HTTP server with full CORS & PNA preflight support.
+- CLI streaming monitor (--tail), aggregate statistics (--stats), and backfill (--backfill).
 """
 
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 import datetime
 import hashlib
 import http.server
@@ -25,13 +29,15 @@ import logging
 import os
 from pathlib import Path
 import re
-import socket
 import sys
 import threading
 import time
 from typing import Any, Dict, List, Optional
 import urllib.parse
 import urllib.request
+
+from orbit_security.radar_lead_enricher import DEFAULT_ENRICHED_LEADS_FILE, RadarLeadEnricher
+from orbit_security.radar_proposal_stager import DEFAULT_CAMPAIGNS_DIR, RadarRetainerProposalStager
 
 logger = logging.getLogger("orbit_security.radar_telemetry")
 
@@ -49,6 +55,211 @@ RESTRICTED_DOMAINS = {
     "lan",
     "home.arpa",
 }
+
+
+def parse_user_agent_summary(
+    user_agent: Optional[str], screen_resolution: Optional[str] = None
+) -> Dict[str, str]:
+    """Parses raw browser User-Agent string into human-readable device, OS, and browser telemetry."""
+    ua = (user_agent or "").strip()
+    screen = (screen_resolution or "").strip() or "N/A"
+    if not ua:
+        return {
+            "device_type": "Unknown",
+            "os": "Unknown OS",
+            "browser": "Unknown Browser",
+            "screen": screen,
+            "summary": f"Unknown Device ({screen})" if screen != "N/A" else "Unknown Device",
+            "raw": "N/A",
+        }
+
+    ua_lower = ua.lower()
+
+    # 1. OS Detection
+    os_name = "Unknown OS"
+    android_m = re.search(r"android\s+([0-9.]+)", ua, re.IGNORECASE)
+    ios_m = re.search(r"(?:iphone os|cpu os)\s+([0-9_]+)", ua, re.IGNORECASE)
+    if android_m:
+        os_name = f"Android {android_m.group(1)}"
+    elif ios_m:
+        os_name = f"iOS {ios_m.group(1).replace('_', '.')}"
+    elif "iphone" in ua_lower:
+        os_name = "iOS (iPhone)"
+    elif "ipad" in ua_lower:
+        os_name = "iPadOS"
+    elif "windows nt 10.0" in ua_lower:
+        os_name = "Windows 10/11"
+    elif "windows" in ua_lower:
+        os_name = "Windows"
+    elif "mac os x" in ua_lower or "macintosh" in ua_lower:
+        os_name = "macOS"
+    elif "linux" in ua_lower:
+        os_name = "Linux"
+
+    # 2. Device Type Detection
+    if any(tok in ua_lower for tok in ("mobile", "iphone", "android")) and "ipad" not in ua_lower:
+        device_type = "Mobile"
+    elif any(tok in ua_lower for tok in ("ipad", "tablet")):
+        device_type = "Tablet"
+    elif any(tok in ua_lower for tok in ("bot", "HeadlessChrome".lower(), "curl", "python")):
+        device_type = "Bot/CLI"
+    else:
+        device_type = "Desktop"
+
+    # 3. Browser Detection
+    browser = "Browser"
+    edg_m = re.search(r"edg(?:e|a|ios)?/([0-9.]+)", ua, re.IGNORECASE)
+    chrome_m = re.search(r"(?:chrome|crios)/([0-9.]+)", ua, re.IGNORECASE)
+    fx_m = re.search(r"(?:firefox|fxios)/([0-9.]+)", ua, re.IGNORECASE)
+    safari_m = re.search(r"version/([0-9.]+).*safari", ua, re.IGNORECASE)
+
+    if edg_m:
+        browser = f"Edge {edg_m.group(1).split('.')[0]}"
+    elif chrome_m:
+        ver = chrome_m.group(1).split(".")[0]
+        browser = f"Chrome Mobile {ver}" if device_type == "Mobile" else f"Chrome {ver}"
+    elif fx_m:
+        browser = f"Firefox {fx_m.group(1).split('.')[0]}"
+    elif safari_m or ("safari" in ua_lower and "chrome" not in ua_lower):
+        ver = safari_m.group(1).split(".")[0] if safari_m else ""
+        browser = f"Mobile Safari {ver}".strip() if device_type in ("Mobile", "Tablet") else f"Safari {ver}".strip()
+
+    res_suffix = f" ({screen})" if screen and screen != "N/A" else ""
+    summary = f"{os_name} {device_type} • {browser}{res_suffix}"
+
+    return {
+        "device_type": device_type,
+        "os": os_name,
+        "browser": browser,
+        "screen": screen,
+        "summary": summary,
+        "raw": ua[:180],
+    }
+
+
+def format_discord_radar_embed(
+    record: Dict[str, Any],
+    enrichment: Optional[Dict[str, Any]] = None,
+    proposal: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Builds a rich Discord Embed payload for an inbound Radar Terminal domain scan."""
+    domain = record.get("domain", "unknown")
+    enrich = enrichment or {}
+    prop = proposal or {}
+
+    score = record.get("score")
+    if score is None:
+        score = enrich.get("computed_score")
+
+    grade = record.get("grade") or enrich.get("computed_grade") or "PENDING"
+    risk_label = record.get("risk_label") or (
+        "LOW RISK" if (score is not None and score >= 88)
+        else ("MODERATE RISK" if (score is not None and score >= 70) else "ACTION RECOMMENDED")
+    )
+    trigger_source = record.get("trigger_source") or "radar_submit"
+    dmarc_status = (record.get("dmarc_status") or enrich.get("dmarc_status") or "pending").upper()
+    spf_status = (record.get("spf_status") or enrich.get("spf_status") or "pending").upper()
+    cname_status = (record.get("cname_status") or "PASS").upper()
+
+    ua_info = parse_user_agent_summary(
+        record.get("user_agent"),
+        record.get("screen_resolution"),
+    )
+
+    if score is not None and score >= 88:
+        color = 0x10B981  # Emerald
+    elif score is not None and score >= 70:
+        color = 0xF59E0B  # Amber
+    else:
+        color = 0xEF4444  # Crimson
+
+    score_display = f"**{score}/100** (Grade: `{grade}`)" if score is not None else f"Pending (Grade: `{grade}`)"
+
+    fields: List[Dict[str, Any]] = [
+        {
+            "name": "🎯 Target Domain",
+            "value": f"`{domain}`",
+            "inline": True,
+        },
+        {
+            "name": "🛡️ Hygiene Score & Grade",
+            "value": score_display,
+            "inline": True,
+        },
+        {
+            "name": "⚡ Trigger & Posture",
+            "value": f"`{trigger_source}` • `{risk_label}`",
+            "inline": True,
+        },
+        {
+            "name": "📱 Visitor Device & User Agent",
+            "value": f"**{ua_info['summary']}**\n`{ua_info['raw']}`",
+            "inline": False,
+        },
+        {
+            "name": "📡 DNS Authentication Posture",
+            "value": f"DMARC: `{dmarc_status}` | SPF: `{spf_status}` | CNAME: `{cname_status}`",
+            "inline": False,
+        },
+    ]
+
+    if enrich:
+        company = enrich.get("company_profile", {}).get("company_name") or domain
+        registrar = enrich.get("registrar") or "Unknown"
+        stack = ", ".join(enrich.get("tech_stack") or ["Standard Web"])
+        mx_prov = enrich.get("mx_provider") or "Standard MX"
+        osint = enrich.get("public_apis_osint") or {}
+        osint_count = osint.get("security_osint_count", 0)
+        total_apis = osint.get("total_catalog_apis", 0)
+
+        fields.append(
+            {
+                "name": "🔍 OSINT & Tech Stack Profile (public-apis)",
+                "value": (
+                    f"**Company:** {company} | **Registrar:** `{registrar}`\n"
+                    f"**Tech Stack:** `{stack}` | **MX:** `{mx_prov}`\n"
+                    f"**OSINT Catalog:** `{osint_count}` security endpoints correlated (`{total_apis}` indexed APIs)"
+                ),
+                "inline": False,
+            }
+        )
+
+    if prop:
+        slug = prop.get("domain_slug") or domain.replace(".", "_")
+        pdf_name = Path(prop.get("pdf_path") or f"{slug}_security_audit.pdf").name
+        fields.append(
+            {
+                "name": "📄 Staged Retainer Deliverables",
+                "value": (
+                    f"Folder: `outbound_campaigns/{slug}/`\n"
+                    f"• PDF Audit: `{pdf_name}`\n"
+                    f"• DNS Fix: `dns_remediation_plan.md` | Proposal: `retainer_proposal.md`"
+                ),
+                "inline": False,
+            }
+        )
+
+    ts = record.get("timestamp") or datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    return {
+        "username": "ORBIT Radar Sentinel",
+        "avatar_url": "https://cmfh009.github.io/Orbit-Security/assets/logo.png",
+        "embeds": [
+            {
+                "title": f"🎯 Orbit Radar Probe Detected: {domain} (Grade {grade})",
+                "description": (
+                    f"Live perimeter scan captured on **ORBIT // PERIMETER RADAR TERMINAL** "
+                    f"for `{domain}` via `{ua_info['device_type']}` ({ua_info['browser']})."
+                ),
+                "color": color,
+                "fields": fields,
+                "footer": {
+                    "text": "Project ORBIT // Perimeter Radar Terminal Live Telemetry",
+                },
+                "timestamp": ts,
+            }
+        ],
+    }
 
 
 @dataclass
@@ -79,11 +290,13 @@ class RadarQueryRecord:
 
 
 class RadarTelemetryService:
-    """Thread-safe telemetry recorder and observer for perimeter radar probes."""
+    """Thread-safe telemetry recorder, OSINT enricher, and proposal stager for perimeter radar probes."""
 
     def __init__(
         self,
         queries_file: Optional[Path] = None,
+        leads_file: Optional[Path] = None,
+        campaigns_dir: Optional[Path] = None,
         dedup_window_seconds: float = 3.0,
     ):
         self.queries_file = Path(queries_file) if queries_file else DEFAULT_QUERIES_FILE
@@ -91,6 +304,8 @@ class RadarTelemetryService:
         self.dedup_window_seconds = dedup_window_seconds
         self._lock = threading.Lock()
         self._recent_probes_cache: Dict[str, float] = {}
+        self.enricher = RadarLeadEnricher(leads_file=leads_file or DEFAULT_ENRICHED_LEADS_FILE)
+        self.proposal_stager = RadarRetainerProposalStager(campaigns_dir=campaigns_dir or DEFAULT_CAMPAIGNS_DIR)
 
     @staticmethod
     def normalize_domain(domain_raw: str) -> str:
@@ -118,8 +333,14 @@ class RadarTelemetryService:
             return False
         return True
 
-    def _is_duplicate(self, domain: str, session_id: str, now_epoch: float) -> bool:
-        cache_key = f"{domain}:{session_id or 'none'}"
+    def _is_duplicate(
+        self,
+        domain: str,
+        session_id: str,
+        now_epoch: float,
+        trigger_source: str = "radar_submit",
+    ) -> bool:
+        cache_key = f"{domain}:{session_id or 'none'}:{trigger_source}"
         last_time = self._recent_probes_cache.get(cache_key, 0.0)
         # Purge stale keys
         if len(self._recent_probes_cache) > 200:
@@ -132,8 +353,14 @@ class RadarTelemetryService:
         self._recent_probes_cache[cache_key] = now_epoch
         return False
 
-    def record_query(self, event_data: Dict[str, Any], client_ip: str = "") -> Dict[str, Any]:
-        """Validates, records, and dispatches a radar domain query event."""
+    def record_query(
+        self,
+        event_data: Dict[str, Any],
+        client_ip: str = "",
+        enrich_async: bool = True,
+        network_probe: bool = True,
+    ) -> Dict[str, Any]:
+        """Validates, records, enriches, stages retainer deliverables, and dispatches webhook alerts."""
         raw_input = str(event_data.get("domain") or event_data.get("target") or event_data.get("raw_input") or "").strip()
         domain = self.normalize_domain(raw_input)
 
@@ -170,7 +397,7 @@ class RadarTelemetryService:
         is_lookup_failed = bool(audit.get("is_lookup_failed") or event_data.get("is_lookup_failed"))
 
         # Deterministic unique query ID
-        hash_seed = f"{domain}:{now_epoch}:{session_id}:{client_ip}"
+        hash_seed = f"{domain}:{now_epoch}:{session_id}:{client_ip}:{trigger_source}"
         query_id = f"rad_{int(now_epoch)}_{hashlib.sha256(hash_seed.encode('utf-8')).hexdigest()[:8]}"
 
         record = RadarQueryRecord(
@@ -198,9 +425,9 @@ class RadarTelemetryService:
 
         record_dict = record.to_dict()
 
-        # Check deduplication window to avoid double-logging fast repeated clicks
+        # Check deduplication window per (domain, session_id, trigger_source)
         with self._lock:
-            is_dup = self._is_duplicate(domain, session_id, now_epoch)
+            is_dup = self._is_duplicate(domain, session_id, now_epoch, trigger_source=trigger_source)
             if not is_dup:
                 try:
                     with open(self.queries_file, "a", encoding="utf-8") as fh:
@@ -211,17 +438,58 @@ class RadarTelemetryService:
         # Broadcast to local Blackboard event bus
         self._publish_to_blackboard(record_dict)
 
-        # Dispatch rich webhook notification if configured
-        self._dispatch_webhooks(record_dict)
+        # Trigger OSINT enrichment, retainer proposal staging, and rich webhook alerting
+        if enrich_async:
+            threading.Thread(
+                target=self._enrich_stage_and_alert,
+                args=(record_dict, network_probe),
+                daemon=True,
+            ).start()
+        else:
+            self._enrich_stage_and_alert(record_dict, network_probe=network_probe)
 
         return {
             "ok": True,
             "id": query_id,
             "domain": domain,
-            "score": score,
-            "grade": grade,
+            "score": record_dict.get("score"),
+            "grade": record_dict.get("grade"),
             "recorded_at": now.isoformat(),
             "trigger_source": trigger_source,
+        }
+
+    def _enrich_stage_and_alert(self, record_dict: Dict[str, Any], network_probe: bool = True) -> Dict[str, Any]:
+        """Executes OSINT enrichment, stages retainer deliverables, and dispatches Discord/Slack webhooks."""
+        domain = record_dict.get("domain", "")
+        enrichment: Optional[Dict[str, Any]] = None
+        proposal: Optional[Dict[str, Any]] = None
+
+        try:
+            enrichment = self.enricher.enrich_domain(domain, network_probe=network_probe)
+            if record_dict.get("score") is None and enrichment.get("computed_score") is not None:
+                record_dict["score"] = enrichment["computed_score"]
+            if not record_dict.get("grade") and enrichment.get("computed_grade"):
+                record_dict["grade"] = enrichment["computed_grade"]
+            if not record_dict.get("dmarc_status") and enrichment.get("dmarc_status"):
+                record_dict["dmarc_status"] = enrichment["dmarc_status"]
+            if not record_dict.get("spf_status") and enrichment.get("spf_status"):
+                record_dict["spf_status"] = enrichment["spf_status"]
+        except Exception as ex:
+            logger.warning(f"Radar OSINT enrichment failed for {domain}: {ex}")
+
+        try:
+            proposal = self.proposal_stager.stage_campaign(
+                domain=domain,
+                query_record=record_dict,
+                enrichment=enrichment,
+            )
+        except Exception as ex:
+            logger.warning(f"Radar retainer proposal staging failed for {domain}: {ex}")
+
+        self._dispatch_webhooks(record_dict, enrichment=enrichment, proposal=proposal, sync=True)
+        return {
+            "enrichment": enrichment,
+            "proposal": proposal,
         }
 
     def _publish_to_blackboard(self, record_dict: Dict[str, Any]) -> None:
@@ -244,9 +512,19 @@ class RadarTelemetryService:
         except Exception as ex:
             logger.debug(f"Blackboard event publication notice: {ex}")
 
-    def _dispatch_webhooks(self, record: Dict[str, Any]) -> None:
-        """Dispatches an alert to configured Discord / Slack webhooks."""
-        discord_url = os.environ.get("ORBIT_RADAR_WEBHOOK_URL") or os.environ.get("DISCORD_WEBHOOK_URL")
+    def _dispatch_webhooks(
+        self,
+        record: Dict[str, Any],
+        enrichment: Optional[Dict[str, Any]] = None,
+        proposal: Optional[Dict[str, Any]] = None,
+        sync: bool = False,
+    ) -> None:
+        """Dispatches a rich embed alert to configured Discord / Slack webhooks."""
+        discord_url = (
+            os.environ.get("ORBIT_RADAR_WEBHOOK_URL")
+            or os.environ.get("ORBIT_DISCORD_WEBHOOK_URL")
+            or os.environ.get("DISCORD_WEBHOOK_URL")
+        )
         slack_url = os.environ.get("SLACK_WEBHOOK_URL")
 
         if not discord_url and not slack_url:
@@ -259,47 +537,41 @@ class RadarTelemetryService:
                 grade = record.get("grade") or "N/A"
                 source = record.get("trigger_source") or "terminal"
                 ts = record.get("timestamp", "")[:19]
-
-                score_text = f"{score}/100" if score is not None else "Pending"
-                title = f"🎯 Orbit Radar Probe Detected: {domain}"
-                summary = (
-                    f"**Target Domain:** `{domain}`\n"
-                    f"**Perimeter Hygiene:** {score_text} (Grade: `{grade}`)\n"
-                    f"**Trigger Source:** `{source}`\n"
-                    f"**Source URL:** {record.get('source_url') or 'https://cmfh009.github.io/Orbit-Security/'}\n"
-                    f"**Timestamp:** {ts} UTC"
+                ua_info = parse_user_agent_summary(
+                    record.get("user_agent"),
+                    record.get("screen_resolution"),
                 )
 
                 if discord_url:
-                    payload = {
-                        "username": "ORBIT Radar Sentinel",
-                        "avatar_url": "https://cmfh009.github.io/Orbit-Security/assets/logo.png",
-                        "embeds": [
-                            {
-                                "title": title,
-                                "description": summary,
-                                "color": 0x10B981 if (score and score >= 75) else 0xEF4444,
-                                "footer": {"text": "Project ORBIT // Perimeter Radar Terminal Live Telemetry"},
-                            }
-                        ],
-                    }
+                    payload = format_discord_radar_embed(
+                        record,
+                        enrichment=enrichment,
+                        proposal=proposal,
+                    )
                     req = urllib.request.Request(
                         discord_url,
                         data=json.dumps(payload).encode("utf-8"),
-                        headers={"Content-Type": "application/json", "User-Agent": "OrbitRadarTelemetry/1.0"},
+                        headers={"Content-Type": "application/json", "User-Agent": "OrbitRadarTelemetry/2.0"},
                         method="POST",
                     )
                     with urllib.request.urlopen(req, timeout=5.0) as _:
                         pass
 
                 if slack_url:
-                    payload = {
-                        "text": f"{title}\n{summary}",
-                    }
+                    score_text = f"{score}/100" if score is not None else "Pending"
+                    title = f"🎯 Orbit Radar Probe Detected: {domain} (Grade {grade})"
+                    summary = (
+                        f"*Target Domain:* `{domain}`\n"
+                        f"*Perimeter Hygiene:* {score_text} (Grade: `{grade}`)\n"
+                        f"*Visitor Device:* {ua_info['summary']}\n"
+                        f"*Trigger Source:* `{source}`\n"
+                        f"*Timestamp:* {ts} UTC"
+                    )
+                    payload = {"text": f"{title}\n{summary}"}
                     req = urllib.request.Request(
                         slack_url,
                         data=json.dumps(payload).encode("utf-8"),
-                        headers={"Content-Type": "application/json", "User-Agent": "OrbitRadarTelemetry/1.0"},
+                        headers={"Content-Type": "application/json", "User-Agent": "OrbitRadarTelemetry/2.0"},
                         method="POST",
                     )
                     with urllib.request.urlopen(req, timeout=5.0) as _:
@@ -307,7 +579,10 @@ class RadarTelemetryService:
             except Exception as ex:
                 logger.warning(f"Webhook dispatch failed: {ex}")
 
-        threading.Thread(target=_worker, daemon=True).start()
+        if sync:
+            _worker()
+        else:
+            threading.Thread(target=_worker, daemon=True).start()
 
     def get_recent_queries(
         self, limit: int = 50, domain: Optional[str] = None
@@ -392,6 +667,31 @@ class RadarTelemetryService:
                     self.queries_file.write_text("", encoding="utf-8")
                 except Exception:
                     pass
+
+    def backfill_existing_queries(self, network_probe: bool = True) -> List[Dict[str, Any]]:
+        """Enriches and stages retainer proposals for all unique domains in radar_queries.jsonl."""
+        queries = self.get_recent_queries(limit=500)
+        seen_domains = set()
+        results: List[Dict[str, Any]] = []
+        for q in queries:
+            dom = q.get("domain")
+            if not dom or dom in seen_domains:
+                continue
+            seen_domains.add(dom)
+            res = self._enrich_stage_and_alert(dict(q), network_probe=network_probe)
+            results.append(
+                {
+                    "domain": dom,
+                    "score": res["proposal"]["score"] if res.get("proposal") else q.get("score"),
+                    "grade": res["proposal"]["grade"] if res.get("proposal") else q.get("grade"),
+                    "company_name": res["enrichment"]["company_profile"]["company_name"] if res.get("enrichment") else dom,
+                    "tech_stack": res["enrichment"]["tech_stack"] if res.get("enrichment") else [],
+                    "registrar": res["enrichment"]["registrar"] if res.get("enrichment") else "Unknown",
+                    "campaign_dir": res["proposal"]["campaign_dir"] if res.get("proposal") else "",
+                    "pdf_path": res["proposal"]["pdf_path"] if res.get("proposal") else "",
+                }
+            )
+        return results
 
 
 # =============================================================================
@@ -527,7 +827,8 @@ def _print_query_line(q: Dict[str, Any]) -> None:
     src = q.get("trigger_source", "submit")
     ts = q.get("timestamp", "")[:19].replace("T", " ")
     score_str = f"{score:>3}/100" if score is not None else "  ---  "
-    print(f"[{ts}] [{grade:^3}] ({score_str}) PROBE: {domain:<32} [via: {src}]")
+    ua_info = parse_user_agent_summary(q.get("user_agent"), q.get("screen_resolution"))
+    print(f"[{ts}] [{grade:^3}] ({score_str}) PROBE: {domain:<26} | {ua_info['summary']} [via: {src}]")
 
 
 def run_stats() -> None:
@@ -561,13 +862,30 @@ def main() -> int:
     parser.add_argument("--port", type=int, default=9095, help="Port for server (default: 9095)")
     parser.add_argument("--host", default="0.0.0.0", help="Host interface (default: 0.0.0.0)")
     parser.add_argument("--probe", help="Emit manual test probe for specified domain")
+    parser.add_argument("--enrich", help="Run OSINT enrichment and retainer staging for a domain")
+    parser.add_argument("--backfill", action="store_true", help="Enrich and stage proposals for all logged queries")
 
     args = parser.parse_args()
 
     if args.probe:
         service = RadarTelemetryService()
-        res = service.record_query({"domain": args.probe, "trigger_source": "cli_test"})
+        res = service.record_query({"domain": args.probe, "trigger_source": "cli_test"}, enrich_async=False)
         print(json.dumps(res, indent=2))
+        return 0
+
+    if args.enrich:
+        service = RadarTelemetryService()
+        out = service._enrich_stage_and_alert(
+            {"domain": service.normalize_domain(args.enrich), "trigger_source": "cli_enrich"},
+            network_probe=True,
+        )
+        print(json.dumps(out.get("proposal") or {}, indent=2))
+        return 0
+
+    if args.backfill:
+        service = RadarTelemetryService()
+        results = service.backfill_existing_queries(network_probe=True)
+        print(json.dumps({"backfilled_count": len(results), "results": results}, indent=2))
         return 0
 
     if args.serve:

@@ -26,5 +26,7 @@ from orbit_security.blackboard import (
     EVENT_PR_AUDIT_COMPLETED,
     EVENT_SHOWCASE_UPDATED,
     EVENT_RADAR_DOMAIN_ENTERED,
+    EVENT_RADAR_LEAD_ENRICHED,
+    EVENT_RADAR_PROPOSAL_STAGED,
     __all__,
 )
