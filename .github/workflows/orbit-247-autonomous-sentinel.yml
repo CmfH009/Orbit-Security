@@ -1,0 +1,78 @@
+# .github/workflows/orbit-247-autonomous-sentinel.yml
+name: "Orbit 24/7 Autonomous Cloud Sentinel"
+
+on:
+  schedule:
+    # Run every 4 hours autonomously 24/7 in GitHub's hardened cloud runners
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
+    inputs:
+      target_override:
+        description: 'Optional single target domain to scan'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+concurrency:
+  group: orbit-cloud-sentinel
+  cancel-in-progress: false
+
+jobs:
+  autonomous-perimeter-sweep:
+    name: "24/7 Autonomous Security Audit"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Hardened Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Runtime & Security Auditing Tooling
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install dnspython httpx pydantic pytest pip-audit
+
+      - name: "Anti-CVE Shield: Supply Chain & Dependency Audit"
+        run: |
+          echo "### 🛡️ Supply Chain & Dependency Audit (Anti-CVE Shield)" >> $GITHUB_STEP_SUMMARY
+          echo "Scanning installed environment for known CVE advisories via pip-audit..."
+          # Scan dependencies for known CVEs
+          pip-audit --desc || echo "::warning::pip-audit identified potential dependency advisories"
+
+      - name: "Unit & Security Invariant Verification"
+        run: |
+          PYTHONPATH=src pytest tests/test_input_sanitizer.py tests/test_orbit_recon.py -v
+
+      - name: "Autonomous Perimeter Recon & DNS Hygiene Audit"
+        run: |
+          TARGETS_ARG="--targets-file .orbit-targets.txt"
+          if [ -n "${{ github.event.inputs.target_override }}" ]; then
+            TARGETS_ARG="${{ github.event.inputs.target_override }}"
+          fi
+
+          python tools/orbit-recon.py $TARGETS_ARG \
+            --markdown "orbit-recon-report.md"
+
+          if [ -f "orbit-recon-report.md" ]; then
+            cat orbit-recon-report.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: "Upload Autonomous Audit Artifacts"
+        uses: actions/upload-artifact@v4
+        with:
+          name: orbit-247-audit-report-${{ github.run_id }}
+          path: |
+            orbit-recon-report.md
+          retention-days: 30

@@ -33,6 +33,7 @@ except ImportError:
 from orbit_security.scanner import is_safe_host
 from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES
 from orbit_security.remediation import DnsRemediationGenerator
+from orbit_security.input_sanitizer import sanitize_domain, SecurityValidationError
 from orbit_security.scoring import (
     MISSING_HEADER_TITLES,
     TAKEOVER_CLASS_KEY,
@@ -412,7 +413,13 @@ def build_remediation_plan(domain: str, dns_res: Dict[str, Any], web_res: Dict[s
 
 
 def run_recon(target: str, json_output: bool = False, remediate: bool = False) -> Dict[str, Any]:
-    domain = target.replace("http://", "").replace("https://", "").split("/")[0].strip()
+    raw_domain = target.replace("http://", "").replace("https://", "").split("/")[0].strip()
+    try:
+        domain = sanitize_domain(raw_domain)
+    except SecurityValidationError as sve:
+        if not json_output:
+            print(f"{RED}{BOLD}[SECURITY VALIDATION REJECTED]{RESET} '{raw_domain}': {sve}")
+        return {"target": raw_domain, "error": str(sve), "score": 0, "grade": "F", "dns": {}, "perimeter": {}}
 
     dns_res = resolve_dns(domain)
     web_res = check_headers_and_exposures(domain)
@@ -537,8 +544,15 @@ def run_bulk_recon(
         print(f"{BOLD}Executing Bulk Perimeter Audit across {len(targets)} domains...{RESET}\n")
 
     for target in targets:
-        domain = target.replace("http://", "").replace("https://", "").split("/")[0].strip()
-        if not domain or domain.startswith("#"):
+        raw_domain = target.replace("http://", "").replace("https://", "").split("/")[0].strip()
+        if not raw_domain or raw_domain.startswith("#"):
+            continue
+
+        try:
+            domain = sanitize_domain(raw_domain)
+        except SecurityValidationError as sve:
+            if not json_output:
+                print(f"  • {RED}{BOLD}[REJECTED INPUT]{RESET} '{raw_domain}': {sve}")
             continue
 
         dns_res = resolve_dns(domain)

@@ -14,9 +14,11 @@ import os
 import sys
 import json
 import time
+import html
+import re
 from datetime import datetime, timezone
 from pathlib import Path
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field, asdict, fields
 from typing import Dict, List, Any, Optional, Union
 from enum import Enum
 
@@ -75,7 +77,9 @@ class ClientBriefingData:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> ClientBriefingData:
-        return cls(**data)
+        valid_keys = {f.name for f in fields(cls)}
+        filtered = {k: v for k, v in data.items() if k in valid_keys}
+        return cls(**filtered)
 
 
 class ClientThreatPortalExporter:
@@ -119,8 +123,15 @@ class ClientThreatPortalExporter:
         score = max(15, min(100, 100 - penalty)) if initial_score is None else initial_score
         grade = self._calculate_grade(score)
 
-        # 2. Mermaid Attack Tree generation
-        tree = from_osint_findings(domain, findings)
+        # 2. Mermaid Attack Tree generation (sanitize tags to prevent script injection)
+        safe_tree_domain = re.sub(r"<[^>]*>", "", domain)
+        sanitized_tree_findings = []
+        for f in findings:
+            f_tree = dict(f)
+            if "title" in f_tree:
+                f_tree["title"] = re.sub(r"<[^>]*>", "", str(f_tree["title"]))
+            sanitized_tree_findings.append(f_tree)
+        tree = from_osint_findings(safe_tree_domain, sanitized_tree_findings)
         mermaid_code = tree_to_mermaid(tree, direction="TD")
 
         # 3. DuckDB In-Memory OLAP Analytics
@@ -318,36 +329,50 @@ class ClientThreatPortalExporter:
         """Renders an executive, responsive HTML report deliverable."""
         findings_html = ""
         for i, f in enumerate(data.findings, start=1):
-            sev = f.get("severity", "MEDIUM").upper()
+            raw_sev = str(f.get("severity", "MEDIUM")).upper()
+            sev = html.escape(raw_sev)
             badge_color = {
                 "CRITICAL": "#ff1744",
                 "HIGH": "#ff9100",
                 "MEDIUM": "#ffd600",
                 "LOW": "#00e5ff",
                 "INFO": "#90caf9"
-            }.get(sev, "#90caf9")
+            }.get(raw_sev, "#90caf9")
+
+            title = html.escape(str(f.get("title", "")))
+            category = html.escape(str(f.get("category", "general")))
+            target = html.escape(str(f.get("target", data.domain)))
+            desc = html.escape(str(f.get("description", "")))
+            evidence = html.escape(str(f.get("evidence", ""))) if f.get("evidence") else ""
+            remediation = html.escape(str(f.get("remediation", "")))
+
+            evidence_html = f'<div class="finding-evidence"><strong>Evidence:</strong> <code>{evidence}</code></div>' if evidence else ''
 
             findings_html += f"""
             <div class="finding-card" style="border-left: 4px solid {badge_color};">
                 <div class="finding-header">
-                    <span class="finding-title">#{i} {f.get('title')}</span>
+                    <span class="finding-title">#{i} {title}</span>
                     <span class="badge" style="background: {badge_color}22; color: {badge_color}; border: 1px solid {badge_color}55;">{sev}</span>
                 </div>
-                <div class="finding-meta"><strong>Category:</strong> {f.get('category', 'general')} | <strong>Target:</strong> <code>{f.get('target', data.domain)}</code></div>
-                <p class="finding-desc">{f.get('description', '')}</p>
-                {f'<div class="finding-evidence"><strong>Evidence:</strong> <code>{f.get("evidence")}</code></div>' if f.get('evidence') else ''}
-                <div class="finding-remediation"><strong>Remediation:</strong> {f.get('remediation', '')}</div>
+                <div class="finding-meta"><strong>Category:</strong> {category} | <strong>Target:</strong> <code>{target}</code></div>
+                <p class="finding-desc">{desc}</p>
+                {evidence_html}
+                <div class="finding-remediation"><strong>Remediation:</strong> {remediation}</div>
             </div>
             """
 
         tiers_html = ""
         for t in data.care_plan_tiers:
+            t_tier = html.escape(str(t.get('tier', '')))
+            t_cov = html.escape(str(t.get('coverage', '')))
+            t_sla = html.escape(str(t.get('sla', '')))
+            t_price = t.get('price_mrr', 0)
             tiers_html += f"""
             <div class="plan-card">
-                <h3>{t['tier']}</h3>
-                <div class="plan-price">${t['price_mrr']:,}<span>/month</span></div>
-                <p class="plan-coverage">{t['coverage']}</p>
-                <div class="plan-sla">⚡ SLA: {t['sla']}</div>
+                <h3>{t_tier}</h3>
+                <div class="plan-price">${t_price:,}<span>/month</span></div>
+                <p class="plan-coverage">{t_cov}</p>
+                <div class="plan-sla">⚡ SLA: {t_sla}</div>
             </div>
             """
 
@@ -356,17 +381,23 @@ class ClientThreatPortalExporter:
         for s_name, s_count in sb.items():
             breakdown_html += f"""
             <div class="stat-pill">
-                <span class="stat-label">{s_name}</span>
+                <span class="stat-label">{html.escape(str(s_name))}</span>
                 <span class="stat-val">{s_count}</span>
             </div>
             """
+
+        safe_domain = html.escape(str(data.domain))
+        safe_client_name = html.escape(str(data.client_name))
+        safe_summary = html.escape(str(data.executive_summary))
+        safe_pgp = html.escape(str(data.pgp_advisory.get('pgp_armored_block', '')))
+        safe_engine = html.escape(str(data.duckdb_metrics.get("engine", "DuckDB")))
 
         html_template = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orbit Security Audit: {data.domain}</title>
+    <title>Orbit Security Audit: {safe_domain}</title>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
     <script>mermaid.initialize({{ startOnLoad: true, theme: 'dark' }});</script>
     <style>
@@ -423,7 +454,7 @@ class ClientThreatPortalExporter:
         <header>
             <div class="header-title">
                 <h1>🛸 Project ORBIT Security Briefing</h1>
-                <p>Audited Entity: <strong>{data.domain}</strong> ({data.client_name}) | Generated: {data.timestamp}</p>
+                <p>Audited Entity: <strong>{safe_domain}</strong> ({safe_client_name}) | Generated: {data.timestamp}</p>
             </div>
             <div class="score-box">
                 <div class="score-val">{data.score}</div>
@@ -433,9 +464,9 @@ class ClientThreatPortalExporter:
 
         <section class="card">
             <h2 class="section-title" style="margin-top:0;">1. Executive Summary</h2>
-            <p>{data.executive_summary}</p>
+            <p>{safe_summary}</p>
             <div class="stats-grid" style="margin-top: 1.25rem;">
-                <div class="stat-pill"><span class="stat-label">Analytics Engine</span><span class="stat-val">{data.duckdb_metrics.get("engine", "DuckDB")}</span></div>
+                <div class="stat-pill"><span class="stat-label">Analytics Engine</span><span class="stat-val">{safe_engine}</span></div>
                 <div class="stat-pill"><span class="stat-label">Total Findings</span><span class="stat-val">{len(data.findings)}</span></div>
                 {breakdown_html}
             </div>
@@ -464,7 +495,7 @@ class ClientThreatPortalExporter:
         <section class="card" style="margin-top: 2rem;">
             <h2 class="section-title" style="margin-top:0;">5. RFC 9116 PGP Signed Advisory</h2>
             <p style="color: var(--text-muted); margin-bottom: 0.75rem;">Cryptographic security disclosure bundle signed with Orbit Sentinel GPG key:</p>
-            <pre class="pgp-box">{data.pgp_advisory.get('pgp_armored_block', '')}</pre>
+            <pre class="pgp-box">{safe_pgp}</pre>
         </section>
 
         <footer>

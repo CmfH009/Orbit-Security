@@ -193,3 +193,39 @@ class TestClientThreatPortalExporter:
         assert ok is True
         assert pdf_file.exists()
         assert pdf_file.stat().st_size > 500
+
+    def test_export_html_xss_sanitization(self, tmp_path):
+        exporter = ClientThreatPortalExporter()
+        malicious_findings = [
+            {
+                "title": "<script>alert('xss_title')</script>",
+                "category": "<img src=x onerror=alert(1)>",
+                "severity": "HIGH",
+                "score": 8.0,
+                "description": "Exploit with <iframe src=evil.com>",
+                "target": "target.com<script>",
+                "evidence": "Payload: <script>document.cookie</script>",
+                "remediation": "Escape <b>everything</b> & always"
+            }
+        ]
+        briefing = exporter.compile_from_audit("target.com<script>", malicious_findings, client_name="Corp<script>")
+        html_file = tmp_path / "xss_report.html"
+        html_content = exporter.export_html(briefing, output_path=html_file)
+
+        assert html_file.exists()
+        assert "<script>alert('xss_title')</script>" not in html_content
+        assert "&lt;script&gt;alert(&#x27;xss_title&#x27;)&lt;/script&gt;" in html_content or "&lt;script&gt;" in html_content
+        assert "<img src=x onerror=alert(1)>" not in html_content
+        assert "<iframe src=evil.com>" not in html_content
+
+    def test_from_dict_extra_fields_resilience(self):
+        data = {
+            "domain": "safe.com",
+            "client_name": "Safe Corp",
+            "score": 90,
+            "grade": "A",
+            "unknown_extra_field_from_future_version": "should_not_crash"
+        }
+        briefing = ClientBriefingData.from_dict(data)
+        assert briefing.domain == "safe.com"
+        assert briefing.grade == "A"

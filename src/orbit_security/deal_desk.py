@@ -56,8 +56,12 @@ class RetainerDealDeskConcierge:
     def __init__(self, workspace_root: Optional[Path] = None, portals_dir: Optional[Path] = None):
         if workspace_root:
             self.workspace_root = Path(workspace_root)
-            self.portals_dir = portals_dir or (self.workspace_root / "projects" / "orbit-security" / "docs" / "portals")
-            self._is_repo_workspace = False
+            if (self.workspace_root / "docs" / "portals").exists() or (self.workspace_root / "src" / "orbit_security").exists():
+                self.portals_dir = portals_dir or (self.workspace_root / "docs" / "portals")
+                self._is_repo_workspace = True
+            else:
+                self.portals_dir = portals_dir or (self.workspace_root / "projects" / "orbit-security" / "docs" / "portals")
+                self._is_repo_workspace = False
         else:
             self.workspace_root = REPO_ROOT
             self.portals_dir = portals_dir or PORTALS_OUTPUT_DIR
@@ -268,10 +272,9 @@ class RetainerDealDeskConcierge:
 </html>
 """
         portal_file.write_text(portal_html, encoding="utf-8")
-        if getattr(self, "_is_repo_workspace", False):
-            landing_portal_file = REPO_ROOT / "landing" / "portals" / portal_file.name
-            if landing_portal_file.parent.exists():
-                landing_portal_file.write_text(portal_html, encoding="utf-8")
+        landing_portal_file = REPO_ROOT / "landing" / "portals" / portal_file.name
+        if landing_portal_file.parent.exists():
+            landing_portal_file.write_text(portal_html, encoding="utf-8")
 
         # Publish event to blackboard
         try:
