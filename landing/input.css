@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@source "./**/*.html";
+@source "../docs/**/*.html";
+@source "../landing/**/*.html";
 
 @font-face {
   font-family: 'Press Start 2P';

@@ -2967,7 +2967,7 @@
         initAllScrollIndicators();
 
         // Specular mouse cursor spotlight on glass cards (rAF throttled)
-        const glassCards = document.querySelectorAll(".card-glass, .card-glass-emerald, .card-glass-cyan, .pricing-grid > div");
+        const glassCards = document.querySelectorAll(".card-glass, .card-glass-emerald, .card-glass-cyan, .card-glass-amber, .card-glass-purple, .pricing-grid > div");
         glassCards.forEach(card => {
             let ticking = false;
             card.addEventListener("mousemove", (e) => {
@@ -3201,11 +3201,11 @@
             }
 
             /* Specular Mouse-Tracking Spotlight on Cards */
-            .card-glass, .card-glass-emerald, .card-glass-cyan, .pricing-grid > div {
+            .card-glass, .card-glass-emerald, .card-glass-cyan, .card-glass-amber, .card-glass-purple, .pricing-grid > div {
                 position: relative !important;
                 overflow: hidden !important;
             }
-            .card-glass::after, .card-glass-emerald::after, .card-glass-cyan::after, .pricing-grid > div::after {
+            .card-glass::after, .card-glass-emerald::after, .card-glass-cyan::after, .card-glass-amber::after, .card-glass-purple::after, .pricing-grid > div::after {
                 content: '';
                 position: absolute;
                 inset: 0;

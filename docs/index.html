@@ -1637,11 +1637,98 @@ Apex Digital Studio</pre>
         </div>
     </section>
 
-    <!-- Project #7 & #9: Interactive Subdomain Takeover PoC Playground & Zero-Knowledge Agency Scorecard Portal -->
-    <section id="takeover-poc-playground" class="scroll-mt-20 py-10 sm:py-12 max-w-6xl mx-auto px-4 sm:px-6 border-t border-slate-800/80">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
+    <!-- Project #9 & #19: Zero-Knowledge Fleet Scorecard Portal & Autonomous Perimeter Sentinel Statuspage -->
+    <section id="fleet-sentinel-cockpit" class="relative z-10 scroll-mt-20 py-10 sm:py-12 max-w-6xl mx-auto px-4 sm:px-6 border-t border-slate-800/80">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-stretch">
+            <!-- Left 6 Cols: Project #9 Zero-Knowledge Agency Security Scorecard Portal -->
+            <div id="zk-agency-scorecard" class="relative z-10 lg:col-span-6 bg-slate-900/85 rounded-2xl border-2 border-cyan-500/40 p-5 sm:p-6 shadow-2xl card-glass-cyan flex flex-col justify-between space-y-5">
+                <div class="space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-950 border border-cyan-500/40 text-cyan-400 font-arcade text-[9px] uppercase rounded">
+                            <span>🔐 ZERO-KNOWLEDGE AGENCY SCORECARD</span>
+                        </div>
+                        <span class="px-2.5 py-1 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-mono text-[10px] font-bold">ZERO SERVER STORAGE</span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight">Zero-Knowledge Fleet Scorecard Portal</h2>
+                        <p class="text-xs sm:text-sm text-slate-400 mt-1">
+                            Audit a multi-domain client portfolio 100% inside your browser via encrypted DNS-over-HTTPS (`dns.google` &amp; `cloudflare-dns.com`). Zero client domains or results ever touch an external backend server.
+                        </p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                            <label for="zkFleetDomainsInput">Client Portfolio Domains (comma or newline separated):</label>
+                            <span id="zkFleetGradeBadge" class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold">FLEET READY</span>
+                        </div>
+                        <textarea id="zkFleetDomainsInput" rows="3" class="w-full p-3 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-cyan-400" placeholder="shopify.com, github.com, example.com">shopify.com, github.com, cloudflare.com</textarea>
+                    </div>
+
+                    <!-- Scorecard Results Table -->
+                    <div id="zkScorecardResultsContainer" class="p-4 rounded-xl bg-slate-950/95 border border-cyan-500/30 space-y-3 font-mono text-xs">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+                            <div>
+                                <span class="text-slate-400 text-[10px] uppercase block">R1-R5 Exploitability-Aware Fleet Score</span>
+                                <span id="zkFleetSummaryScore" class="text-base font-extrabold text-white">Click "Run Zero-Knowledge Batch Audit" below</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-slate-500 text-[10px] uppercase block">SHA-256 Verification Digest</span>
+                                <span id="zkFleetSha256Badge" class="text-[10px] text-cyan-400">In-Memory Ephemeral Mode</span>
+                            </div>
+                        </div>
+                        <div id="zkScorecardRows" class="space-y-1.5 max-h-[175px] overflow-y-auto pr-1 text-[11px] text-slate-300">
+                            <div class="text-slate-400 py-2">
+                                Ready to evaluate client domains using R1-R5 exploitability floor/ceiling scoring rules directly in WebCrypto + DoH memory.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 pt-2">
+                    <button type="button" id="btnRunZkScorecard" onclick="runZeroKnowledgeBatchScorecard()" class="flex-1 min-h-[44px] px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-bold text-xs uppercase tracking-wide cursor-pointer transition shadow-lg shadow-cyan-500/20">
+                        Run Zero-Knowledge Batch Audit
+                    </button>
+                    <button type="button" onclick="exportZeroKnowledgeScorecardJson()" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-bold cursor-pointer transition">
+                        Export Signed JSON
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right 6 Cols: Project #19 Public Bug Bounty Radar Statuspage -->
+            <div id="bounty-radar-statuspage" class="relative z-10 lg:col-span-6 bg-slate-900/85 rounded-2xl border-2 border-emerald-500/40 p-5 sm:p-6 shadow-2xl card-glass-emerald flex flex-col justify-between space-y-4">
+                <div class="space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-950 border border-emerald-500/40 text-emerald-400 font-arcade text-[9px] uppercase rounded">
+                            <span>🛰️ PUBLIC BUG BOUNTY RADAR STATUSPAGE</span>
+                        </div>
+                        <span id="bountyStatusOperationalBadge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-[10px] font-bold">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            ALL SENTINELS OPERATIONAL
+                        </span>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-extrabold text-white tracking-tight">Autonomous Perimeter Sentinel Statuspage</h3>
+                        <p class="text-xs text-slate-400 mt-1">
+                            Live telemetry across monitored public bug bounty scopes (Shopify, GitHub, Cloudflare, GitLab, Fastly), CT Log Stream Daemons, and Safe-Harbor Governance gates.
+                        </p>
+                    </div>
+                    <div id="bountyStatuspageGrid" class="p-4 rounded-xl bg-slate-950/95 border border-emerald-500/30 space-y-2 font-mono text-xs">
+                        <div class="text-slate-400 text-[11px]">Loading sentinel statuspage telemetry...</div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-800">
+                    <span>Outreach Freeze: <strong class="text-emerald-400">ENFORCED (LOCKED)</strong></span>
+                    <span class="text-cyan-400">RFC 9116 Safe Harbor Compliant</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Project #7 & #12: Interactive Subdomain Takeover PoC Playground & EPSS Probability Horizon Visualizer -->
+    <section id="takeover-poc-playground" class="relative z-10 scroll-mt-20 py-10 sm:py-12 max-w-6xl mx-auto px-4 sm:px-6 border-t border-slate-800/80">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-stretch">
             <!-- Left 6 Cols: Project #7 Interactive Subdomain Takeover PoC Playground -->
-            <div class="lg:col-span-6 bg-slate-900/85 rounded-2xl border-2 border-amber-500/40 p-5 sm:p-6 shadow-2xl card-glass-amber flex flex-col justify-between space-y-5">
+            <div class="relative z-10 lg:col-span-6 bg-slate-900/85 rounded-2xl border-2 border-amber-500/40 p-5 sm:p-6 shadow-2xl card-glass-amber flex flex-col justify-between space-y-5">
                 <div class="space-y-4">
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-950 border border-amber-500/40 text-amber-400 font-arcade text-[9px] uppercase rounded">
@@ -1717,67 +1804,8 @@ Apex Digital Studio</pre>
                 </div>
             </div>
 
-            <!-- Right 6 Cols: Project #9 Zero-Knowledge Agency Security Scorecard Portal -->
-            <div id="zk-agency-scorecard" class="lg:col-span-6 bg-slate-900/85 rounded-2xl border-2 border-cyan-500/40 p-5 sm:p-6 shadow-2xl card-glass-cyan flex flex-col justify-between space-y-5">
-                <div class="space-y-4">
-                    <div class="flex flex-wrap items-center justify-between gap-2">
-                        <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-950 border border-cyan-500/40 text-cyan-400 font-arcade text-[9px] uppercase rounded">
-                            <span>🔐 ZERO-KNOWLEDGE AGENCY SCORECARD</span>
-                        </div>
-                        <span class="px-2.5 py-1 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-mono text-[10px] font-bold">ZERO SERVER STORAGE</span>
-                    </div>
-                    <div>
-                        <h2 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight">Zero-Knowledge Fleet Scorecard Portal</h2>
-                        <p class="text-xs sm:text-sm text-slate-400 mt-1">
-                            Audit a multi-domain client portfolio 100% inside your browser via encrypted DNS-over-HTTPS (`dns.google` &amp; `cloudflare-dns.com`). Zero client domains or results ever touch an external backend server.
-                        </p>
-                    </div>
-
-                    <div class="space-y-2">
-                        <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                            <label for="zkFleetDomainsInput">Client Portfolio Domains (comma or newline separated):</label>
-                            <span id="zkFleetGradeBadge" class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold">FLEET READY</span>
-                        </div>
-                        <textarea id="zkFleetDomainsInput" rows="3" class="w-full p-3 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-cyan-400" placeholder="shopify.com, github.com, example.com">shopify.com, github.com, cloudflare.com</textarea>
-                    </div>
-
-                    <!-- Scorecard Results Table -->
-                    <div id="zkScorecardResultsContainer" class="p-4 rounded-xl bg-slate-950/95 border border-cyan-500/30 space-y-3 font-mono text-xs">
-                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
-                            <div>
-                                <span class="text-slate-400 text-[10px] uppercase block">R1-R5 Exploitability-Aware Fleet Score</span>
-                                <span id="zkFleetSummaryScore" class="text-base font-extrabold text-white">Click "Run Zero-Knowledge Batch Audit" below</span>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-slate-500 text-[10px] uppercase block">SHA-256 Verification Digest</span>
-                                <span id="zkFleetSha256Badge" class="text-[10px] text-cyan-400">In-Memory Ephemeral Mode</span>
-                            </div>
-                        </div>
-                        <div id="zkScorecardRows" class="space-y-1.5 max-h-[175px] overflow-y-auto pr-1 text-[11px] text-slate-300">
-                            <div class="text-slate-400 py-2">
-                                Ready to evaluate client domains using R1-R5 exploitability floor/ceiling scoring rules directly in WebCrypto + DoH memory.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex flex-wrap items-center gap-2 pt-2">
-                    <button type="button" id="btnRunZkScorecard" onclick="runZeroKnowledgeBatchScorecard()" class="flex-1 min-h-[44px] px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-bold text-xs uppercase tracking-wide cursor-pointer transition shadow-lg shadow-cyan-500/20">
-                        Run Zero-Knowledge Batch Audit
-                    </button>
-                    <button type="button" onclick="exportZeroKnowledgeScorecardJson()" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-bold cursor-pointer transition">
-                        Export Signed JSON
-                    </button>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Project #12 & #19: EPSS Probability Horizon Visualizer & Public Bug Bounty Radar Statuspage -->
-    <section id="epss-horizon-visualizer" class="scroll-mt-20 py-10 sm:py-12 max-w-6xl mx-auto px-4 sm:px-6 border-t border-slate-800/80">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
-            <!-- Left 6 Cols: Project #12 EPSS 30-Day Probability Horizon Visualizer -->
-            <div class="lg:col-span-6 bg-slate-900/85 rounded-2xl border-2 border-purple-500/40 p-5 sm:p-6 shadow-2xl card-glass-purple flex flex-col justify-between space-y-4">
+            <!-- Right 6 Cols: Project #12 EPSS 30-Day Probability Horizon Visualizer -->
+            <div id="epss-horizon-visualizer" class="relative z-10 lg:col-span-6 bg-slate-900/85 rounded-2xl border-2 border-purple-500/40 p-5 sm:p-6 shadow-2xl card-glass-purple flex flex-col justify-between space-y-4">
                 <div class="space-y-3">
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-950 border border-purple-500/40 text-purple-300 font-arcade text-[9px] uppercase rounded">
@@ -1798,34 +1826,6 @@ Apex Digital Studio</pre>
                 <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-800">
                     <span>Red Zone: EPSS &ge; 50% (Critical Velocity)</span>
                     <button type="button" onclick="renderEpssHorizonChart()" class="px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-purple-500/20 text-purple-300 border border-purple-500/40 cursor-pointer transition">Refresh Horizon</button>
-                </div>
-            </div>
-
-            <!-- Right 6 Cols: Project #19 Public Bug Bounty Radar Statuspage -->
-            <div id="bounty-radar-statuspage" class="lg:col-span-6 bg-slate-900/85 rounded-2xl border-2 border-emerald-500/40 p-5 sm:p-6 shadow-2xl card-glass-emerald flex flex-col justify-between space-y-4">
-                <div class="space-y-3">
-                    <div class="flex flex-wrap items-center justify-between gap-2">
-                        <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-950 border border-emerald-500/40 text-emerald-400 font-arcade text-[9px] uppercase rounded">
-                            <span>🛰️ PUBLIC BUG BOUNTY RADAR STATUSPAGE</span>
-                        </div>
-                        <span id="bountyStatusOperationalBadge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-[10px] font-bold">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                            ALL SENTINELS OPERATIONAL
-                        </span>
-                    </div>
-                    <div>
-                        <h3 class="text-xl font-extrabold text-white tracking-tight">Autonomous Perimeter Sentinel Statuspage</h3>
-                        <p class="text-xs text-slate-400 mt-1">
-                            Live telemetry across monitored public bug bounty scopes (Shopify, GitHub, Cloudflare, GitLab, Fastly), CT Log Stream Daemons, and Safe-Harbor Governance gates.
-                        </p>
-                    </div>
-                    <div id="bountyStatuspageGrid" class="p-4 rounded-xl bg-slate-950/95 border border-emerald-500/30 space-y-2 font-mono text-xs">
-                        <div class="text-slate-400 text-[11px]">Loading sentinel statuspage telemetry...</div>
-                    </div>
-                </div>
-                <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-800">
-                    <span>Outreach Freeze: <strong class="text-emerald-400">ENFORCED (LOCKED)</strong></span>
-                    <span class="text-cyan-400">RFC 9116 Safe Harbor Compliant</span>
                 </div>
             </div>
         </div>
