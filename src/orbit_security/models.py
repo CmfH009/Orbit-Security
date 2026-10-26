@@ -8,17 +8,20 @@ from pydantic import BaseModel, Field
 # compatibility: `from orbit_security.models import Severity` still works.
 from orbit_security.scoring import Severity, score_findings
 
-__all__ = ["Severity", "Finding", "AgencyBranding", "DomainAuditResult"]
+__all__ = ["Severity", "Finding", "VulnerabilityFinding", "AgencyBranding", "DomainAuditResult"]
 
 
 class Finding(BaseModel):
     title: str
     severity: Severity
-    category: str
+    category: str = "DNS Security"
     description: str
     remediation: str
-    target: str
+    target: str = ""
     evidence: str = ""
+
+
+VulnerabilityFinding = Finding
 
 
 class AgencyBranding(BaseModel):

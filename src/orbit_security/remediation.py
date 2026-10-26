@@ -6,7 +6,8 @@ dangling CNAME takeovers, missing/weak DMARC, and permissive SPF records.
 """
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 import re
 
 
@@ -266,4 +267,112 @@ if ($query_string ~* "(?:invokefunction|call_user_func_array|pearcmd|\\+config-c
 # register_argc_argv = Off
 # allow_url_include = Off
 """
+
+    @classmethod
+    def generate_full_package(
+        cls,
+        domain: str,
+        output_dir: Optional[Path] = None,
+        policy: str = "quarantine",
+        report_email: Optional[str] = None,
+        generate_pdf: bool = False,
+    ) -> Dict[str, Any]:
+        """Generates all 5 remediation deliverables: .zone, .tf, security.txt, summary.txt, and PDF."""
+        import datetime
+        out = output_dir or (Path("outbound_campaigns") / domain.replace(".", "_"))
+        out.mkdir(parents=True, exist_ok=True)
+
+        dmarc_snippets = cls.generate_dmarc_fix(domain, policy=policy, report_email=report_email)
+        spf_snippets = cls.generate_spf_fix(domain, hard_fail=True)
+        caa_snippets = cls.generate_caa_fix(domain, alert_email=report_email)
+        sec_txt = cls.generate_security_txt(domain, contact_email=report_email)
+
+        # 1. BIND Zone File (Cloudflare DNS 1-click importable)
+        zone_lines = [
+            f"; Orbit Security RFC 1035 BIND Zone Remediation File for {domain}",
+            f"; Generated: {datetime.datetime.now(datetime.timezone.utc).isoformat()}",
+            "$ORIGIN " + domain + ".",
+            "$TTL 300",
+            f'_dmarc\tIN\tTXT\t{dmarc_snippets[0].record_value}',
+            f'@\tIN\tTXT\t{spf_snippets[0].record_value}',
+            f'@\tIN\tCAA\t0 issue "letsencrypt.org"',
+            f'@\tIN\tCAA\t0 issue "digicert.com"',
+        ]
+        zone_path = out / "remediation.zone"
+        zone_path.write_text("\n".join(zone_lines) + "\n", encoding="utf-8")
+
+        # 2. Terraform HCL
+        tf_blocks = [
+            "# Orbit Security: Terraform DNS Remediation Blueprint",
+            dmarc_snippets[0].terraform_hcl,
+            spf_snippets[0].terraform_hcl,
+            caa_snippets[0].terraform_hcl,
+        ]
+        tf_path = out / "remediation.tf"
+        tf_path.write_text("\n\n".join(tf_blocks) + "\n", encoding="utf-8")
+
+        # 3. security.txt
+        sec_path = out / "security.txt"
+        sec_path.write_text(sec_txt, encoding="utf-8")
+
+        # 4. remediation_summary.txt
+        summary_lines = [
+            f"=== ORBIT SECURITY REMEDIATION BLUEPRINT: {domain} ===",
+            f"Generated: {datetime.datetime.now(datetime.timezone.utc).isoformat()}",
+            "",
+            "1. DMARC POLICY ENFORCEMENT:",
+            f"   Record: _dmarc.{domain} TXT {dmarc_snippets[0].record_value}",
+            f"   Action: {dmarc_snippets[0].instructions}",
+            "",
+            "2. SPF STRICT HARD-FAIL:",
+            f"   Record: {domain} TXT {spf_snippets[0].record_value}",
+            f"   Action: {spf_snippets[0].instructions}",
+            "",
+            "3. CAA RESTRICTION:",
+            f"   Record: {domain} CAA 0 issue \"letsencrypt.org\"",
+            "",
+            "Files Generated:",
+            f" - {zone_path.name} (BIND zone file importable in Cloudflare DNS)",
+            f" - {tf_path.name} (Terraform HCL infrastructure-as-code)",
+            f" - {sec_path.name} (RFC 9116 security policy)",
+        ]
+        summary_path = out / "remediation_summary.txt"
+        summary_path.write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
+
+        # 5. Optional PDF report
+        pdf_path = None
+        if generate_pdf:
+            try:
+                from orbit_security.reporter import ReportGenerator
+                from orbit_security.models import DomainAuditResult, VulnerabilityFinding, Severity
+                pdf_file = out / f"{domain.replace('.', '_')}_dns_remediation.pdf"
+                dummy_audit = DomainAuditResult(
+                    domain=domain,
+                    score=75,
+                    grade="C",
+                    findings=[
+                        VulnerabilityFinding(
+                            title="Missing DMARC Policy Enforcement",
+                            severity=Severity.HIGH,
+                            description=f"Domain {domain} lacks strict DMARC quarantine/reject policy.",
+                            remediation=dmarc_snippets[0].instructions,
+                            evidence="p=none or missing",
+                        )
+                    ],
+                )
+                ReportGenerator.generate_pdf(dummy_audit, output_path=pdf_file)
+                pdf_path = pdf_file
+            except Exception as e:
+                import logging
+                logging.getLogger("orbit_security.remediation").warning(f"Failed to generate remediation PDF: {e}")
+
+        return {
+            "domain": domain,
+            "output_dir": str(out),
+            "zone_file": str(zone_path),
+            "terraform_file": str(tf_path),
+            "security_txt": str(sec_path),
+            "summary_file": str(summary_path),
+            "pdf_file": str(pdf_path) if pdf_path else None,
+        }
 

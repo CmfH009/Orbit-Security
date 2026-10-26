@@ -489,6 +489,15 @@ def main():
     telem_parser.add_argument("--serve", action="store_true", help="Run standalone telemetry ingestion server")
     telem_parser.add_argument("--port", type=int, default=9095, help="Port for server (default: 9095)")
 
+    # Remediate command (Task 3: Instant 1-click DNS remediation package & PDF)
+    rem_parser = subparsers.add_parser("remediate", help="Generate instant 1-click DNS remediation package & PDF")
+    rem_parser.add_argument("domain", help="Target domain to remediate")
+    rem_parser.add_argument("--output-dir", help="Directory to save generated remediation artifacts")
+    rem_parser.add_argument("--policy", choices=["quarantine", "reject"], default="quarantine", help="DMARC policy")
+    rem_parser.add_argument("--email", help="DMARC/security.txt reporting email")
+    rem_parser.add_argument("--no-pdf", dest="pdf", action="store_false", help="Disable executive remediation PDF generation")
+    rem_parser.set_defaults(pdf=True)
+
     args = parser.parse_args()
 
     if args.command == "scan":
@@ -749,6 +758,23 @@ def main():
                 q.get("spf_status") or "--",
             )
         console.print(table)
+        return 0
+    elif args.command == "remediate":
+        from orbit_security.remediation import DnsRemediationGenerator
+        out_dir = Path(args.output_dir) if args.output_dir else None
+        res = DnsRemediationGenerator.generate_full_package(
+            domain=args.domain,
+            output_dir=out_dir,
+            policy=args.policy,
+            report_email=args.email,
+            generate_pdf=args.pdf,
+        )
+        print(f"[+] Remediation package generated for {args.domain} in {res['output_dir']}:")
+        print(f"    - BIND Zone:      {res['zone_file']}")
+        print(f"    - Terraform:      {res['terraform_file']}")
+        print(f"    - security.txt:   {res['security_txt']}")
+        if res.get("pdf_file"):
+            print(f"    - Executive PDF:  {res['pdf_file']}")
         return 0
 
 
