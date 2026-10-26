@@ -98,6 +98,23 @@ _RFC1918_NETWORKS = (
     ipaddress.IPv4Network("192.168.0.0/16"),
 )
 
+ACTION_SIGNING_SALT = os.environ.get("ORBIT_ACTION_SALT", "orbit-action-secret-v1")
+
+
+def generate_action_token(domain: str, action: str = "stage_retainer") -> str:
+    """Generates a keyed HMAC-SHA256 signature for 1-click webhook action triggers."""
+    salt = os.environ.get("ORBIT_ACTION_SALT", ACTION_SIGNING_SALT)
+    msg = f"{action}:{domain.lower().strip()}"
+    return hmac.new(salt.encode("utf-8"), msg.encode("utf-8"), hashlib.sha256).hexdigest()[:16]
+
+
+def verify_action_token(domain: str, action: str, token: str) -> bool:
+    """Validates an action token in constant time."""
+    if not token or not domain:
+        return False
+    expected = generate_action_token(domain, action)
+    return hmac.compare_digest(expected, token)
+
 
 def anonymize_client_ip(ip_raw: Optional[str]) -> Optional[str]:
     """GDPR/CCPA-compliant IP anonymizer: masks public IPv4 to /24 and IPv6 to /48 + SHA-256 token.
@@ -212,6 +229,7 @@ def format_discord_radar_embed(
     record: Dict[str, Any],
     enrichment: Optional[Dict[str, Any]] = None,
     proposal: Optional[Dict[str, Any]] = None,
+    base_url: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Builds a rich Discord Embed payload for an inbound Radar Terminal domain scan."""
     domain = record.get("domain", "unknown")
@@ -312,24 +330,61 @@ def format_discord_radar_embed(
 
     ts = record.get("timestamp") or datetime.datetime.now(datetime.timezone.utc).isoformat()
 
+    target_base = base_url or os.environ.get(
+        "ORBIT_LIVE_CLOUD_ENDPOINT",
+        "https://orbit-security-api-911438991206.us-central1.run.app",
+    )
+    action_token = generate_action_token(domain, "stage_retainer")
+    stage_action_url = f"{target_base}/api/orbit/radar/action?action=stage_retainer&domain={domain}&token={action_token}"
+    radar_url = f"https://cmfh009.github.io/Orbit-Security/?target={domain}"
+    fleet_url = f"https://cmfh009.github.io/Orbit-Security/fleet.html?domain={domain}"
+
+    embed = {
+        "title": f"🎯 Orbit Radar Probe Detected: {domain} (Grade {grade})",
+        "description": (
+            f"⚡ **[1-Click Stage Retainer Proposal]({stage_action_url})** • "
+            f"🛡️ **[Open Terminal Radar]({radar_url})** • "
+            f"🌐 **[Fleet Command]({fleet_url})**"
+        ),
+        "color": color,
+        "fields": fields,
+        "footer": {
+            "text": "Project ORBIT // Perimeter Radar Terminal Live Telemetry",
+        },
+        "timestamp": ts,
+    }
+
+    components = [
+        {
+            "type": 1,
+            "components": [
+                {
+                    "type": 2,
+                    "style": 5,  # Link button
+                    "label": "⚡ Generate Retainer",
+                    "url": stage_action_url,
+                },
+                {
+                    "type": 2,
+                    "style": 5,
+                    "label": "🛡️ Open Terminal Radar",
+                    "url": radar_url,
+                },
+                {
+                    "type": 2,
+                    "style": 5,
+                    "label": "🌐 Fleet Command",
+                    "url": fleet_url,
+                },
+            ],
+        }
+    ]
+
     return {
         "username": "ORBIT Radar Sentinel",
         "avatar_url": "https://cmfh009.github.io/Orbit-Security/assets/logo.png",
-        "embeds": [
-            {
-                "title": f"🎯 Orbit Radar Probe Detected: {domain} (Grade {grade})",
-                "description": (
-                    f"Live perimeter scan captured on **ORBIT // PERIMETER RADAR TERMINAL** "
-                    f"for `{domain}` via `{ua_info['device_type']}` ({ua_info['browser']})."
-                ),
-                "color": color,
-                "fields": fields,
-                "footer": {
-                    "text": "Project ORBIT // Perimeter Radar Terminal Live Telemetry",
-                },
-                "timestamp": ts,
-            }
-        ],
+        "embeds": [embed],
+        "components": components,
     }
 
 
@@ -1177,6 +1232,38 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+            return
+
+        if parsed.path in ("/api/orbit/radar/action", "/api/radar/action"):
+            params = urllib.parse.parse_qs(parsed.query)
+            action = params.get("action", [""])[0]
+            domain = params.get("domain", [""])[0]
+            token = params.get("token", [""])[0]
+
+            if not verify_action_token(domain, action, token):
+                self._send_json_error(403, "Invalid or expired action token")
+                return
+
+            if action == "stage_retainer":
+                stager = getattr(self.service, "proposal_stager", None) or RadarRetainerProposalStager()
+                result = stager.stage_campaign(domain=domain)
+                enricher = getattr(self.service, "enricher", None) or RadarLeadEnricher()
+                enrichment = enricher.enrich_domain(domain=domain)
+                response = {
+                    "status": "ok",
+                    "action": "stage_retainer",
+                    "domain": domain,
+                    "deliverables": result,
+                    "message": f"Retainer campaign successfully staged for {domain}",
+                }
+                body = json.dumps(response, indent=2).encode("utf-8")
+                self.send_cors_headers(200, "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+
+            self._send_json_error(400, f"Unsupported action: {action}")
             return
 
         if parsed.path in (
