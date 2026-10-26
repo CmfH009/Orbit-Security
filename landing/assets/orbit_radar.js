@@ -296,6 +296,122 @@
         }
     };
 
+    // ==========================================
+    // 3b. Recursive RFC 7208 SPF Lookup Tree Walker
+    // ==========================================
+
+    const SPF_LOOKUP_LIMIT = 10;
+
+    async function walkSpfLookupTree(domain, spfRecord, maxLookups = SPF_LOOKUP_LIMIT) {
+        const root = String(domain || '').trim().toLowerCase().replace(/\.+$/, '');
+        const visited = new Set(root ? [root] : []);
+        const includes = [];
+        const flattenedIps = [];
+        const seenIps = new Set();
+        const hardCap = maxLookups + 5;
+        const deadline = Date.now() + 8000;
+        let totalLookups = 0;
+        let voidLookups = 0;
+        let hasLoop = false;
+
+        const collectIps = (record) => {
+            for (const rawToken of String(record || '').split(/\s+/)) {
+                const token = rawToken.replace(/^[+\-~?]+/, '').toLowerCase();
+                if (!token.startsWith('ip4:') && !token.startsWith('ip6:')) continue;
+                const address = token.split(':').slice(1).join(':').trim();
+                if (address && !seenIps.has(address)) {
+                    seenIps.add(address);
+                    flattenedIps.push(address);
+                }
+            }
+        };
+
+        const walk = async (record, depth = 0) => {
+            if (!record || depth > 20) return;
+            collectIps(record);
+
+            const pending = [];
+            for (const rawToken of String(record).split(/\s+/)) {
+                if (totalLookups > hardCap) break;
+                const token = rawToken.replace(/^[+\-~?]+/, '').toLowerCase();
+                if (!token) continue;
+
+                let target = null;
+                if (token.startsWith('include:')) {
+                    target = token.slice('include:'.length);
+                } else if (token.startsWith('redirect=')) {
+                    target = token.slice('redirect='.length);
+                } else if (
+                    token === 'a' || token === 'mx' || token === 'ptr' ||
+                    token.startsWith('a:') || token.startsWith('a/') ||
+                    token.startsWith('mx:') || token.startsWith('mx/') ||
+                    token.startsWith('ptr:') || token.startsWith('exists:')
+                ) {
+                    totalLookups += 1;
+                    continue;
+                } else {
+                    continue;
+                }
+
+                totalLookups += 1;
+                target = target.trim().replace(/\.+$/, '');
+                if (!target) {
+                    voidLookups += 1;
+                    continue;
+                }
+                includes.push(target);
+                if (visited.has(target)) {
+                    hasLoop = true;
+                    continue;
+                }
+                visited.add(target);
+                pending.push(target);
+            }
+
+            if (!pending.length) return;
+
+            // Resolve one tree level concurrently so a hostile 15-include record
+            // cannot serialize into minutes of browser-blocking DoH latency.
+            const resolved = await Promise.all(pending.map(async (target) => {
+                if (Date.now() > deadline) return null;
+                try {
+                    const res = await DoHService.query(target, 16, 2500);
+                    const txts = (res && res.success) ? DnsParser.extractTxt(res.answer) : [];
+                    return txts.find(t => /^v\s*=\s*spf1(?:\s|$)/i.test(t)) || null;
+                } catch (err) {
+                    return null;
+                }
+            }));
+
+            for (const nested of resolved) {
+                if (nested) {
+                    await walk(nested, depth + 1);
+                } else {
+                    voidLookups += 1;
+                }
+            }
+        };
+
+        await walk(spfRecord);
+
+        const uniqueIps = Array.from(new Set(flattenedIps)).sort();
+        const flattenedRecord = uniqueIps.length
+            ? `v=spf1 ${uniqueIps.map(ip => (ip.includes(':') ? `ip6:${ip}` : `ip4:${ip}`)).join(' ')} -all`
+            : String(spfRecord || '').trim();
+
+        return {
+            domain: root,
+            totalLookups,
+            voidLookups,
+            maxLookups,
+            exceedsLimit: totalLookups > maxLookups,
+            hasLoop,
+            includes,
+            flattenedIps: uniqueIps,
+            flattenedRecord
+        };
+    }
+
     const SAAS_TAKEOVER_PATTERNS = [
         { name: 'Unbounce', pattern: 'unbouncepages.com' },
         { name: 'AWS S3', pattern: 's3.amazonaws.com' },
@@ -1194,6 +1310,90 @@
         }
     }
 
+    function renderSpfTreeHud(tree) {
+        const label = document.getElementById('spfLookupGaugeLabel');
+        const bar = document.getElementById('spfLookupGaugeBar');
+        const notice = document.getElementById('spfTreeNotice');
+        const chain = document.getElementById('spfTreeChain');
+        const preview = document.getElementById('flattenedSpfPreview');
+
+        if (preview) {
+            preview.classList.add('hidden');
+            preview.textContent = '';
+        }
+        if (!label || !bar) return;
+
+        if (!tree) {
+            label.textContent = '0/10 lookups';
+            label.className = 'font-bold text-slate-400';
+            bar.style.width = '0%';
+            bar.className = 'h-full w-0 bg-slate-600 transition-all duration-500';
+            if (notice) {
+                notice.textContent = '';
+                notice.className = 'hidden text-[11px] mt-1.5';
+            }
+            if (chain) chain.textContent = 'No SPF record published — lookup tree unavailable.';
+            return;
+        }
+
+        const total = Number(tree.totalLookups) || 0;
+        const max = Number(tree.maxLookups) || SPF_LOOKUP_LIMIT;
+        const pct = Math.min(100, Math.round((total / max) * 100));
+        const danger = Boolean(tree.exceedsLimit || tree.hasLoop);
+
+        label.textContent = `${total}/${max} lookups`;
+        label.className = `font-bold ${danger ? 'text-red-400' : (total >= 8 ? 'text-amber-400' : 'text-emerald-400')}`;
+        bar.style.width = `${pct}%`;
+        bar.className = `h-full transition-all duration-500 ${danger ? 'bg-red-500' : (total >= 8 ? 'bg-amber-400' : 'bg-emerald-500')}`;
+
+        if (notice) {
+            const notes = [];
+            if (tree.hasLoop) notes.push('PermError: circular include/redirect chain detected.');
+            if (tree.exceedsLimit) notes.push(`PermError: ${total} lookups exceed the RFC 7208 limit of ${max}.`);
+            if (tree.voidLookups > 0) notes.push(`${tree.voidLookups} void lookup(s) — RFC 7208 allows 2.`);
+            if (notes.length) {
+                notice.textContent = `⚠ ${notes.join(' ')}`;
+                notice.className = 'text-[11px] mt-1.5 text-red-400';
+            } else {
+                notice.textContent = '';
+                notice.className = 'hidden text-[11px] mt-1.5';
+            }
+        }
+
+        if (chain) {
+            chain.textContent = (tree.includes && tree.includes.length)
+                ? `↳ ${tree.includes.join(' → ')}`
+                : 'No include:/redirect= delegation detected.';
+        }
+    }
+
+    function simulateFlattenedSpf() {
+        const audit = window._lastAuditResult;
+        const tree = audit && audit.spfTree;
+        if (!tree || !tree.flattenedRecord) {
+            showArcadeToast('No SPF lookup tree available. Run a DoH scan first.', 'warn');
+            return;
+        }
+
+        const record = tree.flattenedRecord;
+        const preview = document.getElementById('flattenedSpfPreview');
+        if (preview) {
+            preview.textContent = record;
+            preview.classList.remove('hidden');
+        }
+
+        const done = () => {
+            if (window.SimpleCat && SimpleCat.playCoin) SimpleCat.playCoin();
+            showArcadeToast('Flattened SPF record copied — verify before publishing.', 'warn');
+        };
+
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            navigator.clipboard.writeText(record).then(done).catch(() => prompt('Copy Flattened SPF Record:', record));
+        } else {
+            prompt('Copy Flattened SPF Record:', record);
+        }
+    }
+
     async function handleAuditRequest(e) {
         e.preventDefault();
         const input = document.getElementById('targetDomain');
@@ -1455,6 +1655,21 @@
                             <span class="text-slate-400 block mb-1">SPF Mechanism Query:</span>
                             <code class="text-emerald-400 break-all">${escapeHtml(audit.spfResult.raw || audit.spfPolicy)}</code>
                         </div>
+                        <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-xs">
+                            <div class="flex items-center justify-between gap-2 mb-1.5">
+                                <span class="text-slate-400">RFC 7208 SPF Lookup Tree:</span>
+                                <span id="spfLookupGaugeLabel" class="font-bold text-slate-400">0/10 lookups</span>
+                            </div>
+                            <div class="w-full h-2 rounded-full bg-slate-800 overflow-hidden" role="progressbar" aria-label="RFC 7208 SPF lookup budget">
+                                <div id="spfLookupGaugeBar" class="h-full w-0 bg-slate-600 transition-all duration-500"></div>
+                            </div>
+                            <p id="spfTreeNotice" class="hidden text-[11px] mt-1.5"></p>
+                            <p id="spfTreeChain" class="text-slate-400 text-[11px] mt-1.5 break-all"></p>
+                            <div class="mt-2 flex flex-wrap items-center gap-2">
+                                <button type="button" id="btnSimulateFlattenedSpf" onclick="simulateFlattenedSpf()" class="pixel-btn min-h-[34px] px-3 py-1.5 text-[10px] font-arcade rounded bg-slate-900 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 transition-all cursor-pointer flex items-center gap-1.5">⚡ Simulate Flattened Record</button>
+                            </div>
+                            <code id="flattenedSpfPreview" class="hidden block mt-2 p-2 rounded bg-slate-950/80 border border-cyan-500/20 text-cyan-300 break-all"></code>
+                        </div>
                     </div>
 
                     <!-- Tab 3: SaaS CNAMEs -->
@@ -1483,6 +1698,7 @@
             if (rawTelemetryEl) {
                 rawTelemetryEl.textContent = JSON.stringify(audit.rawTelemetry, null, 2);
             }
+            renderSpfTreeHud(audit.spfTree);
 
             if (window.SimpleCat) {
                 SimpleCat.playPowerUp();
@@ -2049,6 +2265,8 @@ ${payload.url}`;
     window.setScanTarget = setScanTarget;
     window.switchHudTab = switchHudTab;
     window.copyRawTelemetry = copyRawTelemetry;
+    window.simulateFlattenedSpf = simulateFlattenedSpf;
+    window.walkSpfLookupTree = walkSpfLookupTree;
     window.handleAuditRequest = handleAuditRequest;
     window.toggleFaq = toggleFaq;
     window.copyShareableBadge = copyShareableBadge;
@@ -2225,6 +2443,16 @@ ${payload.url}`;
             spfScore = 35;
         }
 
+        // C2. Recursive RFC 7208 lookup-tree expansion (include:/redirect= chains)
+        let spfTree = null;
+        if (spfResult && spfResult.raw) {
+            try {
+                spfTree = await walkSpfLookupTree(domain, spfResult.raw);
+            } catch (err) {
+                console.warn('[Orbit Radar] SPF lookup tree walk failed:', err);
+            }
+        }
+
         // D. DMARC Evaluation
         let dmarcParsed = DnsParser.parseDmarc(DnsParser.extractTxt(dmarcDirect?.answer || []));
         let inherited = false;
@@ -2364,7 +2592,7 @@ ${payload.url}`;
             hygiene_score: totalScore,
             grade,
             dmarc: { status: dmarcStatus, policy: dmarcPolicy, parsed: dmarcParsed, inherited },
-            spf: { status: spfStatus, policy: spfPolicy, result: spfResult, inherited: spfInherited },
+            spf: { status: spfStatus, policy: spfPolicy, result: spfResult, inherited: spfInherited, tree: spfTree },
             perimeter: { status: cnameStatus, target: cnameTarget, saas_detected: detectedSaaS },
             timestamp: new Date().toISOString()
         };
@@ -2392,6 +2620,7 @@ ${payload.url}`;
             spfScore,
             spfResult,
             spfInherited,
+            spfTree,
             cnameStatus,
             cnameTarget,
             cnameScore,

@@ -342,6 +342,8 @@ class EmailAuthPolicyAnalyzer:
     """Autonomous Email Security SPF / DKIM / DMARC / MTA-STS / BIMI Policy Analyzer (Project #22)."""
 
     DNS_LOOKUP_MECHANISMS = ("include:", "a", "mx", "ptr", "exists:", "redirect=")
+    SPF_LOOKUP_PREFIXES = ("include:", "exists:", "redirect=", "a:", "a/", "mx:", "mx/", "ptr:")
+    SPF_LOOKUP_BARE = ("a", "mx", "ptr")
 
     @classmethod
     def _count_spf_lookups(cls, spf_record: str) -> int:
@@ -362,6 +364,104 @@ class EmailAuthPolicyAnalyzer:
             ):
                 count += 1
         return count
+
+    @classmethod
+    def expand_spf_tree(
+        cls,
+        domain: str,
+        spf_record: str,
+        lookup_fn: Optional[Any] = None,
+        max_lookups: int = 10,
+    ) -> Dict[str, Any]:
+        """Recursively walks an RFC 7208 SPF lookup tree, counting lookups and collecting CIDRs.
+
+        ``lookup_fn`` receives a domain name and returns its SPF TXT record (str,
+        or a list of TXT strings). ``include:`` and ``redirect=`` targets are
+        expanded recursively; ``a``/``mx``/``ptr``/``exists:`` count as lookups
+        but trigger no SPF recursion. Cycles are flagged via ``has_loop``.
+        """
+        root_domain = str(domain or "").strip().lower().rstrip(".")
+        visited = {root_domain} if root_domain else set()
+        total_lookups = 0
+        void_lookups = 0
+        has_loop = False
+        includes: List[str] = []
+        flattened_ips: List[str] = []
+        seen_ips = set()
+
+        def collect_ips(record: str) -> None:
+            for raw_token in record.split():
+                token = raw_token.lstrip("+-~?").lower()
+                if not (token.startswith("ip4:") or token.startswith("ip6:")):
+                    continue
+                address = token.split(":", 1)[1].strip()
+                if address and address not in seen_ips:
+                    seen_ips.add(address)
+                    flattened_ips.append(address)
+
+        def walk(record: str, depth: int = 0) -> None:
+            nonlocal total_lookups, void_lookups, has_loop
+            if not record or depth > 20:
+                return
+            collect_ips(record)
+
+            for raw_token in record.split():
+                token = raw_token.lstrip("+-~?").lower()
+                if token.startswith("include:"):
+                    target = token.split(":", 1)[1].strip().rstrip(".")
+                elif token.startswith("redirect="):
+                    target = token.split("=", 1)[1].strip().rstrip(".")
+                elif token in cls.SPF_LOOKUP_BARE or token.startswith(cls.SPF_LOOKUP_PREFIXES):
+                    total_lookups += 1
+                    continue
+                else:
+                    continue
+
+                total_lookups += 1
+                if not target:
+                    void_lookups += 1
+                    continue
+                includes.append(target)
+                if target in visited:
+                    has_loop = True
+                    continue
+                visited.add(target)
+
+                nested_record = None
+                if lookup_fn is not None:
+                    try:
+                        nested_record = lookup_fn(target)
+                    except Exception:
+                        nested_record = None
+                if isinstance(nested_record, (list, tuple)):
+                    nested_record = " ".join(str(item) for item in nested_record if item)
+                if nested_record:
+                    walk(str(nested_record), depth + 1)
+                elif lookup_fn is not None:
+                    void_lookups += 1
+
+        walk(str(spf_record or ""))
+
+        unique_ips = sorted(set(flattened_ips))
+        flattened_record = (
+            "v=spf1 "
+            + " ".join(
+                f"ip6:{ip}" if ":" in ip else f"ip4:{ip}" for ip in unique_ips
+            )
+            + " -all"
+        ) if unique_ips else str(spf_record or "").strip()
+
+        return {
+            "domain": root_domain,
+            "total_lookups": total_lookups,
+            "void_lookups": void_lookups,
+            "max_lookups": max_lookups,
+            "exceeds_limit": total_lookups > max_lookups,
+            "has_loop": has_loop,
+            "includes": includes,
+            "flattened_ips": unique_ips,
+            "flattened_record": flattened_record,
+        }
 
     @classmethod
     def analyze_email_security_posture(
