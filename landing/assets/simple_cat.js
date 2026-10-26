@@ -2307,170 +2307,742 @@
         canvas.height = isPortrait ? 1280 : 720;
         const ctx = canvas.getContext("2d");
 
+        // Starfield & Particle State for Recording Clip
+        const starColors = ['#10b981', '#38bdf8', '#a855f7', '#fbbf24', '#ffffff'];
+        const clipStars = [];
+        for (let i = 0; i < 75; i++) {
+            clipStars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() < 0.2 ? 3.5 : (Math.random() < 0.5 ? 2.5 : 1.5),
+                isCross: Math.random() < 0.3,
+                color: starColors[Math.floor(Math.random() * starColors.length)],
+                speed: 0.4 + Math.random() * 0.8,
+                opacity: 0.35 + Math.random() * 0.65,
+                twinkle: Math.random() * Math.PI * 2
+            });
+        }
+
+        const clipSparks = [];
         let frameCount = 0;
+
+        function roundRect(c, x, y, w, h, r) {
+            if (w < 2 * r) r = w / 2;
+            if (h < 2 * r) r = h / 2;
+            c.beginPath();
+            c.moveTo(x + r, y);
+            c.arcTo(x + w, y, x + w, y + h, r);
+            c.arcTo(x + w, y + h, x, y + h, r);
+            c.arcTo(x, y + h, x, y, r);
+            c.arcTo(x, y + w, x, y, r);
+            c.closePath();
+        }
+
+        function drawVectorAstroCat(c, cx, cy, scale, fCount) {
+            c.save();
+            c.translate(cx, cy);
+            c.scale(scale, scale);
+
+            const flameFlicker = Math.sin(fCount * 0.45) * 4;
+
+            // 1. Jetpack Plasma Thruster Flames
+            const flameGrad = c.createLinearGradient(0, 20, 0, 38);
+            flameGrad.addColorStop(0, '#38bdf8');
+            flameGrad.addColorStop(0.35, '#34d399');
+            flameGrad.addColorStop(0.7, '#fbbf24');
+            flameGrad.addColorStop(1, 'transparent');
+            c.fillStyle = flameGrad;
+
+            // Left flame
+            c.beginPath();
+            c.moveTo(-13, 20);
+            c.quadraticCurveTo(-11, 33 + flameFlicker, -9, 20);
+            c.fill();
+
+            // Right flame
+            c.beginPath();
+            c.moveTo(9, 20);
+            c.quadraticCurveTo(11, 33 + flameFlicker, 13, 20);
+            c.fill();
+
+            // 2. Jetpack Backpack
+            c.fillStyle = '#0b1329';
+            c.strokeStyle = '#10b981';
+            c.lineWidth = 1.6;
+
+            // Left tank
+            roundRect(c, -17, 2, 10, 20, 3);
+            c.fill();
+            c.stroke();
+
+            // Right tank
+            roundRect(c, 7, 2, 10, 20, 3);
+            c.fill();
+            c.stroke();
+
+            // Center connector bridge
+            c.fillStyle = '#1e293b';
+            c.strokeStyle = '#334155';
+            c.lineWidth = 1;
+            roundRect(c, -9, 6, 18, 12, 2);
+            c.fill();
+            c.stroke();
+
+            // Nozzles
+            c.fillStyle = '#64748b';
+            c.beginPath();
+            c.moveTo(-15, 20);
+            c.lineTo(-7, 20);
+            c.lineTo(-8, 23);
+            c.lineTo(-14, 23);
+            c.closePath();
+            c.fill();
+
+            c.beginPath();
+            c.moveTo(7, 20);
+            c.lineTo(15, 20);
+            c.lineTo(14, 23);
+            c.lineTo(8, 23);
+            c.closePath();
+            c.fill();
+
+            // 3. Space Suit Body
+            c.fillStyle = '#131e36';
+            c.strokeStyle = '#10b981';
+            c.lineWidth = 2.2;
+            c.beginPath();
+            c.ellipse(0, 12, 13, 12, 0, 0, Math.PI * 2);
+            c.fill();
+            c.stroke();
+
+            // Chest Mission Patch
+            c.fillStyle = '#064e3b';
+            c.strokeStyle = '#34d399';
+            c.lineWidth = 0.8;
+            roundRect(c, -4, 7, 8, 5, 1);
+            c.fill();
+            c.stroke();
+            c.fillStyle = '#38bdf8';
+            c.beginPath();
+            c.arc(0, 9.5, 1.5, 0, Math.PI * 2);
+            c.fill();
+
+            // Suit Paws
+            c.fillStyle = '#334155';
+            c.strokeStyle = '#10b981';
+            c.lineWidth = 1.6;
+            c.beginPath();
+            c.arc(-11, 15, 3.5, 0, Math.PI * 2);
+            c.fill();
+            c.stroke();
+            c.beginPath();
+            c.arc(11, 15, 3.5, 0, Math.PI * 2);
+            c.fill();
+            c.stroke();
+
+            // 4. Helmet Base Collar
+            c.fillStyle = '#0b1329';
+            c.strokeStyle = '#10b981';
+            c.lineWidth = 2.2;
+            c.beginPath();
+            c.ellipse(0, 1, 16, 5, 0, 0, Math.PI * 2);
+            c.fill();
+            c.stroke();
+
+            // 5. Helmet Ear Pods
+            c.fillStyle = '#0b1329';
+            c.strokeStyle = '#10b981';
+            c.lineWidth = 1.6;
+
+            // Left Ear
+            c.beginPath();
+            c.moveTo(-15, -12);
+            c.lineTo(-10, -23);
+            c.lineTo(-5, -15);
+            c.closePath();
+            c.fill();
+            c.stroke();
+
+            c.fillStyle = 'rgba(236, 72, 153, 0.9)';
+            c.beginPath();
+            c.moveTo(-13, -14);
+            c.lineTo(-10, -20);
+            c.lineTo(-7, -15);
+            c.closePath();
+            c.fill();
+
+            // Right Ear
+            c.fillStyle = '#0b1329';
+            c.strokeStyle = '#10b981';
+            c.beginPath();
+            c.moveTo(15, -12);
+            c.lineTo(10, -23);
+            c.lineTo(5, -15);
+            c.closePath();
+            c.fill();
+            c.stroke();
+
+            c.fillStyle = 'rgba(236, 72, 153, 0.9)';
+            c.beginPath();
+            c.moveTo(13, -14);
+            c.lineTo(10, -20);
+            c.lineTo(7, -15);
+            c.closePath();
+            c.fill();
+
+            // 6. Glass Bubble Helmet (Background layer)
+            c.save();
+            c.beginPath();
+            c.arc(0, -8, 17, 0, Math.PI * 2);
+            c.fillStyle = 'rgba(10, 17, 35, 0.95)';
+            c.fill();
+            c.restore();
+
+            // 7. Cat Head Inside Helmet
+            c.fillStyle = '#070b14';
+            c.beginPath();
+            c.ellipse(0, -7, 12, 10, 0, 0, Math.PI * 2);
+            c.fill();
+
+            // Cat Eyes (Blinking animation)
+            const isBlink = (fCount % 100) > 94;
+            if (isBlink) {
+                c.strokeStyle = '#10b981';
+                c.lineWidth = 2;
+                c.beginPath();
+                c.moveTo(-7, -8);
+                c.lineTo(-3, -8);
+                c.moveTo(3, -8);
+                c.lineTo(7, -8);
+                c.stroke();
+            } else {
+                c.fillStyle = '#10b981';
+                c.beginPath();
+                c.ellipse(-5, -8, 2.5, 3.5, 0, 0, Math.PI * 2);
+                c.fill();
+                c.beginPath();
+                c.ellipse(5, -8, 2.5, 3.5, 0, 0, Math.PI * 2);
+                c.fill();
+
+                // Pupil Sparkles
+                c.fillStyle = '#ffffff';
+                c.beginPath();
+                c.arc(-4, -9, 1, 0, Math.PI * 2);
+                c.fill();
+                c.beginPath();
+                c.arc(6, -9, 1, 0, Math.PI * 2);
+                c.fill();
+            }
+
+            // Nose & Mouth
+            c.fillStyle = '#f43f5e';
+            c.beginPath();
+            c.moveTo(-1, -5);
+            c.lineTo(1, -5);
+            c.lineTo(0, -3.5);
+            c.closePath();
+            c.fill();
+
+            c.strokeStyle = '#cbd5e1';
+            c.lineWidth = 0.8;
+            c.beginPath();
+            c.moveTo(-2, -3);
+            c.quadraticCurveTo(0, -1.5, 2, -3);
+            c.stroke();
+
+            // 8. Glass Bubble Helmet Outer Rim & Gloss Reflection Arc
+            c.strokeStyle = '#38bdf8';
+            c.lineWidth = 2.2;
+            c.beginPath();
+            c.arc(0, -8, 17, 0, Math.PI * 2);
+            c.stroke();
+
+            // Gloss reflection arc
+            c.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+            c.lineWidth = 1.6;
+            c.beginPath();
+            c.arc(0, -8, 14.5, -Math.PI * 0.75, -Math.PI * 0.35);
+            c.stroke();
+
+            c.restore();
+        }
+
         const renderFrame = () => {
             if (!ctx) return;
             frameCount++;
             const w = canvas.width;
             const h = canvas.height;
 
-            // 1. Cyber-Grid Background
-            ctx.fillStyle = "#020617";
+            // ---------------------------------------------------------------
+            // 1. DEEP CYBER NEBULA & SPACE STARFIELD
+            // ---------------------------------------------------------------
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+            bgGrad.addColorStop(0, '#030712');
+            bgGrad.addColorStop(0.45, '#070f26');
+            bgGrad.addColorStop(1, '#020617');
+            ctx.fillStyle = bgGrad;
             ctx.fillRect(0, 0, w, h);
 
-            ctx.strokeStyle = "rgba(16, 185, 129, 0.14)";
-            ctx.lineWidth = 1;
-            const gridStep = 40;
-            const offset = (frameCount * 1.5) % gridStep;
-            for (let x = 0; x < w; x += gridStep) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, h);
-                ctx.stroke();
-            }
-            for (let y = offset; y < h; y += gridStep) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(w, y);
-                ctx.stroke();
-            }
+            // Ambient Nebula Radial Glows
+            const n1 = ctx.createRadialGradient(w * 0.2, 160, 0, w * 0.2, 160, 320);
+            n1.addColorStop(0, 'rgba(16, 185, 129, 0.16)');
+            n1.addColorStop(1, 'transparent');
+            ctx.fillStyle = n1;
+            ctx.fillRect(0, 0, w, h);
 
-            // 2. Top Telemetry Header Bar
-            ctx.fillStyle = "rgba(15, 23, 42, 0.95)";
-            ctx.fillRect(24, 24, w - 48, 76);
-            ctx.strokeStyle = "#10b981";
+            const n2 = ctx.createRadialGradient(w * 0.82, isPortrait ? 600 : 360, 0, w * 0.82, isPortrait ? 600 : 360, 360);
+            n2.addColorStop(0, 'rgba(6, 182, 212, 0.14)');
+            n2.addColorStop(1, 'transparent');
+            ctx.fillStyle = n2;
+            ctx.fillRect(0, 0, w, h);
+
+            // Twinkling Starfield
+            clipStars.forEach(st => {
+                st.y += st.speed;
+                if (st.y > h) {
+                    st.y = 0;
+                    st.x = Math.random() * w;
+                }
+                const alpha = Math.max(0.2, Math.min(1.0, st.opacity + Math.sin(frameCount * 0.05 + st.twinkle) * 0.25));
+                ctx.fillStyle = st.color;
+                ctx.globalAlpha = alpha;
+
+                const sx = Math.floor(st.x);
+                const sy = Math.floor(st.y);
+                if (st.isCross && st.size >= 3) {
+                    ctx.fillRect(sx, sy, st.size, st.size);
+                    ctx.fillRect(sx - 1, sy + 1, 1, 1);
+                    ctx.fillRect(sx + st.size, sy + 1, 1, 1);
+                    ctx.fillRect(sx + 1, sy - 1, 1, 1);
+                    ctx.fillRect(sx + 1, sy + st.size, 1, 1);
+                } else {
+                    ctx.fillRect(sx, sy, st.size, st.size);
+                }
+            });
+            ctx.globalAlpha = 1.0;
+
+            // Perspective 3D Synthwave Grid Floor
+            const horizonY = isPortrait ? h * 0.84 : h * 0.80;
+            const vanishingX = w * 0.5;
+
+            // Horizon Glow Beam
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)';
             ctx.lineWidth = 2;
-            ctx.strokeRect(24, 24, w - 48, 76);
+            ctx.beginPath();
+            ctx.moveTo(0, horizonY);
+            ctx.lineTo(w, horizonY);
+            ctx.stroke();
 
-            if (Math.floor(frameCount / 15) % 2 === 0) {
-                ctx.fillStyle = "#ef4444";
+            // Perspective Rays
+            ctx.strokeStyle = 'rgba(6, 182, 212, 0.16)';
+            ctx.lineWidth = 1;
+            const rayCount = 12;
+            for (let i = -rayCount; i <= rayCount; i++) {
+                const targetX = vanishingX + (i * (w / (rayCount * 0.85)));
                 ctx.beginPath();
-                ctx.arc(54, 62, 8, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.moveTo(vanishingX, horizonY);
+                ctx.lineTo(targetX, h);
+                ctx.stroke();
             }
-            ctx.fillStyle = "#10b981";
-            ctx.font = "bold 20px monospace";
-            ctx.fillText("ORBIT SECURITY // PERIMETER RADAR", 76, 56);
-            ctx.fillStyle = "#94a3b8";
-            ctx.font = "14px monospace";
+
+            // Moving Horizontal Depth Lines
+            const depthProgress = (frameCount * 0.008) % 1.0;
+            for (let d = 0; d < 6; d++) {
+                const prog = (d / 6 + depthProgress) % 1.0;
+                if (prog <= 0.05) continue;
+                const lineY = horizonY + Math.pow(prog, 2.0) * (h - horizonY);
+                ctx.strokeStyle = `rgba(16, 185, 129, ${prog * 0.35})`;
+                ctx.lineWidth = 1 + prog * 1.5;
+                ctx.beginPath();
+                ctx.moveTo(0, lineY);
+                ctx.lineTo(w, lineY);
+                ctx.stroke();
+            }
+
+            // ---------------------------------------------------------------
+            // 2. SLEEK TERMINAL HEADER (FROSTED GLASS PILL)
+            // ---------------------------------------------------------------
+            const headX = 24;
+            const headY = 24;
+            const headW = w - 48;
+            const headH = 80;
+
+            ctx.fillStyle = 'rgba(11, 19, 43, 0.92)';
+            roundRect(ctx, headX, headY, headW, headH, 18);
+            ctx.fill();
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Pulsing Red Recording Indicator
+            const recPulse = Math.sin(frameCount * 0.15);
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(headX + 32, headY + 40, 7 + recPulse * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(headX + 32, headY + 40, 11 + recPulse * 3, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Header Title
+            ctx.fillStyle = '#10b981';
+            ctx.font = 'bold 18px "Courier New", Courier, monospace';
+            ctx.fillText("ORBIT SECURITY // PASSIVE RADAR", headX + 54, headY + 34);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '13px "Courier New", Courier, monospace';
+            ctx.fillText("RFC-8484 DNS-OVER-HTTPS • CFAA SAFE HARBOR", headX + 54, headY + 56);
+
+            // Right Timer Badge
+            const timerBoxW = isPortrait ? 120 : 140;
+            const timerBoxX = headX + headW - timerBoxW - 14;
+            ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
+            roundRect(ctx, timerBoxX, headY + 18, timerBoxW, 44, 10);
+            ctx.fill();
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 1.4;
+            ctx.stroke();
+
             const mins = String(Math.floor(recSeconds / 60)).padStart(2, "0");
             const secs = String(recSeconds % 60).padStart(2, "0");
-            ctx.fillText(`LIVE TELEMETRY CLIP [${mins}:${secs}] • RFC-8484 DoH`, 76, 82);
+            const maxSecs = isPortrait ? "06" : "60";
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 14px "Courier New", Courier, monospace';
+            ctx.fillText(`${mins}:${secs} / 00:${maxSecs}`, timerBoxX + 10, headY + 45);
 
-            // 3. Active Domain Audit Card (from window._lastAuditResult or #targetDomain)
+            // ---------------------------------------------------------------
+            // 3. TARGET PERIMETER SECURITY AUDIT CARD
+            // ---------------------------------------------------------------
             const audit = (typeof window !== "undefined" && window._lastAuditResult) ? window._lastAuditResult : null;
             const domainInput = (typeof document !== "undefined") ? document.getElementById("targetDomain") : null;
-            const activeDomain = (audit && audit.domain) || (domainInput && domainInput.value && domainInput.value.trim()) || "shopify.com";
+            
+            // Auto-resolve domain: audit result -> live input -> localStorage unsent queue -> default
+            let resolvedDomain = (audit && audit.domain) || (domainInput && domainInput.value && domainInput.value.trim());
+            if (!resolvedDomain) {
+                try {
+                    const stored = JSON.parse(localStorage.getItem('orbit_radar_probe_telemetry_v1') || '[]');
+                    if (Array.isArray(stored) && stored.length > 0 && stored[0].domain) {
+                        resolvedDomain = stored[0].domain;
+                    }
+                } catch (_) {}
+            }
+            if (!resolvedDomain) resolvedDomain = "smartmouseco.com";
+
             const activeScore = (audit && typeof audit.score === "number") ? audit.score : 95;
-            const activeGrade = (audit && audit.grade) ? audit.grade : "A+";
+            const activeGrade = (audit && audit.grade) ? audit.grade : (activeScore >= 80 ? "A+" : (activeScore >= 50 ? "C" : "F"));
             const dmarcStatus = (audit && audit.dmarcStatus) ? String(audit.dmarcStatus).toUpperCase() : "PASS";
             const spfStatus = (audit && audit.spfStatus) ? String(audit.spfStatus).toUpperCase() : "PASS";
             const cnameStatus = (audit && audit.cnameStatus) ? String(audit.cnameStatus).toUpperCase() : "PASS";
 
-            const cardY = 124;
-            const cardH = isPortrait ? 310 : 220;
-            ctx.fillStyle = "rgba(15, 23, 42, 0.92)";
-            ctx.fillRect(24, cardY, w - 48, cardH);
-            ctx.strokeStyle = activeScore >= 80 ? "#10b981" : (activeScore >= 50 ? "#f59e0b" : "#ef4444");
-            ctx.lineWidth = 2;
-            ctx.strokeRect(24, cardY, w - 48, cardH);
+            const cardX = 24;
+            const cardY = headY + headH + 20;
+            const cardW = w - 48;
+            const cardH = isPortrait ? 300 : 210;
 
-            ctx.fillStyle = "#6ee7b7";
-            ctx.font = "bold 16px monospace";
-            ctx.fillText("TARGET PERIMETER AUDIT", 48, cardY + 38);
+            // Score Color Coding
+            const scoreColor = activeScore >= 80 ? '#10b981' : (activeScore >= 50 ? '#f59e0b' : '#ef4444');
+            const scoreGlow = activeScore >= 80 ? 'rgba(16, 185, 129, 0.45)' : (activeScore >= 50 ? 'rgba(245, 158, 11, 0.45)' : 'rgba(239, 68, 68, 0.45)');
 
-            ctx.fillStyle = "#ffffff";
-            ctx.font = "bold 32px monospace";
-            ctx.fillText(String(activeDomain).slice(0, 28), 48, cardY + 80);
-
-            ctx.fillStyle = activeScore >= 80 ? "#34d399" : (activeScore >= 50 ? "#fbbf24" : "#f87171");
-            ctx.font = "bold 44px monospace";
-            ctx.fillText(`${activeScore}/100 (GRADE ${activeGrade})`, 48, cardY + 138);
-
-            ctx.fillStyle = "#cbd5e1";
-            ctx.font = "bold 18px monospace";
-            ctx.fillText(`🛡️ DMARC: ${dmarcStatus}   📋 SPF: ${spfStatus}   🏷️ CNAME: ${cnameStatus}`, 48, cardY + 185);
-
-            if (isPortrait) {
-                ctx.fillStyle = "#38bdf8";
-                ctx.font = "16px monospace";
-                ctx.fillText("Zero-Server Browser DoH • Passive CFAA Safe Harbor", 48, cardY + 235);
-                ctx.fillStyle = "#94a3b8";
-                ctx.font = "15px monospace";
-                ctx.fillText("Instant White-Label Executive PDF Ready", 48, cardY + 270);
-            }
-
-            // 4. Live Gameplay Video Frame or Radar Sonar Sweep
-            const vidY = cardY + cardH + 24;
-            const vidH = isPortrait ? 390 : (h - vidY - 120);
-            ctx.fillStyle = "rgba(6, 10, 22, 0.95)";
-            ctx.fillRect(24, vidY, w - 48, vidH);
-            ctx.strokeStyle = "#06b6d4";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(24, vidY, w - 48, vidH);
-
-            const vidEl = (typeof document !== "undefined") ? document.getElementById("astrocat-gameplay-video") : null;
-            let drewVideo = false;
-            if (vidEl && vidEl.readyState >= 2) {
-                try {
-                    ctx.drawImage(vidEl, 28, vidY + 4, w - 56, vidH - 8);
-                    drewVideo = true;
-                } catch (_) {}
-            }
-
-            if (!drewVideo) {
-                const cx = w / 2;
-                const cy = vidY + vidH / 2;
-                const radius = Math.min(w - 120, vidH - 60) / 2;
-                ctx.strokeStyle = "rgba(16, 185, 129, 0.35)";
-                ctx.lineWidth = 2;
-                [0.35, 0.68, 1.0].forEach(scale => {
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, Math.max(10, radius * scale), 0, Math.PI * 2);
-                    ctx.stroke();
-                });
-                const angle = (frameCount * 0.06) % (Math.PI * 2);
-                ctx.strokeStyle = "#10b981";
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.moveTo(cx, cy);
-                ctx.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
-                ctx.stroke();
-            }
-
-            // 5. Animated Astro-Cat Copilot & Speech Bubble Overlay
-            const catX = 64 + ((Math.sin(frameCount * 0.05) + 1) * 0.5) * (w - 200);
-            const catY = vidY + vidH - 90 + Math.cos(frameCount * 0.08) * 18;
-            ctx.fillStyle = "#10b981";
-            ctx.beginPath();
-            ctx.arc(catX, catY, 28, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(10, 18, 40, 0.94)';
+            roundRect(ctx, cardX, cardY, cardW, cardH, 20);
             ctx.fill();
-            ctx.fillStyle = "#020617";
-            ctx.font = "28px sans-serif";
-            ctx.fillText("🐱", catX - 16, catY + 10);
+            ctx.strokeStyle = scoreColor;
+            ctx.lineWidth = 2.4;
+            ctx.stroke();
 
-            const bubbleTextEl = (typeof document !== "undefined") ? document.getElementById("astro-speech-text") : null;
-            const liveSpeech = (bubbleTextEl && bubbleTextEl.textContent)
-                ? bubbleTextEl.textContent.trim()
-                : "Patrolling DNS perimeter in Zero-G! Zero dangling CNAMEs on my watch! 🐾";
+            // Card Header Pill
+            ctx.fillStyle = 'rgba(6, 182, 212, 0.15)';
+            roundRect(ctx, cardX + 24, cardY + 20, 220, 26, 6);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(6, 182, 212, 0.45)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 11px "Courier New", Courier, monospace';
+            ctx.fillText("TARGET PERIMETER RECON", cardX + 34, cardY + 37);
 
-            const speechY = h - 170;
-            ctx.fillStyle = "rgba(15, 23, 42, 0.96)";
-            ctx.fillRect(24, speechY, w - 48, 84);
-            ctx.strokeStyle = "#34d399";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(24, speechY, w - 48, 84);
-            ctx.fillStyle = "#34d399";
-            ctx.font = "bold 15px monospace";
-            ctx.fillText("🐱 ASTRO-CAT COPILOT // LIVE TELEMETRY", 44, speechY + 28);
-            ctx.fillStyle = "#f8fafc";
-            ctx.font = "16px monospace";
-            ctx.fillText(liveSpeech.slice(0, isPortrait ? 46 : 82), 44, speechY + 58);
+            // Target Domain Name (Large & Crisp)
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 28px "Courier New", Courier, monospace';
+            ctx.fillText(String(resolvedDomain).slice(0, 26), cardX + 24, cardY + 80);
 
-            // 6. Footer CTA Bar
-            ctx.fillStyle = "#10b981";
-            ctx.font = "bold 18px monospace";
-            ctx.fillText("🌐 cmfh009.github.io/Orbit-Security   •   𝕏 @_arsoncode", 28, h - 32);
+            // Circular Cyber Score Gauge
+            const gaugeRadius = isPortrait ? 44 : 36;
+            const gaugeX = cardX + cardW - gaugeRadius - 32;
+            const gaugeY = cardY + 84;
+
+            // Gauge Track Background
+            ctx.strokeStyle = 'rgba(51, 65, 85, 0.7)';
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.arc(gaugeX, gaugeY, gaugeRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Glowing Score Arc
+            const scoreAngle = (activeScore / 100) * (Math.PI * 2);
+            ctx.strokeStyle = scoreColor;
+            ctx.lineWidth = 8;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(gaugeX, gaugeY, gaugeRadius, -Math.PI / 2, -Math.PI / 2 + scoreAngle);
+            ctx.stroke();
+            ctx.lineCap = 'butt';
+
+            // Score Number in Center
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 22px "Courier New", Courier, monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(String(activeScore), gaugeX, gaugeY + 4);
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '10px "Courier New", Courier, monospace';
+            ctx.fillText('/100', gaugeX, gaugeY + 18);
+            ctx.textAlign = 'left';
+
+            // Grade Badge Box
+            const gradeBadgeW = 120;
+            const gradeBadgeX = cardX + 24;
+            const gradeBadgeY = cardY + 104;
+            ctx.fillStyle = activeScore >= 80 ? 'rgba(16, 185, 129, 0.2)' : (activeScore >= 50 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)');
+            roundRect(ctx, gradeBadgeX, gradeBadgeY, gradeBadgeW, 36, 8);
+            ctx.fill();
+            ctx.strokeStyle = scoreColor;
+            ctx.lineWidth = 1.4;
+            ctx.stroke();
+
+            ctx.fillStyle = scoreColor;
+            ctx.font = 'bold 16px "Courier New", Courier, monospace';
+            ctx.fillText(`GRADE ${activeGrade}`, gradeBadgeX + 16, gradeBadgeY + 24);
+
+            // Subtitle
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '13px "Courier New", Courier, monospace';
+            ctx.fillText(activeScore >= 80 ? "Perimeter Hardened • Zero Takeover Vectors" : "Attack Surface Vulnerable • Takeover Vector", cardX + 24, cardY + 164);
+
+            // 3 Bottom Status Badges
+            const badgeW = (cardW - 48 - 16) / 3;
+            const badgeY = isPortrait ? cardY + 195 : cardY + 140;
+            const badgeH = isPortrait ? 80 : 54;
+
+            const metrics = [
+                { label: "DMARC", val: dmarcStatus === "PASS" ? "ENFORCED" : (dmarcStatus === "MISSING" ? "MISSING" : "MONITOR"), ok: dmarcStatus === "PASS" },
+                { label: "SPF", val: spfStatus === "PASS" ? "ENFORCED" : (spfStatus === "MISSING" ? "FAIL" : "SOFTFAIL"), ok: spfStatus === "PASS" },
+                { label: "CNAME", val: cnameStatus === "PASS" ? "SECURE" : "DANGLING", ok: cnameStatus === "PASS" }
+            ];
+
+            metrics.forEach((m, idx) => {
+                const bX = cardX + 24 + idx * (badgeW + 8);
+                ctx.fillStyle = 'rgba(2, 6, 23, 0.7)';
+                roundRect(ctx, bX, badgeY, badgeW, badgeH, 12);
+                ctx.fill();
+                ctx.strokeStyle = m.ok ? '#10b981' : '#ef4444';
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
+
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = 'bold 11px "Courier New", Courier, monospace';
+                ctx.fillText(m.label, bX + 12, badgeY + 22);
+
+                ctx.fillStyle = m.ok ? '#34d399' : '#f87171';
+                ctx.font = 'bold 13px "Courier New", Courier, monospace';
+                ctx.fillText(`${m.ok ? "●" : "✕"} ${m.val}`, bX + 12, badgeY + 44);
+
+                if (isPortrait) {
+                    ctx.fillStyle = '#64748b';
+                    ctx.font = '10px "Courier New", Courier, monospace';
+                    ctx.fillText(m.ok ? "RFC Validated" : "Action Needed", bX + 12, badgeY + 64);
+                }
+            });
+
+            // ---------------------------------------------------------------
+            // 4. RADAR SCREEN WITH VECTOR ASTRO-CAT & SONAR SWEEP
+            // ---------------------------------------------------------------
+            const radarBoxY = cardY + cardH + 20;
+            const radarBoxH = isPortrait ? 400 : (h - radarBoxY - 110);
+            const radarBoxW = w - 48;
+
+            ctx.fillStyle = 'rgba(7, 13, 28, 0.94)';
+            roundRect(ctx, 24, radarBoxY, radarBoxW, radarBoxH, 20);
+            ctx.fill();
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 2.2;
+            ctx.stroke();
+
+            // Radar Header Pill
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 12px "Courier New", Courier, monospace';
+            ctx.fillText("TACTICAL ZERO-G RADAR // AZIMUTH SWEEP", 44, radarBoxY + 30);
+
+            // Radar Sonar Display Center
+            const rCx = w / 2;
+            const rCy = radarBoxY + (radarBoxH / 2) + 10;
+            const rRadius = Math.min(radarBoxW - 80, radarBoxH - 80) / 2;
+
+            // Concentric Range Rings with distance labels
+            const rings = [0.33, 0.66, 1.0];
+            const ringLabels = ["10 NM", "25 NM", "50 NM"];
+            rings.forEach((rScale, i) => {
+                ctx.strokeStyle = 'rgba(16, 185, 129, 0.28)';
+                ctx.lineWidth = 1.4;
+                ctx.beginPath();
+                ctx.arc(rCx, rCy, rRadius * rScale, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.fillStyle = 'rgba(16, 185, 129, 0.6)';
+                ctx.font = '9px "Courier New", Courier, monospace';
+                ctx.fillText(ringLabels[i], rCx + 6, rCy - rRadius * rScale + 12);
+            });
+
+            // Crosshair Azimuth Lines
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.20)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(rCx - rRadius, rCy);
+            ctx.lineTo(rCx + rRadius, rCy);
+            ctx.moveTo(rCx, rCy - rRadius);
+            ctx.lineTo(rCx, rCy + rRadius);
+            ctx.stroke();
+
+            // 360-Degree Rotating Radar Beam with Phosphor Gradient Fan
+            const sweepAngle = (frameCount * 0.055) % (Math.PI * 2);
+            const fanAngle = Math.PI * 0.28;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(rCx, rCy);
+            ctx.arc(rCx, rCy, rRadius, sweepAngle - fanAngle, sweepAngle, false);
+            ctx.closePath();
+
+            const sweepGrad = ctx.createRadialGradient(rCx, rCy, 0, rCx, rCy, rRadius);
+            sweepGrad.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
+            sweepGrad.addColorStop(1, 'rgba(16, 185, 129, 0.05)');
+            ctx.fillStyle = sweepGrad;
+            ctx.fill();
+            ctx.restore();
+
+            // Leading Radar Sweep Beam
+            ctx.strokeStyle = '#34d399';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(rCx, rCy);
+            ctx.lineTo(rCx + Math.cos(sweepAngle) * rRadius, rCy + Math.sin(sweepAngle) * rRadius);
+            ctx.stroke();
+
+            // Pulsing Target Blips on Radar
+            const blips = [
+                { angle: 0.8, dist: 0.45, label: "DNS-OK", color: "#10b981" },
+                { angle: 2.4, dist: 0.72, label: "SPF-HARD", color: "#38bdf8" },
+                { angle: 4.8, dist: 0.85, label: "CNAME-0", color: "#a855f7" }
+            ];
+
+            blips.forEach(b => {
+                const bx = rCx + Math.cos(b.angle) * (rRadius * b.dist);
+                const by = rCy + Math.sin(b.angle) * (rRadius * b.dist);
+
+                const blipPulse = Math.sin(frameCount * 0.12 + b.angle) * 3;
+                ctx.fillStyle = b.color;
+                ctx.beginPath();
+                ctx.arc(bx, by, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = b.color;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(bx, by, 8 + blipPulse, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.fillStyle = '#cbd5e1';
+                ctx.font = '8px "Courier New", Courier, monospace';
+                ctx.fillText(b.label, bx + 10, by + 3);
+            });
+
+            // Thruster Sparks Generator behind Astro-Cat
+            const catOrbitX = rCx + Math.sin(frameCount * 0.04) * (rRadius * 0.55);
+            const catOrbitY = rCy + Math.cos(frameCount * 0.045) * (rRadius * 0.45);
+            const catScale = 1.35;
+
+            if (frameCount % 2 === 0) {
+                clipSparks.push({
+                    x: catOrbitX + (Math.random() * 8 - 4),
+                    y: catOrbitY + 28 * catScale,
+                    vx: (Math.random() - 0.5) * 1.5,
+                    vy: Math.random() * 2 + 1.2,
+                    size: Math.random() * 3 + 1.5,
+                    alpha: 1.0,
+                    color: Math.random() > 0.4 ? '#38bdf8' : '#fbbf24'
+                });
+            }
+
+            // Render Sparks
+            for (let i = clipSparks.length - 1; i >= 0; i--) {
+                const sp = clipSparks[i];
+                sp.x += sp.vx;
+                sp.y += sp.vy;
+                sp.alpha -= 0.04;
+                if (sp.alpha <= 0) {
+                    clipSparks.splice(i, 1);
+                    continue;
+                }
+                ctx.fillStyle = sp.color;
+                ctx.globalAlpha = sp.alpha;
+                ctx.fillRect(sp.x, sp.y, sp.size, sp.size);
+            }
+            ctx.globalAlpha = 1.0;
+
+            // DRAW VECTOR ASTRO-CAT
+            drawVectorAstroCat(ctx, catOrbitX, catOrbitY, catScale, frameCount);
+
+            // ---------------------------------------------------------------
+            // 5. HOLOGRAPHIC COPILOT COMMS SUBTITLE BOX
+            // ---------------------------------------------------------------
+            const commsY = radarBoxY + radarBoxH + 18;
+            const commsH = isPortrait ? 96 : 80;
+
+            ctx.fillStyle = 'rgba(10, 18, 40, 0.94)';
+            roundRect(ctx, 24, commsY, w - 48, commsH, 16);
+            ctx.fill();
+            ctx.strokeStyle = '#34d399';
+            ctx.lineWidth = 1.8;
+            ctx.stroke();
+
+            ctx.fillStyle = '#34d399';
+            ctx.font = 'bold 12px "Courier New", Courier, monospace';
+            ctx.fillText("🐱 ASTRO-CAT COPILOT // ZERO-G TELEMETRY", 44, commsY + 26);
+
+            // Dynamic Live Dialogue
+            const liveQuips = [
+                "Perimeter secured! RFC-8484 DNS verified with 0 exploit packets. 🐾",
+                "Zero dangling CNAMEs detected! DMARC blast shields online. 🛡️",
+                "Automated white-label audit report generated for client retainer! 💼",
+                "Full passive surveillance active. Client estate safe & monitored! 🚀"
+            ];
+            const quipIdx = Math.floor(frameCount / 90) % liveQuips.length;
+            const liveQuip = liveQuips[quipIdx];
+
+            ctx.fillStyle = '#f8fafc';
+            ctx.font = 'bold 14px "Courier New", Courier, monospace';
+            ctx.fillText(liveQuip.slice(0, isPortrait ? 44 : 76), 44, commsY + 54);
+
+            // Animated Audio Equalizer Bars on Right
+            const eqX = w - 90;
+            const eqY = commsY + 42;
+            for (let b = 0; b < 5; b++) {
+                const bH = 6 + Math.abs(Math.sin(frameCount * 0.25 + b * 1.2)) * 18;
+                ctx.fillStyle = '#10b981';
+                ctx.fillRect(eqX + b * 8, eqY - bH / 2, 4, bH);
+            }
+
+            // ---------------------------------------------------------------
+            // 6. BRANDING & FOOTER CTA BAR
+            // ---------------------------------------------------------------
+            const footY = h - (isPortrait ? 60 : 44);
+            ctx.fillStyle = '#10b981';
+            ctx.font = 'bold 15px "Courier New", Courier, monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText("🌐 cmfh009.github.io/Orbit-Security   •   𝕏 @_arsoncode", w / 2, footY);
+            ctx.textAlign = 'left';
         };
 
         renderFrame();
@@ -2520,26 +3092,33 @@
             const shareUrl = "https://cmfh009.github.io/Orbit-Security/#audit-terminal";
             const xIntentUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
 
-            modal.className = "fixed bottom-20 right-4 sm:right-6 max-w-sm w-[calc(100vw-2rem)] p-4 rounded-2xl bg-slate-950/98 border-2 border-emerald-500 shadow-[0_0_35px_rgba(16,185,129,0.45)] backdrop-blur-xl text-xs font-mono text-slate-200 space-y-3";
+            modal.className = "fixed bottom-20 right-4 sm:right-6 max-w-sm w-[calc(100vw-2rem)] p-4 rounded-2xl bg-slate-950/98 border-2 border-emerald-500 shadow-[0_0_40px_rgba(16,185,129,0.55)] backdrop-blur-2xl text-xs font-mono text-slate-200 space-y-3";
             modal.style.cssText = "z-index: 999999 !important;";
             modal.innerHTML = `
-                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
                     <div class="flex items-center gap-2 text-emerald-400 font-bold">
-                        <span>🎬</span>
-                        <span class="font-arcade text-[10px]">CLIP READY FOR X // ${fileExt.toUpperCase()}</span>
+                        <span class="text-sm">🎬</span>
+                        <span class="font-arcade text-[10px] tracking-wider text-emerald-300">HD CLIP FOR X // ${fileExt.toUpperCase()}</span>
                     </div>
-                    <button type="button" onclick="document.getElementById('orbit-clip-share-modal').classList.add('hidden')" class="text-slate-400 hover:text-white text-base px-1 cursor-pointer">&times;</button>
+                    <button type="button" onclick="document.getElementById('orbit-clip-share-modal').classList.add('hidden')" class="text-slate-400 hover:text-white text-lg px-1.5 py-0.5 rounded cursor-pointer">&times;</button>
                 </div>
-                <video src="${lastRecordedClipUrl}" controls playsinline muted autoplay loop class="w-full max-h-44 rounded-xl border border-slate-800 bg-black object-contain"></video>
+                <div class="relative rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-900 shadow-inner">
+                    <video src="${lastRecordedClipUrl}" controls playsinline muted autoplay loop class="w-full max-h-52 bg-slate-950 object-contain"></video>
+                </div>
                 <p class="text-[11px] text-slate-300 leading-relaxed">
-                    Saved <code class="text-emerald-300">${filename}</code>! Tap <strong>Share Clip File</strong> on mobile to send the video directly to X, or open X below:
+                    Captured <code class="text-emerald-300 font-bold">${filename}</code>! Tap <strong>Share Clip</strong> to open the phone share sheet directly for X, or download below:
                 </p>
-                <div class="flex flex-wrap items-center gap-2">
-                    <button type="button" id="orbit-native-share-clip-btn" class="flex-1 min-h-[42px] px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs uppercase cursor-pointer flex items-center justify-center gap-1.5">
-                        <span>📱 Share Clip File</span>
-                    </button>
-                    <a href="${xIntentUrl}" target="_blank" rel="noopener noreferrer" class="flex-1 min-h-[42px] px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white border border-slate-700 hover:border-emerald-400 font-bold text-xs uppercase cursor-pointer flex items-center justify-center gap-1.5">
-                        <span>𝕏 Post on X</span>
+                <div class="flex flex-col gap-2">
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="orbit-native-share-clip-btn" class="flex-1 min-h-[44px] px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs uppercase cursor-pointer flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
+                            <span>📱 Share Clip</span>
+                        </button>
+                        <a href="${lastRecordedClipUrl}" download="${filename}" class="flex-1 min-h-[44px] px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/40 font-bold text-xs uppercase cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+                            <span>⬇️ Save Video</span>
+                        </a>
+                    </div>
+                    <a href="${xIntentUrl}" target="_blank" rel="noopener noreferrer" class="w-full min-h-[40px] px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white border border-slate-700 hover:border-emerald-400 font-bold text-xs uppercase cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+                        <span>𝕏 Post Link on X</span>
                     </a>
                 </div>
             `;
