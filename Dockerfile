@@ -31,7 +31,6 @@ WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /requirements.txt /requirements.txt
 COPY src/ ./src/
-COPY orbit/ ./orbit/
 COPY data/ ./data/
 COPY scripts/ ./scripts/
 
@@ -41,23 +40,12 @@ COPY scripts/ ./scripts/
 ENV PYTHONPATH=/app/src:/app \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    UV_PROJECT_ENVIRONMENT=/app/.venv
+    UV_PROJECT_ENVIRONMENT=/app/.venv \
+    PORT=8080 \
+    HOST=0.0.0.0
 
-# Health check (Cloud Run native, no wget/curl needed)
+# Health check & Service Port (Cloud Run native)
 EXPOSE 8080
 
-# Entry point - direct python execution, no shell
-ENTRYPOINT ["/app/.venv/bin/python", "-c"]
-CMD ["import os, sys, time, threading; \
-os.environ['COCKPIT_PORT'] = '8080'; \
-from system.cockpit.server import start_web_server_if_needed; \
-url = start_web_server_if_needed(8080); \
-print(f'API Server: {url}', flush=True); \
-def monitor(): \
-    import urllib.request; \
-    while True: \
-        time.sleep(30); \
-        try: urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=5) \
-        except: os._exit(1); \
-threading.Thread(target=monitor, daemon=True).start(); \
-while True: time.sleep(3600)"]
+# Entry point - direct python execution of hardened Radar Telemetry Server
+ENTRYPOINT ["/app/.venv/bin/python", "-m", "orbit_security.radar_telemetry", "--serve", "--port", "8080", "--host", "0.0.0.0"]

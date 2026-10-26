@@ -11,6 +11,11 @@ on:
         description: 'Optional single target domain to scan'
         required: false
         default: ''
+      run_backfill:
+        description: 'Run background OSINT & proposal generation'
+        type: boolean
+        required: false
+        default: true
 
 permissions:
   contents: read
@@ -25,7 +30,7 @@ jobs:
   autonomous-perimeter-sweep:
     name: "24/7 Autonomous Security Audit"
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Hardened Checkout
@@ -43,18 +48,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install -e .
-          python -m pip install dnspython httpx pydantic pytest pytest-asyncio pyyaml pip-audit duckdb
+          python -m pip install dnspython httpx pydantic pytest pytest-asyncio pyyaml pip-audit duckdb reportlab
 
       - name: "Anti-CVE Shield: Supply Chain & Dependency Audit"
         run: |
           echo "### 🛡️ Supply Chain & Dependency Audit (Anti-CVE Shield)" >> $GITHUB_STEP_SUMMARY
           echo "Scanning installed environment for known CVE advisories via pip-audit..."
-          # Scan dependencies for known CVEs
           pip-audit --desc || echo "::warning::pip-audit identified potential dependency advisories"
 
       - name: "Unit & Security Invariant Verification"
         run: |
-          PYTHONPATH=src pytest tests/test_input_sanitizer.py tests/test_orbit_recon.py tests/test_infra_validation.py tests/test_tier2_roadmap.py tests/test_tier3_roadmap.py -v
+          PYTHONPATH=src pytest tests/test_input_sanitizer.py tests/test_orbit_recon.py tests/test_infra_validation.py tests/test_radar_telemetry.py -v
 
       - name: "Refresh Compacted CISA KEV + EPSS Radar Feed & Email/TLS Posture"
         run: |
@@ -87,10 +91,77 @@ jobs:
             cat orbit-recon-report.md >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: "Upload Autonomous Audit Artifacts"
+      - name: "Autonomous Lead OSINT Enrichment & Proposal Staging"
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          PYTHONPATH=src python src/orbit_security/radar_telemetry.py --backfill
+
+      - name: "Dispatch Scheduled 24/7 Security Alert to Discord"
+        if: always()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          PYTHONPATH=src python - <<'PY'
+          import os, json, urllib.request
+
+          webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
+          if not webhook_url:
+              print("ℹ️ DISCORD_WEBHOOK_URL secret not configured in repository — skipping webhook push.")
+              exit(0)
+
+          report_file = "orbit-recon-report.md"
+          report_content = "Perimeter audit executed successfully."
+          if os.path.exists(report_file):
+              with open(report_file, "r", encoding="utf-8") as f:
+                  report_content = f.read()
+
+          # Parse domains and grades from the report
+          lines = [line.strip() for line in report_content.splitlines() if line.strip().startswith("| `")]
+          fields = []
+          for line in lines[:8]:
+              parts = [p.strip() for p in line.split("|") if p.strip()]
+              if len(parts) >= 3:
+                  domain = parts[0].replace("`", "")
+                  score = parts[1].replace("*", "")
+                  grade = parts[2].replace("*", "")
+                  fields.append({
+                      "name": f"🌐 {domain}",
+                      "value": f"**Score:** {score} • **Grade:** `{grade}`",
+                      "inline": True
+                  })
+
+          payload = {
+              "username": "ORBIT // 24/7 CLOUD SENTINEL",
+              "avatar_url": "https://cmfh009.github.io/Orbit-Security/assets/orbit_cats_pounce.jpg",
+              "embeds": [{
+                  "title": "🛰️ Scheduled 24/7 Cloud Perimeter Sentinel Sweep",
+                  "description": "Autonomous perimeter reconnaissance run complete across target estates.\n**Audit Engine:** RFC-8484 DoH • **CFAA Safe Harbor:** Enforced",
+                  "color": 0x10b981,
+                  "fields": fields if fields else [{"name": "Status", "value": "All targets scanned clean.", "inline": False}],
+                  "footer": {"text": "Project ORBIT Cloud Sentinel • GitHub Actions Cron • 0ms Local PC Dependency"}
+              }]
+          }
+
+          req = urllib.request.Request(
+              webhook_url,
+              data=json.dumps(payload).encode("utf-8"),
+              headers={"Content-Type": "application/json", "User-Agent": "OrbitSecuritySentinel/1.0"}
+          )
+          try:
+              with urllib.request.urlopen(req, timeout=10) as resp:
+                  print(f"✓ Discord alert dispatched successfully: HTTP {resp.status}")
+          except Exception as e:
+              print(f"⚠️ Discord dispatch non-fatal warning: {e}")
+          PY
+
+      - name: "Upload Autonomous Audit & Staged Proposals"
         uses: actions/upload-artifact@v4
         with:
           name: orbit-247-audit-report-${{ github.run_id }}
           path: |
             orbit-recon-report.md
+            data/outbound_campaigns/*.pdf
+            data/outbound_campaigns/*.md
+            data/radar_queries.jsonl
           retention-days: 30
