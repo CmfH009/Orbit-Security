@@ -980,11 +980,13 @@ class RadarTunnelWatchdog:
                 tmp.unlink()
 
         if sync_assets:
-            self.sync_tunnel_endpoint_in_assets(endpoint)
+            self.sync_tunnel_endpoint_in_assets(endpoint, state=state)
         return state
 
-    def sync_tunnel_endpoint_in_assets(self, new_endpoint: str) -> bool:
-        """Updates the public HTTPS tunnel fallback endpoint in landing/assets/orbit_radar.js & docs/."""
+    def sync_tunnel_endpoint_in_assets(
+        self, new_endpoint: str, state: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """Updates the public HTTPS tunnel fallback endpoint in landing/assets/orbit_radar.js, docs/, and radar_tunnel_state.json."""
         updated = False
         pattern = re.compile(
             r"addEp\('https://[a-zA-Z0-9.-]+\.(?:lhr\.life|localhost\.run|trycloudflare\.com)/api/orbit/radar/telemetry'\);"
@@ -1001,6 +1003,25 @@ class RadarTunnelWatchdog:
                         updated = True
                 except Exception as ex:
                     logger.warning("Failed to sync tunnel endpoint in %s: %s", target, ex)
+
+        public_state = {
+            "telemetry_endpoint": new_endpoint,
+            "updated_at": (state or {}).get("updated_at")
+            or datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "status": "active",
+        }
+        public_json = json.dumps(public_state, indent=2)
+        for state_rel in (
+            "landing/assets/radar_tunnel_state.json",
+            "docs/assets/radar_tunnel_state.json",
+        ):
+            state_target = self.repo_root / state_rel
+            try:
+                state_target.parent.mkdir(parents=True, exist_ok=True)
+                state_target.write_text(public_json, encoding="utf-8")
+                updated = True
+            except Exception as ex:
+                logger.warning("Failed to write public tunnel state %s: %s", state_target, ex)
         return updated
 
 

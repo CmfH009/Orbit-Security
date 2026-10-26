@@ -854,14 +854,15 @@
                 addEp(`${window.location.origin}/api/orbit/radar/telemetry`);
             }
 
-            // 3. Public HTTPS Telemetry Tunnel
-            addEp('https://326d608a6748ef.lhr.life/api/orbit/radar/telemetry');
+            // 3. Public HTTPS Telemetry Tunnel (Dynamic + Fallback)
+            if (window.ORBIT_LIVE_TUNNEL_ENDPOINT) addEp(window.ORBIT_LIVE_TUNNEL_ENDPOINT);
+            addEp('https://fc1acb6485846d.lhr.life/api/orbit/radar/telemetry');
 
             // 4. Localhost collector fallbacks (Cockpit on 9090, Standalone CLI Receiver on 9095)
             addEp('http://127.0.0.1:9090/api/orbit/radar/telemetry');
             addEp('http://127.0.0.1:9095/api/orbit/radar/telemetry');
 
-            // 4. Webhook collector (window, localStorage, or ?webhook= URL param)
+            // 5. Webhook collector (window, localStorage, or ?webhook= URL param)
             if (window.ORBIT_RADAR_WEBHOOK) addEp(window.ORBIT_RADAR_WEBHOOK);
             try {
                 const storedWh = localStorage.getItem(TELEMETRY_WEBHOOK_STORAGE_KEY);
@@ -876,6 +877,94 @@
             } catch (_) {}
         }
         return endpoints;
+    }
+
+    const TELEMETRY_SYNCED_PROBES_KEY = 'orbit_radar_synced_probes_v1';
+
+    function markProbeSynced(probeKey) {
+        if (!probeKey) return;
+        try {
+            if (typeof localStorage === 'undefined' || !localStorage.getItem) return;
+            const list = JSON.parse(localStorage.getItem(TELEMETRY_SYNCED_PROBES_KEY) || '[]');
+            const arr = Array.isArray(list) ? list : [];
+            if (!arr.includes(probeKey)) {
+                arr.unshift(probeKey);
+                if (arr.length > 100) arr.length = 100;
+                localStorage.setItem(TELEMETRY_SYNCED_PROBES_KEY, JSON.stringify(arr));
+            }
+        } catch (_) {}
+    }
+
+    function isProbeSynced(probeKey) {
+        if (!probeKey) return false;
+        try {
+            if (typeof localStorage === 'undefined' || !localStorage.getItem) return false;
+            const list = JSON.parse(localStorage.getItem(TELEMETRY_SYNCED_PROBES_KEY) || '[]');
+            return Array.isArray(list) && list.includes(probeKey);
+        } catch (_) {
+            return false;
+        }
+    }
+
+    async function resolveLiveTunnelEndpoint() {
+        if (typeof window === 'undefined' || typeof fetch !== 'function') return null;
+        const ts = Date.now();
+        const stateUrls = [
+            `https://raw.githubusercontent.com/CmfH009/Orbit-Security/main/landing/assets/radar_tunnel_state.json?t=${ts}`,
+            `assets/radar_tunnel_state.json?t=${ts}`
+        ];
+        for (const u of stateUrls) {
+            try {
+                const res = await fetch(u, { cache: 'no-store' });
+                if (res && res.ok) {
+                    const data = await res.json();
+                    if (data && typeof data.telemetry_endpoint === 'string' && data.telemetry_endpoint.startsWith('https://')) {
+                        window.ORBIT_LIVE_TUNNEL_ENDPOINT = data.telemetry_endpoint;
+                        return data.telemetry_endpoint;
+                    }
+                }
+            } catch (_) {}
+        }
+        return window.ORBIT_LIVE_TUNNEL_ENDPOINT || null;
+    }
+
+    async function flushUnsentLocalProbes() {
+        if (typeof window === 'undefined' || isTelemetryOptedOut() || typeof fetch !== 'function') return;
+        try {
+            if (typeof localStorage === 'undefined' || !localStorage.getItem) return;
+            const probes = JSON.parse(localStorage.getItem(TELEMETRY_STORAGE_KEY) || '[]');
+            if (!Array.isArray(probes) || probes.length === 0) return;
+
+            const liveEp = await resolveLiveTunnelEndpoint();
+            const endpoints = getTelemetryEndpoints();
+            if (liveEp && !endpoints.includes(liveEp)) endpoints.unshift(liveEp);
+
+            const unsynced = probes.slice(0, 10).filter(p => {
+                if (!p || !p.domain) return false;
+                const key = `${p.domain}:${p.timestamp_epoch || p.timestamp || ''}`;
+                return !isProbeSynced(key);
+            });
+
+            for (const probe of unsynced) {
+                const key = `${probe.domain}:${probe.timestamp_epoch || probe.timestamp || ''}`;
+                const jsonStr = JSON.stringify(probe);
+                for (const url of endpoints) {
+                    try {
+                        const res = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: jsonStr,
+                            mode: 'cors',
+                            keepalive: true
+                        });
+                        if (res && res.ok) {
+                            markProbeSynced(key);
+                            break;
+                        }
+                    } catch (_) {}
+                }
+            }
+        } catch (_) {}
     }
 
     function dispatchRadarTelemetry(domain, triggerSource, auditResult) {
@@ -914,8 +1003,9 @@
         if (typeof window !== 'undefined' && !optedOut) {
             const endpoints = getTelemetryEndpoints();
             const jsonStr = JSON.stringify(payload);
+            const probeKey = `${payload.domain}:${payload.timestamp_epoch}`;
 
-            endpoints.forEach(url => {
+            const sendToEndpoint = (url) => {
                 try {
                     if (typeof fetch === 'function') {
                         fetch(url, {
@@ -924,6 +1014,8 @@
                             body: jsonStr,
                             mode: 'cors',
                             keepalive: true
+                        }).then(res => {
+                            if (res && res.ok) markProbeSynced(probeKey);
                         }).catch(() => {
                             try {
                                 if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
@@ -937,7 +1029,15 @@
                         navigator.sendBeacon(url, blob);
                     }
                 } catch (_) {}
-            });
+            };
+
+            endpoints.forEach(sendToEndpoint);
+
+            resolveLiveTunnelEndpoint().then(liveEp => {
+                if (liveEp && !endpoints.includes(liveEp) && !isProbeSynced(probeKey)) {
+                    sendToEndpoint(liveEp);
+                }
+            }).catch(() => {});
 
             try {
                 if (typeof window.dispatchEvent === 'function') {
@@ -987,6 +1087,8 @@
             return url;
         },
         getEndpoints: getTelemetryEndpoints,
+        resolveLiveTunnelEndpoint: resolveLiveTunnelEndpoint,
+        flushUnsentLocalProbes: flushUnsentLocalProbes,
         isOptedOut: isTelemetryOptedOut,
         optOut: function() {
             try {
@@ -1010,6 +1112,9 @@
     if (typeof window !== 'undefined') {
         window.OrbitRadarTelemetry = OrbitRadarTelemetry;
         window.dispatchRadarTelemetry = dispatchRadarTelemetry;
+        if (window.location && window.location.hostname && window.location.hostname.endsWith('github.io')) {
+            setTimeout(() => { flushUnsentLocalProbes(); }, 600);
+        }
     }
 
     function setScanTarget(domain) {

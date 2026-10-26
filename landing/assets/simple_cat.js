@@ -1379,15 +1379,16 @@
         // 2b. 60fps Video Recorder Banner for X Clips
         const recBannerEl = document.createElement("div");
         recBannerEl.id = "orbit-rec-banner";
-        recBannerEl.className = "fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-rose-950/95 border-2 border-rose-500 text-rose-200 font-mono text-xs flex items-center gap-3 shadow-[0_0_30px_rgba(244,63,94,0.6)] backdrop-blur-md hidden";
+        recBannerEl.className = "fixed top-20 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-rose-950/95 border-2 border-rose-500 text-rose-200 font-mono text-xs flex items-center gap-3 shadow-[0_0_30px_rgba(244,63,94,0.6)] backdrop-blur-md hidden";
+        recBannerEl.style.cssText = "z-index: 999999 !important;";
         recBannerEl.innerHTML = `
             <span class="flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
                 <span class="font-bold text-rose-300">REC FOR X</span>
                 <span id="orbit-rec-timer" class="px-1.5 py-0.5 rounded bg-black/60 text-white font-bold text-[10px]">00:00</span>
             </span>
-            <button type="button" id="orbit-rec-finish-btn" class="px-3 py-1 rounded-full bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold text-[10px] transition-all cursor-pointer shadow-sm">
-                ⏹️ Save Clip
+            <button type="button" id="orbit-rec-finish-btn" class="px-3 py-1.5 rounded-full bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold text-[11px] transition-all cursor-pointer shadow-sm">
+                ⏹️ Stop &amp; Share Clip
             </button>
         `;
         document.body.appendChild(recBannerEl);
@@ -1427,6 +1428,7 @@
                 <button type="button" id="hud-treats-btn" class="astro-hud-btn" title="Feed Cosmic Treats">🐟 Treats</button>
                 <button type="button" id="hud-laser-btn" class="astro-hud-btn" title="Laser Chase Mode">🎯 Laser</button>
                 <button type="button" id="hud-patrol-btn" class="astro-hud-btn" title="Threat Patrol Mini-Game">👾 Patrol</button>
+                <button type="button" id="hud-rec-btn" class="astro-hud-btn" title="Record Clip for X">📹 Clip</button>
                 <button type="button" id="hud-decode-btn" class="astro-hud-btn" title="Security Dictionary">📖 Decode</button>
                 <button type="button" id="hud-dock-btn" class="astro-hud-btn" title="Park into Corner Space Station">🛰️ Station</button>
             </div>
@@ -1518,6 +1520,9 @@
                 </button>
                 <button type="button" id="touch-decode-btn" class="min-h-[46px] px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95">
                     <span>📖 Jargon</span>
+                </button>
+                <button type="button" id="touch-rec-btn" class="col-span-2 min-h-[46px] px-3 py-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/50 text-rose-300 font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95">
+                    <span>📹 Record Clip for X</span>
                 </button>
             </div>
         `;
@@ -1627,6 +1632,13 @@
                 showSimpleCatDialog("dmarc");
             });
         }
+        const touchRec = document.getElementById("touch-rec-btn");
+        if (touchRec) {
+            touchRec.addEventListener("click", () => {
+                closeTouchDrawer();
+                toggleScreenRecording();
+            });
+        }
 
         // Close touch drawer on outside pointerdown
         window.addEventListener("pointerdown", (e) => {
@@ -1695,6 +1707,13 @@
             hudPatrol.addEventListener("click", (e) => {
                 e.stopPropagation();
                 startSpacePatrol();
+            });
+        }
+        const hudRec = document.getElementById("hud-rec-btn");
+        if (hudRec) {
+            hudRec.addEventListener("click", (e) => {
+                e.stopPropagation();
+                toggleScreenRecording();
             });
         }
         const hudDecode = document.getElementById("hud-decode-btn");
@@ -2501,7 +2520,8 @@
             const shareUrl = "https://cmfh009.github.io/Orbit-Security/#audit-terminal";
             const xIntentUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
 
-            modal.className = "fixed bottom-20 right-4 sm:right-6 z-50 max-w-sm w-[calc(100vw-2rem)] p-4 rounded-2xl bg-slate-950/95 border-2 border-emerald-500 shadow-[0_0_35px_rgba(16,185,129,0.35)] backdrop-blur-xl text-xs font-mono text-slate-200 space-y-3";
+            modal.className = "fixed bottom-20 right-4 sm:right-6 max-w-sm w-[calc(100vw-2rem)] p-4 rounded-2xl bg-slate-950/98 border-2 border-emerald-500 shadow-[0_0_35px_rgba(16,185,129,0.45)] backdrop-blur-xl text-xs font-mono text-slate-200 space-y-3";
+            modal.style.cssText = "z-index: 999999 !important;";
             modal.innerHTML = `
                 <div class="flex items-center justify-between border-b border-slate-800 pb-2">
                     <div class="flex items-center gap-2 text-emerald-400 font-bold">
@@ -2510,8 +2530,9 @@
                     </div>
                     <button type="button" onclick="document.getElementById('orbit-clip-share-modal').classList.add('hidden')" class="text-slate-400 hover:text-white text-base px-1 cursor-pointer">&times;</button>
                 </div>
+                <video src="${lastRecordedClipUrl}" controls playsinline muted autoplay loop class="w-full max-h-44 rounded-xl border border-slate-800 bg-black object-contain"></video>
                 <p class="text-[11px] text-slate-300 leading-relaxed">
-                    Saved <code class="text-emerald-300">${filename}</code>! On mobile phones, tap <strong>Share Clip File</strong> to send the video directly to the X app, or open the X post composer below:
+                    Saved <code class="text-emerald-300">${filename}</code>! Tap <strong>Share Clip File</strong> on mobile to send the video directly to X, or open X below:
                 </p>
                 <div class="flex flex-wrap items-center gap-2">
                     <button type="button" id="orbit-native-share-clip-btn" class="flex-1 min-h-[42px] px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs uppercase cursor-pointer flex items-center justify-center gap-1.5">
@@ -2569,9 +2590,6 @@
                 recStream = createMobileCanvasStream();
                 usingMobileCanvasFallback = true;
             } else {
-                // Target 720p / 1080p @ 30fps: Recommended Twitter/X specs.
-                // Explicitly set preferCurrentTab & selfBrowserSurface: "include" so Chrome displays the "Chrome Tab"
-                // selector with the current tab pre-selected and visible, plus tab-switching controls.
                 const captureOptions = {
                     video: {
                         displaySurface: "browser",
@@ -2589,37 +2607,41 @@
                 try {
                     recStream = await navigator.mediaDevices.getDisplayMedia(captureOptions);
                 } catch (captureErr) {
-                    // If strict parameters fail on older browser builds, fallback to resilient permissive capture
-                    if (captureErr.name === 'TypeError' || captureErr.name === 'OverconstrainedError') {
+                    if (captureErr.name === 'NotAllowedError' || captureErr.name === 'AbortError') {
+                        throw captureErr;
+                    }
+                    try {
                         recStream = await navigator.mediaDevices.getDisplayMedia({
                             video: true,
                             audio: true,
                             selfBrowserSurface: "include"
                         });
-                    } else if (captureErr.name === 'NotSupportedError' || captureErr.name === 'InvalidAccessError') {
+                    } catch (_) {
                         recStream = createMobileCanvasStream();
                         usingMobileCanvasFallback = true;
-                    } else {
-                        throw captureErr;
                     }
                 }
             }
 
             recordedChunks = [];
 
-            // Prioritize GPU Hardware-Accelerated Codecs:
-            // 1. MP4 (H.264 / AVC) -> GPU Hardware NVENC/Intel QuickSync (virtually 0% CPU)
-            // 2. WebM with H.264
-            // 3. WebM with VP8 (lightweight hardware acceleration)
-            // 4. WebM default
+            // IMPORTANT: Video-only streams (<canvas>.captureStream on mobile) have 0 audio tracks.
+            // Passing an audio codec (like mp4a.40.2 or opus) on a 0-audio-track stream throws NotSupportedError on mobile browsers!
+            const hasAudioTracks = recStream.getAudioTracks && recStream.getAudioTracks().length > 0;
             let chosenMime = "";
             let fileExt = "webm";
-            const candidates = [
+            const candidates = hasAudioTracks ? [
                 { mime: "video/mp4;codecs=avc1.42E01E,mp4a.40.2", ext: "mp4" },
                 { mime: "video/mp4;codecs=avc1", ext: "mp4" },
                 { mime: "video/mp4", ext: "mp4" },
                 { mime: "video/webm;codecs=h264,opus", ext: "webm" },
                 { mime: "video/webm;codecs=vp8,opus", ext: "webm" },
+                { mime: "video/webm;codecs=vp8", ext: "webm" },
+                { mime: "video/webm", ext: "webm" }
+            ] : [
+                { mime: "video/mp4;codecs=avc1", ext: "mp4" },
+                { mime: "video/mp4", ext: "mp4" },
+                { mime: "video/webm;codecs=vp9", ext: "webm" },
                 { mime: "video/webm;codecs=vp8", ext: "webm" },
                 { mime: "video/webm", ext: "webm" }
             ];
@@ -2632,14 +2654,24 @@
                 }
             }
 
-            // Cap bitrate to 2.5 Mbps: standard for Twitter/X video clips.
-            // Prevents runaway RAM buffers and stops CPU encoder saturation.
             const recorderOptions = {
                 videoBitsPerSecond: 2500000
             };
             if (chosenMime) recorderOptions.mimeType = chosenMime;
 
-            mediaRecorder = new MediaRecorder(recStream, recorderOptions);
+            try {
+                mediaRecorder = new MediaRecorder(recStream, recorderOptions);
+            } catch (_) {
+                try {
+                    mediaRecorder = chosenMime ? new MediaRecorder(recStream, { mimeType: chosenMime }) : new MediaRecorder(recStream);
+                } catch (_2) {
+                    mediaRecorder = new MediaRecorder(recStream);
+                }
+            }
+
+            if (mediaRecorder.mimeType && mediaRecorder.mimeType.includes("mp4")) {
+                fileExt = "mp4";
+            }
 
             mediaRecorder.ondataavailable = (e) => {
                 if (e.data && e.data.size > 0) {
@@ -2652,7 +2684,9 @@
                 const banner = document.getElementById("orbit-rec-banner");
                 if (banner) banner.classList.add("hidden");
                 const dockRecBtn = document.getElementById("dock-rec-btn");
-                if (dockRecBtn) dockRecBtn.innerHTML = '<span>📹 Clip for X</span>';
+                if (dockRecBtn) dockRecBtn.innerHTML = '<span>📹 Clip</span>';
+                const touchRecBtn = document.getElementById("touch-rec-btn");
+                if (touchRecBtn) touchRecBtn.innerHTML = '<span>📹 Record Clip for X</span>';
 
                 // Release all capture tracks immediately
                 if (recStream) {
@@ -2680,44 +2714,47 @@
                 }, 150);
 
                 playCoin();
-                showSpeechBubble("🎬 Clip saved! Tap 'Share Clip File' or 'Post on X' to share! 🚀", 7000, false, "ASTRO-CAT // CLIP SAVED");
+                showSpeechBubble("🎬 Clip ready! Preview below or tap 'Share Clip File' to post on X! 🚀", 7000, false, "ASTRO-CAT // CLIP SAVED");
                 showClipSavedShareBanner(blob, fileExt, filename);
             };
 
             if (recStream.getVideoTracks().length > 0) {
                 recStream.getVideoTracks()[0].onended = () => {
                     if (mediaRecorder && mediaRecorder.state === "recording") {
-                        mediaRecorder.stop();
+                        stopScreenRecording();
                     }
                 };
             }
 
-            // Collect 1000ms (1-second) chunks instead of 250ms -> reduces memory allocations by 75%
-            mediaRecorder.start(1000);
+            mediaRecorder.start(usingMobileCanvasFallback ? 250 : 1000);
             recSeconds = 0;
+            const maxRecSeconds = usingMobileCanvasFallback ? 6 : 60;
             const banner = document.getElementById("orbit-rec-banner");
             const timerEl = document.getElementById("orbit-rec-timer");
             if (banner) banner.classList.remove("hidden");
-            if (timerEl) timerEl.textContent = "00:00";
+            if (timerEl) timerEl.textContent = usingMobileCanvasFallback ? `00:00 / 00:0${maxRecSeconds}` : "00:00";
 
             recTimerInterval = setInterval(() => {
                 recSeconds++;
                 const mins = String(Math.floor(recSeconds / 60)).padStart(2, "0");
                 const secs = String(recSeconds % 60).padStart(2, "0");
-                if (timerEl) timerEl.textContent = `${mins}:${secs}`;
+                if (timerEl) {
+                    timerEl.textContent = usingMobileCanvasFallback ? `${mins}:${secs} / 00:0${maxRecSeconds}` : `${mins}:${secs}`;
+                }
 
-                // Auto-stop at 60 seconds max to prevent runaway RAM consumption
-                if (recSeconds >= 60) {
+                if (recSeconds >= maxRecSeconds) {
                     stopScreenRecording();
                 }
             }, 1000);
 
             const dockRecBtn = document.getElementById("dock-rec-btn");
             if (dockRecBtn) dockRecBtn.innerHTML = '<span class="text-rose-400 animate-pulse">⏹️ Stop Rec</span>';
+            const touchRecBtn = document.getElementById("touch-rec-btn");
+            if (touchRecBtn) touchRecBtn.innerHTML = '<span class="text-rose-400 animate-pulse">⏹️ Stop &amp; Save Clip</span>';
 
             playPowerUp();
             if (usingMobileCanvasFallback) {
-                showSpeechBubble("📱 Mobile Canvas Recorder active! Recording 30fps HUD clip for X — tap Stop when ready! 🐾", 7500, false, "ASTRO-CAT // MOBILE RECORDER");
+                showSpeechBubble("📱 Recording 6-second HUD clip for X! Auto-saves in 6s or tap 'Stop & Share Clip' at top! 🐾", 6500, false, "ASTRO-CAT // MOBILE RECORDER");
             } else {
                 showSpeechBubble("🎥 Recording clip (GPU optimized)! Flips & tricks ready! 🐾", 7500, false, "ASTRO-CAT // RECORDER");
             }
@@ -2733,6 +2770,11 @@
 
     function stopScreenRecording() {
         if (mediaRecorder && mediaRecorder.state === "recording") {
+            try {
+                if (typeof mediaRecorder.requestData === "function") {
+                    mediaRecorder.requestData();
+                }
+            } catch (_) {}
             mediaRecorder.stop();
         }
     }
