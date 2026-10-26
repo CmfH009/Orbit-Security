@@ -315,31 +315,7 @@ if ($query_string ~* "(?:invokefunction|call_user_func_array|pearcmd|\\+config-c
         sec_path = out / "security.txt"
         sec_path.write_text(sec_txt, encoding="utf-8")
 
-        # 4. remediation_summary.txt
-        summary_lines = [
-            f"=== ORBIT SECURITY REMEDIATION BLUEPRINT: {domain} ===",
-            f"Generated: {datetime.datetime.now(datetime.timezone.utc).isoformat()}",
-            "",
-            "1. DMARC POLICY ENFORCEMENT:",
-            f"   Record: _dmarc.{domain} TXT {dmarc_snippets[0].record_value}",
-            f"   Action: {dmarc_snippets[0].instructions}",
-            "",
-            "2. SPF STRICT HARD-FAIL:",
-            f"   Record: {domain} TXT {spf_snippets[0].record_value}",
-            f"   Action: {spf_snippets[0].instructions}",
-            "",
-            "3. CAA RESTRICTION:",
-            f"   Record: {domain} CAA 0 issue \"letsencrypt.org\"",
-            "",
-            "Files Generated:",
-            f" - {zone_path.name} (BIND zone file importable in Cloudflare DNS)",
-            f" - {tf_path.name} (Terraform HCL infrastructure-as-code)",
-            f" - {sec_path.name} (RFC 9116 security policy)",
-        ]
-        summary_path = out / "remediation_summary.txt"
-        summary_path.write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
-
-        # 5. Optional PDF report
+        # 4. Optional PDF report
         pdf_path = None
         if generate_pdf:
             try:
@@ -360,11 +336,38 @@ if ($query_string ~* "(?:invokefunction|call_user_func_array|pearcmd|\\+config-c
                         )
                     ],
                 )
-                ReportGenerator.generate_pdf(dummy_audit, output_path=pdf_file)
+                ReportGenerator.generate_pdf(dummy_audit, output_path=str(pdf_file))
                 pdf_path = pdf_file
             except Exception as e:
                 import logging
                 logging.getLogger("orbit_security.remediation").warning(f"Failed to generate remediation PDF: {e}")
+
+        # 5. remediation_summary.txt (written after the PDF so the manifest is complete)
+        summary_lines = [
+            f"=== ORBIT SECURITY REMEDIATION BLUEPRINT: {domain} ===",
+            f"Generated: {datetime.datetime.now(datetime.timezone.utc).isoformat()}",
+            "",
+            "1. DMARC POLICY ENFORCEMENT:",
+            f"   Record: _dmarc.{domain} TXT {dmarc_snippets[0].record_value}",
+            f"   Action: {dmarc_snippets[0].instructions}",
+            "",
+            "2. SPF STRICT HARD-FAIL:",
+            f"   Record: {domain} TXT {spf_snippets[0].record_value}",
+            f"   Action: {spf_snippets[0].instructions}",
+            "",
+            "3. CAA RESTRICTION:",
+            f"   Record: {domain} CAA 0 issue \"letsencrypt.org\"",
+            "",
+            "Files Generated:",
+            f" - {zone_path.name} (BIND zone file importable in Cloudflare DNS)",
+            f" - {tf_path.name} (Terraform HCL infrastructure-as-code)",
+            f" - {sec_path.name} (RFC 9116 security policy)",
+        ]
+        if pdf_path:
+            summary_lines.append(f" - {pdf_path.name} (Executive PDF remediation audit)")
+
+        summary_path = out / "remediation_summary.txt"
+        summary_path.write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
 
         return {
             "domain": domain,

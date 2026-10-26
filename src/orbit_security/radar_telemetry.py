@@ -1245,10 +1245,12 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
                 return
 
             if action == "stage_retainer":
-                stager = getattr(self.service, "proposal_stager", None) or RadarRetainerProposalStager()
-                result = stager.stage_campaign(domain=domain)
+                # Enrich first: the stager needs the freshly computed score/DMARC snapshot,
+                # not the stale profile from a previous probe.
                 enricher = getattr(self.service, "enricher", None) or RadarLeadEnricher()
                 enrichment = enricher.enrich_domain(domain=domain)
+                stager = getattr(self.service, "proposal_stager", None) or RadarRetainerProposalStager()
+                result = stager.stage_campaign(domain=domain, enrichment=enrichment)
                 response = {
                     "status": "ok",
                     "action": "stage_retainer",

@@ -363,9 +363,39 @@ async def run_disclose(args, now_utc: datetime.datetime | None = None):
     return 0
 
 
+def _is_unresolvable_cname_target(cname_target: str) -> bool:
+    """Returns True when a CNAME target cannot resolve on the public DNS.
+
+    Reserved/private-use TLDs (RFC 2606, RFC 6762), malformed names, and the
+    synthetic ``*.unresolved.cname`` placeholder all indicate that no live SaaS
+    edge exists. The playground must degrade to a safe-harbor demonstration
+    instead of emitting a curl command against a host that will never answer.
+    """
+    target = (cname_target or "").strip().rstrip(".").lower()
+    if not target or len(target) > 253 or "." not in target:
+        return True
+    if any(ch.isspace() for ch in target):
+        return True
+    reserved_suffixes = (
+        ".local",
+        ".localhost",
+        ".invalid",
+        ".test",
+        ".example",
+        ".unresolved.cname",
+    )
+    return target.endswith(reserved_suffixes)
+
+
 def generate_takeover_poc_proof(subdomain: str, cname_target: str, provider: str = "Unknown") -> Dict[str, Any]:
     """Generates a harmless, non-destructive proof-of-concept verification script and remediation block."""
     from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES
+
+    cname_target = (cname_target or "").strip()
+    fallback_assigned = _is_unresolvable_cname_target(cname_target)
+    if not cname_target:
+        cname_target = f"{subdomain}.unresolved.cname"
+
     matched_sig = next(
         (s for s in SAAS_TAKEOVER_SIGNATURES if (provider and provider.lower() != "unknown" and (s.saas_provider.lower() in provider.lower() or provider.lower() in s.saas_provider.lower())) or any(c in cname_target for c in s.cname_fingerprints)),
         None,
@@ -374,6 +404,13 @@ def generate_takeover_poc_proof(subdomain: str, cname_target: str, provider: str
     pattern = matched_sig.response_fingerprints[0] if (matched_sig and matched_sig.response_fingerprints) else "Not Found"
 
     curl_cmd = f'curl -sI -k -H "Host: {subdomain}" "https://{cname_target}"'
+    safe_harbor_notice = "Non-destructive passive audit verification only. Do not claim unauthorized resources."
+    if fallback_assigned:
+        safe_harbor_notice += (
+            f" CNAME target '{cname_target}' did not resolve; a placeholder was assigned for "
+            "safe-harbor demonstration only. Re-run DNS discovery before any verification attempt."
+        )
+
     return {
         "subdomain": subdomain,
         "cname_target": cname_target,
@@ -382,7 +419,8 @@ def generate_takeover_poc_proof(subdomain: str, cname_target: str, provider: str
         "signature_pattern": pattern,
         "curl_command": curl_cmd,
         "remediation": f"Delete DNS record '{subdomain} CNAME {cname_target}' immediately or claim in {matched_sig.saas_provider if matched_sig else provider}.",
-        "safe_harbor_notice": "Non-destructive passive audit verification only. Do not claim unauthorized resources.",
+        "fallback_assigned": fallback_assigned,
+        "safe_harbor_notice": safe_harbor_notice,
     }
 
 
@@ -827,6 +865,12 @@ def main():
         if args.json:
             print(_json.dumps(poc, indent=2))
             return 0
+
+        if poc.get("fallback_assigned"):
+            console.print(
+                f"[bold yellow]⚠ CNAME target '{poc['cname_target']}' did not resolve.[/bold yellow] "
+                "[yellow]Placeholder assigned for safe-harbor demonstration only — re-run DNS discovery before verification.[/yellow]"
+            )
 
         console.print(
             Panel.fit(
