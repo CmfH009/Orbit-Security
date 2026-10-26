@@ -854,7 +854,9 @@
                 addEp(`${window.location.origin}/api/orbit/radar/telemetry`);
             }
 
-            // 3. Public HTTPS Telemetry Tunnel (Dynamic + Fallback)
+            // 3. Permanent Zero-Tunnel Cloud Edge & Live HTTPS Tunnel
+            if (window.ORBIT_LIVE_CLOUD_ENDPOINT) addEp(window.ORBIT_LIVE_CLOUD_ENDPOINT);
+            addEp('https://orbit-security-api-911438991206.us-central1.run.app/api/orbit/radar/telemetry');
             if (window.ORBIT_LIVE_TUNNEL_ENDPOINT) addEp(window.ORBIT_LIVE_TUNNEL_ENDPOINT);
             addEp('https://fc1acb6485846d.lhr.life/api/orbit/radar/telemetry');
 

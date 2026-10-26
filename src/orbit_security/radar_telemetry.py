@@ -32,6 +32,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import tempfile
 import threading
 import time
 from typing import Any, Dict, List, Optional
@@ -50,7 +51,34 @@ from orbit_security.radar_proposal_stager import DEFAULT_CAMPAIGNS_DIR, RadarRet
 logger = logging.getLogger("orbit_security.radar_telemetry")
 
 DATA_DIR = REPO_ROOT / "data"
-DEFAULT_QUERIES_FILE = DATA_DIR / "radar_queries.jsonl"
+
+
+def get_effective_data_dir() -> Path:
+    """Returns the writable data directory for radar telemetry logs.
+
+    Detects read-only filesystems (such as Google Cloud Run containers with
+    readOnlyRootFilesystem=true) and automatically falls back to /tmp/orbit_data.
+    """
+    env_dir = os.environ.get("ORBIT_DATA_DIR")
+    if env_dir:
+        p = Path(env_dir)
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+
+    # Test default DATA_DIR writability
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        test_file = DATA_DIR / f".write_test_{os.getpid()}.tmp"
+        test_file.write_text("test", encoding="utf-8")
+        test_file.unlink(missing_ok=True)
+        return DATA_DIR
+    except (OSError, PermissionError):
+        fallback = Path("/tmp/orbit_data") if os.name != "nt" else Path(tempfile.gettempdir()) / "orbit_data"
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
+
+
+DEFAULT_QUERIES_FILE = get_effective_data_dir() / "radar_queries.jsonl"
 
 DOMAIN_REGEX = re.compile(
     r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$"
@@ -342,13 +370,16 @@ class RadarTelemetryService:
         campaigns_dir: Optional[Path] = None,
         dedup_window_seconds: float = 3.0,
     ):
-        self.queries_file = Path(queries_file) if queries_file else DEFAULT_QUERIES_FILE
+        effective_data = get_effective_data_dir()
+        self.queries_file = Path(queries_file) if queries_file else (effective_data / "radar_queries.jsonl")
         self.queries_file.parent.mkdir(parents=True, exist_ok=True)
         self.dedup_window_seconds = dedup_window_seconds
         self._lock = threading.Lock()
         self._recent_probes_cache: Dict[str, float] = {}
-        self.enricher = RadarLeadEnricher(leads_file=leads_file or DEFAULT_ENRICHED_LEADS_FILE)
-        self.proposal_stager = RadarRetainerProposalStager(campaigns_dir=campaigns_dir or DEFAULT_CAMPAIGNS_DIR)
+        leads_path = leads_file or (effective_data / "radar_enriched_leads.json" if effective_data != DATA_DIR else DEFAULT_ENRICHED_LEADS_FILE)
+        campaigns_path = campaigns_dir or (effective_data / "campaigns" if effective_data != DATA_DIR else DEFAULT_CAMPAIGNS_DIR)
+        self.enricher = RadarLeadEnricher(leads_file=leads_path)
+        self.proposal_stager = RadarRetainerProposalStager(campaigns_dir=campaigns_path)
 
     @staticmethod
     def normalize_domain(domain_raw: str) -> str:
@@ -905,7 +936,7 @@ class RadarTelemetryService:
 # Self-Healing Public Telemetry Tunnel Watchdog
 # =============================================================================
 
-DEFAULT_TUNNEL_STATE_FILE = DATA_DIR / "radar_tunnel_state.json"
+DEFAULT_TUNNEL_STATE_FILE = get_effective_data_dir() / "radar_tunnel_state.json"
 
 
 class RadarTunnelWatchdog:
@@ -917,7 +948,7 @@ class RadarTunnelWatchdog:
     )
 
     def __init__(self, state_file: Optional[Path] = None, repo_root: Optional[Path] = None):
-        self.state_file = Path(state_file) if state_file else DEFAULT_TUNNEL_STATE_FILE
+        self.state_file = Path(state_file) if state_file else (get_effective_data_dir() / "radar_tunnel_state.json")
         self.state_file.parent.mkdir(parents=True, exist_ok=True)
         self.repo_root = Path(repo_root) if repo_root else REPO_ROOT
 
@@ -1039,6 +1070,17 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
     _rate_lock = threading.Lock()
     _rate_buckets: Dict[str, List[float]] = {}
 
+    @classmethod
+    def _build_server_config(cls) -> Dict[str, Any]:
+        return {
+            "status": "ok",
+            "service": "orbit-radar-telemetry",
+            "version": "2.4.0",
+            "env": "cloudrun" if os.environ.get("K_SERVICE") else "standalone",
+            "zero_tunnel": True,
+            "data_dir": str(get_effective_data_dir()),
+        }
+
     def _extract_client_ip(self) -> str:
         xff = self.headers.get("X-Forwarded-For", "").strip()
         if xff:
@@ -1120,6 +1162,15 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path in ("/api/health", "/health"):
             body = b'{"status": "ok", "service": "orbit-radar-telemetry"}'
+            self.send_cors_headers(200, "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
+        if parsed.path in ("/api/orbit/radar/config", "/api/radar/config"):
+            config = self._build_server_config()
+            body = json.dumps(config).encode("utf-8")
             self.send_cors_headers(200, "application/json")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
@@ -1235,7 +1286,12 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
         pass  # Silent logging to prevent console pollution
 
 
-def run_server(port: int = 9095, host: str = "0.0.0.0") -> None:
+RadarTelemetryHandler = RadarTelemetryHTTPHandler
+
+
+def run_server(port: Optional[int] = None, host: str = "0.0.0.0") -> None:
+    if port is None:
+        port = int(os.environ.get("PORT", 9095))
     server_address = (host, port)
     httpd = http.server.ThreadingHTTPServer(server_address, RadarTelemetryHTTPHandler)
     print(f"[ORBIT-TELEMETRY] Listening on http://{host}:{port}/api/orbit/radar/telemetry")
@@ -1318,7 +1374,12 @@ def main() -> int:
     parser.add_argument("--tail", action="store_true", help="Live tail inbound queries")
     parser.add_argument("--stats", action="store_true", help="Display inquiry statistics")
     parser.add_argument("--serve", action="store_true", help="Run standalone ingestion HTTP server")
-    parser.add_argument("--port", type=int, default=9095, help="Port for server (default: 9095)")
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("PORT", 9095)),
+        help="Port for server (default: 9095 or $PORT)",
+    )
     parser.add_argument("--host", default="0.0.0.0", help="Host interface (default: 0.0.0.0)")
     parser.add_argument("--probe", help="Emit manual test probe for specified domain")
     parser.add_argument("--enrich", help="Run OSINT enrichment and retainer staging for a domain")
