@@ -2,7 +2,7 @@
 # ==========================================
 # STAGE 1: Build with full toolchain (ephemeral)
 # ==========================================
-FROM python:3.12-slim AS builder
+FROM python:3.13-slim AS builder
 
 WORKDIR /app
 
@@ -12,21 +12,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv and dependencies in isolated layer
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
 RUN pip install --no-cache-dir uv && \
     uv sync --no-dev --no-install-project && \
-    uv pip freeze > /requirements.txt
+    /app/.venv/bin/python -m pip freeze > /requirements.txt || true
 
 # ==========================================
-# STAGE 2: Distroless runtime (NO shell, NO package manager, NO root)
+# STAGE 2: Hardened non-root runtime (UID 65532)
 # ==========================================
-FROM gcr.io/distroless/python3-debian12:nonroot
+FROM python:3.13-slim
 
 # Security: Explicit non-root user (UID 65532)
 USER 65532:65532
-
-# Security: Read-only root filesystem (enforced by distroless)
-# Security: No shell, no package manager, no apt, no su, no sudo
 
 WORKDIR /app
 

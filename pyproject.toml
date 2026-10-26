@@ -11,10 +11,10 @@ dependencies = [
     "dnspython>=2.8.0",
     "httpx>=0.28.1",
     "jinja2>=3.1.6",
-    "pyautogui>=0.9.54",
+    "pyautogui>=0.9.54; sys_platform == 'win32'",
     "pydantic>=2.13.5",
     "python-dotenv>=1.2.3",
-    "pywinauto>=0.6.9",
+    "pywinauto>=0.6.9; sys_platform == 'win32'",
     "reportlab>=5.0.1",
     "rich>=15.0.0",
     # Imported at module level by src/orbit_security/voice_model.py (edge-tts)
