@@ -855,7 +855,7 @@
             }
 
             // 3. Public HTTPS Telemetry Tunnel
-            addEp('https://21ebe34e0d176c.lhr.life/api/orbit/radar/telemetry');
+            addEp('https://0123ecfa16accc.lhr.life/api/orbit/radar/telemetry');
 
             // 4. Localhost collector fallbacks (Cockpit on 9090, Standalone CLI Receiver on 9095)
             addEp('http://127.0.0.1:9090/api/orbit/radar/telemetry');
@@ -1245,6 +1245,31 @@
                         </div>
                     </div>
 
+                    <!-- Social Share & Mobile Clip Action Bar for Live Scan Result -->
+                    <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-slate-900/80 border border-emerald-500/30 text-xs font-mono">
+                        <span class="text-[11px] text-emerald-400 font-bold flex items-center gap-1.5">
+                            <span>🚀</span>
+                            <span>Share Scan Scorecard:</span>
+                        </span>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" onclick="shareOrbitTool('radar', 'x')" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 text-emerald-300 border border-emerald-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1.5">
+                                <span>𝕏 Post to X</span>
+                            </button>
+                            <button type="button" onclick="shareOrbitTool('radar', 'linkedin')" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 border border-cyan-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1.5">
+                                <span>in LinkedIn</span>
+                            </button>
+                            <button type="button" onclick="shareOrbitTool('radar', 'reddit')" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-amber-500 hover:text-slate-950 text-amber-300 border border-amber-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1.5">
+                                <span>👾 Reddit</span>
+                            </button>
+                            <button type="button" onclick="shareOrbitTool('radar', 'native')" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-purple-500 hover:text-slate-950 text-purple-300 border border-purple-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1.5">
+                                <span>📤 Share</span>
+                            </button>
+                            <button type="button" onclick="if(window.SimpleCat && SimpleCat.recordClip) SimpleCat.recordClip()" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500 hover:text-slate-950 text-rose-300 border border-rose-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1.5">
+                                <span>📹 Clip for X</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- HUD Tabs -->
                     <div class="flex border-b border-slate-800/80 gap-1.5 overflow-x-auto pb-1.5 -mx-1 px-1 no-scrollbar scroll-indicate-x scroll-fade-r scroll-cyber-x">
                         <button type="button" id="tabBtn-overview" onclick="switchHudTab('overview')" class="hud-tab-btn min-h-[48px] px-4 py-2.5 font-mono text-xs font-semibold rounded-lg border-b-2 border-emerald-500 text-emerald-400 bg-emerald-500/10 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Overview</button>
@@ -1412,6 +1437,135 @@
         } else {
             prompt('Copy Summary:', badgeText);
         }
+    }
+
+    function buildOrbitToolSharePayload(toolKey, customContext) {
+        const baseUrl = 'https://cmfh009.github.io/Orbit-Security/';
+        const audit = (typeof window !== 'undefined' && window._lastAuditResult) ? window._lastAuditResult : null;
+        const domainInput = (typeof document !== 'undefined') ? document.getElementById('targetDomain') : null;
+        const activeDomain = (customContext && customContext.domain) || (audit && audit.domain) || (domainInput && domainInput.value && domainInput.value.trim()) || 'shopify.com';
+        const activeScore = (audit && typeof audit.score === 'number') ? audit.score : 95;
+        const activeGrade = (audit && audit.grade) ? audit.grade : 'A+';
+
+        const payloads = {
+            'radar': {
+                title: `Orbit Security — Passive DoH Perimeter Audit (${activeDomain})`,
+                text: `🛡️ Ran a zero-server RFC-8484 DNS & DMARC perimeter scan on ${activeDomain}: Score ${activeScore}/100 (Grade ${activeGrade}) via @OrbitSecurity! Scan any domain free in your browser:`,
+                url: `${baseUrl}#audit-terminal`
+            },
+            'audit-studio': {
+                title: 'Orbit Security — Co-Branded White-Label Audit Studio',
+                text: `📄 Test-driving the interactive White-Label Security Audit Studio on @OrbitSecurity — compiles executive DMARC, SPF & dangling CNAME PDF reports in browser RAM for $250/mo agency care plans:`,
+                url: `${baseUrl}#audit-preview`
+            },
+            'pitch-drawer': {
+                title: 'Orbit Security — 1-Click Agency Security Retainer Email Templates',
+                text: `✉️ Free copy-paste client pitch templates for web & Shopify agencies to close $250/mo DNS & DMARC security care retainers:`,
+                url: `${baseUrl}#client-pitch-drawer`
+            },
+            'kev-radar': {
+                title: 'Orbit Security — Interactive CISA KEV + FIRST EPSS Threat Radar',
+                text: `🛰️ Exploring 1,750+ CISA Known Exploited Vulnerabilities fused with 30-day FIRST EPSS weaponization probabilities in <5ms client-side on @OrbitSecurity:`,
+                url: `${baseUrl}#kev-epss-radar`
+            },
+            'zk-scorecard': {
+                title: 'Orbit Security — Zero-Knowledge Fleet Scorecard Portal',
+                text: `🔐 Audited a multi-domain client portfolio 100% in-browser via encrypted DNS-over-HTTPS + WebCrypto SHA-256 verification (zero server storage) on @OrbitSecurity:`,
+                url: `${baseUrl}#zk-agency-scorecard`
+            },
+            'takeover-poc': {
+                title: 'Orbit Security — Interactive Dangling CNAME Subdomain Takeover Sandbox',
+                text: `👻 Simulating passive dangling CNAME subdomain takeover signatures (AWS S3, GitHub Pages, Vercel, Shopify) with instant DNS remediation playbooks on @OrbitSecurity:`,
+                url: `${baseUrl}#takeover-poc-playground`
+            },
+            'epss-horizon': {
+                title: 'Orbit Security — EPSS 30-Day Exploitation Probability Horizon',
+                text: `📈 Visualizing 30-day CVE exploitation probability horizons against global FIRST.org percentile telemetry on @OrbitSecurity:`,
+                url: `${baseUrl}#epss-horizon-visualizer`
+            },
+            'simple-cat': {
+                title: 'Orbit Security — Simple Cat Plain-English Cyber Decoder',
+                text: `🐱 Simple Cat translates DMARC, SPF, DNSSEC & dangling CNAME takeovers into plain-English analogies clients actually understand (plus mobile clip recording for X!):`,
+                url: `${baseUrl}#simple-cat`
+            },
+            'legal-rider': {
+                title: 'Orbit Security — CFAA §1030 Safe Harbor Agency Contract Rider',
+                text: `⚖️ Free copy-paste Agency-Client Safe Harbor Contract Rider for passive RFC-8484 DNS & perimeter security monitoring under CFAA §1030:`,
+                url: `${baseUrl}#legal`
+            },
+            'roi-calculator': {
+                title: 'Orbit Security — Agency Security Retainer ROI Calculator',
+                text: `💰 Model your web agency's recurring profit margin from $250/mo white-label perimeter security & DMARC retainers on @OrbitSecurity:`,
+                url: `${baseUrl}#roi-calculator`
+            }
+        };
+
+        return payloads[toolKey] || payloads['radar'];
+    }
+
+    function shareOrbitTool(toolKey, platform = 'x', customContext = null) {
+        if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
+        const payload = buildOrbitToolSharePayload(toolKey, customContext);
+        const encodedText = encodeURIComponent(payload.text);
+        const encodedUrl = encodeURIComponent(payload.url);
+        const encodedTitle = encodeURIComponent(payload.title);
+
+        if (platform === 'x' || platform === 'twitter') {
+            const xUrl = `https://x.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
+            if (typeof window !== 'undefined' && typeof window.open === 'function') {
+                window.open(xUrl, '_blank', 'noopener,noreferrer');
+            }
+            return xUrl;
+        }
+
+        if (platform === 'linkedin') {
+            const liUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
+            if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(`${payload.text} ${payload.url}`).catch(() => {});
+            }
+            showArcadeToast('✓ Summary copied! Opening LinkedIn share composer...');
+            if (typeof window !== 'undefined' && typeof window.open === 'function') {
+                window.open(liUrl, '_blank', 'noopener,noreferrer');
+            }
+            return liUrl;
+        }
+
+        if (platform === 'reddit') {
+            const rdUrl = `https://www.reddit.com/submit?url=${encodedUrl}&title=${encodedTitle}`;
+            if (typeof window !== 'undefined' && typeof window.open === 'function') {
+                window.open(rdUrl, '_blank', 'noopener,noreferrer');
+            }
+            return rdUrl;
+        }
+
+        if (platform === 'hackernews' || platform === 'hn') {
+            const hnUrl = `https://news.ycombinator.com/submitlink?u=${encodedUrl}&t=${encodedTitle}`;
+            if (typeof window !== 'undefined' && typeof window.open === 'function') {
+                window.open(hnUrl, '_blank', 'noopener,noreferrer');
+            }
+            return hnUrl;
+        }
+
+        // 'native' or fallback: Web Share API on phones/tablets, clipboard copy fallback on desktop
+        if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+            navigator.share({
+                title: payload.title,
+                text: payload.text,
+                url: payload.url
+            }).catch(() => {});
+            return payload.url;
+        }
+
+        const fullShare = `${payload.text}
+${payload.url}`;
+        if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(fullShare)
+                .then(() => showArcadeToast('✓ Share summary & link copied to clipboard!'))
+                .catch(() => prompt('Copy Share Link:', fullShare));
+        } else if (typeof prompt === 'function') {
+            prompt('Copy Share Link:', fullShare);
+        }
+        return payload.url;
     }
 
     function copySessionLink() {
@@ -1791,6 +1945,8 @@
     window.handleAuditRequest = handleAuditRequest;
     window.toggleFaq = toggleFaq;
     window.copyShareableBadge = copyShareableBadge;
+    window.shareOrbitTool = shareOrbitTool;
+    window.buildOrbitToolSharePayload = buildOrbitToolSharePayload;
     window.copyLegalRider = copyLegalRider;
     window.copySessionLink = copySessionLink;
     window.switchLegalTab = switchLegalTab;

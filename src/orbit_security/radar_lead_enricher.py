@@ -127,6 +127,8 @@ class RadarLeadEnricher:
         self.osint_harvester = PublicAPIsIntelHarvester(db_path=db_path)
         self.leadership_verifier = ExecutiveOSINTVerifier()
 
+    COMMON_DKIM_SELECTORS = ("google", "selector1", "selector2", "k1", "s1", "default")
+
     def _query_doh_txt_or_ns(self, name: str, record_type: str = "TXT") -> List[str]:
         """Queries Google DNS-over-HTTPS (RFC 8484) for fast non-blocking DNS record inspection."""
         url = f"https://dns.google/resolve?name={urllib.parse.quote(name)}&type={record_type}"
@@ -146,6 +148,53 @@ class RadarLeadEnricher:
         except Exception as ex:
             logger.debug("DoH query (%s %s) skipped: %s", name, record_type, ex)
         return records
+
+    def _probe_dkim_selectors(self, domain: str) -> List[str]:
+        """Passively probes common enterprise DKIM selectors via DoH TXT/CNAME resolution."""
+        found: List[str] = []
+        for sel in self.COMMON_DKIM_SELECTORS:
+            qname = f"{sel}._domainkey.{domain}"
+            records = self._query_doh_txt_or_ns(qname, "TXT")
+            if any(
+                ("v=dkim1" in r.lower() or "k=rsa" in r.lower() or "p=" in r.lower() or "_domainkey" in r.lower())
+                for r in records
+            ):
+                found.append(sel)
+        return found
+
+    def _probe_caa_records(self, domain: str) -> List[str]:
+        """Passively queries RFC 8659 DNS CAA records for Certificate Authority Authorization."""
+        records = self._query_doh_txt_or_ns(domain, "CAA")
+        return [r for r in records if any(tok in r.lower() for tok in ("issue", "issuewild", "iodef"))]
+
+    def _harvest_ct_subdomains(self, domain: str, limit: int = 15) -> List[str]:
+        """Queries Certificate Transparency logs (crt.sh) passively for subdomain attack surface discovery."""
+        url = f"https://crt.sh/?q=%25.{urllib.parse.quote(domain)}&output=json"
+        req = urllib.request.Request(
+            url,
+            headers={"Accept": "application/json", "User-Agent": "OrbitRadarEnricher/1.0"},
+        )
+        discovered: Set[str] = set()
+        suffix = f".{domain.lower()}"
+        try:
+            with urllib.request.urlopen(req, timeout=min(self.timeout, 3.0)) as resp:
+                if resp.status == 200:
+                    raw = resp.read(262144).decode("utf-8", errors="ignore")
+                    entries = json.loads(raw)
+                    if isinstance(entries, list):
+                        for entry in entries:
+                            name_val = str(entry.get("name_value") or "")
+                            for candidate in name_val.splitlines():
+                                sub = candidate.strip().lower().rstrip(".")
+                                if not sub or sub.startswith("*.") or sub == domain.lower():
+                                    continue
+                                if sub.endswith(suffix) and re.match(r"^[a-z0-9.-]+$", sub):
+                                    discovered.add(sub)
+                                    if len(discovered) >= limit * 2:
+                                        break
+        except Exception as ex:
+            logger.debug("CT log harvest skipped for %s: %s", domain, ex)
+        return sorted(discovered)[:limit]
 
     def _lookup_rdap_registrar(self, domain: str, nameservers: List[str]) -> str:
         """Queries RDAP for domain registrar with nameserver-based heuristic fallback."""
@@ -341,6 +390,9 @@ class RadarLeadEnricher:
         mx_records: List[str] = []
         txt_records: List[str] = []
         dmarc_txt_records: List[str] = []
+        dkim_selectors_found: List[str] = []
+        caa_records: List[str] = []
+        ct_subdomains: List[str] = []
         http_info: Dict[str, Any] = {}
         registrar = "Cloudflare / Standard Registrar"
 
@@ -350,10 +402,13 @@ class RadarLeadEnricher:
             nameservers = [ns.rstrip(".").lower() for ns in self._query_doh_txt_or_ns(clean_domain, "NS")]
             txt_records = self._query_doh_txt_or_ns(clean_domain, "TXT")
             dmarc_txt_records = self._query_doh_txt_or_ns(f"_dmarc.{clean_domain}", "TXT")
+            dkim_selectors_found = self._probe_dkim_selectors(clean_domain)
+            caa_records = self._probe_caa_records(clean_domain)
+            ct_subdomains = self._harvest_ct_subdomains(clean_domain, limit=15)
             registrar = self._lookup_rdap_registrar(clean_domain, nameservers)
             http_info = self._probe_http_profile_and_stack(clean_domain)
 
-        # 3. Evaluate DMARC & SPF hygiene
+        # 3. Evaluate DMARC, SPF, DKIM & CAA hygiene
         dmarc_raw = next((t for t in dmarc_txt_records if t.lower().startswith("v=dmarc1")), "")
         if not dmarc_raw:
             dmarc_status = "missing"
@@ -370,6 +425,9 @@ class RadarLeadEnricher:
         else:
             spf_status = "warn"
 
+        dkim_status = "pass" if dkim_selectors_found else "missing"
+        caa_status = "pass" if caa_records else "missing"
+
         # Compute deterministic hygiene score & grade when network_probe is active
         score = 92
         if dmarc_status == "missing":
@@ -380,6 +438,10 @@ class RadarLeadEnricher:
             score -= 18
         elif spf_status == "warn":
             score -= 8
+        if dkim_status == "pass":
+            score += 3
+        if caa_status == "pass":
+            score += 3
         score = max(35, min(98, score))
         grade = (
             "A+" if score >= 95
@@ -440,6 +502,12 @@ class RadarLeadEnricher:
             "dmarc_record": dmarc_raw,
             "spf_status": spf_status,
             "spf_record": spf_raw,
+            "dkim_status": dkim_status,
+            "dkim_selectors_found": dkim_selectors_found,
+            "caa_status": caa_status,
+            "caa_records": caa_records,
+            "ct_subdomains": ct_subdomains,
+            "ct_subdomain_count": len(ct_subdomains),
             "computed_score": score,
             "computed_grade": grade,
             "leadership": leadership,
@@ -456,6 +524,8 @@ class RadarLeadEnricher:
         self._save_enriched_lead(clean_domain, enrichment_record)
         self._publish_blackboard_event(enrichment_record)
         return enrichment_record
+
+    enrich_and_persist = enrich_domain
 
     def _save_enriched_lead(self, domain: str, record: Dict[str, Any]) -> None:
         with self._lock:

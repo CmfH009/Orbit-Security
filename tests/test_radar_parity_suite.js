@@ -359,6 +359,46 @@ async function runTests() {
     sandbox.window.OrbitRadarTelemetry.optIn();
     assert(sandbox.window.OrbitRadarTelemetry.isOptedOut() === false, 'optIn() restores telemetry dispatch');
 
+    // =========================================================================
+    // Scenario 8: Universal Free Tool Social Share Engine & Mobile Clip Recorder
+    // =========================================================================
+    console.log('\nTesting Scenario 8: Universal Free Tool Social Share & Mobile Clip Recorder');
+    assert(typeof sandbox.window.shareOrbitTool === 'function', 'window.shareOrbitTool is exposed');
+    assert(typeof sandbox.window.buildOrbitToolSharePayload === 'function', 'window.buildOrbitToolSharePayload is exposed');
+
+    const toolKeys = [
+        'radar', 'audit-studio', 'pitch-drawer', 'kev-radar', 'zk-scorecard',
+        'takeover-poc', 'epss-horizon', 'simple-cat', 'legal-rider', 'roi-calculator'
+    ];
+    for (const tk of toolKeys) {
+        const xUrl = sandbox.window.shareOrbitTool(tk, 'x', { domain: 'shopify.com' });
+        assert(typeof xUrl === 'string' && xUrl.startsWith('https://x.com/intent/tweet?text='), `shareOrbitTool('${tk}', 'x') builds valid X intent URL`);
+    }
+    const liUrl = sandbox.window.shareOrbitTool('radar', 'linkedin');
+    assert(liUrl.startsWith('https://www.linkedin.com/sharing/share-offsite/'), 'shareOrbitTool linkedin builds valid LinkedIn share URL');
+    const rdUrl = sandbox.window.shareOrbitTool('radar', 'reddit');
+    assert(rdUrl.startsWith('https://www.reddit.com/submit?url='), 'shareOrbitTool reddit builds valid Reddit submit URL');
+
+    // Verify dynamic #auditHUD includes social share & mobile clip buttons
+    assert(hudHtml.includes("shareOrbitTool('radar', 'x')"), 'Dynamic #auditHUD includes X share button');
+    assert(hudHtml.includes("shareOrbitTool('radar', 'linkedin')"), 'Dynamic #auditHUD includes LinkedIn share button');
+    assert(hudHtml.includes("SimpleCat.recordClip()"), 'Dynamic #auditHUD includes Record Clip for X button');
+
+    // Verify simple_cat.js contains mobile phone canvas stream fallback & native file sharing
+    const simpleCatJs = fs.readFileSync(path.join(__dirname, '..', 'landing', 'assets', 'simple_cat.js'), 'utf8');
+    assert(simpleCatJs.includes('function createMobileCanvasStream()'), 'simple_cat.js defines createMobileCanvasStream() for mobile phones');
+    assert(simpleCatJs.includes('function isMobileOrTouchDevice()'), 'simple_cat.js defines isMobileOrTouchDevice()');
+    assert(simpleCatJs.includes('function showClipSavedShareBanner('), 'simple_cat.js defines showClipSavedShareBanner() with native phone share');
+
+    // Verify landing/index.html and landing/ghostdns/index.html have share buttons across all free tools
+    const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'landing', 'index.html'), 'utf8');
+    for (const tk of toolKeys) {
+        assert(indexHtml.includes(`shareOrbitTool('${tk}'`), `landing/index.html includes social share button for '${tk}'`);
+    }
+    const ghostDnsHtml = fs.readFileSync(path.join(__dirname, '..', 'landing', 'ghostdns', 'index.html'), 'utf8');
+    assert(ghostDnsHtml.includes("shareGhostDnsTool('x')"), 'landing/ghostdns/index.html includes X share button');
+    assert(ghostDnsHtml.includes("shareGhostDnsTool('native')"), 'landing/ghostdns/index.html includes Native share button');
+
     console.log(`\n========================================`);
     console.log(`ALL ${passed}/${total} AUDIT ENGINE & PDF PARITY TESTS PASSED!`);
     console.log(`========================================`);

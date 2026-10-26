@@ -147,7 +147,7 @@ class RadarRetainerProposalStager:
             )
         )
 
-        subdomains_scanned = [
+        base_subs = [
             domain,
             f"www.{domain}",
             f"shop.{domain}",
@@ -155,6 +155,8 @@ class RadarRetainerProposalStager:
             f"promo.{domain}",
             f"dev.{domain}",
         ]
+        ct_subs = [str(s) for s in (enrichment.get("ct_subdomains") or []) if s]
+        subdomains_scanned = list(dict.fromkeys(base_subs + ct_subs))
 
         return DomainAuditResult(
             domain=domain,
@@ -257,10 +259,24 @@ class RadarRetainerProposalStager:
                 "",
             ])
 
+        dkim_status = str(enrichment.get("dkim_status") or "unknown").upper()
+        dkim_selectors = ", ".join(enrichment.get("dkim_selectors_found") or []) or "None detected across common enterprise selectors"
+        caa_status = str(enrichment.get("caa_status") or "unknown").upper()
+        caa_records = ", ".join(enrichment.get("caa_records") or []) or "None published"
+
         lines.extend([
             "---",
             "",
+            "## 2b. DKIM Selector Verification (`<selector>._domainkey` TXT — RFC 6376)",
+            "",
+            f"- **Current DKIM Status:** `{dkim_status}`",
+            f"- **Verified Selectors:** `{dkim_selectors}`",
+            "",
+            "---",
+            "",
             "## 3. Certificate Authority Authorization (`@` CAA Record — RFC 8659)",
+            "",
+            f"- **Current CAA Status:** `{caa_status}` (`{caa_records}`)",
             "",
         ])
 
@@ -311,6 +327,12 @@ class RadarRetainerProposalStager:
             else f"Suggested patterns: {', '.join(f'`{p}`' for p in (lead.get('suggested_patterns') or [f'cto@{domain}']))}"
         )
 
+        dkim_status = str(enrichment.get("dkim_status", "unknown")).upper()
+        dkim_selectors = ", ".join(enrichment.get("dkim_selectors_found") or []) or "None detected"
+        caa_status = str(enrichment.get("caa_status", "unknown")).upper()
+        ct_subs = enrichment.get("ct_subdomains") or []
+        ct_display = ", ".join(f"`{s}`" for s in ct_subs[:8]) if ct_subs else "None indexed in public CT logs"
+
         return f"""# 🛡️ Project ORBIT // Executive Perimeter Retainer Proposal — {company_name}
 
 **Target Domain:** `{domain}`  
@@ -334,6 +356,9 @@ Our passive reconnaissance and `public-apis` OSINT correlation engine identified
 | **Mail Exchange (MX)** | `{mx_provider}` |
 | **DMARC Status** | `{str(enrichment.get('dmarc_status', 'unknown')).upper()}` |
 | **SPF Status** | `{str(enrichment.get('spf_status', 'unknown')).upper()}` |
+| **DKIM Selector Status** | `{dkim_status}` (Selectors: `{dkim_selectors}`) |
+| **DNS CAA Status** | `{caa_status}` |
+| **CT Log Subdomains (`crt.sh`)** | {ct_display} (`{len(ct_subs)}` discovered) |
 | **Public APIs OSINT Catalog** | `{osint.get('security_osint_count', 0)}` security/OSINT endpoints cross-referenced (out of `{osint.get('total_catalog_apis', 0)}` indexed APIs) |
 | **Technical Contact Routing** | {exec_contact} |
 
@@ -478,13 +503,37 @@ To lock down `{domain}` against subdomain hijacking, executive email spoofing, a
             "pdf_path": str(pdf_path),
             "audit_md_path": str(audit_md_path),
             "remediation_path": str(remediation_path),
+            "dns_remediation_path": str(remediation_path),
             "proposal_path": str(proposal_path),
+            "retainer_proposal_path": str(proposal_path),
             "pitch_path": str(pitch_path),
             "staged_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
 
         self._publish_blackboard_event(staged_summary)
         return staged_summary
+
+    def stage_proposal(
+        self,
+        domain_or_query: Any,
+        enrichment: Optional[Dict[str, Any]] = None,
+        agency_branding: Optional[AgencyBranding] = None,
+    ) -> Dict[str, Any]:
+        """Convenience wrapper accepting either a domain string or a query record dict."""
+        if isinstance(domain_or_query, dict):
+            dom = str(domain_or_query.get("domain") or "")
+            return self.stage_campaign(
+                domain=dom,
+                query_record=domain_or_query,
+                enrichment=enrichment,
+                agency_branding=agency_branding,
+            )
+        return self.stage_campaign(
+            domain=str(domain_or_query),
+            query_record=None,
+            enrichment=enrichment,
+            agency_branding=agency_branding,
+        )
 
     def _publish_blackboard_event(self, staged_summary: Dict[str, Any]) -> None:
         try:

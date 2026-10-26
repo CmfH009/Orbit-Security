@@ -31,6 +31,7 @@ dist/
 data/roast_f_grades_post_log.jsonl
 data/radar_queries.jsonl
 data/radar_enriched_leads.json
+data/radar_tunnel_state.json
 data/leads_state.json
 data/prospects.json
 data/dispatched_campaigns.json

@@ -859,6 +859,31 @@
                         </div>
                     </div>
 
+                    <!-- Free Tool Social Share & Mobile Clip Bar (Perimeter Radar) -->
+                    <div class="mt-3.5 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                        <span class="text-[11px] text-slate-400 flex items-center gap-1.5">
+                            <span class="text-emerald-400">📣</span>
+                            <span>Share Free Radar &amp; Record Clip (Phone + Desktop):</span>
+                        </span>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <button type="button" onclick="shareOrbitTool('radar', 'x')" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400 border border-emerald-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1">
+                                <span>𝕏 Post to X</span>
+                            </button>
+                            <button type="button" onclick="shareOrbitTool('radar', 'linkedin')" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-cyan-500 hover:text-slate-950 text-cyan-400 border border-cyan-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1">
+                                <span>in LinkedIn</span>
+                            </button>
+                            <button type="button" onclick="shareOrbitTool('radar', 'reddit')" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-amber-400 border border-amber-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1">
+                                <span>👾 Reddit</span>
+                            </button>
+                            <button type="button" onclick="shareOrbitTool('radar', 'native')" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-purple-500 hover:text-slate-950 text-purple-400 border border-purple-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1">
+                                <span>📤 Share</span>
+                            </button>
+                            <button type="button" onclick="if(window.SimpleCat && SimpleCat.recordClip) SimpleCat.recordClip()" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500 hover:text-slate-950 text-rose-300 border border-rose-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1">
+                                <span>📹 Record Clip for X</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Live HUD Results Container -->
                     <div id="auditHUD" class="hidden mt-6 pt-5 border-t border-slate-800 text-left transition-all"></div>
                 </div>
@@ -1142,9 +1167,18 @@
                     <!-- Footer Callout -->
                     <div class="mt-6 bg-slate-950/60 rounded-xl p-4 border border-slate-800 text-xs text-slate-400 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                         <span>💡 Co-Branding Guarantee: Your clients never see Orbit Security. All reports feature your logo, brand colors, and contact info.</span>
-                        <div class="flex flex-wrap items-center gap-3">
+                        <div class="flex flex-wrap items-center gap-2.5">
                             <button type="button" onclick="openPdfFlipbookModal()" class="min-h-[42px] px-3.5 py-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-bold flex items-center gap-1.5 transition-all pixel-btn cursor-pointer">
                                 <span>📖 Inspect Interactive PDF Flipbook</span>
+                            </button>
+                            <button type="button" onclick="shareOrbitTool('audit-studio', 'x')" class="min-h-[42px] px-3 py-2 rounded-lg bg-slate-900 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/40 text-emerald-400 font-mono text-xs font-bold transition-all cursor-pointer">
+                                <span>𝕏 Share on X</span>
+                            </button>
+                            <button type="button" onclick="shareOrbitTool('audit-studio', 'linkedin')" class="min-h-[42px] px-3 py-2 rounded-lg bg-slate-900 hover:bg-cyan-500 hover:text-slate-950 border border-cyan-500/40 text-cyan-400 font-mono text-xs font-bold transition-all cursor-pointer">
+                                <span>in LinkedIn</span>
+                            </button>
+                            <button type="button" onclick="shareOrbitTool('audit-studio', 'native')" class="min-h-[42px] px-3 py-2 rounded-lg bg-slate-900 hover:bg-purple-500 hover:text-slate-950 border border-purple-500/40 text-purple-300 font-mono text-xs font-bold transition-all cursor-pointer">
+                                <span>📤 Share</span>
                             </button>
                             <a href="sample_audit.pdf" target="_blank" rel="noopener noreferrer" class="text-slate-300 hover:text-emerald-300 font-semibold flex items-center gap-1 whitespace-nowrap underline decoration-dotted">
                                 Raw PDF &rarr;
@@ -1175,10 +1209,18 @@
                         <div class="text-xs font-mono text-slate-400">
                             Subject: <span id="pitchSubjectDisplay" class="text-white font-bold">[Action Recommended] Protecting your domain against the October DNS takeover wave</span>
                         </div>
-                        <button type="button" id="copyPitchBtn" onclick="copyClientPitch()" class="min-h-[44px] px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide transition-all shadow-lg shadow-cyan-500/20 pixel-btn flex items-center justify-center gap-2 cursor-pointer flex-shrink-0">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                            <span id="copyPitchBtnText">Copy Email Pitch</span>
-                        </button>
+                        <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
+                            <button type="button" id="copyPitchBtn" onclick="copyClientPitch()" class="min-h-[44px] px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide transition-all shadow-lg shadow-cyan-500/20 pixel-btn flex items-center justify-center gap-2 cursor-pointer">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                <span id="copyPitchBtnText">Copy Email Pitch</span>
+                            </button>
+                            <button type="button" onclick="shareOrbitTool('pitch-drawer', 'x')" class="min-h-[44px] px-3 py-2 rounded-xl bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-bold transition-all cursor-pointer">
+                                <span>𝕏 Share</span>
+                            </button>
+                            <button type="button" onclick="shareOrbitTool('pitch-drawer', 'native')" class="min-h-[44px] px-3 py-2 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 text-emerald-300 border border-emerald-500/40 font-mono text-xs font-bold transition-all cursor-pointer">
+                                <span>📤</span>
+                            </button>
+                        </div>
                     </div>
                     <pre id="pitchBodyDisplay" class="p-4 rounded-xl bg-slate-950/90 border border-slate-800 font-mono text-xs text-slate-200 whitespace-pre-wrap leading-relaxed select-all overflow-x-auto scroll-cyber-x">Hi [Client Name],
 
@@ -1638,6 +1680,17 @@ Apex Digital Studio</pre>
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                                 <span id="btnCopyKevAdvisoryText">Copy Client CVE Advisory Email</span>
                             </button>
+                            <div class="flex flex-wrap items-center gap-2 pt-1">
+                                <button type="button" onclick="shareOrbitTool('kev-radar', 'x')" class="flex-1 min-h-[40px] px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-bold cursor-pointer transition">
+                                    𝕏 Post CVE Alert
+                                </button>
+                                <button type="button" onclick="shareOrbitTool('kev-radar', 'linkedin')" class="min-h-[40px] px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-emerald-500 hover:text-slate-950 text-emerald-300 border border-emerald-500/40 font-mono text-xs font-bold cursor-pointer transition">
+                                    in LinkedIn
+                                </button>
+                                <button type="button" onclick="shareOrbitTool('kev-radar', 'native')" class="min-h-[40px] px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-purple-500 hover:text-slate-950 text-purple-300 border border-purple-500/40 font-mono text-xs font-bold cursor-pointer transition">
+                                    📤 Share
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1698,6 +1751,12 @@ Apex Digital Studio</pre>
                     </button>
                     <button type="button" onclick="exportZeroKnowledgeScorecardJson()" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-bold cursor-pointer transition">
                         Export Signed JSON
+                    </button>
+                    <button type="button" onclick="shareOrbitTool('zk-scorecard', 'x')" class="min-h-[44px] px-3 py-2 rounded-xl bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-bold cursor-pointer transition">
+                        𝕏 Share
+                    </button>
+                    <button type="button" onclick="shareOrbitTool('zk-scorecard', 'native')" class="min-h-[44px] px-3 py-2 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 text-emerald-300 border border-emerald-500/40 font-mono text-xs font-bold cursor-pointer transition">
+                        📤
                     </button>
                 </div>
             </div>
@@ -1809,6 +1868,12 @@ Apex Digital Studio</pre>
                     <button type="button" onclick="copyTakeoverRemediation()" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-amber-300 border border-amber-500/40 font-mono text-xs font-bold cursor-pointer transition">
                         Copy DNS Fix Ticket
                     </button>
+                    <button type="button" onclick="shareOrbitTool('takeover-poc', 'x')" class="min-h-[44px] px-3 py-2 rounded-xl bg-slate-950 hover:bg-amber-500 hover:text-slate-950 text-amber-300 border border-amber-500/40 font-mono text-xs font-bold cursor-pointer transition">
+                        𝕏 Share
+                    </button>
+                    <button type="button" onclick="shareOrbitTool('takeover-poc', 'native')" class="min-h-[44px] px-3 py-2 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 text-emerald-300 border border-emerald-500/40 font-mono text-xs font-bold cursor-pointer transition">
+                        📤
+                    </button>
                 </div>
             </div>
 
@@ -1831,9 +1896,13 @@ Apex Digital Studio</pre>
                         <div class="text-slate-400 text-[11px]">Rendering EPSS probability distribution horizon...</div>
                     </div>
                 </div>
-                <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-800">
+                <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-800">
                     <span>Red Zone: EPSS &ge; 50% (Critical Velocity)</span>
-                    <button type="button" onclick="renderEpssHorizonChart()" class="px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-purple-500/20 text-purple-300 border border-purple-500/40 cursor-pointer transition">Refresh Horizon</button>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="renderEpssHorizonChart()" class="px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-purple-500/20 text-purple-300 border border-purple-500/40 cursor-pointer transition">Refresh Horizon</button>
+                        <button type="button" onclick="shareOrbitTool('epss-horizon', 'x')" class="px-2.5 py-1.5 rounded-lg bg-slate-950 hover:bg-purple-500 hover:text-slate-950 text-purple-300 border border-purple-500/40 font-bold cursor-pointer transition">𝕏 Share</button>
+                        <button type="button" onclick="shareOrbitTool('epss-horizon', 'native')" class="px-2.5 py-1.5 rounded-lg bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 border border-cyan-500/40 font-bold cursor-pointer transition">📤</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2359,6 +2428,19 @@ Apex Digital Studio</pre>
                         ⭐ $250 Agency Retainer Engine
                     </button>
                 </div>
+
+                <!-- Mobile & Desktop Record Clip for X + Social Share Bar -->
+                <div class="mt-6 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-center gap-2.5 text-xs font-mono">
+                    <button type="button" onclick="if(window.SimpleCat && SimpleCat.recordClip) SimpleCat.recordClip()" class="min-h-[44px] px-4 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500 hover:text-slate-950 text-rose-300 border border-rose-500/50 font-bold transition-all cursor-pointer flex items-center gap-2 pixel-btn">
+                        <span>📹 Record Clip for X (Phone &amp; Desktop)</span>
+                    </button>
+                    <button type="button" onclick="shareOrbitTool('simple-cat', 'x')" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400 border border-emerald-500/40 font-bold transition-all cursor-pointer flex items-center gap-1.5 pixel-btn">
+                        <span>𝕏 Share Simple Cat on X</span>
+                    </button>
+                    <button type="button" onclick="shareOrbitTool('simple-cat', 'native')" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 text-cyan-400 border border-cyan-500/40 font-bold transition-all cursor-pointer flex items-center gap-1.5 pixel-btn">
+                        <span>📤 Share Decoder</span>
+                    </button>
+                </div>
             </div>
 
         </div>
@@ -2637,10 +2719,18 @@ Apex Digital Studio</pre>
                                 Copy and paste this standard 1-paragraph clause directly into your Master Services Agreements (MSAs) or Web Care SOWs.
                             </p>
                         </div>
-                        <button type="button" id="copy-rider-btn" onclick="copyLegalRider()" class="min-h-[48px] px-5 py-2.5 rounded-xl bg-slate-900 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 text-xs font-arcade uppercase transition-all flex items-center justify-center gap-2 flex-shrink-0 pixel-btn shadow-sm cursor-pointer">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                            <span>COPY CONTRACT RIDER</span>
-                        </button>
+                        <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
+                            <button type="button" id="copy-rider-btn" onclick="copyLegalRider()" class="min-h-[48px] px-5 py-2.5 rounded-xl bg-slate-900 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 text-xs font-arcade uppercase transition-all flex items-center justify-center gap-2 pixel-btn shadow-sm cursor-pointer">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                <span>COPY CONTRACT RIDER</span>
+                            </button>
+                            <button type="button" onclick="shareOrbitTool('legal-rider', 'x')" class="min-h-[48px] px-3.5 py-2.5 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/40 text-emerald-400 font-mono text-xs font-bold transition-all cursor-pointer">
+                                𝕏 Share
+                            </button>
+                            <button type="button" onclick="shareOrbitTool('legal-rider', 'native')" class="min-h-[48px] px-3.5 py-2.5 rounded-xl bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 border border-cyan-500/40 text-cyan-400 font-mono text-xs font-bold transition-all cursor-pointer">
+                                📤
+                            </button>
+                        </div>
                     </div>
                     <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 font-mono text-xs text-slate-300 leading-relaxed select-all">
                         "Client authorizes Agency and its designated automated surveillance sentinels (Orbit Security) to perform continuous, non-invasive perimeter telemetry queries (including RFC 1035/8484 DNS-over-HTTPS records, SSL/TLS certificate transparency logs, and public HTTP security headers) on Client-owned web domains for the sole purpose of identifying security misconfigurations, email authentication posture (SPF/DKIM/DMARC), and subdomain exposure. All telemetry is passive, causes zero system degradation, and conforms to Computer Fraud and Abuse Act (CFAA §1030) authorized assessment guidelines."
@@ -2982,6 +3072,11 @@ Apex Digital Studio</pre>
                                 <span id="roiRecommendedCtaText">Deploy Recommended Growth Plan ($59/mo)</span>
                                 <span>&rarr;</span>
                             </a>
+                            <div class="flex items-center justify-between gap-2 pt-1 font-mono text-[11px]">
+                                <button type="button" onclick="shareOrbitTool('roi-calculator', 'x')" class="flex-1 min-h-[36px] px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 text-emerald-300 border border-emerald-500/40 font-bold cursor-pointer transition">𝕏 Share ROI on X</button>
+                                <button type="button" onclick="shareOrbitTool('roi-calculator', 'linkedin')" class="min-h-[36px] px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 border border-cyan-500/40 font-bold cursor-pointer transition">in LinkedIn</button>
+                                <button type="button" onclick="shareOrbitTool('roi-calculator', 'native')" class="min-h-[36px] px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-purple-500 hover:text-slate-950 text-purple-300 border border-purple-500/40 font-bold cursor-pointer transition">📤</button>
+                            </div>
                         </div>
                     </div>
                 </div>

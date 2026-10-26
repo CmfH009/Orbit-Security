@@ -197,6 +197,23 @@
                 </button>
             </div>
 
+            <!-- Social Share Bar for GhostDNS Free Scanner -->
+            <div class="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs font-mono">
+                <span class="text-slate-500 text-[10px]">SHARE GHOSTDNS:</span>
+                <button type="button" onclick="shareGhostDnsTool('x')" class="min-h-[40px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-cyan-400 hover:text-slate-950 text-cyan-400 border border-cyan-500/40 font-bold transition cursor-pointer">
+                    𝕏 Post to X
+                </button>
+                <button type="button" onclick="shareGhostDnsTool('linkedin')" class="min-h-[40px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-purple-500 hover:text-white text-purple-300 border border-purple-500/40 font-bold transition cursor-pointer">
+                    in LinkedIn
+                </button>
+                <button type="button" onclick="shareGhostDnsTool('reddit')" class="min-h-[40px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-amber-400 hover:text-slate-950 text-amber-300 border border-amber-500/40 font-bold transition cursor-pointer">
+                    👾 Reddit
+                </button>
+                <button type="button" onclick="shareGhostDnsTool('native')" class="min-h-[40px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-emerald-400 hover:text-slate-950 text-emerald-300 border border-emerald-500/40 font-bold transition cursor-pointer">
+                    📤 Share
+                </button>
+            </div>
+
             <!-- Audit Result Terminal with CRT Styling -->
             <div id="auditResult" class="mt-6 max-w-2xl mx-auto hidden p-5 rounded-xl text-left font-mono text-xs card-glass card-glass-cyan relative overflow-hidden">
                 <div class="absolute inset-0 scanlines pointer-events-none z-0 opacity-20"></div>
@@ -523,6 +540,37 @@
                         Maintain 100% perimeter hygiene across all campaigns: <a href="#pricing" class="text-cyan-400 underline">Enable GhostDNS Sentinel ($29/mo)</a>.
                     </div>
                 `;
+            }
+        }
+
+        function shareGhostDnsTool(platform = 'x') {
+            const rawDomain = (document.getElementById('targetDomain')?.value || '').trim() || 'candykittens.co.uk';
+            const shareUrl = 'https://cmfh009.github.io/Orbit-Security/ghostdns/';
+            const shareText = `👻 Scanned ${rawDomain} for dangling SaaS CNAMEs & silent DNS drift with GhostDNS (RFC-8484 DoH) by @OrbitSecurity! Run a free subdomain takeover check:`;
+            const shareTitle = `GhostDNS — Subdomain Takeover & Dangling CNAME Scanner (${rawDomain})`;
+
+            if (platform === 'x') {
+                window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank', 'noopener,noreferrer');
+                return;
+            }
+            if (platform === 'linkedin') {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(`${shareText} ${shareUrl}`).catch(() => {});
+                }
+                window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`, '_blank', 'noopener,noreferrer');
+                return;
+            }
+            if (platform === 'reddit') {
+                window.open(`https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTitle)}`, '_blank', 'noopener,noreferrer');
+                return;
+            }
+            if (navigator.share) {
+                navigator.share({ title: shareTitle, text: shareText, url: shareUrl }).catch(() => {});
+                return;
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(`${shareText}
+${shareUrl}`);
             }
         }
     </script>

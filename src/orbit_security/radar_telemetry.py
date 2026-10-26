@@ -402,6 +402,7 @@ class RadarTelemetryService:
         client_ip: str = "",
         enrich_async: bool = True,
         network_probe: bool = True,
+        background_enrich: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """Validates, records, enriches, stages retainer deliverables, and dispatches webhook alerts."""
         raw_input = str(event_data.get("domain") or event_data.get("target") or event_data.get("raw_input") or "").strip()
@@ -483,7 +484,9 @@ class RadarTelemetryService:
         self._publish_to_blackboard(record_dict)
 
         # Trigger OSINT enrichment, retainer proposal staging, and rich webhook alerting
-        if enrich_async:
+        if background_enrich is False:
+            pass
+        elif enrich_async and background_enrich is not False:
             threading.Thread(
                 target=self._enrich_stage_and_alert,
                 args=(record_dict, network_probe),
@@ -628,12 +631,42 @@ class RadarTelemetryService:
         else:
             threading.Thread(target=_worker, daemon=True).start()
 
+    def _merge_enriched_lead_into_query(
+        self,
+        record: Dict[str, Any],
+        all_leads: Dict[str, Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """Back-propagates computed hygiene score, grade, and DNS/DKIM/CAA telemetry from enriched leads."""
+        dom = record.get("domain") or ""
+        lead = all_leads.get(dom)
+        if not lead:
+            return record
+        merged = dict(record)
+        if merged.get("score") is None and lead.get("computed_score") is not None:
+            merged["score"] = lead["computed_score"]
+        if not merged.get("grade") and lead.get("computed_grade"):
+            merged["grade"] = lead["computed_grade"]
+        if not merged.get("dmarc_status") and lead.get("dmarc_status"):
+            merged["dmarc_status"] = lead["dmarc_status"]
+        if not merged.get("spf_status") and lead.get("spf_status"):
+            merged["spf_status"] = lead["spf_status"]
+        if lead.get("dkim_status"):
+            merged["dkim_status"] = lead["dkim_status"]
+        if lead.get("dkim_selectors_found") is not None:
+            merged["dkim_selectors_found"] = lead["dkim_selectors_found"]
+        if lead.get("caa_status"):
+            merged["caa_status"] = lead["caa_status"]
+        if lead.get("ct_subdomains") is not None:
+            merged["ct_subdomains"] = lead["ct_subdomains"]
+        return merged
+
     def get_recent_queries(
         self, limit: int = 50, domain: Optional[str] = None
     ) -> List[Dict[str, Any]]:
-        """Reads recent queries from JSONL in reverse chronological order."""
+        """Reads recent queries from JSONL in reverse chronological order with enriched score back-propagation."""
         if not self.queries_file.exists():
             return []
+        all_leads = self.enricher.get_all_enriched_leads()
         queries: List[Dict[str, Any]] = []
         target = self.normalize_domain(domain) if domain else None
         try:
@@ -646,7 +679,7 @@ class RadarTelemetryService:
                         record = json.loads(line)
                         if target and target not in record.get("domain", ""):
                             continue
-                        queries.append(record)
+                        queries.append(self._merge_enriched_lead_into_query(record, all_leads))
                     except json.JSONDecodeError:
                         continue
         except Exception as ex:
@@ -657,7 +690,7 @@ class RadarTelemetryService:
         return queries[:limit]
 
     def get_query_stats(self) -> Dict[str, Any]:
-        """Calculates aggregate metrics across recorded perimeter radar probes."""
+        """Calculates aggregate metrics across recorded perimeter radar probes with enriched grade back-propagation."""
         if not self.queries_file.exists():
             return {
                 "total_probes": 0,
@@ -667,6 +700,7 @@ class RadarTelemetryService:
                 "latest_probe": None,
             }
 
+        all_leads = self.enricher.get_all_enriched_leads()
         domain_counts: Dict[str, int] = {}
         grade_counts: Dict[str, int] = {}
         total = 0
@@ -679,7 +713,8 @@ class RadarTelemetryService:
                     if not line:
                         continue
                     try:
-                        record = json.loads(line)
+                        raw_record = json.loads(line)
+                        record = self._merge_enriched_lead_into_query(raw_record, all_leads)
                         total += 1
                         d = record.get("domain", "unknown")
                         domain_counts[d] = domain_counts.get(d, 0) + 1
@@ -783,6 +818,12 @@ class RadarTelemetryService:
                 "grade": grade,
                 "dmarc_status": q.get("dmarc_status") or lead.get("dmarc_status") or "unknown",
                 "spf_status": q.get("spf_status") or lead.get("spf_status") or "unknown",
+                "dkim_status": lead.get("dkim_status") or "unknown",
+                "dkim_selectors_found": lead.get("dkim_selectors_found") or [],
+                "caa_status": lead.get("caa_status") or "unknown",
+                "caa_records": lead.get("caa_records") or [],
+                "ct_subdomains": lead.get("ct_subdomains") or [],
+                "ct_subdomain_count": lead.get("ct_subdomain_count", len(lead.get("ct_subdomains") or [])),
                 "registrar": lead.get("registrar") or "Unknown",
                 "dns_provider": lead.get("dns_provider") or "Standard DNS",
                 "mx_provider": lead.get("mx_provider") or "Corporate Mail",
@@ -861,6 +902,109 @@ class RadarTelemetryService:
 
 
 # =============================================================================
+# Self-Healing Public Telemetry Tunnel Watchdog
+# =============================================================================
+
+DEFAULT_TUNNEL_STATE_FILE = DATA_DIR / "radar_tunnel_state.json"
+
+
+class RadarTunnelWatchdog:
+    """Supervises and tracks public HTTPS tunnel URL rotations (e.g., localhost.run / lhr.life)."""
+
+    TUNNEL_URL_REGEX = re.compile(
+        r"https://[a-zA-Z0-9.-]+\.(?:lhr\.life|localhost\.run|trycloudflare\.com|ngrok-free\.app|ngrok\.io)",
+        re.IGNORECASE,
+    )
+
+    def __init__(self, state_file: Optional[Path] = None, repo_root: Optional[Path] = None):
+        self.state_file = Path(state_file) if state_file else DEFAULT_TUNNEL_STATE_FILE
+        self.state_file.parent.mkdir(parents=True, exist_ok=True)
+        self.repo_root = Path(repo_root) if repo_root else REPO_ROOT
+
+    @classmethod
+    def extract_tunnel_url(cls, text: str) -> Optional[str]:
+        """Extracts the latest public HTTPS tunnel base URL from SSH/tunnel stdout logs."""
+        if not text:
+            return None
+        matches = cls.TUNNEL_URL_REGEX.findall(text)
+        if not matches:
+            return None
+        return matches[-1].rstrip("/")
+
+    def get_state(self) -> Dict[str, Any]:
+        """Reads the current persisted tunnel state."""
+        if self.state_file.exists():
+            try:
+                data = json.loads(self.state_file.read_text(encoding="utf-8"))
+                if isinstance(data, dict):
+                    return data
+            except Exception:
+                pass
+        return {
+            "tunnel_base_url": None,
+            "telemetry_endpoint": None,
+            "rotation_count": 0,
+            "updated_at": None,
+            "status": "uninitialized",
+        }
+
+    def record_tunnel_rotation(
+        self,
+        tunnel_base_url: str,
+        sync_assets: bool = True,
+    ) -> Dict[str, Any]:
+        """Persists a newly detected public HTTPS tunnel URL and optionally syncs landing/docs assets."""
+        clean_base = (tunnel_base_url or "").strip().rstrip("/")
+        if not clean_base.startswith("https://"):
+            raise ValueError(f"Invalid HTTPS tunnel URL: {tunnel_base_url}")
+
+        current = self.get_state()
+        rotations = int(current.get("rotation_count") or 0)
+        if current.get("tunnel_base_url") != clean_base:
+            rotations += 1
+
+        endpoint = f"{clean_base}/api/orbit/radar/telemetry"
+        state = {
+            "tunnel_base_url": clean_base,
+            "telemetry_endpoint": endpoint,
+            "rotation_count": rotations,
+            "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "status": "active",
+        }
+        tmp = self.state_file.with_suffix(".tmp")
+        try:
+            tmp.write_text(json.dumps(state, indent=2), encoding="utf-8")
+            tmp.replace(self.state_file)
+        except Exception:
+            if tmp.exists():
+                tmp.unlink()
+
+        if sync_assets:
+            self.sync_tunnel_endpoint_in_assets(endpoint)
+        return state
+
+    def sync_tunnel_endpoint_in_assets(self, new_endpoint: str) -> bool:
+        """Updates the public HTTPS tunnel fallback endpoint in landing/assets/orbit_radar.js & docs/."""
+        updated = False
+        pattern = re.compile(
+            r"addEp\('https://[a-zA-Z0-9.-]+\.(?:lhr\.life|localhost\.run|trycloudflare\.com)/api/orbit/radar/telemetry'\);"
+        )
+        replacement = f"addEp('{new_endpoint}');"
+        for rel_path in ("landing/assets/orbit_radar.js", "docs/assets/orbit_radar.js"):
+            target = self.repo_root / rel_path
+            if target.exists():
+                try:
+                    raw = target.read_text(encoding="utf-8")
+                    new_raw, count = pattern.subn(replacement, raw)
+                    if count > 0 and new_raw != raw:
+                        target.write_text(new_raw, encoding="utf-8")
+                        updated = True
+                except Exception as ex:
+                    logger.warning("Failed to sync tunnel endpoint in %s: %s", target, ex)
+        return updated
+
+
+# =============================================================================
 # Standalone HTTP Ingestion Handler & Server
 # =============================================================================
 
@@ -868,6 +1012,7 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
     """Zero-dependency HTTP handler for incoming telemetry beacons from the browser."""
 
     service = RadarTelemetryService()
+    tunnel_watchdog = RadarTunnelWatchdog()
     MAX_POST_BODY_BYTES = 16384
     MAX_REQUESTS_PER_MINUTE = 30
     _rate_lock = threading.Lock()
@@ -967,12 +1112,21 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
             "/api/radar/leads",
             "/api/orbit/radar/deliverable",
             "/api/radar/deliverable",
+            "/api/orbit/radar/tunnel",
+            "/api/radar/tunnel",
         ):
             if not self._is_authorized_reader():
                 self._send_json_error(403, "Forbidden: loopback or Bearer token required for telemetry inspection")
                 return
 
-        if parsed.path in ("/api/orbit/radar/telemetry", "/api/radar/telemetry"):
+        if parsed.path in ("/api/orbit/radar/tunnel", "/api/radar/tunnel"):
+            state = self.tunnel_watchdog.get_state()
+            body = json.dumps({"ok": True, "tunnel": state}).encode("utf-8")
+            self.send_cors_headers(200, "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        elif parsed.path in ("/api/orbit/radar/telemetry", "/api/radar/telemetry"):
             q_params = urllib.parse.parse_qs(parsed.query)
             limit = max(1, min(200, int(q_params.get("limit", [50])[0])))
             domain = q_params.get("domain", [None])[0]
@@ -1148,8 +1302,30 @@ def main() -> int:
     parser.add_argument("--probe", help="Emit manual test probe for specified domain")
     parser.add_argument("--enrich", help="Run OSINT enrichment and retainer staging for a domain")
     parser.add_argument("--backfill", action="store_true", help="Enrich and stage proposals for all logged queries")
+    parser.add_argument("--tunnel-status", action="store_true", help="Show active public HTTPS tunnel telemetry state")
+    parser.add_argument("--sync-tunnel", help="Record and sync a public HTTPS tunnel base URL or log file")
 
     args = parser.parse_args()
+
+    if args.tunnel_status:
+        watchdog = RadarTunnelWatchdog()
+        print(json.dumps(watchdog.get_state(), indent=2))
+        return 0
+
+    if args.sync_tunnel:
+        watchdog = RadarTunnelWatchdog()
+        raw_arg = args.sync_tunnel.strip()
+        if raw_arg.startswith("https://"):
+            url = watchdog.extract_tunnel_url(raw_arg) or raw_arg
+        else:
+            log_path = Path(raw_arg)
+            url = watchdog.extract_tunnel_url(log_path.read_text(encoding="utf-8", errors="ignore")) if log_path.exists() else None
+        if not url:
+            print(json.dumps({"ok": False, "error": f"No tunnel URL found in {raw_arg}"}))
+            return 1
+        state = watchdog.record_tunnel_rotation(url, sync_assets=True)
+        print(json.dumps({"ok": True, "tunnel": state}, indent=2))
+        return 0
 
     if args.probe:
         service = RadarTelemetryService()

@@ -675,3 +675,92 @@ class TestRadarLeadEnricherAndProposalStager:
             httpd.shutdown()
             httpd.server_close()
 
+    def test_deep_scan_dkim_caa_ct_score_backprop_and_tunnel_watchdog(self, tmp_path, monkeypatch):
+        from orbit_security.radar_telemetry import RadarTunnelWatchdog
+
+        # 1. Deep-Scan OSINT: DKIM selectors, CAA records, and CT log subdomains
+        enricher = RadarLeadEnricher(leads_file=tmp_path / "deep_leads.json")
+
+        def fake_doh(name: str, record_type: str = "TXT"):
+            if name == "google._domainkey.smartmouseco.com" and record_type == "TXT":
+                return ["v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A"]
+            if name == "smartmouseco.com" and record_type in ("CAA", "257"):
+                return ['0 issue "letsencrypt.org"']
+            if name == "_dmarc.smartmouseco.com" and record_type == "TXT":
+                return []
+            if name == "smartmouseco.com" and record_type == "TXT":
+                return ["v=spf1 include:_spf.google.com ~all"]
+            if name == "smartmouseco.com" and record_type == "NS":
+                return ["dns1.registrar-servers.com."]
+            return []
+
+        monkeypatch.setattr(enricher, "_query_doh_txt_or_ns", fake_doh)
+        monkeypatch.setattr(
+            enricher,
+            "_harvest_ct_subdomains",
+            lambda dom, limit=15: [f"shop.{dom}", f"auth.{dom}", f"cdn.{dom}"],
+        )
+        monkeypatch.setattr(enricher, "_lookup_rdap_registrar", lambda dom, ns: "NameCheap, Inc.")
+        monkeypatch.setattr(
+            enricher,
+            "_probe_http_profile_and_stack",
+            lambda dom: {"tech_signals": ["Shopify"], "title": "Smart Mouse Co", "site_name": "Smart Mouse Co", "description": "Store"},
+        )
+
+        lead = enricher.enrich_and_persist("smartmouseco.com", network_probe=True)
+        assert lead["dkim_status"] == "pass"
+        assert "google" in lead["dkim_selectors_found"]
+        assert lead["caa_status"] == "pass"
+        assert len(lead["caa_records"]) == 1
+        assert "shop.smartmouseco.com" in lead["ct_subdomains"]
+        assert lead["ct_subdomain_count"] == 3
+
+        # 2. Enriched Score Back-Propagation into get_recent_queries() & get_query_stats()
+        service = RadarTelemetryService(
+            queries_file=tmp_path / "backprop_queries.jsonl",
+            leads_file=tmp_path / "deep_leads.json",
+            campaigns_dir=tmp_path / "outbound_campaigns",
+        )
+        # Record a raw radar_submit query WITHOUT score/grade
+        service.record_query(
+            {
+                "domain": "smartmouseco.com",
+                "trigger_source": "radar_submit",
+            },
+            background_enrich=False,
+        )
+        recent = service.get_recent_queries(limit=10)
+        assert len(recent) == 1
+        assert recent[0]["score"] == lead["computed_score"]
+        assert recent[0]["grade"] == lead["computed_grade"]
+        assert recent[0]["dkim_status"] == "pass"
+        assert recent[0]["caa_status"] == "pass"
+
+        stats = service.get_query_stats()
+        assert stats["grade_breakdown"].get("PENDING", 0) == 0
+        assert stats["grade_breakdown"].get(lead["computed_grade"], 0) == 1
+
+        # Stage proposal and verify DKIM/CAA/CT subdomains appear in deliverables
+        staged = service.proposal_stager.stage_proposal(recent[0], lead)
+        remediation_text = Path(staged["dns_remediation_path"]).read_text(encoding="utf-8")
+        proposal_text = Path(staged["retainer_proposal_path"]).read_text(encoding="utf-8")
+        assert "DKIM" in remediation_text
+        assert "shop.smartmouseco.com" in proposal_text
+
+        # 3. Self-Healing Public Telemetry Tunnel Watchdog
+        watchdog = RadarTunnelWatchdog(state_file=tmp_path / "tunnel_state.json")
+        line1 = "93ac679bcacf1b.lhr.life tunneled with tls termination, https://93ac679bcacf1b.lhr.life"
+        url1 = watchdog.extract_tunnel_url(line1)
+        assert url1 == "https://93ac679bcacf1b.lhr.life"
+
+        state1 = watchdog.record_tunnel_rotation(url1, sync_assets=False)
+        assert state1["telemetry_endpoint"] == "https://93ac679bcacf1b.lhr.life/api/orbit/radar/telemetry"
+        assert state1["rotation_count"] == 1
+
+        line2 = "21ebe34e0d176c.lhr.life tunneled with tls termination, https://21ebe34e0d176c.lhr.life"
+        url2 = watchdog.extract_tunnel_url(line2)
+        state2 = watchdog.record_tunnel_rotation(url2, sync_assets=False)
+        assert state2["telemetry_endpoint"] == "https://21ebe34e0d176c.lhr.life/api/orbit/radar/telemetry"
+        assert state2["rotation_count"] == 2
+
+
