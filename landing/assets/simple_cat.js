@@ -2318,23 +2318,25 @@
         const isPortrait = typeof window !== "undefined" && window.innerHeight >= window.innerWidth;
         const baseW = isPortrait ? 720 : 1280;
         const baseH = isPortrait ? 1280 : 720;
-        const dpr = typeof window !== "undefined" && window.devicePixelRatio ? Math.min(window.devicePixelRatio, 2) : 1.5;
-        const renderScale = dpr > 1.2 ? 1.5 : 1.0;
-        canvas.width = Math.round(baseW * renderScale);
-        canvas.height = Math.round(baseH * renderScale);
+        canvas.width = baseW;
+        canvas.height = baseH;
+        canvas.id = "orbit-capture-canvas";
+        canvas.style.cssText = "position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; z-index: -9999;";
+        if (typeof document !== "undefined" && document.body) {
+            document.body.appendChild(canvas);
+        }
         const ctx = canvas.getContext("2d");
 
-        // Starfield & Particle State for Recording Clip
-        const starColors = ['#10b981', '#38bdf8', '#a855f7', '#fbbf24', '#ffffff'];
+        // Starfield & Particle State
+        const starColors = ['#10b981', '#38bdf8', '#34d399', '#fbbf24', '#ffffff'];
         const clipStars = [];
-        for (let i = 0; i < 75; i++) {
+        for (let i = 0; i < 65; i++) {
             clipStars.push({
                 x: Math.random() * baseW,
                 y: Math.random() * baseH,
-                size: Math.random() < 0.2 ? 3.5 : (Math.random() < 0.5 ? 2.5 : 1.5),
-                isCross: Math.random() < 0.3,
+                size: Math.random() < 0.25 ? 3 : (Math.random() < 0.6 ? 2 : 1.5),
                 color: starColors[Math.floor(Math.random() * starColors.length)],
-                speed: 0.4 + Math.random() * 0.8,
+                speed: 0.3 + Math.random() * 0.7,
                 opacity: 0.35 + Math.random() * 0.65,
                 twinkle: Math.random() * Math.PI * 2
             });
@@ -2343,211 +2345,142 @@
         const clipSparks = [];
         let frameCount = 0;
 
-        function roundRect(c, x, y, w, h, r) {
-            if (w < 2 * r) r = w / 2;
-            if (h < 2 * r) r = h / 2;
-            c.beginPath();
-            c.moveTo(x + r, y);
-            c.arcTo(x + w, y, x + w, y + h, r);
-            c.arcTo(x + w, y + h, x, y + h, r);
-            c.arcTo(x, y + h, x, y, r);
-            c.arcTo(x, y + w, x, y, r);
-            c.closePath();
-        }
-
-        function drawRetroCrtOverlay(c, w, h) {
+        function drawBox(c, x, y, bw, bh, r, fill, stroke, lw) {
+            lw = lw || 1;
             c.save();
-            // 1. CRT Horizontal Scanlines
-            c.fillStyle = 'rgba(0, 0, 0, 0.16)';
-            for (let y = 0; y < h; y += 4) {
-                c.fillRect(0, y, w, 2);
+            c.beginPath();
+            if (typeof c.roundRect === "function") {
+                c.roundRect(x, y, bw, bh, r);
+            } else {
+                c.moveTo(x + r, y);
+                c.lineTo(x + bw - r, y);
+                c.quadraticCurveTo(x + bw, y, x + bw, y + r);
+                c.lineTo(x + bw, y + bh - r);
+                c.quadraticCurveTo(x + bw, y + bh, x + bw - r, y + bh);
+                c.lineTo(x + r, y + bh);
+                c.quadraticCurveTo(x, y + bh, x, y + bh - r);
+                c.lineTo(x, y + r);
+                c.quadraticCurveTo(x, y, x + r, y);
+                c.closePath();
             }
-            // 2. Phosphor Edge Vignette
-            const crtVignette = c.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.45, w / 2, h / 2, Math.max(w, h) * 0.72);
-            crtVignette.addColorStop(0, 'rgba(16, 185, 129, 0)');
-            crtVignette.addColorStop(0.7, 'rgba(2, 6, 23, 0.25)');
-            crtVignette.addColorStop(1, 'rgba(2, 6, 23, 0.65)');
-            c.fillStyle = crtVignette;
-            c.fillRect(0, 0, w, h);
+            if (fill) { c.fillStyle = fill; c.fill(); }
+            if (stroke && lw > 0) { c.strokeStyle = stroke; c.lineWidth = lw; c.stroke(); }
             c.restore();
         }
 
-        function drawVectorAstroCat(c, cx, cy, scale, fCount) {
+        function drawAstroCat(c, cx, cy, scale, fCount) {
             c.save();
             c.translate(cx, cy);
             c.scale(scale, scale);
 
-            const flameFlicker = Math.sin(fCount * 0.45) * 4;
+            const flk = Math.sin(fCount * 0.5) * 4;
+            const flGrad = c.createLinearGradient(0, 18, 0, 36);
+            flGrad.addColorStop(0, '#38bdf8');
+            flGrad.addColorStop(0.4, '#34d399');
+            flGrad.addColorStop(0.8, '#fbbf24');
+            flGrad.addColorStop(1, 'transparent');
+            c.fillStyle = flGrad;
 
-            // 1. Jetpack Plasma Thruster Flames
-            const flameGrad = c.createLinearGradient(0, 20, 0, 38);
-            flameGrad.addColorStop(0, '#38bdf8');
-            flameGrad.addColorStop(0.35, '#34d399');
-            flameGrad.addColorStop(0.7, '#fbbf24');
-            flameGrad.addColorStop(1, 'transparent');
-            c.fillStyle = flameGrad;
-
-            // Left flame
+            // Thruster Flames
             c.beginPath();
-            c.moveTo(-13, 20);
-            c.quadraticCurveTo(-11, 33 + flameFlicker, -9, 20);
+            c.moveTo(-13, 18);
+            c.quadraticCurveTo(-11, 32 + flk, -9, 18);
             c.fill();
 
-            // Right flame
             c.beginPath();
-            c.moveTo(9, 20);
-            c.quadraticCurveTo(11, 33 + flameFlicker, 13, 20);
+            c.moveTo(9, 18);
+            c.quadraticCurveTo(11, 32 + flk, 13, 18);
             c.fill();
 
-            // 2. Jetpack Backpack
-            c.fillStyle = '#0b1329';
-            c.strokeStyle = '#10b981';
-            c.lineWidth = 1.6;
+            // Jetpack Tanks
+            drawBox(c, -17, 2, 9, 18, 3, '#0f172a', '#10b981', 1.5);
+            drawBox(c, 8, 2, 9, 18, 3, '#0f172a', '#10b981', 1.5);
+            drawBox(c, -9, 5, 18, 12, 2, '#1e293b', '#334155', 1);
 
-            // Left tank
-            roundRect(c, -17, 2, 10, 20, 3);
-            c.fill();
-            c.stroke();
-
-            // Right tank
-            roundRect(c, 7, 2, 10, 20, 3);
-            c.fill();
-            c.stroke();
-
-            // Center connector bridge
+            // Space Suit Body
             c.fillStyle = '#1e293b';
-            c.strokeStyle = '#334155';
-            c.lineWidth = 1;
-            roundRect(c, -9, 6, 18, 12, 2);
-            c.fill();
-            c.stroke();
-
-            // Nozzles
-            c.fillStyle = '#64748b';
-            c.beginPath();
-            c.moveTo(-15, 20);
-            c.lineTo(-7, 20);
-            c.lineTo(-8, 23);
-            c.lineTo(-14, 23);
-            c.closePath();
-            c.fill();
-
-            c.beginPath();
-            c.moveTo(7, 20);
-            c.lineTo(15, 20);
-            c.lineTo(14, 23);
-            c.lineTo(8, 23);
-            c.closePath();
-            c.fill();
-
-            // 3. Space Suit Body
-            c.fillStyle = '#131e36';
             c.strokeStyle = '#10b981';
-            c.lineWidth = 2.2;
+            c.lineWidth = 2;
             c.beginPath();
-            c.ellipse(0, 12, 13, 12, 0, 0, Math.PI * 2);
+            c.ellipse(0, 11, 13, 12, 0, 0, Math.PI * 2);
             c.fill();
             c.stroke();
 
             // Chest Mission Patch
-            c.fillStyle = '#064e3b';
-            c.strokeStyle = '#34d399';
-            c.lineWidth = 0.8;
-            roundRect(c, -4, 7, 8, 5, 1);
-            c.fill();
-            c.stroke();
+            drawBox(c, -4, 6, 8, 5, 1, '#064e3b', '#34d399', 0.8);
             c.fillStyle = '#38bdf8';
             c.beginPath();
-            c.arc(0, 9.5, 1.5, 0, Math.PI * 2);
+            c.arc(0, 8.5, 1.5, 0, Math.PI * 2);
             c.fill();
 
             // Suit Paws
             c.fillStyle = '#334155';
             c.strokeStyle = '#10b981';
-            c.lineWidth = 1.6;
+            c.lineWidth = 1.4;
             c.beginPath();
-            c.arc(-11, 15, 3.5, 0, Math.PI * 2);
-            c.fill();
-            c.stroke();
+            c.arc(-11, 14, 3.5, 0, Math.PI * 2);
+            c.fill(); c.stroke();
             c.beginPath();
-            c.arc(11, 15, 3.5, 0, Math.PI * 2);
-            c.fill();
-            c.stroke();
+            c.arc(11, 14, 3.5, 0, Math.PI * 2);
+            c.fill(); c.stroke();
 
-            // 4. Helmet Base Collar
-            c.fillStyle = '#0b1329';
+            // Helmet Base Collar
+            c.fillStyle = '#0f172a';
             c.strokeStyle = '#10b981';
-            c.lineWidth = 2.2;
+            c.lineWidth = 2;
             c.beginPath();
-            c.ellipse(0, 1, 16, 5, 0, 0, Math.PI * 2);
+            c.ellipse(0, 0, 16, 5, 0, 0, Math.PI * 2);
             c.fill();
             c.stroke();
 
-            // 5. Helmet Ear Pods
-            c.fillStyle = '#0b1329';
+            // Ear Pods
+            c.fillStyle = '#0f172a';
             c.strokeStyle = '#10b981';
-            c.lineWidth = 1.6;
-
-            // Left Ear
+            c.lineWidth = 1.5;
             c.beginPath();
-            c.moveTo(-15, -12);
-            c.lineTo(-10, -23);
-            c.lineTo(-5, -15);
-            c.closePath();
-            c.fill();
-            c.stroke();
+            c.moveTo(-15, -12); c.lineTo(-10, -23); c.lineTo(-5, -15); c.closePath();
+            c.fill(); c.stroke();
 
-            c.fillStyle = 'rgba(236, 72, 153, 0.9)';
+            c.fillStyle = 'rgba(236, 72, 153, 0.85)';
             c.beginPath();
-            c.moveTo(-13, -14);
-            c.lineTo(-10, -20);
-            c.lineTo(-7, -15);
-            c.closePath();
+            c.moveTo(-13, -14); c.lineTo(-10, -20); c.lineTo(-7, -15); c.closePath();
             c.fill();
 
-            // Right Ear
-            c.fillStyle = '#0b1329';
+            c.fillStyle = '#0f172a';
             c.strokeStyle = '#10b981';
             c.beginPath();
-            c.moveTo(15, -12);
-            c.lineTo(10, -23);
-            c.lineTo(5, -15);
-            c.closePath();
-            c.fill();
-            c.stroke();
+            c.moveTo(15, -12); c.lineTo(10, -23); c.lineTo(5, -15); c.closePath();
+            c.fill(); c.stroke();
 
-            c.fillStyle = 'rgba(236, 72, 153, 0.9)';
+            c.fillStyle = 'rgba(236, 72, 153, 0.85)';
             c.beginPath();
-            c.moveTo(13, -14);
-            c.lineTo(10, -20);
-            c.lineTo(7, -15);
-            c.closePath();
+            c.moveTo(13, -14); c.lineTo(10, -20); c.lineTo(7, -15); c.closePath();
             c.fill();
 
-            // 6. Glass Bubble Helmet (Background layer)
-            c.save();
+            // Glass Bubble Helmet with radial shading
+            const hGlass = c.createRadialGradient(-3, -11, 2, 0, -8, 17);
+            hGlass.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
+            hGlass.addColorStop(0.65, 'rgba(15, 23, 42, 0.9)');
+            hGlass.addColorStop(1, 'rgba(2, 6, 23, 0.98)');
+            c.fillStyle = hGlass;
             c.beginPath();
             c.arc(0, -8, 17, 0, Math.PI * 2);
-            c.fillStyle = 'rgba(10, 17, 35, 0.95)';
             c.fill();
-            c.restore();
 
-            // 7. Cat Head Inside Helmet
-            c.fillStyle = '#070b14';
+            // Cat Head
+            c.fillStyle = '#090d16';
             c.beginPath();
             c.ellipse(0, -7, 12, 10, 0, 0, Math.PI * 2);
             c.fill();
 
-            // Cat Eyes (Blinking animation)
-            const isBlink = (fCount % 100) > 94;
+            // Big Cute Eyes with Blinking
+            const isBlink = (fCount % 110) > 104;
             if (isBlink) {
                 c.strokeStyle = '#10b981';
                 c.lineWidth = 2;
                 c.beginPath();
-                c.moveTo(-7, -8);
-                c.lineTo(-3, -8);
-                c.moveTo(3, -8);
-                c.lineTo(7, -8);
+                c.moveTo(-7, -8); c.lineTo(-3, -8);
+                c.moveTo(3, -8); c.lineTo(7, -8);
                 c.stroke();
             } else {
                 c.fillStyle = '#10b981';
@@ -2561,41 +2494,46 @@
                 // Pupil Sparkles
                 c.fillStyle = '#ffffff';
                 c.beginPath();
-                c.arc(-4, -9, 1, 0, Math.PI * 2);
+                c.arc(-4, -9, 1.2, 0, Math.PI * 2);
                 c.fill();
                 c.beginPath();
-                c.arc(6, -9, 1, 0, Math.PI * 2);
+                c.arc(6, -9, 1.2, 0, Math.PI * 2);
                 c.fill();
             }
 
-            // Nose & Mouth
+            // Whiskers
+            c.strokeStyle = 'rgba(148, 163, 184, 0.7)';
+            c.lineWidth = 1;
+            c.beginPath();
+            c.moveTo(-7, -5); c.lineTo(-14, -7);
+            c.moveTo(-7, -3); c.lineTo(-14, -2);
+            c.moveTo(7, -5); c.lineTo(14, -7);
+            c.moveTo(7, -3); c.lineTo(14, -2);
+            c.stroke();
+
+            // Nose & Smile
             c.fillStyle = '#f43f5e';
             c.beginPath();
-            c.moveTo(-1, -5);
-            c.lineTo(1, -5);
-            c.lineTo(0, -3.5);
-            c.closePath();
+            c.moveTo(-1.2, -4.5); c.lineTo(1.2, -4.5); c.lineTo(0, -3.2); c.closePath();
             c.fill();
 
             c.strokeStyle = '#cbd5e1';
             c.lineWidth = 0.8;
             c.beginPath();
-            c.moveTo(-2, -3);
-            c.quadraticCurveTo(0, -1.5, 2, -3);
+            c.moveTo(-2, -2.5); c.quadraticCurveTo(0, -1.2, 2, -2.5);
             c.stroke();
 
-            // 8. Glass Bubble Helmet Outer Rim & Gloss Reflection Arc
+            // Helmet Glass Rim & Specular Arc
             c.strokeStyle = '#38bdf8';
-            c.lineWidth = 2.2;
+            c.lineWidth = 2;
             c.beginPath();
             c.arc(0, -8, 17, 0, Math.PI * 2);
             c.stroke();
 
-            // Gloss reflection arc
-            c.strokeStyle = 'rgba(255, 255, 255, 0.55)';
-            c.lineWidth = 1.6;
+            c.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            c.lineWidth = 1.8;
             c.beginPath();
-            c.arc(0, -8, 14.5, -Math.PI * 0.75, -Math.PI * 0.35);
+            c.arc(0, -8, 14.5, -Math.PI * 0.78, -Math.PI * 0.3);
             c.stroke();
 
             c.restore();
@@ -2604,64 +2542,47 @@
         const renderFrame = () => {
             if (!ctx) return;
             frameCount++;
-            ctx.save();
-            ctx.scale(renderScale, renderScale);
             const w = baseW;
             const h = baseH;
 
-            // ---------------------------------------------------------------
-            // 1. DEEP CYBER NEBULA & SPACE STARFIELD
-            // ---------------------------------------------------------------
+            // 1. Cyberpunk Dark Space Canvas
             const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
-            bgGrad.addColorStop(0, '#030712');
-            bgGrad.addColorStop(0.45, '#070f26');
+            bgGrad.addColorStop(0, '#020617');
+            bgGrad.addColorStop(0.35, '#070f26');
+            bgGrad.addColorStop(0.7, '#0b1329');
             bgGrad.addColorStop(1, '#020617');
             ctx.fillStyle = bgGrad;
             ctx.fillRect(0, 0, w, h);
 
-            // Ambient Nebula Radial Glows
-            const n1 = ctx.createRadialGradient(w * 0.2, 160, 0, w * 0.2, 160, 320);
+            // Glowing Nebula Blooms
+            const n1 = ctx.createRadialGradient(w * 0.25, 250, 0, w * 0.25, 250, 380);
             n1.addColorStop(0, 'rgba(16, 185, 129, 0.16)');
             n1.addColorStop(1, 'transparent');
             ctx.fillStyle = n1;
             ctx.fillRect(0, 0, w, h);
 
-            const n2 = ctx.createRadialGradient(w * 0.82, isPortrait ? 600 : 360, 0, w * 0.82, isPortrait ? 600 : 360, 360);
-            n2.addColorStop(0, 'rgba(6, 182, 212, 0.14)');
+            const n2 = ctx.createRadialGradient(w * 0.8, isPortrait ? 720 : 380, 0, w * 0.8, isPortrait ? 720 : 380, 360);
+            n2.addColorStop(0, 'rgba(56, 189, 248, 0.14)');
             n2.addColorStop(1, 'transparent');
             ctx.fillStyle = n2;
             ctx.fillRect(0, 0, w, h);
 
-            // Twinkling Starfield
+            // Parallax Starfield
             clipStars.forEach(st => {
                 st.y += st.speed;
-                if (st.y > h) {
+                if (st.y > h - 140) {
                     st.y = 0;
                     st.x = Math.random() * w;
                 }
                 const alpha = Math.max(0.2, Math.min(1.0, st.opacity + Math.sin(frameCount * 0.05 + st.twinkle) * 0.25));
                 ctx.fillStyle = st.color;
                 ctx.globalAlpha = alpha;
-
-                const sx = Math.floor(st.x);
-                const sy = Math.floor(st.y);
-                if (st.isCross && st.size >= 3) {
-                    ctx.fillRect(sx, sy, st.size, st.size);
-                    ctx.fillRect(sx - 1, sy + 1, 1, 1);
-                    ctx.fillRect(sx + st.size, sy + 1, 1, 1);
-                    ctx.fillRect(sx + 1, sy - 1, 1, 1);
-                    ctx.fillRect(sx + 1, sy + st.size, 1, 1);
-                } else {
-                    ctx.fillRect(sx, sy, st.size, st.size);
-                }
+                ctx.fillRect(Math.floor(st.x), Math.floor(st.y), st.size, st.size);
             });
             ctx.globalAlpha = 1.0;
 
-            // Perspective 3D Synthwave Grid Floor
-            const horizonY = isPortrait ? h * 0.84 : h * 0.80;
-            const vanishingX = w * 0.5;
-
-            // Horizon Glow Beam
+            // Horizon Grid Floor
+            const horizonY = isPortrait ? h * 0.88 : h * 0.86;
             ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)';
             ctx.lineWidth = 2;
             ctx.beginPath();
@@ -2669,92 +2590,32 @@
             ctx.lineTo(w, horizonY);
             ctx.stroke();
 
-            // Perspective Rays
-            ctx.strokeStyle = 'rgba(6, 182, 212, 0.16)';
-            ctx.lineWidth = 1;
-            const rayCount = 12;
+            const rayCount = isPortrait ? 8 : 12;
             for (let i = -rayCount; i <= rayCount; i++) {
-                const targetX = vanishingX + (i * (w / (rayCount * 0.85)));
+                ctx.strokeStyle = 'rgba(6, 182, 212, 0.16)';
+                ctx.lineWidth = 1.2;
                 ctx.beginPath();
-                ctx.moveTo(vanishingX, horizonY);
-                ctx.lineTo(targetX, h);
+                ctx.moveTo(w / 2, horizonY);
+                ctx.lineTo(w / 2 + i * (w / (rayCount * 0.9)), h);
                 ctx.stroke();
             }
 
-            // Moving Horizontal Depth Lines
-            const depthProgress = (frameCount * 0.008) % 1.0;
-            for (let d = 0; d < 6; d++) {
-                const prog = (d / 6 + depthProgress) % 1.0;
-                if (prog <= 0.05) continue;
-                const lineY = horizonY + Math.pow(prog, 2.0) * (h - horizonY);
-                ctx.strokeStyle = `rgba(16, 185, 129, ${prog * 0.35})`;
-                ctx.lineWidth = 1 + prog * 1.5;
+            const depthProg = (frameCount * 0.012) % 1.0;
+            for (let d = 0; d < 5; d++) {
+                const p = (d / 5 + depthProg) % 1.0;
+                if (p <= 0.05) continue;
+                const ly = horizonY + Math.pow(p, 2.2) * (h - horizonY);
+                ctx.strokeStyle = `rgba(16, 185, 129, ${p * 0.45})`;
+                ctx.lineWidth = 1 + p * 1.5;
                 ctx.beginPath();
-                ctx.moveTo(0, lineY);
-                ctx.lineTo(w, lineY);
+                ctx.moveTo(0, ly);
+                ctx.lineTo(w, ly);
                 ctx.stroke();
             }
 
-            // ---------------------------------------------------------------
-            // 2. SLEEK TERMINAL HEADER (FROSTED GLASS PILL)
-            // ---------------------------------------------------------------
-            const headX = 24;
-            const headY = 24;
-            const headW = w - 48;
-            const headH = 80;
-
-            ctx.fillStyle = 'rgba(11, 19, 43, 0.92)';
-            roundRect(ctx, headX, headY, headW, headH, 18);
-            ctx.fill();
-            ctx.strokeStyle = '#10b981';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            // Pulsing Red Recording Indicator
-            const recPulse = Math.sin(frameCount * 0.15);
-            ctx.fillStyle = '#ef4444';
-            ctx.beginPath();
-            ctx.arc(headX + 32, headY + 40, 7 + recPulse * 1.5, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(headX + 32, headY + 40, 11 + recPulse * 3, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // Header Title
-            ctx.fillStyle = '#10b981';
-            ctx.font = 'bold 18px "Courier New", Courier, monospace';
-            ctx.fillText("ORBIT SECURITY // PASSIVE RADAR", headX + 54, headY + 34);
-
-            ctx.fillStyle = '#94a3b8';
-            ctx.font = '13px "Courier New", Courier, monospace';
-            ctx.fillText("RFC-8484 DNS-OVER-HTTPS • CFAA SAFE HARBOR", headX + 54, headY + 56);
-
-            // Right Timer Badge (Real-time countdown to 3.5s)
-            const timerBoxW = isPortrait ? 130 : 150;
-            const timerBoxX = headX + headW - timerBoxW - 14;
-            ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
-            roundRect(ctx, timerBoxX, headY + 18, timerBoxW, 44, 10);
-            ctx.fill();
-            ctx.strokeStyle = '#06b6d4';
-            ctx.lineWidth = 1.4;
-            ctx.stroke();
-
-            const elapsedSecs = Math.min(3.5, frameCount / 30);
-            const secStr = elapsedSecs.toFixed(1);
-            ctx.fillStyle = '#38bdf8';
-            ctx.font = 'bold 13px "Courier New", Courier, monospace';
-            ctx.fillText(`00:0${secStr} / 00:03.5`, timerBoxX + 10, headY + 45);
-
-            // ---------------------------------------------------------------
-            // 3. TARGET PERIMETER SECURITY AUDIT CARD (DYNAMIC TELEMETRY)
-            // ---------------------------------------------------------------
+            // Target Telemetry Extraction
             const audit = (typeof window !== "undefined" && window._lastAuditResult) ? window._lastAuditResult : null;
             const domainInput = (typeof document !== "undefined") ? (document.getElementById("targetDomain") || document.getElementById("realScanDomain")) : null;
-            
-            // Auto-resolve domain: audit result -> live input -> localStorage unsent queue -> default
             let resolvedDomain = (audit && audit.domain) || (domainInput && domainInput.value && domainInput.value.trim());
             if (!resolvedDomain) {
                 try {
@@ -2772,322 +2633,503 @@
             const dmarcStatus = (audit && audit.dmarcStatus) ? String(audit.dmarcStatus).toUpperCase() : "PASS";
             const spfStatus = (audit && audit.spfStatus) ? String(audit.spfStatus).toUpperCase() : "PASS";
             const cnameStatus = (audit && audit.cnameStatus) ? String(audit.cnameStatus).toUpperCase() : "PASS";
+            const isCnameOk = cnameStatus === "PASS" || cnameStatus === "SECURE";
 
-            const cardX = 24;
-            const cardY = headY + headH + 20;
-            const cardW = w - 48;
-            const cardH = isPortrait ? 300 : 210;
-
-            // Score Color Coding
             const scoreColor = activeScore >= 80 ? '#10b981' : (activeScore >= 50 ? '#f59e0b' : '#ef4444');
 
-            ctx.fillStyle = 'rgba(10, 18, 40, 0.94)';
-            roundRect(ctx, cardX, cardY, cardW, cardH, 20);
-            ctx.fill();
-            ctx.strokeStyle = scoreColor;
-            ctx.lineWidth = 2.4;
-            ctx.stroke();
+            if (isPortrait) {
+                // ==========================================
+                // PORTRAIT LAYOUT (720 x 1280)
+                // ==========================================
+                // 1. Header Bar
+                const headX = 28;
+                const headY = 32;
+                const headW = w - 56;
+                const headH = 76;
+                drawBox(ctx, headX, headY, headW, headH, 20, 'rgba(11, 19, 43, 0.95)', '#10b981', 2);
 
-            // Card Header Pill
-            ctx.fillStyle = 'rgba(6, 182, 212, 0.15)';
-            roundRect(ctx, cardX + 24, cardY + 20, 220, 26, 6);
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(6, 182, 212, 0.45)';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-            ctx.fillStyle = '#38bdf8';
-            ctx.font = 'bold 11px "Courier New", Courier, monospace';
-            ctx.fillText("TARGET PERIMETER RECON", cardX + 34, cardY + 37);
-
-            // Target Domain Name (Large & Crisp)
-            const domainDisplay = `TARGET: ${resolvedDomain.toUpperCase()}`;
-            ctx.fillStyle = '#ffffff';
-            ctx.font = domainDisplay.length > 22 ? 'bold 20px "Courier New", Courier, monospace' : 'bold 24px "Courier New", Courier, monospace';
-            ctx.fillText(domainDisplay.slice(0, 28), cardX + 24, cardY + 80);
-
-            // Circular Cyber Score Gauge
-            const gaugeRadius = isPortrait ? 44 : 36;
-            const gaugeX = cardX + cardW - gaugeRadius - 32;
-            const gaugeY = cardY + 84;
-
-            // Gauge Track Background
-            ctx.strokeStyle = 'rgba(51, 65, 85, 0.7)';
-            ctx.lineWidth = 8;
-            ctx.beginPath();
-            ctx.arc(gaugeX, gaugeY, gaugeRadius, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // Glowing Score Arc
-            const scoreAngle = (activeScore / 100) * (Math.PI * 2);
-            ctx.strokeStyle = scoreColor;
-            ctx.lineWidth = 8;
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.arc(gaugeX, gaugeY, gaugeRadius, -Math.PI / 2, -Math.PI / 2 + scoreAngle);
-            ctx.stroke();
-            ctx.lineCap = 'butt';
-
-            // Score Number in Center
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 22px "Courier New", Courier, monospace';
-            ctx.textAlign = 'center';
-            ctx.fillText(String(activeScore), gaugeX, gaugeY + 4);
-            ctx.fillStyle = '#94a3b8';
-            ctx.font = '10px "Courier New", Courier, monospace';
-            ctx.fillText('/100', gaugeX, gaugeY + 18);
-            ctx.textAlign = 'left';
-
-            // Grade Badge Box
-            const gradeBadgeW = 120;
-            const gradeBadgeX = cardX + 24;
-            const gradeBadgeY = cardY + 104;
-            ctx.fillStyle = activeScore >= 80 ? 'rgba(16, 185, 129, 0.2)' : (activeScore >= 50 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)');
-            roundRect(ctx, gradeBadgeX, gradeBadgeY, gradeBadgeW, 36, 8);
-            ctx.fill();
-            ctx.strokeStyle = scoreColor;
-            ctx.lineWidth = 1.4;
-            ctx.stroke();
-
-            ctx.fillStyle = scoreColor;
-            ctx.font = 'bold 16px "Courier New", Courier, monospace';
-            ctx.fillText(`GRADE ${activeGrade}`, gradeBadgeX + 16, gradeBadgeY + 24);
-
-            // Subtitle Verdict
-            ctx.fillStyle = '#94a3b8';
-            ctx.font = '13px "Courier New", Courier, monospace';
-            ctx.fillText(activeScore >= 80 ? "Perimeter Hardened • Zero Takeover Vectors" : "Attack Surface Vulnerable • Takeover Vector", cardX + 24, cardY + 164);
-
-            // 3 Bottom Status Badges
-            const badgeW = (cardW - 48 - 16) / 3;
-            const badgeY = isPortrait ? cardY + 195 : cardY + 140;
-            const badgeH = isPortrait ? 80 : 54;
-
-            const isCnameOk = cnameStatus === "PASS" || cnameStatus === "SECURE";
-            const metrics = [
-                { label: "DMARC", val: dmarcStatus === "PASS" ? "ENFORCED" : (dmarcStatus === "MISSING" ? "MISSING" : "MONITOR"), ok: dmarcStatus === "PASS" },
-                { label: "SPF", val: spfStatus === "PASS" ? "ENFORCED" : (spfStatus === "MISSING" ? "FAIL" : "SOFTFAIL"), ok: spfStatus === "PASS" },
-                { label: "CNAME", val: isCnameOk ? "SECURE" : "DANGLING", ok: isCnameOk }
-            ];
-
-            metrics.forEach((m, idx) => {
-                const bX = cardX + 24 + idx * (badgeW + 8);
-                ctx.fillStyle = 'rgba(2, 6, 23, 0.7)';
-                roundRect(ctx, bX, badgeY, badgeW, badgeH, 12);
+                const recPulse = Math.sin(frameCount * 0.15);
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(headX + 28, headY + 38, 7 + recPulse * 1.5, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.strokeStyle = m.ok ? '#10b981' : '#ef4444';
-                ctx.lineWidth = 1.2;
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(headX + 28, headY + 38, 12 + recPulse * 3, 0, Math.PI * 2);
                 ctx.stroke();
+
+                ctx.fillStyle = '#10b981';
+                ctx.font = 'bold 20px system-ui, -apple-system, sans-serif';
+                ctx.fillText("ORBIT SECURITY", headX + 48, headY + 33);
+
+                ctx.fillStyle = '#64748b';
+                ctx.font = 'bold 12px ui-monospace, SFMono-Regular, monospace';
+                ctx.fillText("PASSIVE ATTACK SURFACE RADAR", headX + 48, headY + 54);
+
+                const elapsedSecs = Math.min(3.5, frameCount / 30);
+                const secStr = elapsedSecs.toFixed(1);
+                drawBox(ctx, headX + headW - 136, headY + 18, 122, 40, 12, 'rgba(2, 6, 23, 0.85)', '#06b6d4', 1.5);
+                ctx.fillStyle = '#38bdf8';
+                ctx.font = 'bold 13px ui-monospace, SFMono-Regular, monospace';
+                ctx.fillText(`REC ● 00:0${secStr}`, headX + headW - 124, headY + 43);
+
+                // 2. Recon Card
+                const cardX = 28;
+                const cardY = headY + headH + 24;
+                const cardW = w - 56;
+                const cardH = 340;
+                drawBox(ctx, cardX, cardY, cardW, cardH, 24, 'rgba(15, 23, 42, 0.96)', scoreColor, 2.5);
+
+                drawBox(ctx, cardX + 24, cardY + 24, 210, 30, 8, 'rgba(6, 182, 212, 0.15)', 'rgba(6, 182, 212, 0.5)', 1.2);
+                ctx.fillStyle = '#38bdf8';
+                ctx.font = 'bold 12px ui-monospace, SFMono-Regular, monospace';
+                ctx.fillText("TARGET PERIMETER RECON", cardX + 36, cardY + 44);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 26px system-ui, -apple-system, sans-serif';
+                ctx.fillText(resolvedDomain.toUpperCase().slice(0, 24), cardX + 24, cardY + 92);
 
                 ctx.fillStyle = '#94a3b8';
-                ctx.font = 'bold 11px "Courier New", Courier, monospace';
-                ctx.fillText(m.label, bX + 12, badgeY + 22);
+                ctx.font = '14px system-ui, -apple-system, sans-serif';
+                ctx.fillText("RFC-8484 DNS & Subdomain Attack Surface", cardX + 24, cardY + 118);
 
-                ctx.fillStyle = m.ok ? '#34d399' : '#f87171';
-                ctx.font = 'bold 13px "Courier New", Courier, monospace';
-                ctx.fillText(`${m.ok ? "●" : "✕"} ${m.val}`, bX + 12, badgeY + 44);
-
-                if (isPortrait) {
-                    ctx.fillStyle = '#64748b';
-                    ctx.font = '10px "Courier New", Courier, monospace';
-                    ctx.fillText(m.ok ? "RFC Validated" : "Action Needed", bX + 12, badgeY + 64);
-                }
-            });
-
-            // ---------------------------------------------------------------
-            // 4. RADAR SCREEN WITH VECTOR ASTRO-CAT & SONAR SWEEP
-            // ---------------------------------------------------------------
-            const radarBoxY = cardY + cardH + 20;
-            const radarBoxH = isPortrait ? 400 : (h - radarBoxY - 110);
-            const radarBoxW = w - 48;
-
-            ctx.fillStyle = 'rgba(7, 13, 28, 0.94)';
-            roundRect(ctx, 24, radarBoxY, radarBoxW, radarBoxH, 20);
-            ctx.fill();
-            ctx.strokeStyle = '#06b6d4';
-            ctx.lineWidth = 2.2;
-            ctx.stroke();
-
-            // Radar Header Pill
-            ctx.fillStyle = '#38bdf8';
-            ctx.font = 'bold 12px "Courier New", Courier, monospace';
-            ctx.fillText("TACTICAL ZERO-G RADAR // AZIMUTH SWEEP", 44, radarBoxY + 30);
-
-            // Radar Sonar Display Center
-            const rCx = w / 2;
-            const rCy = radarBoxY + (radarBoxH / 2) + 10;
-            const rRadius = Math.min(radarBoxW - 80, radarBoxH - 80) / 2;
-
-            // Concentric Range Rings with distance labels
-            const rings = [0.33, 0.66, 1.0];
-            const ringLabels = ["10 NM", "25 NM", "50 NM"];
-            rings.forEach((rScale, i) => {
-                ctx.strokeStyle = 'rgba(16, 185, 129, 0.28)';
-                ctx.lineWidth = 1.4;
+                // Circular Gauge
+                const gRadius = 48;
+                const gX = cardX + cardW - gRadius - 32;
+                const gY = cardY + 76;
+                ctx.strokeStyle = 'rgba(51, 65, 85, 0.7)';
+                ctx.lineWidth = 10;
                 ctx.beginPath();
-                ctx.arc(rCx, rCy, rRadius * rScale, 0, Math.PI * 2);
+                ctx.arc(gX, gY, gRadius, 0, Math.PI * 2);
                 ctx.stroke();
 
-                ctx.fillStyle = 'rgba(16, 185, 129, 0.6)';
-                ctx.font = '9px "Courier New", Courier, monospace';
-                ctx.fillText(ringLabels[i], rCx + 6, rCy - rRadius * rScale + 12);
-            });
-
-            // Crosshair Azimuth Lines
-            ctx.strokeStyle = 'rgba(16, 185, 129, 0.20)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(rCx - rRadius, rCy);
-            ctx.lineTo(rCx + rRadius, rCy);
-            ctx.moveTo(rCx, rCy - rRadius);
-            ctx.lineTo(rCx, rCy + rRadius);
-            ctx.stroke();
-
-            // 360-Degree Rotating Radar Beam with Phosphor Gradient Fan
-            const sweepAngle = (frameCount * 0.055) % (Math.PI * 2);
-            const fanAngle = Math.PI * 0.28;
-
-            ctx.save();
-            ctx.beginPath();
-            ctx.moveTo(rCx, rCy);
-            ctx.arc(rCx, rCy, rRadius, sweepAngle - fanAngle, sweepAngle, false);
-            ctx.closePath();
-
-            const sweepGrad = ctx.createRadialGradient(rCx, rCy, 0, rCx, rCy, rRadius);
-            sweepGrad.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
-            sweepGrad.addColorStop(1, 'rgba(16, 185, 129, 0.05)');
-            ctx.fillStyle = sweepGrad;
-            ctx.fill();
-            ctx.restore();
-
-            // Leading Radar Sweep Beam
-            ctx.strokeStyle = '#34d399';
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            ctx.moveTo(rCx, rCy);
-            ctx.lineTo(rCx + Math.cos(sweepAngle) * rRadius, rCy + Math.sin(sweepAngle) * rRadius);
-            ctx.stroke();
-
-            // Pulsing Target Blips on Radar
-            const blips = [
-                { angle: 0.8, dist: 0.45, label: "DNS-OK", color: "#10b981" },
-                { angle: 2.4, dist: 0.72, label: "SPF-HARD", color: "#38bdf8" },
-                { angle: 4.8, dist: 0.85, label: "CNAME-0", color: "#a855f7" }
-            ];
-
-            blips.forEach(b => {
-                const bx = rCx + Math.cos(b.angle) * (rRadius * b.dist);
-                const by = rCy + Math.sin(b.angle) * (rRadius * b.dist);
-
-                const blipPulse = Math.sin(frameCount * 0.12 + b.angle) * 3;
-                ctx.fillStyle = b.color;
+                const sAngle = (activeScore / 100) * (Math.PI * 2);
+                ctx.strokeStyle = scoreColor;
+                ctx.lineWidth = 10;
+                ctx.lineCap = 'round';
                 ctx.beginPath();
-                ctx.arc(bx, by, 4.5, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.arc(gX, gY, gRadius, -Math.PI / 2, -Math.PI / 2 + sAngle);
+                ctx.stroke();
+                ctx.lineCap = 'butt';
 
-                ctx.strokeStyle = b.color;
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 24px ui-monospace, SFMono-Regular, monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(String(activeScore), gX, gY + 3);
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = 'bold 11px ui-monospace, SFMono-Regular, monospace';
+                ctx.fillText("/100", gX, gY + 20);
+                ctx.textAlign = 'left';
+
+                drawBox(ctx, cardX + 24, cardY + 144, 150, 42, 10, activeScore >= 80 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)', scoreColor, 1.8);
+                ctx.fillStyle = scoreColor;
+                ctx.font = 'bold 18px ui-monospace, SFMono-Regular, monospace';
+                ctx.fillText(`GRADE: ${activeGrade}`, cardX + 38, cardY + 171);
+
+                // 3 Badges
+                const badgeW = (cardW - 48 - 18) / 3;
+                const badgeH = 105;
+                const badgeY = cardY + 208;
+                const badges = [
+                    { title: "DMARC", val: dmarcStatus === "PASS" ? "ENFORCED" : (dmarcStatus === "MISSING" ? "MISSING" : "MONITOR"), sub: "RFC-7489", ok: dmarcStatus === "PASS" },
+                    { title: "SPF", val: spfStatus === "PASS" ? "VALIDATED" : (spfStatus === "MISSING" ? "FAIL" : "SOFTFAIL"), sub: "RFC-7208", ok: spfStatus === "PASS" },
+                    { title: "TAKEOVER", val: isCnameOk ? "HARDENED" : "DANGLING", sub: isCnameOk ? "0 Dangling" : "Action Req", ok: isCnameOk }
+                ];
+
+                badges.forEach((b, idx) => {
+                    const bx = cardX + 24 + idx * (badgeW + 9);
+                    const col = b.ok ? '#10b981' : '#ef4444';
+                    drawBox(ctx, bx, badgeY, badgeW, badgeH, 14, 'rgba(2, 6, 23, 0.75)', col, 1.4);
+
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.font = 'bold 12px ui-monospace, SFMono-Regular, monospace';
+                    ctx.fillText(b.title, bx + 14, badgeY + 28);
+
+                    ctx.fillStyle = col;
+                    ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
+                    ctx.fillText(`● ${b.val}`, bx + 14, badgeY + 58);
+
+                    ctx.fillStyle = '#64748b';
+                    ctx.font = '11px ui-monospace, SFMono-Regular, monospace';
+                    ctx.fillText(b.sub, bx + 14, badgeY + 86);
+                });
+
+                // 3. Tactical Radar Box
+                const radarY = cardY + cardH + 24;
+                const radarW = w - 56;
+                const radarH = 430;
+                drawBox(ctx, 28, radarY, radarW, radarH, 24, 'rgba(11, 19, 43, 0.95)', '#06b6d4', 2.2);
+
+                ctx.fillStyle = '#38bdf8';
+                ctx.font = 'bold 13px ui-monospace, SFMono-Regular, monospace';
+                ctx.fillText("TACTICAL ZERO-G RADAR // LIVE TELEMETRY", 48, radarY + 34);
+
+                const rCx = w / 2;
+                const rCy = radarY + 225;
+                const rRadius = 150;
+
+                [0.33, 0.66, 1.0].forEach((scale, i) => {
+                    ctx.strokeStyle = 'rgba(16, 185, 129, 0.3)';
+                    ctx.lineWidth = 1.4;
+                    ctx.beginPath();
+                    ctx.arc(rCx, rCy, rRadius * scale, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    ctx.fillStyle = 'rgba(16, 185, 129, 0.6)';
+                    ctx.font = '10px ui-monospace, SFMono-Regular, monospace';
+                    ctx.fillText(["10 NM", "25 NM", "50 NM"][i], rCx + 8, rCy - rRadius * scale + 14);
+                });
+
+                ctx.strokeStyle = 'rgba(16, 185, 129, 0.2)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.arc(bx, by, 8 + blipPulse, 0, Math.PI * 2);
+                ctx.moveTo(rCx - rRadius, rCy); ctx.lineTo(rCx + rRadius, rCy);
+                ctx.moveTo(rCx, rCy - rRadius); ctx.lineTo(rCx, rCy + rRadius);
                 ctx.stroke();
 
-                ctx.fillStyle = '#cbd5e1';
-                ctx.font = '8px "Courier New", Courier, monospace';
-                ctx.fillText(b.label, bx + 10, by + 3);
-            });
+                const sweep = (frameCount * 0.055) % (Math.PI * 2);
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(rCx, rCy);
+                ctx.arc(rCx, rCy, rRadius, sweep - 0.7, sweep, false);
+                ctx.closePath();
+                const beamGrad = ctx.createRadialGradient(rCx, rCy, 0, rCx, rCy, rRadius);
+                beamGrad.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
+                beamGrad.addColorStop(1, 'rgba(16, 185, 129, 0.02)');
+                ctx.fillStyle = beamGrad;
+                ctx.fill();
+                ctx.restore();
 
-            // Thruster Sparks Generator behind Astro-Cat
-            const catOrbitX = rCx + Math.sin(frameCount * 0.04) * (rRadius * 0.55);
-            const catOrbitY = rCy + Math.cos(frameCount * 0.045) * (rRadius * 0.45);
-            const catScale = 1.35;
+                ctx.strokeStyle = '#34d399';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(rCx, rCy);
+                ctx.lineTo(rCx + Math.cos(sweep) * rRadius, rCy + Math.sin(sweep) * rRadius);
+                ctx.stroke();
 
-            if (frameCount % 2 === 0) {
-                clipSparks.push({
-                    x: catOrbitX + (Math.random() * 8 - 4),
-                    y: catOrbitY + 28 * catScale,
-                    vx: (Math.random() - 0.5) * 1.5,
-                    vy: Math.random() * 2 + 1.2,
-                    size: Math.random() * 3 + 1.5,
-                    alpha: 1.0,
-                    color: Math.random() > 0.4 ? '#38bdf8' : '#fbbf24'
+                [
+                    { a: 0.8, d: 0.5, label: "DNS: SECURE", col: "#10b981" },
+                    { a: 2.6, d: 0.78, label: "SPF: PASS", col: "#38bdf8" },
+                    { a: 4.5, d: 0.85, label: "DMARC: REJECT", col: "#a855f7" }
+                ].forEach(b => {
+                    const bx = rCx + Math.cos(b.a) * (rRadius * b.d);
+                    const by = rCy + Math.sin(b.a) * (rRadius * b.d);
+                    ctx.fillStyle = b.col;
+                    ctx.beginPath();
+                    ctx.arc(bx, by, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = b.col;
+                    ctx.lineWidth = 1.2;
+                    ctx.beginPath();
+                    ctx.arc(bx, by, 9 + Math.sin(frameCount * 0.15 + b.a) * 3, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#cbd5e1';
+                    ctx.font = 'bold 10px ui-monospace, SFMono-Regular, monospace';
+                    ctx.fillText(b.label, bx + 12, by + 4);
                 });
-            }
 
-            // Render Sparks
-            for (let i = clipSparks.length - 1; i >= 0; i--) {
-                const sp = clipSparks[i];
-                sp.x += sp.vx;
-                sp.y += sp.vy;
-                sp.alpha -= 0.04;
-                if (sp.alpha <= 0) {
-                    clipSparks.splice(i, 1);
-                    continue;
+                // Astro-Cat Motion & Sparks
+                const catX = rCx + Math.sin(frameCount * 0.04) * 55;
+                const catY = rCy + Math.cos(frameCount * 0.045) * 45;
+                const catScale = 2.0;
+
+                if (frameCount % 2 === 0) {
+                    clipSparks.push({
+                        x: catX + (Math.random() * 12 - 6),
+                        y: catY + 28 * catScale,
+                        vx: (Math.random() - 0.5) * 1.5,
+                        vy: Math.random() * 2 + 1.2,
+                        size: Math.random() * 3 + 1.5,
+                        alpha: 1.0,
+                        color: Math.random() > 0.4 ? '#38bdf8' : '#fbbf24'
+                    });
                 }
-                ctx.fillStyle = sp.color;
-                ctx.globalAlpha = sp.alpha;
-                ctx.fillRect(sp.x, sp.y, sp.size, sp.size);
-            }
-            ctx.globalAlpha = 1.0;
 
-            // DRAW VECTOR ASTRO-CAT
-            drawVectorAstroCat(ctx, catOrbitX, catOrbitY, catScale, frameCount);
+                for (let i = clipSparks.length - 1; i >= 0; i--) {
+                    const sp = clipSparks[i];
+                    sp.x += sp.vx;
+                    sp.y += sp.vy;
+                    sp.alpha -= 0.04;
+                    if (sp.alpha <= 0) {
+                        clipSparks.splice(i, 1);
+                        continue;
+                    }
+                    ctx.fillStyle = sp.color;
+                    ctx.globalAlpha = sp.alpha;
+                    ctx.fillRect(sp.x, sp.y, sp.size, sp.size);
+                }
+                ctx.globalAlpha = 1.0;
 
-            // ---------------------------------------------------------------
-            // 5. HOLOGRAPHIC COPILOT COMMS SUBTITLE BOX
-            // ---------------------------------------------------------------
-            const commsY = radarBoxY + radarBoxH + 18;
-            const commsH = isPortrait ? 96 : 80;
+                drawAstroCat(ctx, catX, catY, catScale, frameCount);
 
-            ctx.fillStyle = 'rgba(10, 18, 40, 0.94)';
-            roundRect(ctx, 24, commsY, w - 48, commsH, 16);
-            ctx.fill();
-            ctx.strokeStyle = '#34d399';
-            ctx.lineWidth = 1.8;
-            ctx.stroke();
+                // 4. Comms Bar
+                const commsY = radarY + radarH + 20;
+                const commsW = w - 56;
+                const commsH = 82;
+                drawBox(ctx, 28, commsY, commsW, commsH, 18, 'rgba(11, 19, 43, 0.95)', '#34d399', 1.8);
 
-            ctx.fillStyle = '#34d399';
-            ctx.font = 'bold 12px "Courier New", Courier, monospace';
-            ctx.fillText("🐱 ASTRO-CAT COPILOT // ZERO-G TELEMETRY", 44, commsY + 26);
+                ctx.fillStyle = '#34d399';
+                ctx.font = 'bold 12px ui-monospace, SFMono-Regular, monospace';
+                ctx.fillText("🐱 ASTRO-CAT // ZERO-G RADAR COPILOT", 48, commsY + 28);
 
-            // Dynamic Live Dialogue referencing scanned domain
-            const statusVerb = activeScore >= 80 ? "secured" : "analyzed";
-            const liveQuips = [
-                `Perimeter ${statusVerb} for ${resolvedDomain}! Grade ${activeGrade} (${activeScore}/100). 🐾`,
-                `Zero-G DoH recon active: SPF & DMARC blast shields verified! 🛡️`,
-                `Automated audit report generated for ${resolvedDomain} retainer! 💼`,
-                `Continuous passive telemetry online. Domain monitored! 🚀`
-            ];
-            const quipIdx = Math.floor(frameCount / 45) % liveQuips.length;
-            const liveQuip = liveQuips[quipIdx];
+                ctx.fillStyle = '#f8fafc';
+                ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
+                ctx.fillText(`Perimeter hardened for ${resolvedDomain}! Score ${activeScore}/100 Grade ${activeGrade} 🐾`, 48, commsY + 56);
 
-            ctx.fillStyle = '#f8fafc';
-            ctx.font = 'bold 13px "Courier New", Courier, monospace';
-            ctx.fillText(liveQuip.slice(0, isPortrait ? 48 : 76), 44, commsY + 54);
+                for (let b = 0; b < 5; b++) {
+                    const barH = 6 + Math.abs(Math.sin(frameCount * 0.25 + b * 1.3)) * 20;
+                    ctx.fillStyle = '#10b981';
+                    ctx.fillRect(w - 90 + b * 8, commsY + 42 - barH / 2, 4, barH);
+                }
 
-            // Animated Audio Equalizer Bars on Right
-            const eqX = w - 90;
-            const eqY = commsY + 42;
-            for (let b = 0; b < 5; b++) {
-                const bH = 6 + Math.abs(Math.sin(frameCount * 0.25 + b * 1.2)) * 18;
+                // 5. Footer
                 ctx.fillStyle = '#10b981';
-                ctx.fillRect(eqX + b * 8, eqY - bH / 2, 4, bH);
+                ctx.font = 'bold 16px ui-monospace, SFMono-Regular, monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText("🌐 cmfh009.github.io/Orbit-Security   •   𝕏 @OrbitSecurity", w / 2, h - 36);
+                ctx.textAlign = 'left';
+
+            } else {
+                // ==========================================
+                // LANDSCAPE LAYOUT (1280 x 720)
+                // ==========================================
+                const headX = 24;
+                const headY = 20;
+                const headW = w - 48;
+                const headH = 56;
+                drawBox(ctx, headX, headY, headW, headH, 16, 'rgba(11, 19, 43, 0.95)', '#10b981', 1.8);
+
+                const recPulse = Math.sin(frameCount * 0.15);
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(headX + 24, headY + 28, 6 + recPulse * 1.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#10b981';
+                ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
+                ctx.fillText("ORBIT SECURITY // LIVE RADAR", headX + 42, headY + 34);
+
+                const elapsedSecs = Math.min(3.5, frameCount / 30);
+                const secStr = elapsedSecs.toFixed(1);
+                drawBox(ctx, headX + headW - 130, headY + 12, 116, 32, 10, 'rgba(2, 6, 23, 0.85)', '#06b6d4', 1.2);
+                ctx.fillStyle = '#38bdf8';
+                ctx.font = 'bold 12px ui-monospace, SFMono-Regular, monospace';
+                ctx.fillText(`REC ● 00:0${secStr}`, headX + headW - 120, headY + 32);
+
+                const paneY = headY + headH + 16;
+                const paneW = (w - 48 - 18) / 2;
+                const paneH = 510;
+
+                // Left Pane
+                drawBox(ctx, headX, paneY, paneW, paneH, 20, 'rgba(15, 23, 42, 0.96)', scoreColor, 2.2);
+
+                drawBox(ctx, headX + 20, paneY + 20, 190, 26, 6, 'rgba(6, 182, 212, 0.15)', 'rgba(6, 182, 212, 0.5)', 1);
+                ctx.fillStyle = '#38bdf8';
+                ctx.font = 'bold 11px ui-monospace, SFMono-Regular, monospace';
+                ctx.fillText("TARGET PERIMETER RECON", headX + 30, paneY + 37);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 24px system-ui, -apple-system, sans-serif';
+                ctx.fillText(resolvedDomain.toUpperCase().slice(0, 26), headX + 20, paneY + 80);
+
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '13px system-ui, -apple-system, sans-serif';
+                ctx.fillText("RFC-8484 DNS & Subdomain Attack Surface", headX + 20, paneY + 104);
+
+                const gRadius = 44;
+                const gX = headX + paneW - gRadius - 28;
+                const gY = paneY + 74;
+                ctx.strokeStyle = 'rgba(51, 65, 85, 0.7)';
+                ctx.lineWidth = 8;
+                ctx.beginPath();
+                ctx.arc(gX, gY, gRadius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                const sAngle = (activeScore / 100) * (Math.PI * 2);
+                ctx.strokeStyle = scoreColor;
+                ctx.lineWidth = 8;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.arc(gX, gY, gRadius, -Math.PI / 2, -Math.PI / 2 + sAngle);
+                ctx.stroke();
+                ctx.lineCap = 'butt';
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 22px ui-monospace, SFMono-Regular, monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(String(activeScore), gX, gY + 3);
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = 'bold 10px ui-monospace, SFMono-Regular, monospace';
+                ctx.fillText("/100", gX, gY + 18);
+                ctx.textAlign = 'left';
+
+                drawBox(ctx, headX + 20, paneY + 128, 140, 36, 8, activeScore >= 80 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)', scoreColor, 1.6);
+                ctx.fillStyle = scoreColor;
+                ctx.font = 'bold 16px ui-monospace, SFMono-Regular, monospace';
+                ctx.fillText(`GRADE: ${activeGrade}`, headX + 34, paneY + 152);
+
+                const badgeW = (paneW - 40 - 16) / 3;
+                const badgeH = 92;
+                const badgeY = paneY + 180;
+                const badges = [
+                    { title: "DMARC", val: dmarcStatus === "PASS" ? "ENFORCED" : (dmarcStatus === "MISSING" ? "MISSING" : "MONITOR"), sub: "RFC-7489", ok: dmarcStatus === "PASS" },
+                    { title: "SPF", val: spfStatus === "PASS" ? "VALIDATED" : (spfStatus === "MISSING" ? "FAIL" : "SOFTFAIL"), sub: "RFC-7208", ok: spfStatus === "PASS" },
+                    { title: "TAKEOVER", val: isCnameOk ? "HARDENED" : "DANGLING", sub: isCnameOk ? "0 Dangling" : "Action Req", ok: isCnameOk }
+                ];
+
+                badges.forEach((b, idx) => {
+                    const bx = headX + 20 + idx * (badgeW + 8);
+                    const col = b.ok ? '#10b981' : '#ef4444';
+                    drawBox(ctx, bx, badgeY, badgeW, badgeH, 12, 'rgba(2, 6, 23, 0.75)', col, 1.2);
+
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.font = 'bold 11px ui-monospace, SFMono-Regular, monospace';
+                    ctx.fillText(b.title, bx + 12, badgeY + 24);
+
+                    ctx.fillStyle = col;
+                    ctx.font = 'bold 13px system-ui, -apple-system, sans-serif';
+                    ctx.fillText(`● ${b.val}`, bx + 12, badgeY + 50);
+
+                    ctx.fillStyle = '#64748b';
+                    ctx.font = '10px ui-monospace, SFMono-Regular, monospace';
+                    ctx.fillText(b.sub, bx + 12, badgeY + 74);
+                });
+
+                const commsBoxY = paneY + 290;
+                const commsBoxH = 195;
+                drawBox(ctx, headX + 20, commsBoxY, paneW - 40, commsBoxH, 14, 'rgba(11, 19, 43, 0.95)', '#34d399', 1.5);
+
+                ctx.fillStyle = '#34d399';
+                ctx.font = 'bold 12px ui-monospace, SFMono-Regular, monospace';
+                ctx.fillText("🐱 ASTRO-CAT // ZERO-G TELEMETRY", headX + 36, commsBoxY + 30);
+
+                ctx.fillStyle = '#f8fafc';
+                ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
+                ctx.fillText(`Perimeter hardened for ${resolvedDomain}!`, headX + 36, commsBoxY + 64);
+                ctx.fillText(`Score ${activeScore}/100 Grade ${activeGrade} • Zero takeover vectors.`, headX + 36, commsBoxY + 90);
+                ctx.fillText(`RFC-8484 DNS-over-HTTPS passive surveillance active.`, headX + 36, commsBoxY + 116);
+
+                // Right Pane
+                const rightPaneX = headX + paneW + 18;
+                drawBox(ctx, rightPaneX, paneY, paneW, paneH, 20, 'rgba(11, 19, 43, 0.95)', '#06b6d4', 2.2);
+
+                ctx.fillStyle = '#38bdf8';
+                ctx.font = 'bold 12px ui-monospace, SFMono-Regular, monospace';
+                ctx.fillText("TACTICAL ZERO-G RADAR // AZIMUTH SWEEP", rightPaneX + 24, paneY + 32);
+
+                const rCx = rightPaneX + paneW / 2;
+                const rCy = paneY + paneH / 2 + 10;
+                const rRadius = 175;
+
+                [0.33, 0.66, 1.0].forEach((scale, i) => {
+                    ctx.strokeStyle = 'rgba(16, 185, 129, 0.3)';
+                    ctx.lineWidth = 1.4;
+                    ctx.beginPath();
+                    ctx.arc(rCx, rCy, rRadius * scale, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    ctx.fillStyle = 'rgba(16, 185, 129, 0.6)';
+                    ctx.font = '10px ui-monospace, SFMono-Regular, monospace';
+                    ctx.fillText(["10 NM", "25 NM", "50 NM"][i], rCx + 8, rCy - rRadius * scale + 14);
+                });
+
+                ctx.strokeStyle = 'rgba(16, 185, 129, 0.2)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(rCx - rRadius, rCy); ctx.lineTo(rCx + rRadius, rCy);
+                ctx.moveTo(rCx, rCy - rRadius); ctx.lineTo(rCx, rCy + rRadius);
+                ctx.stroke();
+
+                const sweep = (frameCount * 0.055) % (Math.PI * 2);
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(rCx, rCy);
+                ctx.arc(rCx, rCy, rRadius, sweep - 0.7, sweep, false);
+                ctx.closePath();
+                const beamGrad = ctx.createRadialGradient(rCx, rCy, 0, rCx, rCy, rRadius);
+                beamGrad.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
+                beamGrad.addColorStop(1, 'rgba(16, 185, 129, 0.02)');
+                ctx.fillStyle = beamGrad;
+                ctx.fill();
+                ctx.restore();
+
+                ctx.strokeStyle = '#34d399';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(rCx, rCy);
+                ctx.lineTo(rCx + Math.cos(sweep) * rRadius, rCy + Math.sin(sweep) * rRadius);
+                ctx.stroke();
+
+                [
+                    { a: 0.8, d: 0.5, label: "DNS: SECURE", col: "#10b981" },
+                    { a: 2.6, d: 0.78, label: "SPF: PASS", col: "#38bdf8" },
+                    { a: 4.5, d: 0.85, label: "DMARC: REJECT", col: "#a855f7" }
+                ].forEach(b => {
+                    const bx = rCx + Math.cos(b.a) * (rRadius * b.d);
+                    const by = rCy + Math.sin(b.a) * (rRadius * b.d);
+                    ctx.fillStyle = b.col;
+                    ctx.beginPath();
+                    ctx.arc(bx, by, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = b.col;
+                    ctx.lineWidth = 1.2;
+                    ctx.beginPath();
+                    ctx.arc(bx, by, 9 + Math.sin(frameCount * 0.15 + b.a) * 3, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#cbd5e1';
+                    ctx.font = 'bold 10px ui-monospace, SFMono-Regular, monospace';
+                    ctx.fillText(b.label, bx + 12, by + 4);
+                });
+
+                const catX = rCx + Math.sin(frameCount * 0.04) * 60;
+                const catY = rCy + Math.cos(frameCount * 0.045) * 50;
+                const catScale = 2.3;
+
+                if (frameCount % 2 === 0) {
+                    clipSparks.push({
+                        x: catX + (Math.random() * 12 - 6),
+                        y: catY + 28 * catScale,
+                        vx: (Math.random() - 0.5) * 1.5,
+                        vy: Math.random() * 2 + 1.2,
+                        size: Math.random() * 3 + 1.5,
+                        alpha: 1.0,
+                        color: Math.random() > 0.4 ? '#38bdf8' : '#fbbf24'
+                    });
+                }
+
+                for (let i = clipSparks.length - 1; i >= 0; i--) {
+                    const sp = clipSparks[i];
+                    sp.x += sp.vx;
+                    sp.y += sp.vy;
+                    sp.alpha -= 0.04;
+                    if (sp.alpha <= 0) {
+                        clipSparks.splice(i, 1);
+                        continue;
+                    }
+                    ctx.fillStyle = sp.color;
+                    ctx.globalAlpha = sp.alpha;
+                    ctx.fillRect(sp.x, sp.y, sp.size, sp.size);
+                }
+                ctx.globalAlpha = 1.0;
+
+                drawAstroCat(ctx, catX, catY, catScale, frameCount);
+
+                ctx.fillStyle = '#10b981';
+                ctx.font = 'bold 15px ui-monospace, SFMono-Regular, monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText("🌐 cmfh009.github.io/Orbit-Security   •   𝕏 @OrbitSecurity", w / 2, h - 24);
+                ctx.textAlign = 'left';
             }
 
-            // ---------------------------------------------------------------
-            // 6. BRANDING & FOOTER CTA BAR
-            // ---------------------------------------------------------------
-            const footY = h - (isPortrait ? 60 : 44);
-            ctx.fillStyle = '#10b981';
-            ctx.font = 'bold 15px "Courier New", Courier, monospace';
-            ctx.textAlign = 'center';
-            ctx.fillText("🌐 cmfh009.github.io/Orbit-Security   •   𝕏 @OrbitSecurity", w / 2, footY);
-            ctx.textAlign = 'left';
-
-            // ---------------------------------------------------------------
-            // 7. CRT SCANLINES & PHOSPHOR OVERLAY
-            // ---------------------------------------------------------------
-            drawRetroCrtOverlay(ctx, w, h);
-
-            ctx.restore();
+            // Subtle Cinematic Vignette (Zero destructive scanlines!)
+            const vig = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.55, w / 2, h / 2, Math.max(w, h) * 0.8);
+            vig.addColorStop(0, 'rgba(2, 6, 23, 0)');
+            vig.addColorStop(1, 'rgba(2, 6, 23, 0.55)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, w, h);
         };
 
         renderFrame();
@@ -3096,6 +3138,7 @@
         const streamFn = canvas.captureStream || canvas.webkitCaptureStream || canvas.mozCaptureStream;
         if (!streamFn) {
             clearInterval(canvasInterval);
+            if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
             throw new Error("Canvas captureStream is not supported on this browser.");
         }
         const stream = streamFn.call(canvas, 30);
@@ -3104,6 +3147,9 @@
             const origStop = track.stop.bind(track);
             track.stop = () => {
                 clearInterval(canvasInterval);
+                if (canvas.parentNode) {
+                    canvas.parentNode.removeChild(canvas);
+                }
                 origStop();
             };
         });
@@ -3359,7 +3405,7 @@
             }
 
             const recorderOptions = {
-                videoBitsPerSecond: 2500000
+                videoBitsPerSecond: usingMobileCanvasFallback ? 6000000 : 2500000
             };
             if (chosenMime) recorderOptions.mimeType = chosenMime;
 
