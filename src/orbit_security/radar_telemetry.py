@@ -293,6 +293,48 @@ def format_discord_radar_embed(
     ]
 
     if enrich:
+        def _as_int(value: Any, default: int = 0) -> int:
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return default
+
+        history = enrich.get("enrichment_history") or []
+        probe_count = _as_int(enrich.get("probe_count"), len(history) or 1)
+        score_delta = _as_int(enrich.get("score_delta"), 0)
+        previous_score = enrich.get("previous_score")
+        previous_score = score if previous_score is None else previous_score
+        current_score = score if score is not None else enrich.get("computed_score", "?")
+
+        if enrich.get("is_buying_signal"):
+            reason = (
+                f"Posture regressed `{abs(score_delta)} pts` since the last probe"
+                if score_delta <= -10
+                else "Sustained repeat research intent"
+            )
+            fields.insert(
+                0,
+                {
+                    "name": "🔥 BUYING SIGNAL DETECTED",
+                    "value": (
+                        f"**Repeat Probe #{probe_count}** • Delta: `{score_delta:+d} pts` "
+                        f"({previous_score} → {current_score})\n{reason}"
+                    ),
+                    "inline": False,
+                },
+            )
+        elif probe_count >= 2:
+            fields.append(
+                {
+                    "name": "📈 Re-Scan Score Delta",
+                    "value": (
+                        f"Probe #{probe_count} • Delta: `{score_delta:+d} pts` "
+                        f"({previous_score} → {current_score})"
+                    ),
+                    "inline": False,
+                }
+            )
+
         company = enrich.get("company_profile", {}).get("company_name") or domain
         registrar = enrich.get("registrar") or "Unknown"
         stack = ", ".join(enrich.get("tech_stack") or ["Standard Web"])

@@ -540,6 +540,51 @@ class RadarLeadEnricher:
                 except Exception as ex:
                     logger.warning("Failed to read enriched leads file %s: %s", self.leads_file, ex)
 
+            existing = data.get(domain)
+            existing = existing if isinstance(existing, dict) else {}
+
+            # Rolling re-scan history: keep the last 12 snapshots so repeat probes
+            # can be diffed without unbounded leads.json growth.
+            history = [
+                snapshot
+                for snapshot in (existing.get("enrichment_history") or [])
+                if isinstance(snapshot, dict)
+            ]
+
+            try:
+                current_score = int(record.get("computed_score") or 0)
+            except (TypeError, ValueError):
+                current_score = 0
+
+            try:
+                previous_score = int(history[-1].get("score")) if history else current_score
+            except (TypeError, ValueError):
+                previous_score = current_score
+
+            score_delta = current_score - previous_score
+
+            history.append(
+                {
+                    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                    "score": current_score,
+                    "grade": record.get("computed_grade", "U"),
+                    "dmarc_status": record.get("dmarc_status", "unknown"),
+                    "spf_status": record.get("spf_status", "unknown"),
+                }
+            )
+            history = history[-12:]
+
+            probe_count = len(history)
+            # Buying signal: posture regression of >= 10 pts (likely abandoned
+            # vendor/agency) OR 3+ probes (sustained research intent).
+            is_buying_signal = probe_count >= 3 or score_delta <= -10
+
+            record["enrichment_history"] = history
+            record["previous_score"] = previous_score
+            record["score_delta"] = score_delta
+            record["probe_count"] = probe_count
+            record["is_buying_signal"] = is_buying_signal
+
             data[domain] = record
             tmp = self.leads_file.with_suffix(".tmp")
             try:
