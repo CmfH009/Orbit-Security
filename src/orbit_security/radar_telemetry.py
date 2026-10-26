@@ -23,7 +23,9 @@ import argparse
 from dataclasses import asdict, dataclass
 import datetime
 import hashlib
+import hmac
 import http.server
+import ipaddress
 import json
 import logging
 import os
@@ -60,6 +62,42 @@ RESTRICTED_DOMAINS = {
     "lan",
     "home.arpa",
 }
+
+
+_RFC1918_NETWORKS = (
+    ipaddress.IPv4Network("10.0.0.0/8"),
+    ipaddress.IPv4Network("172.16.0.0/12"),
+    ipaddress.IPv4Network("192.168.0.0/16"),
+)
+
+
+def anonymize_client_ip(ip_raw: Optional[str]) -> Optional[str]:
+    """GDPR/CCPA-compliant IP anonymizer: masks public IPv4 to /24 and IPv6 to /48 + SHA-256 token.
+
+    Loopback and RFC1918 LAN addresses are preserved for local diagnostics and unit testing.
+    Raw public visitor IP addresses are never persisted to disk logs.
+    """
+    if not ip_raw:
+        return None
+    clean = str(ip_raw).split(",")[0].strip()
+    if not clean:
+        return None
+    try:
+        ip_obj = ipaddress.ip_address(clean)
+        if ip_obj.is_loopback or (
+            isinstance(ip_obj, ipaddress.IPv4Address)
+            and any(ip_obj in net for net in _RFC1918_NETWORKS)
+        ):
+            return str(ip_obj)
+        salt = os.environ.get("ORBIT_IP_SALT", "orbit-privacy-shield-v1")
+        token = hashlib.sha256(f"{salt}:{clean}".encode("utf-8")).hexdigest()[:8]
+        if isinstance(ip_obj, ipaddress.IPv4Address):
+            net = ipaddress.IPv4Network(f"{clean}/24", strict=False)
+            return f"{net.network_address}/24#{token}"
+        net6 = ipaddress.IPv6Network(f"{clean}/48", strict=False)
+        return f"{net6.network_address}/48#{token}"
+    except ValueError:
+        return "anon#invalid"
 
 
 def parse_user_agent_summary(
@@ -402,7 +440,8 @@ class RadarTelemetryService:
         is_lookup_failed = bool(audit.get("is_lookup_failed") or event_data.get("is_lookup_failed"))
 
         # Deterministic unique query ID
-        hash_seed = f"{domain}:{now_epoch}:{session_id}:{client_ip}:{trigger_source}"
+        safe_ip = anonymize_client_ip(client_ip)
+        hash_seed = f"{domain}:{now_epoch}:{session_id}:{safe_ip}:{trigger_source}"
         query_id = f"rad_{int(now_epoch)}_{hashlib.sha256(hash_seed.encode('utf-8')).hexdigest()[:8]}"
 
         record = RadarQueryRecord(
@@ -425,7 +464,7 @@ class RadarTelemetryService:
             referrer=str(event_data.get("referrer") or "")[:256] or None,
             user_agent=str(event_data.get("user_agent") or "")[:256] or None,
             screen_resolution=str(event_data.get("screen_resolution") or "")[:32] or None,
-            client_ip=str(client_ip)[:64] if client_ip else None,
+            client_ip=str(safe_ip)[:64] if safe_ip else None,
         )
 
         record_dict = record.to_dict()
@@ -829,6 +868,57 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
     """Zero-dependency HTTP handler for incoming telemetry beacons from the browser."""
 
     service = RadarTelemetryService()
+    MAX_POST_BODY_BYTES = 16384
+    MAX_REQUESTS_PER_MINUTE = 30
+    _rate_lock = threading.Lock()
+    _rate_buckets: Dict[str, List[float]] = {}
+
+    def _extract_client_ip(self) -> str:
+        xff = self.headers.get("X-Forwarded-For", "").strip()
+        if xff:
+            return xff.split(",")[0].strip()
+        xrip = self.headers.get("X-Real-IP", "").strip()
+        if xrip:
+            return xrip
+        return self.client_address[0] if hasattr(self, "client_address") and self.client_address else "127.0.0.1"
+
+    def _is_authorized_reader(self) -> bool:
+        """Restricts sensitive GET inspection endpoints (/leads, /deliverable, /telemetry) to loopback or Bearer auth."""
+        auth_header = self.headers.get("Authorization", "").strip()
+        expected_token = os.environ.get("ORBIT_TELEMETRY_TOKEN", "").strip()
+        if expected_token and auth_header.startswith("Bearer "):
+            provided = auth_header[7:].strip()
+            if hmac.compare_digest(provided, expected_token):
+                return True
+
+        # Reject unauthenticated read attempts arriving over public reverse tunnels
+        if self.headers.get("X-Forwarded-For") or self.headers.get("X-Real-IP"):
+            return False
+        host_hdr = (self.headers.get("Host") or "").lower().split(":")[0]
+        if host_hdr.endswith((".lhr.life", ".localhost.run", ".ngrok.io", ".ngrok-free.app", ".trycloudflare.com")):
+            return False
+
+        raw_ip = self.client_address[0] if hasattr(self, "client_address") and self.client_address else "127.0.0.1"
+        return raw_ip in ("127.0.0.1", "::1", "localhost")
+
+    @classmethod
+    def _check_rate_limit(cls, client_ip: str) -> bool:
+        now = time.time()
+        key = anonymize_client_ip(client_ip) or client_ip
+        with cls._rate_lock:
+            timestamps = [t for t in cls._rate_buckets.get(key, []) if (now - t) < 60.0]
+            if len(timestamps) >= cls.MAX_REQUESTS_PER_MINUTE:
+                cls._rate_buckets[key] = timestamps
+                return False
+            timestamps.append(now)
+            cls._rate_buckets[key] = timestamps
+            if len(cls._rate_buckets) > 500:
+                cls._rate_buckets = {
+                    k: [t for t in v if (now - t) < 60.0]
+                    for k, v in cls._rate_buckets.items()
+                    if any((now - t) < 60.0 for t in v)
+                }
+            return True
 
     def send_cors_headers(self, status: int = 200, content_type: str = "application/json"):
         origin = self.headers.get("Origin", "*")
@@ -842,6 +932,19 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
         )
         self.send_header("Access-Control-Allow-Private-Network", "true")
         self.send_header("Access-Control-Max-Age", "86400")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Cache-Control", "no-store")
+
+    def _send_json_error(self, status: int, message: str):
+        body = json.dumps({"ok": False, "error": message}).encode("utf-8")
+        self.send_cors_headers(status, "application/json")
+        if status == 429:
+            self.send_header("Retry-After", "60")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def do_OPTIONS(self):
         self.send_cors_headers(200, "text/plain")
@@ -849,9 +952,29 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
+        if parsed.path in ("/api/health", "/health"):
+            body = b'{"status": "ok", "service": "orbit-radar-telemetry"}'
+            self.send_cors_headers(200, "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
+        if parsed.path in (
+            "/api/orbit/radar/telemetry",
+            "/api/radar/telemetry",
+            "/api/orbit/radar/leads",
+            "/api/radar/leads",
+            "/api/orbit/radar/deliverable",
+            "/api/radar/deliverable",
+        ):
+            if not self._is_authorized_reader():
+                self._send_json_error(403, "Forbidden: loopback or Bearer token required for telemetry inspection")
+                return
+
         if parsed.path in ("/api/orbit/radar/telemetry", "/api/radar/telemetry"):
             q_params = urllib.parse.parse_qs(parsed.query)
-            limit = int(q_params.get("limit", [50])[0])
+            limit = max(1, min(200, int(q_params.get("limit", [50])[0])))
             domain = q_params.get("domain", [None])[0]
             queries = self.service.get_recent_queries(limit=limit, domain=domain)
             stats = self.service.get_query_stats()
@@ -862,7 +985,7 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(body)
         elif parsed.path in ("/api/orbit/radar/leads", "/api/radar/leads"):
             q_params = urllib.parse.parse_qs(parsed.query)
-            limit = int(q_params.get("limit", [50])[0])
+            limit = max(1, min(200, int(q_params.get("limit", [50])[0])))
             leads = self.service.get_enriched_leads_summary(limit=limit)
             stats = self.service.get_query_stats()
             body = json.dumps({"ok": True, "count": len(leads), "stats": stats, "leads": leads}).encode("utf-8")
@@ -889,12 +1012,6 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
-        elif parsed.path in ("/api/health", "/health"):
-            body = b'{"status": "ok", "service": "orbit-radar-telemetry"}'
-            self.send_cors_headers(200, "application/json")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
         else:
             self.send_cors_headers(404, "text/plain")
             self.end_headers()
@@ -903,19 +1020,30 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path in ("/api/orbit/radar/telemetry", "/api/radar/telemetry"):
-            try:
-                content_length = int(self.headers.get("Content-Length", 0))
-                raw_body = self.rfile.read(content_length).decode("utf-8") if content_length > 0 else "{}"
-                data = json.loads(raw_body)
-            except Exception as ex:
-                err_body = json.dumps({"ok": False, "error": f"Invalid JSON payload: {ex}"}).encode("utf-8")
-                self.send_cors_headers(400, "application/json")
-                self.send_header("Content-Length", str(len(err_body)))
-                self.end_headers()
-                self.wfile.write(err_body)
+            client_ip = self._extract_client_ip()
+            if not self._check_rate_limit(client_ip):
+                self._send_json_error(429, "Rate limit exceeded (max 30 telemetry events per minute)")
                 return
 
-            client_ip = self.client_address[0] if hasattr(self, "client_address") and self.client_address else "127.0.0.1"
+            try:
+                content_length = int(self.headers.get("Content-Length", 0))
+            except ValueError:
+                self._send_json_error(400, "Invalid Content-Length header")
+                return
+
+            if content_length < 0 or content_length > self.MAX_POST_BODY_BYTES:
+                self._send_json_error(413, f"Payload exceeds {self.MAX_POST_BODY_BYTES} byte limit")
+                return
+
+            try:
+                raw_body = self.rfile.read(content_length).decode("utf-8") if content_length > 0 else "{}"
+                data = json.loads(raw_body)
+                if not isinstance(data, dict):
+                    raise ValueError("Payload must be a JSON object")
+            except Exception as ex:
+                self._send_json_error(400, f"Invalid JSON payload: {ex}")
+                return
+
             res = self.service.record_query(data, client_ip=client_ip)
             status_code = 200 if res.get("ok") else 400
             body = json.dumps(res).encode("utf-8")

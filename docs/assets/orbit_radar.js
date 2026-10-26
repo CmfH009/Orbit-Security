@@ -765,6 +765,33 @@
     const TELEMETRY_SESSION_KEY = 'orbit_radar_session_id';
     const TELEMETRY_ENDPOINT_STORAGE_KEY = 'orbit_telemetry_endpoint';
     const TELEMETRY_WEBHOOK_STORAGE_KEY = 'orbit_radar_webhook';
+    const TELEMETRY_OPTOUT_STORAGE_KEY = 'orbit_radar_telemetry_optout';
+
+    function isTelemetryOptedOut() {
+        try {
+            if (typeof window !== 'undefined') {
+                if (window.ORBIT_DISABLE_TELEMETRY === true) return true;
+                if (window.location && window.location.search) {
+                    const p = new URLSearchParams(window.location.search).get('telemetry');
+                    if (p === 'off' || p === '0' || p === 'false') {
+                        try { localStorage.setItem(TELEMETRY_OPTOUT_STORAGE_KEY, '1'); } catch (_) {}
+                        return true;
+                    }
+                    if (p === 'on' || p === '1' || p === 'true') {
+                        try { localStorage.removeItem(TELEMETRY_OPTOUT_STORAGE_KEY); } catch (_) {}
+                        return false;
+                    }
+                }
+            }
+            if (typeof localStorage !== 'undefined' && localStorage.getItem) {
+                if (localStorage.getItem(TELEMETRY_OPTOUT_STORAGE_KEY) === '1') return true;
+            }
+            if (typeof navigator !== 'undefined' && navigator.globalPrivacyControl === true) {
+                return true;
+            }
+        } catch (_) {}
+        return false;
+    }
 
     function getOrCreateSessionId() {
         try {
@@ -815,7 +842,7 @@
                 if (storedEp) addEp(storedEp);
                 if (window.location && window.location.search) {
                     const u = new URLSearchParams(window.location.search).get('telemetry');
-                    if (u) {
+                    if (u && !['off', '0', 'false'].includes(u.toLowerCase())) {
                         addEp(u);
                         localStorage.setItem(TELEMETRY_ENDPOINT_STORAGE_KEY, u);
                     }
@@ -828,7 +855,7 @@
             }
 
             // 3. Public HTTPS Telemetry Tunnel
-            addEp('https://93ac679bcacf1b.lhr.life/api/orbit/radar/telemetry');
+            addEp('https://21ebe34e0d176c.lhr.life/api/orbit/radar/telemetry');
 
             // 4. Localhost collector fallbacks (Cockpit on 9090, Standalone CLI Receiver on 9095)
             addEp('http://127.0.0.1:9090/api/orbit/radar/telemetry');
@@ -879,8 +906,12 @@
 
         recordLocalProbe(payload);
 
+        // Respect Global Privacy Control (GPC), ?telemetry=off, and localStorage opt-out
+        const optedOut = isTelemetryOptedOut();
+        payload.network_dispatched = !optedOut;
+
         // Safe fire-and-forget network dispatch to available telemetry collectors
-        if (typeof window !== 'undefined') {
+        if (typeof window !== 'undefined' && !optedOut) {
             const endpoints = getTelemetryEndpoints();
             const jsonStr = JSON.stringify(payload);
 
@@ -955,7 +986,26 @@
             if (typeof window !== 'undefined') window.ORBIT_RADAR_WEBHOOK = url;
             return url;
         },
-        getEndpoints: getTelemetryEndpoints
+        getEndpoints: getTelemetryEndpoints,
+        isOptedOut: isTelemetryOptedOut,
+        optOut: function() {
+            try {
+                if (typeof localStorage !== 'undefined' && localStorage.setItem) {
+                    localStorage.setItem(TELEMETRY_OPTOUT_STORAGE_KEY, '1');
+                }
+            } catch (_) {}
+            if (typeof window !== 'undefined') window.ORBIT_DISABLE_TELEMETRY = true;
+            return true;
+        },
+        optIn: function() {
+            try {
+                if (typeof localStorage !== 'undefined' && localStorage.removeItem) {
+                    localStorage.removeItem(TELEMETRY_OPTOUT_STORAGE_KEY);
+                }
+            } catch (_) {}
+            if (typeof window !== 'undefined') window.ORBIT_DISABLE_TELEMETRY = false;
+            return false;
+        }
     };
     if (typeof window !== 'undefined') {
         window.OrbitRadarTelemetry = OrbitRadarTelemetry;

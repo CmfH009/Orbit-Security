@@ -576,3 +576,102 @@ class TestRadarLeadEnricherAndProposalStager:
         assert probe_hubs[0]["id"] == "radar:smartmouseco.com"
         assert probe_hubs[0]["color"] == "#00f0ff"
 
+    def test_security_ssrf_ip_anonymization_and_tunnel_access_control(self, tmp_path, monkeypatch):
+        import http.server
+        from orbit_security.radar_telemetry import anonymize_client_ip
+        from orbit_security.radar_lead_enricher import verify_public_target_host, _SafePassiveRedirectHandler
+
+        # 1. GDPR/CCPA IP anonymization: public IPs truncated & hashed; loopback/RFC1918 preserved
+        anon_v4 = anonymize_client_ip("203.0.113.45")
+        assert anon_v4 is not None
+        assert anon_v4.startswith("203.0.113.0/24#")
+        assert "45" not in anon_v4.split("#")[0]
+
+        anon_v6 = anonymize_client_ip("2001:db8:abcd:1234::1")
+        assert anon_v6 is not None
+        assert "/48#" in anon_v6
+
+        assert anonymize_client_ip("127.0.0.1") == "127.0.0.1"
+        assert anonymize_client_ip("192.168.1.100") == "192.168.1.100"
+
+        # 2. SSRF & Redirect protection
+        assert verify_public_target_host("localhost") is False
+        assert verify_public_target_host("127.0.0.1") is False
+        assert verify_public_target_host("169.254.169.254") is False
+        assert verify_public_target_host("100.64.0.1") is False
+
+        handler = _SafePassiveRedirectHandler()
+        dummy_req = urllib.request.Request("https://example.com")
+        with pytest.raises(urllib.error.URLError):
+            handler.redirect_request(
+                dummy_req, None, 302, "Found", {}, "http://127.0.0.1:9090/api/orbit/radar/leads"
+            )
+        with pytest.raises(urllib.error.URLError):
+            handler.redirect_request(
+                dummy_req, None, 302, "Found", {}, "http://169.254.169.254/latest/meta-data/"
+            )
+        with pytest.raises(urllib.error.URLError):
+            handler.redirect_request(
+                dummy_req, None, 302, "Found", {}, "file:///etc/passwd"
+            )
+
+        # 3. HTTP server tunnel access control & payload cap
+        monkeypatch.setenv("ORBIT_TELEMETRY_TOKEN", "sec_token_test_999")
+        service = RadarTelemetryService(
+            queries_file=tmp_path / "sec_queries.jsonl",
+            leads_file=tmp_path / "sec_leads.json",
+            campaigns_dir=tmp_path / "outbound_campaigns",
+        )
+
+        class BoundHandler(RadarTelemetryHTTPHandler):
+            pass
+
+        BoundHandler.service = service
+        httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), BoundHandler)
+        port = httpd.server_address[1]
+        t = threading.Thread(target=httpd.serve_forever, daemon=True)
+        t.start()
+
+        try:
+            # Direct loopback GET /api/orbit/radar/leads is allowed (200)
+            req_local = urllib.request.Request(f"http://127.0.0.1:{port}/api/orbit/radar/leads")
+            with urllib.request.urlopen(req_local, timeout=5) as resp:
+                assert resp.status == 200
+                assert resp.headers.get("X-Content-Type-Options") == "nosniff"
+                assert resp.headers.get("X-Frame-Options") == "DENY"
+
+            # Forwarded public tunnel GET /api/orbit/radar/leads without Bearer token is blocked (403)
+            req_tunnel_unauth = urllib.request.Request(
+                f"http://127.0.0.1:{port}/api/orbit/radar/leads",
+                headers={"X-Forwarded-For": "203.0.113.88"},
+            )
+            with pytest.raises(urllib.error.HTTPError) as exc_info:
+                urllib.request.urlopen(req_tunnel_unauth, timeout=5)
+            assert exc_info.value.code == 403
+
+            # Forwarded public tunnel GET /api/orbit/radar/leads WITH valid Bearer token is allowed (200)
+            req_tunnel_auth = urllib.request.Request(
+                f"http://127.0.0.1:{port}/api/orbit/radar/leads",
+                headers={
+                    "X-Forwarded-For": "203.0.113.88",
+                    "Authorization": "Bearer sec_token_test_999",
+                },
+            )
+            with urllib.request.urlopen(req_tunnel_auth, timeout=5) as resp_auth:
+                assert resp_auth.status == 200
+
+            # Oversized POST (>16KB) is rejected with 413
+            huge_body = json.dumps({"domain": "shopify.com", "pad": "A" * 20000}).encode("utf-8")
+            req_huge = urllib.request.Request(
+                f"http://127.0.0.1:{port}/api/orbit/radar/telemetry",
+                data=huge_body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with pytest.raises(urllib.error.HTTPError) as exc_413:
+                urllib.request.urlopen(req_huge, timeout=5)
+            assert exc_413.value.code == 413
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+

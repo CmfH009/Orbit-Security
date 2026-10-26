@@ -11,7 +11,10 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set
 from urllib.parse import urlparse
 
-DEFAULT_RESOURCES_PATH = Path(r"A:\reference\public-apis\db\resources.json")
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+_LOCAL_REF_PATH = Path(r"A:\reference\public-apis\db\resources.json")
+_BUNDLED_RESOURCES_PATH = _REPO_ROOT / "data" / "public_apis_resources.json"
+DEFAULT_RESOURCES_PATH = _LOCAL_REF_PATH if _LOCAL_REF_PATH.exists() else _BUNDLED_RESOURCES_PATH
 
 # Core categories in public-apis relevant to OSINT, network recon, and perimeter intelligence
 SECURITY_OSINT_CATEGORIES = frozenset([

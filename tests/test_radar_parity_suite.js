@@ -350,6 +350,15 @@ async function runTests() {
     const updatedProbes = sandbox.window.OrbitRadarTelemetry.getRecentProbes();
     assert(updatedProbes[0].domain === 'cmfh009.github.io', 'setScanTarget dispatched probe telemetry for cmfh009.github.io');
 
+    // Test GDPR/CCPA & Global Privacy Control opt-out / opt-in API
+    assert(sandbox.window.OrbitRadarTelemetry.isOptedOut() === false, 'Telemetry is opted-in by default');
+    sandbox.window.OrbitRadarTelemetry.optOut();
+    assert(sandbox.window.OrbitRadarTelemetry.isOptedOut() === true, 'optOut() enables telemetry opt-out');
+    const optedOutEvent = sandbox.window.dispatchRadarTelemetry('privacy-first.org', 'optout_test');
+    assert(optedOutEvent.network_dispatched === false, 'Opted-out probe suppresses external network dispatch');
+    sandbox.window.OrbitRadarTelemetry.optIn();
+    assert(sandbox.window.OrbitRadarTelemetry.isOptedOut() === false, 'optIn() restores telemetry dispatch');
+
     console.log(`\n========================================`);
     console.log(`ALL ${passed}/${total} AUDIT ENGINE & PDF PARITY TESTS PASSED!`);
     console.log(`========================================`);

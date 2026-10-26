@@ -69,18 +69,18 @@
                 </p>
             </section>
 
-            <!-- Section 2: Zero-Server Scanning Guarantee -->
+            <!-- Section 2: Client-Side DoH Execution & Passive Telemetry Governance -->
             <section class="space-y-3">
                 <h2 class="text-lg font-bold text-white flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                    2. Information We Collect & Zero-Server Scanning Guarantee
+                    2. Information We Collect &amp; Passive Telemetry Governance
                 </h2>
-                <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 mb-3 space-y-1">
+                <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 mb-3 space-y-1.5">
                     <div class="font-bold uppercase tracking-wider flex items-center gap-1.5">
-                        <span>🛡️ Zero-Server Logging Guarantee for Browser Scans:</span>
+                        <span>🛡️ Client-Side DoH Execution &amp; Zero-PII Telemetry Architecture:</span>
                     </div>
                     <p class="text-slate-200">
-                        When you enter a domain into the Orbit Radar Terminal on our landing page or Fleet Command Center, the lookup is performed <strong>100% within your client browser</strong> using RFC 8484 DNS-over-HTTPS. Orbit Security's web servers never receive, store, or log the target domains you analyze.
+                        When you enter a domain into the Orbit Radar Terminal, all DNS, DMARC, SPF, and CNAME resolutions execute directly in your browser using RFC 8484 DNS-over-HTTPS (<code class="text-emerald-300">dns.google</code> and <code class="text-emerald-300">cloudflare-dns.com</code>), and PDF reports compile locally in browser memory. To support security posture analytics, vulnerability triage, and optional remediation guidance, the public terminal dispatches a minimal passive telemetry beacon containing the audited domain name, hygiene score/grade, and non-identifying device viewport metadata. <strong>Raw visitor IP addresses are never stored on disk</strong> (all external IPs are immediately truncated to <code class="text-emerald-300">/24</code> IPv4 or <code class="text-emerald-300">/48</code> IPv6 subnets with a one-way SHA-256 rate-limit token). You may disable telemetry beacons at any time via <a href="index.html?telemetry=off" class="underline text-emerald-300 hover:text-white"><code>?telemetry=off</code></a>, <code class="text-emerald-300">OrbitRadarTelemetry.optOut()</code>, or browser Global Privacy Control (<code class="text-emerald-300">Sec-GPC: 1</code>).
                     </p>
                 </div>
                 <ul class="list-disc pl-6 space-y-2 text-slate-300 text-xs">

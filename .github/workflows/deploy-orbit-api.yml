@@ -33,7 +33,38 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check GCP Deployment Credentials
+        id: creds
+        env:
+          WIF_PROVIDER: ${{ secrets.GCP_WIF_PROVIDER }}
+          SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          GCP_PROJ: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          if [ -n "$WIF_PROVIDER" ] && [ -n "$SERVICE_ACCOUNT" ] && [ -n "$GCP_PROJ" ]; then
+            echo "gcp_configured=true" >> "$GITHUB_OUTPUT"
+            echo "GCP WIF credentials detected — proceeding with Cloud Run deployment."
+          else
+            echo "gcp_configured=false" >> "$GITHUB_OUTPUT"
+            echo "GCP WIF secrets not configured in this repository environment — running local Docker build verification gate only."
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Verify Production Container Image Build (Offline CI Gate)
+        if: steps.creds.outputs.gcp_configured != 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: orbit-api:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Authenticate to Google Cloud
+        if: steps.creds.outputs.gcp_configured == 'true'
         id: auth
         uses: google-github-actions/auth@v2
         with:
@@ -41,13 +72,12 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           token_format: access_token
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Configure Artifact Registry
+        if: steps.creds.outputs.gcp_configured == 'true'
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
 
       - name: Build & Push (SLSA Level 3 Provenance + SBOM)
+        if: steps.creds.outputs.gcp_configured == 'true'
         id: build
         uses: docker/build-push-action@v5
         with:
@@ -61,14 +91,17 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Sign Image with Cosign (Keyless)
+        if: steps.creds.outputs.gcp_configured == 'true'
         uses: sigstore/cosign-installer@v3
 
       - name: Sign Container Image
+        if: steps.creds.outputs.gcp_configured == 'true'
         run: |
           cosign sign --yes \
             ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/orbit-api:${{ github.sha }}
 
       - name: Verify Image Signature
+        if: steps.creds.outputs.gcp_configured == 'true'
         run: |
           cosign verify \
             --certificate-identity-regexp "https://github.com/${{ github.repository }}" \
@@ -76,6 +109,7 @@ jobs:
             ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/orbit-api:${{ github.sha }}
 
       - name: Deploy to Cloud Run (Gen2 + gVisor + Private Networking)
+        if: steps.creds.outputs.gcp_configured == 'true'
         run: |
           gcloud run deploy ${{ env.SERVICE }} \
             --image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/orbit-api:${{ github.sha }} \
@@ -96,6 +130,7 @@ jobs:
             --set-env-vars="PYTHONUNBUFFERED=1,PYTHONDONTWRITEBYTECODE=1"
 
       - name: Configure Cloud Armor WAF
+        if: steps.creds.outputs.gcp_configured == 'true'
         run: |
           # Create WAF policy (idempotent)
           gcloud compute security-policies create orbit-waf \

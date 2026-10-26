@@ -72,6 +72,9 @@ jobs:
       - name: Check landing/ -> docs/ parity
         run: python scripts/sync_landing_to_docs.py --check
 
+      - name: Run Radar Client Audit & Telemetry JS Parity Suite
+        run: node tests/test_radar_parity_suite.js
+
       - name: AST Code Sentinel & CISA KEV PR Security Gate
         run: |
           python src/orbit_security/ast_sentinel.py --check src/orbit_security

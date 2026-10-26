@@ -18,12 +18,15 @@ from __future__ import annotations
 
 import datetime
 import html as html_mod
+import ipaddress
 import json
 import logging
 from pathlib import Path
 import re
+import socket
 import threading
 from typing import Any, Dict, List, Optional, Set
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -36,6 +39,57 @@ logger = logging.getLogger("orbit_security.radar_lead_enricher")
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = REPO_ROOT / "data"
 DEFAULT_ENRICHED_LEADS_FILE = DATA_DIR / "radar_enriched_leads.json"
+
+_CGNAT_TAILSCALE_NET = ipaddress.ip_network("100.64.0.0/10")
+
+
+def verify_public_target_host(host: str) -> bool:
+    """Strictly verifies that a hostname resolves exclusively to public global unicast IPs.
+
+    Blocks loopback, RFC1918 private, link-local / cloud metadata (169.254.169.254),
+    CGNAT / Tailscale mesh (100.64.0.0/10), multicast, and reserved ranges.
+    """
+    clean = (host or "").strip().lower().split(":")[0].rstrip(".")
+    if not clean or not is_safe_host(clean):
+        return False
+    try:
+        infos = socket.getaddrinfo(clean, None)
+        if not infos:
+            return False
+        for item in infos:
+            ip_str = item[4][0]
+            ip_obj = ipaddress.ip_address(ip_str)
+            if (
+                not ip_obj.is_global
+                or ip_obj.is_private
+                or ip_obj.is_loopback
+                or ip_obj.is_link_local
+                or ip_obj.is_multicast
+                or ip_obj.is_reserved
+                or ip_obj.is_unspecified
+                or (isinstance(ip_obj, ipaddress.IPv4Address) and ip_obj in _CGNAT_TAILSCALE_NET)
+            ):
+                return False
+        return True
+    except Exception:
+        return False
+
+
+class _SafePassiveRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Blocks redirect-based SSRF and DNS rebinding across HTTP 3xx hops."""
+
+    max_redirections = 3
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        parsed = urllib.parse.urlparse(newurl)
+        if parsed.scheme not in ("http", "https"):
+            raise urllib.error.URLError(f"Blocked non-HTTP redirect scheme: {parsed.scheme}")
+        if parsed.port not in (None, 80, 443):
+            raise urllib.error.URLError(f"Blocked non-standard redirect port: {parsed.port}")
+        target_host = parsed.hostname or ""
+        if not verify_public_target_host(target_host):
+            raise urllib.error.URLError(f"Blocked SSRF redirect to non-public target: {target_host}")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
 def _humanize_domain_brand(domain: str) -> str:
@@ -188,22 +242,26 @@ class RadarLeadEnricher:
             "description": "",
             "http_server": "",
         }
-        if not is_safe_host(domain):
+        if not verify_public_target_host(domain):
             return info
 
+        safe_opener = urllib.request.build_opener(_SafePassiveRedirectHandler())
         for scheme in ("https", "http"):
             url = f"{scheme}://{domain}"
             req = urllib.request.Request(
                 url,
                 headers={
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) OrbitSecurity-OSINT/1.0",
+                    "User-Agent": (
+                        "OrbitSecurity-PerimeterRadar/1.0 "
+                        "(+https://cmfh009.github.io/Orbit-Security/.well-known/security.txt; passive-hygiene-audit)"
+                    ),
                     "Accept": "text/html,application/xhtml+xml",
                 },
             )
             try:
-                with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                with safe_opener.open(req, timeout=self.timeout) as resp:
                     headers = {k.lower(): v for k, v in resp.headers.items()}
-                    raw_html = resp.read(65536).decode("utf-8", errors="ignore")
+                    raw_html = resp.read(32768).decode("utf-8", errors="ignore")
 
                     stack: Set[str] = set()
                     server = headers.get("server", "")
