@@ -520,3 +520,59 @@ class TestRadarLeadEnricherAndProposalStager:
         assert "Subject:" in pitch_text
         assert "smartmouseco.com" in pitch_text
 
+    def test_leads_summary_deliverable_reader_and_attack_graph_projection(self, tmp_path):
+        from orbit_security.bounty_graph import BountyAttackGraph
+
+        service = RadarTelemetryService(
+            queries_file=tmp_path / "queries.jsonl",
+            leads_file=tmp_path / "leads.json",
+            campaigns_dir=tmp_path / "outbound_campaigns",
+        )
+        res = service.record_query(
+            {
+                "domain": "smartmouseco.com",
+                "score": 68,
+                "grade": "C",
+                "dmarc_status": "missing",
+                "spf_status": "pass",
+                "user_agent": "Mozilla/5.0 (Linux; Android 10; K) Chrome/155.0.0.0 Mobile",
+                "screen_resolution": "412x883",
+            },
+            enrich_async=False,
+            network_probe=False,
+        )
+        assert res["ok"] is True
+
+        leads = service.get_enriched_leads_summary(limit=10)
+        assert len(leads) == 1
+        lead = leads[0]
+        assert lead["domain"] == "smartmouseco.com"
+        assert lead["score"] == 68
+        assert lead["grade"] == "C"
+        assert lead["deliverables"]["staged"] is True
+        assert lead["deliverables"]["has_pdf"] is True
+        assert lead["deliverables"]["has_retainer_proposal"] is True
+
+        # Deliverable content reader
+        prop_doc = service.get_deliverable_content("smartmouseco.com", "retainer_proposal")
+        assert prop_doc["ok"] is True
+        assert "smartmouseco.com" in prop_doc["content"]
+
+        pdf_doc = service.get_deliverable_content("smartmouseco.com", "pdf")
+        assert pdf_doc["ok"] is True
+        assert pdf_doc["is_binary"] is True
+
+        # Reject invalid deliverable type or domain
+        bad_doc = service.get_deliverable_content("smartmouseco.com", "../../etc/passwd")
+        assert bad_doc["ok"] is False
+
+        # Project into 3D Attack Surface Graph
+        g = BountyAttackGraph(output_dir=tmp_path)
+        added = g.ingest_radar_leads(leads)
+        assert added == 1
+        constellation = g.export_constellation_hubs()
+        probe_hubs = [h for h in constellation["hubs"] if h["category"] == "Radar Probe"]
+        assert len(probe_hubs) == 1
+        assert probe_hubs[0]["id"] == "radar:smartmouseco.com"
+        assert probe_hubs[0]["color"] == "#00f0ff"
+

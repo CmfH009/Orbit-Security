@@ -297,6 +297,48 @@ class BountyAttackGraph:
             "total_edges": len(self.edges),
         }
 
+    def ingest_radar_leads(self, leads: List[Dict[str, Any]]) -> int:
+        """Projects live visitor Radar probes and enriched OSINT profiles into the 3D Attack Surface Graph."""
+        if not leads:
+            return 0
+        hub_id = "sentinel:orbit_perimeter_radar"
+        self.add_node(
+            node_id=hub_id,
+            label="ORBIT Perimeter Radar",
+            node_type="TAILSCALE_SENTINEL",
+            meta={"origin_node": "orbit-radar-terminal", "platform": "GitHub Pages / Live Telemetry"},
+        )
+        added = 0
+        for lead in leads:
+            dom = str(lead.get("domain") or "").strip().lower()
+            if not dom:
+                continue
+            node_id = f"radar:{dom}"
+            score = lead.get("score")
+            grade = str(lead.get("grade") or "--")
+            company = str(lead.get("company_name") or dom)
+            self.add_node(
+                node_id=node_id,
+                label=f"{dom} [{grade}]",
+                node_type="RADAR_PROBE",
+                meta={
+                    "domain": dom,
+                    "company_name": company,
+                    "score": score,
+                    "grade": grade,
+                    "registrar": lead.get("registrar") or "Unknown",
+                    "dns_provider": lead.get("dns_provider") or "Standard DNS",
+                    "mx_provider": lead.get("mx_provider") or "Corporate Mail",
+                    "tech_stack": lead.get("tech_stack") or [],
+                    "device_summary": lead.get("device_summary") or "Web Visitor",
+                    "deliverables": lead.get("deliverables") or {},
+                    "evidence": f"Score: {score}/100 ({grade}) | Registrar: {lead.get('registrar')} | Tech: {', '.join((lead.get('tech_stack') or [])[:4])}",
+                },
+            )
+            self.add_edge(hub_id, node_id, relation="PROBED_BY_VISITOR", weight=2.0)
+            added += 1
+        return added
+
     def calculate_centrality(self) -> List[Tuple[str, int, str]]:
         """Calculates degree centrality and identifies critical shared infrastructure nodes.
         
@@ -349,6 +391,7 @@ class BountyAttackGraph:
             "CNAME_TARGET": {"cat": "CNAME Target", "color": "#f59e0b", "base_r": 280.0, "size": 12.0},
             "CLOUD_PROVIDER": {"cat": "Cloud Infrastructure", "color": "#c084fc", "base_r": 160.0, "size": 14.0},
             "VULNERABILITY": {"cat": "Vulnerability", "color": "#ef4444", "base_r": 240.0, "size": 16.0},
+            "RADAR_PROBE": {"cat": "Radar Probe", "color": "#00f0ff", "base_r": 185.0, "size": 15.0},
         }
 
         for i, node in enumerate(node_list):

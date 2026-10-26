@@ -434,6 +434,18 @@ class RadarLeadEnricher:
             pass
         return None
 
+    def get_all_enriched_leads(self) -> Dict[str, Dict[str, Any]]:
+        """Returns all enriched domain profiles keyed by domain."""
+        if not self.leads_file.exists():
+            return {}
+        try:
+            data = json.loads(self.leads_file.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            pass
+        return {}
+
     def _publish_blackboard_event(self, enrichment_record: Dict[str, Any]) -> None:
         try:
             from orbit_security.blackboard import (

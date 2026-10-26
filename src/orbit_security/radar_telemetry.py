@@ -36,12 +36,17 @@ from typing import Any, Dict, List, Optional
 import urllib.parse
 import urllib.request
 
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(REPO_ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT / "src"))
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from orbit_security.radar_lead_enricher import DEFAULT_ENRICHED_LEADS_FILE, RadarLeadEnricher
 from orbit_security.radar_proposal_stager import DEFAULT_CAMPAIGNS_DIR, RadarRetainerProposalStager
 
 logger = logging.getLogger("orbit_security.radar_telemetry")
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = REPO_ROOT / "data"
 DEFAULT_QUERIES_FILE = DATA_DIR / "radar_queries.jsonl"
 
@@ -693,6 +698,128 @@ class RadarTelemetryService:
             )
         return results
 
+    def get_enriched_leads_summary(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Returns enriched lead profiles merged with latest telemetry query metadata and deliverable status."""
+        all_leads = self.enricher.get_all_enriched_leads()
+        recent_queries = self.get_recent_queries(limit=500)
+
+        latest_query_by_domain: Dict[str, Dict[str, Any]] = {}
+        probe_counts: Dict[str, int] = {}
+        for q in recent_queries:
+            dom = q.get("domain")
+            if not dom:
+                continue
+            probe_counts[dom] = probe_counts.get(dom, 0) + 1
+            if dom not in latest_query_by_domain or (
+                q.get("score") is not None and latest_query_by_domain[dom].get("score") is None
+            ):
+                latest_query_by_domain[dom] = q
+
+        all_domains = list(dict.fromkeys(list(latest_query_by_domain.keys()) + list(all_leads.keys())))
+        items: List[Dict[str, Any]] = []
+
+        for dom in all_domains[:limit]:
+            lead = all_leads.get(dom) or {}
+            q = latest_query_by_domain.get(dom) or {}
+            slug = self.proposal_stager.domain_to_slug(dom)
+            camp_dir = self.proposal_stager.campaigns_dir / slug
+
+            score = q.get("score") if q.get("score") is not None else lead.get("computed_score")
+            grade = q.get("grade") or lead.get("computed_grade") or "--"
+            ua_info = parse_user_agent_summary(q.get("user_agent"), q.get("screen_resolution"))
+
+            pdf_file = camp_dir / f"{slug}_security_audit.pdf"
+            md_audit_file = camp_dir / f"{slug}_security_audit.md"
+            dns_file = camp_dir / "dns_remediation_plan.md"
+            proposal_file = camp_dir / "retainer_proposal.md"
+            pitch_file = camp_dir / "pitch_email.txt"
+
+            items.append({
+                "domain": dom,
+                "domain_slug": slug,
+                "company_name": (lead.get("company_profile") or {}).get("company_name") or dom,
+                "title": (lead.get("company_profile") or {}).get("title") or dom,
+                "description": (lead.get("company_profile") or {}).get("description") or "",
+                "score": score,
+                "grade": grade,
+                "dmarc_status": q.get("dmarc_status") or lead.get("dmarc_status") or "unknown",
+                "spf_status": q.get("spf_status") or lead.get("spf_status") or "unknown",
+                "registrar": lead.get("registrar") or "Unknown",
+                "dns_provider": lead.get("dns_provider") or "Standard DNS",
+                "mx_provider": lead.get("mx_provider") or "Corporate Mail",
+                "tech_stack": lead.get("tech_stack") or [],
+                "leadership": lead.get("leadership") or {},
+                "probe_count": probe_counts.get(dom, 1),
+                "last_probed_at": q.get("timestamp") or lead.get("enriched_at") or "",
+                "trigger_source": q.get("trigger_source") or "radar_submit",
+                "device_summary": ua_info.get("summary", "Unknown Device"),
+                "device_type": ua_info.get("device_type", "Unknown"),
+                "deliverables": {
+                    "staged": camp_dir.exists(),
+                    "campaign_dir": f"outbound_campaigns/{slug}",
+                    "has_pdf": pdf_file.exists(),
+                    "has_audit_md": md_audit_file.exists(),
+                    "has_dns_plan": dns_file.exists(),
+                    "has_retainer_proposal": proposal_file.exists(),
+                    "has_pitch_email": pitch_file.exists(),
+                },
+            })
+
+        return items
+
+    def get_deliverable_content(self, domain: str, file_type: str = "retainer_proposal") -> Dict[str, Any]:
+        """Safely reads a staged deliverable file for a given domain."""
+        clean_dom = self.normalize_domain(domain)
+        if not clean_dom or not self.is_valid_domain(clean_dom):
+            return {"ok": False, "error": f"Invalid domain: {domain}"}
+
+        slug = self.proposal_stager.domain_to_slug(clean_dom)
+        camp_dir = (self.proposal_stager.campaigns_dir / slug).resolve()
+        base_dir = self.proposal_stager.campaigns_dir.resolve()
+        if not str(camp_dir).startswith(str(base_dir)):
+            return {"ok": False, "error": "Access denied"}
+
+        file_map = {
+            "retainer_proposal": "retainer_proposal.md",
+            "retainer_proposal.md": "retainer_proposal.md",
+            "dns_remediation": "dns_remediation_plan.md",
+            "dns_remediation_plan.md": "dns_remediation_plan.md",
+            "pitch_email": "pitch_email.txt",
+            "pitch_email.txt": "pitch_email.txt",
+            "security_audit": f"{slug}_security_audit.md",
+            "audit_md": f"{slug}_security_audit.md",
+            f"{slug}_security_audit.md": f"{slug}_security_audit.md",
+            "pdf": f"{slug}_security_audit.pdf",
+            f"{slug}_security_audit.pdf": f"{slug}_security_audit.pdf",
+        }
+        target_name = file_map.get(file_type.strip().lower())
+        if not target_name:
+            return {"ok": False, "error": f"Unsupported deliverable type: {file_type}"}
+
+        target_path = (camp_dir / target_name).resolve()
+        if not str(target_path).startswith(str(camp_dir)) or not target_path.exists():
+            return {"ok": False, "error": f"Deliverable not found: {target_name}"}
+
+        if target_name.endswith(".pdf"):
+            return {
+                "ok": True,
+                "domain": clean_dom,
+                "filename": target_name,
+                "is_binary": True,
+                "path": str(target_path),
+                "size_bytes": target_path.stat().st_size,
+            }
+
+        content = target_path.read_text(encoding="utf-8", errors="replace")
+        return {
+            "ok": True,
+            "domain": clean_dom,
+            "filename": target_name,
+            "is_binary": False,
+            "content": content,
+            "size_bytes": len(content.encode("utf-8")),
+        }
+
 
 # =============================================================================
 # Standalone HTTP Ingestion Handler & Server
@@ -733,6 +860,35 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+        elif parsed.path in ("/api/orbit/radar/leads", "/api/radar/leads"):
+            q_params = urllib.parse.parse_qs(parsed.query)
+            limit = int(q_params.get("limit", [50])[0])
+            leads = self.service.get_enriched_leads_summary(limit=limit)
+            stats = self.service.get_query_stats()
+            body = json.dumps({"ok": True, "count": len(leads), "stats": stats, "leads": leads}).encode("utf-8")
+            self.send_cors_headers(200, "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        elif parsed.path in ("/api/orbit/radar/deliverable", "/api/radar/deliverable"):
+            q_params = urllib.parse.parse_qs(parsed.query)
+            domain = q_params.get("domain", [""])[0]
+            file_type = q_params.get("file", ["retainer_proposal"])[0]
+            res = self.service.get_deliverable_content(domain=domain, file_type=file_type)
+            if res.get("ok") and res.get("is_binary") and q_params.get("raw", ["0"])[0] == "1":
+                pdf_bytes = Path(res["path"]).read_bytes()
+                self.send_cors_headers(200, "application/pdf")
+                self.send_header("Content-Disposition", f'inline; filename="{res["filename"]}"')
+                self.send_header("Content-Length", str(len(pdf_bytes)))
+                self.end_headers()
+                self.wfile.write(pdf_bytes)
+            else:
+                status = 200 if res.get("ok") else 404
+                body = json.dumps(res).encode("utf-8")
+                self.send_cors_headers(status, "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
         elif parsed.path in ("/api/health", "/health"):
             body = b'{"status": "ok", "service": "orbit-radar-telemetry"}'
             self.send_cors_headers(200, "application/json")
