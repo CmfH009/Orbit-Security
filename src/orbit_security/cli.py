@@ -4,6 +4,7 @@ import datetime
 import os
 import sys
 from pathlib import Path
+from typing import Any, Dict
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -362,6 +363,29 @@ async def run_disclose(args, now_utc: datetime.datetime | None = None):
     return 0
 
 
+def generate_takeover_poc_proof(subdomain: str, cname_target: str, provider: str = "Unknown") -> Dict[str, Any]:
+    """Generates a harmless, non-destructive proof-of-concept verification script and remediation block."""
+    from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES
+    matched_sig = next(
+        (s for s in SAAS_TAKEOVER_SIGNATURES if (provider and provider.lower() != "unknown" and (s.saas_provider.lower() in provider.lower() or provider.lower() in s.saas_provider.lower())) or any(c in cname_target for c in s.cname_fingerprints)),
+        None,
+    )
+    expected_status = matched_sig.status_code if matched_sig else 404
+    pattern = matched_sig.response_fingerprints[0] if (matched_sig and matched_sig.response_fingerprints) else "Not Found"
+
+    curl_cmd = f'curl -sI -k -H "Host: {subdomain}" "https://{cname_target}"'
+    return {
+        "subdomain": subdomain,
+        "cname_target": cname_target,
+        "provider": matched_sig.saas_provider if matched_sig else provider,
+        "expected_status": expected_status,
+        "signature_pattern": pattern,
+        "curl_command": curl_cmd,
+        "remediation": f"Delete DNS record '{subdomain} CNAME {cname_target}' immediately or claim in {matched_sig.saas_provider if matched_sig else provider}.",
+        "safe_harbor_notice": "Non-destructive passive audit verification only. Do not claim unauthorized resources.",
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Orbit Security: White-Label Attack Surface & Subdomain Hygiene Sentinel"
@@ -497,6 +521,15 @@ def main():
     rem_parser.add_argument("--email", help="DMARC/security.txt reporting email")
     rem_parser.add_argument("--no-pdf", dest="pdf", action="store_false", help="Disable executive remediation PDF generation")
     rem_parser.set_defaults(pdf=True)
+
+    # Takeover-poc command (Task 4: Subdomain Takeover Exploit Proof-of-Concept Playground)
+    poc_parser = subparsers.add_parser(
+        "takeover-poc", help="Generate safe non-destructive curl verification proof and remediation instructions"
+    )
+    poc_parser.add_argument("subdomain", help="Target subdomain to verify (e.g. shop.example.com)")
+    poc_parser.add_argument("--cname", "--cname-target", dest="cname_target", default=None, help="Known CNAME target (e.g. shops.myshopify.com)")
+    poc_parser.add_argument("--provider", default="Unknown", help="SaaS provider name (e.g. Shopify, GitHub Pages, AWS S3)")
+    poc_parser.add_argument("--json", action="store_true", help="Output raw JSON proof")
 
     args = parser.parse_args()
 
@@ -775,6 +808,45 @@ def main():
         print(f"    - security.txt:   {res['security_txt']}")
         if res.get("pdf_file"):
             print(f"    - Executive PDF:  {res['pdf_file']}")
+        return 0
+    elif args.command == "takeover-poc":
+        import json as _json
+        cname_target = args.cname_target
+        if not cname_target:
+            try:
+                import dns.resolver
+                answers = dns.resolver.resolve(args.subdomain, "CNAME")
+                if answers:
+                    cname_target = str(answers[0].target).rstrip(".")
+            except Exception:
+                pass
+        if not cname_target:
+            cname_target = f"{args.subdomain}.unresolved.cname"
+
+        poc = generate_takeover_poc_proof(args.subdomain, cname_target=cname_target, provider=args.provider)
+        if args.json:
+            print(_json.dumps(poc, indent=2))
+            return 0
+
+        console.print(
+            Panel.fit(
+                f"[bold cyan]Orbit Security[/bold cyan] — [yellow]Subdomain Takeover Exploit Proof-of-Concept Playground[/yellow]\n"
+                f"[dim]Subdomain:[/dim] [bold white]{poc['subdomain']}[/bold white] | [dim]CNAME Target:[/dim] [bold cyan]{poc['cname_target']}[/bold cyan] | [dim]Provider:[/dim] [bold magenta]{poc['provider']}[/bold magenta]",
+                border_style="cyan",
+            )
+        )
+        table = Table(title="Safe Non-Destructive Verification Proof & Remediation", border_style="cyan")
+        table.add_column("Property", style="bold cyan")
+        table.add_column("Value", style="bold white")
+        table.add_row("Subdomain", poc["subdomain"])
+        table.add_row("CNAME Target", poc["cname_target"])
+        table.add_row("Provider", poc["provider"])
+        table.add_row("Expected Status", str(poc["expected_status"]))
+        table.add_row("Signature Pattern", poc["signature_pattern"])
+        table.add_row("Verification POC", f"[bold green]{poc['curl_command']}[/bold green]")
+        table.add_row("Remediation", f"[bold yellow]{poc['remediation']}[/bold yellow]")
+        table.add_row("Safe Harbor", f"[dim]{poc['safe_harbor_notice']}[/dim]")
+        console.print(table)
         return 0
 
 

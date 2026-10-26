@@ -18,6 +18,24 @@ class SaasSignature:
     fingerprints: List[str]
     remediation: str
     nxdomain: bool = False
+    status_code: int = 404
+
+    @property
+    def saas_provider(self) -> str:
+        return self.name
+
+    @property
+    def cname_fingerprints(self) -> List[str]:
+        return self.cname_patterns
+
+    @property
+    def response_fingerprints(self) -> List[str]:
+        return self.fingerprints
+
+    def detect_fingerprint(self, html: str) -> bool:
+        if not html:
+            return False
+        return any(fp.lower() in html.lower() for fp in self.fingerprints)
 
 
 # Canonical Curated & GitHub can-i-take-over-xyz Signatures

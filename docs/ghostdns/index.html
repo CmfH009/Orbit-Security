@@ -215,7 +215,7 @@
             </div>
 
             <!-- Audit Result Terminal with CRT Styling -->
-            <div id="auditResult" class="mt-6 max-w-2xl mx-auto hidden p-5 rounded-xl text-left font-mono text-xs card-glass card-glass-cyan relative overflow-hidden">
+            <div id="auditResult" class="mt-6 max-w-5xl mx-auto hidden p-5 rounded-xl text-left font-mono text-xs card-glass card-glass-cyan relative overflow-hidden">
                 <div class="absolute inset-0 scanlines pointer-events-none z-0 opacity-20"></div>
                 <div id="auditContent" class="relative z-10 space-y-2">
                     <!-- Populated dynamically via JS -->
@@ -368,6 +368,8 @@
 
     <!-- Interactive Live Auditor & Simulation Script -->
     <script>
+        window.playgroundData = {};
+
         function escapeHtml(str) {
             if (str === null || str === undefined) return '';
             return String(str)
@@ -376,6 +378,78 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
+        }
+
+        function copyToClipboard(text, btn) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    if (btn) {
+                        const orig = btn.innerHTML;
+                        btn.innerHTML = '✓ Copied!';
+                        setTimeout(() => { btn.innerHTML = orig; }, 1800);
+                    }
+                }).catch(() => {
+                    prompt('Copy verification snippet:', text);
+                });
+            } else {
+                prompt('Copy verification snippet:', text);
+            }
+        }
+
+        function copyPlaygroundSnippet(id, kind, btn) {
+            const item = window.playgroundData && window.playgroundData[id];
+            if (!item) return;
+            const text = item[kind];
+            if (text) {
+                copyToClipboard(text, btn);
+            }
+        }
+
+        const SAAS_TAKEOVER_SIGNATURES = [
+            { name: "Unbounce", patterns: ["unbouncepages.com"], pattern: "The requested URL was not found on this server" },
+            { name: "GitHub Pages", patterns: ["github.io"], pattern: "There isn't a GitHub Pages site here" },
+            { name: "AWS S3", patterns: ["s3.amazonaws.com", "s3-website", ".s3."], pattern: "NoSuchBucket" },
+            { name: "AWS CloudFront", patterns: ["cloudfront.net"], pattern: "ERROR: The request could not be satisfied" },
+            { name: "Shopify", patterns: ["myshopify.com"], pattern: "Sorry, this shop is currently unavailable" },
+            { name: "Webflow", patterns: ["proxy.webflow.com", "webflow.io", "webflow.com"], pattern: "The site you are looking for could not be found" },
+            { name: "Heroku", patterns: ["herokudns.com", "herokuapp.com"], pattern: "No such app" },
+            { name: "Zendesk", patterns: ["zendesk.com"], pattern: "Help Center Closed" },
+            { name: "Pantheon", patterns: ["pantheonsite.io"], pattern: "The gods are wise, but do not know of the site which you seek" },
+            { name: "Netlify", patterns: ["netlify.app", "netlify.com"], pattern: "Not Found - Request ID" },
+            { name: "Surge.sh", patterns: ["surge.sh"], pattern: "project not found" },
+            { name: "Fly.io", patterns: ["fly.dev", "shw.io"], pattern: "Could not find that app" },
+            { name: "HubSpot", patterns: ["hubspot.net"], pattern: "Domain not found" },
+            { name: "Ghost", patterns: ["ghost.io"], pattern: "The thing you were looking for is no longer here" },
+            { name: "Readme.io", patterns: ["readme.io"], pattern: "Project doesnt exist... yet!" },
+            { name: "WordPress.com", patterns: ["wordpress.com"], pattern: "Do you want to register" },
+            { name: "Fastly", patterns: ["fastly.net"], pattern: "Fastly error: unknown domain" },
+            { name: "Microsoft Azure", patterns: ["azurewebsites.net", "azureedge.net", "cloudapp.net", "blob.core.windows.net"], pattern: "404 Web Site not found" }
+        ];
+
+        const PLAYGROUND_SUBDOMAINS = ['shop', 'store', 'blog', 'promo', 'app', 'dev', 'status', 'help', 'billing', 'staging'];
+
+        function identifyProvider(cname) {
+            if (!cname) return null;
+            const lower = cname.toLowerCase();
+            for (const sig of SAAS_TAKEOVER_SIGNATURES) {
+                if (sig.patterns.some(p => lower.includes(p))) {
+                    return sig;
+                }
+            }
+            return null;
+        }
+
+        function buildPocObject(subdomain, cnameTarget, providerName) {
+            const target = cnameTarget || subdomain;
+            const curlCmd = `curl -sI -H "Host: ${subdomain}" "https://${target}"`;
+            const zoneSnippet = `; --- GhostDNS Remediation: Dangling CNAME Removal ---\n; Subdomain: ${subdomain}\n; Action: Delete dangling CNAME in DNS:\n; ${subdomain}.    IN    CNAME    ${target}.`;
+            const cleanSub = subdomain.split('.')[0].replace(/[^a-zA-Z0-9_]/g, '_');
+            const tfSnippet = `# --- GhostDNS Remediation: Terraform Removal ---\n# Target: ${subdomain}\n# Action: Destroy or remove this resource block:\n# resource "cloudflare_record" "${cleanSub}" {\n#   name  = "${subdomain.split('.')[0]}"\n#   type  = "CNAME"\n#   value = "${target}"\n# }`;
+            return {
+                curl: curlCmd,
+                zone: zoneSnippet,
+                tf: tfSnippet
+            };
         }
 
         async function queryDns(domain, type = 'CNAME') {
@@ -397,6 +471,174 @@
             }
         }
 
+        function renderPlayground(domain, rows, isVulnerable, summaryInfo) {
+            const resContent = document.getElementById('auditContent');
+            window.playgroundData = {};
+
+            const danglingCount = rows.filter(r => r.isDangling).length;
+            const score = isVulnerable || danglingCount > 0 ? Math.max(25, 85 - (danglingCount * 25)) : 95;
+            const grade = score >= 90 ? "A+" : (score >= 70 ? "B" : "F - CRITICAL");
+            const gradeColor = score >= 90 ? "text-emerald-400" : (score >= 70 ? "text-amber-400" : "text-rose-400");
+            const headerIcon = danglingCount > 0 ? "⚠️" : "✓";
+            const headerTitle = danglingCount > 0 ? "TAKEOVER ANOMALIES DETECTED — DANGLING CNAME RISK" : "GHOSTDNS PERIMETER SCAN COMPLETE";
+            const headerColor = danglingCount > 0 ? "text-rose-400" : "text-emerald-400";
+
+            let tableRowsHtml = '';
+            rows.forEach((row, idx) => {
+                const rowId = `row_${idx}_${Date.now()}`;
+                window.playgroundData[rowId] = row.poc;
+
+                let statusBadge = '';
+                if (row.isDangling) {
+                    statusBadge = `
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950/80 text-rose-300 border border-rose-700/60 shadow-sm animate-pulse">
+                            <span>⚠️</span> DANGLING // UNCLAIMED
+                        </span>
+                        <div class="text-[9px] text-rose-400 mt-0.5 font-sans">${escapeHtml(row.provider || 'Orphan SaaS')}</div>
+                    `;
+                } else if (row.cname) {
+                    statusBadge = `
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 shadow-sm">
+                            <span class="text-emerald-400">●</span> SECURE
+                        </span>
+                        <div class="text-[9px] text-emerald-400 mt-0.5 font-sans">${escapeHtml(row.provider || 'Active Service')}</div>
+                    `;
+                } else if (row.hasA) {
+                    statusBadge = `
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] text-cyan-300 bg-cyan-950/60 border border-cyan-800/40">
+                            <span class="text-cyan-400">●</span> SECURE (Apex A)
+                        </span>
+                    `;
+                } else {
+                    statusBadge = `
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] text-slate-400 bg-slate-900 border border-slate-800">
+                            <span>○</span> INACTIVE (No CNAME)
+                        </span>
+                    `;
+                }
+
+                tableRowsHtml += `
+                    <tr class="hover:bg-slate-900/50 transition">
+                        <td class="py-2.5 px-3 font-bold text-white whitespace-nowrap">
+                            ${escapeHtml(row.subdomain)}
+                        </td>
+                        <td class="py-2.5 px-3 font-mono text-cyan-400 text-[11px] whitespace-nowrap">
+                            ${row.cname ? escapeHtml(row.cname) : '<span class="text-slate-600">None</span>'}
+                        </td>
+                        <td class="py-2.5 px-3 whitespace-nowrap">
+                            ${statusBadge}
+                        </td>
+                        <td class="py-2.5 px-3">
+                            <div class="flex items-center gap-1.5 bg-slate-950/90 px-2 py-1 rounded border border-slate-800 max-w-[270px]">
+                                <code class="text-[10px] text-cyan-300 truncate font-mono select-all" title="${escapeHtml(row.poc.curl)}">${escapeHtml(row.poc.curl)}</code>
+                                <button type="button" onclick="copyPlaygroundSnippet('${rowId}', 'curl', this)" class="px-2 py-1 text-[9px] font-bold text-cyan-400 hover:text-slate-950 bg-slate-900 hover:bg-cyan-400 border border-cyan-500/40 rounded transition cursor-pointer shrink-0">Copy</button>
+                            </div>
+                        </td>
+                        <td class="py-2.5 px-3 whitespace-nowrap">
+                            <div class="flex items-center gap-1">
+                                <button type="button" onclick="copyPlaygroundSnippet('${rowId}', 'zone', this)" title="Copy BIND .zone removal" class="px-2 py-1 text-[10px] font-bold text-amber-300 hover:text-slate-950 bg-amber-950/60 hover:bg-amber-400 border border-amber-500/40 rounded transition cursor-pointer">.zone</button>
+                                <button type="button" onclick="copyPlaygroundSnippet('${rowId}', 'tf', this)" title="Copy Terraform removal" class="px-2 py-1 text-[10px] font-bold text-purple-300 hover:text-white bg-purple-950/60 hover:bg-purple-600 border border-purple-500/40 rounded transition cursor-pointer">Terraform</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            resContent.innerHTML = `
+                <div class="${headerColor} font-bold mb-3 flex items-center gap-2">
+                    <span class="text-base">${headerIcon}</span>
+                    <span class="font-arcade text-[11px]">${headerTitle}</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-slate-300 pb-3 border-b border-slate-800">
+                    <div>Target Domain: <span class="text-white font-bold">${escapeHtml(domain)}</span></div>
+                    <div>Hygiene Score: <span class="${gradeColor} font-bold font-mono">${score}/100 (${grade})</span></div>
+                    <div>Dangling CNAMEs: <span class="${danglingCount > 0 ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}">${danglingCount} Detected</span></div>
+                    <div>Authoritative Resolvers: <span class="text-cyan-400">Google DoH &amp; Cloudflare</span></div>
+                    <div>Drift Status: <span class="${danglingCount > 0 ? 'text-rose-400 font-bold' : 'text-cyan-400 font-bold'}">${danglingCount > 0 ? 'ANOMALY DETECTED' : 'Cryptographic Baseline Locked'}</span></div>
+                    <div>Monitored Subdomains: <span class="text-slate-200 font-mono">10 Targets Parallel</span></div>
+                </div>
+
+                <!-- Subdomain Takeover Exploit Proof-of-Concept Playground -->
+                <div class="mt-4 rounded-xl border border-cyan-800/40 bg-slate-950/90 overflow-hidden shadow-xl">
+                    <div class="p-3 bg-slate-900/80 border-b border-cyan-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full ${danglingCount > 0 ? 'bg-rose-500 animate-ping' : 'bg-cyan-400 animate-pulse'}"></span>
+                            <span class="font-arcade text-[10px] text-cyan-300">SUBDOMAIN TAKEOVER EXPLOIT PROOF-OF-CONCEPT PLAYGROUND</span>
+                        </div>
+                        <span class="text-[9px] text-slate-400 font-mono">RFC-8484 REAL-TIME RESOLUTION &amp; VERIFICATION PROOFS</span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs font-mono">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-[10px] text-slate-400 uppercase bg-slate-900/50">
+                                    <th class="py-2.5 px-3">Subdomain</th>
+                                    <th class="py-2.5 px-3">CNAME Destination</th>
+                                    <th class="py-2.5 px-3">Matched SaaS / Risk</th>
+                                    <th class="py-2.5 px-3">Safe Verification Proof (cURL)</th>
+                                    <th class="py-2.5 px-3">Remediation</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60">
+                                ${tableRowsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Custom POC Sandbox Generator -->
+                <div class="mt-4 p-3 rounded-xl card-glass card-glass-cyan border border-cyan-800/40 text-[11px]">
+                    <div class="text-[10px] font-arcade text-cyan-400 mb-2 flex items-center gap-1.5">
+                        <span>⚡</span> CUSTOM SUBDOMAIN TAKEOVER POC SANDBOX
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <input id="customSubInput" type="text" placeholder="custom.yourdomain.com" class="bg-slate-950 px-2.5 py-1.5 rounded font-mono text-white text-xs border border-slate-800 focus:border-cyan-400 focus:outline-none">
+                        <input id="customCnameInput" type="text" placeholder="target.myshopify.com" class="bg-slate-950 px-2.5 py-1.5 rounded font-mono text-white text-xs border border-slate-800 focus:border-cyan-400 focus:outline-none">
+                        <button type="button" onclick="generateCustomPoc()" class="px-3 py-1.5 rounded text-xs font-bold font-pixel bg-cyan-400 hover:bg-cyan-300 text-slate-950 transition pixel-btn">Generate Proof</button>
+                    </div>
+                    <div id="customPocOutput" class="mt-2 hidden p-2 rounded bg-slate-950 border border-slate-800 font-mono text-[10px]">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <div class="mt-3 pt-2 border-t border-slate-800 text-[11px] text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2">
+                    <div>
+                        Continuous 15-minute takeover surveillance: <a href="#pricing" class="text-cyan-400 underline hover:text-cyan-300 font-bold">GhostDNS Sentinel ($29/mo)</a>.
+                    </div>
+                    <div class="text-slate-500 text-[10px]">Safe Harbor: Non-destructive audit verification commands only.</div>
+                </div>
+            `;
+        }
+
+        function generateCustomPoc() {
+            const sub = (document.getElementById('customSubInput').value || '').trim();
+            const cname = (document.getElementById('customCnameInput').value || '').trim();
+            if (!sub || !cname) {
+                alert('Please enter both a subdomain and CNAME target.');
+                return;
+            }
+            const sig = identifyProvider(cname);
+            const providerName = sig ? sig.name : 'Unknown SaaS';
+            const poc = buildPocObject(sub, cname, providerName);
+            const customId = `custom_${Date.now()}`;
+            window.playgroundData[customId] = poc;
+
+            const out = document.getElementById('customPocOutput');
+            out.classList.remove('hidden');
+            out.innerHTML = `
+                <div class="flex items-center justify-between gap-2 mb-1">
+                    <span class="text-cyan-400 font-bold">Provider: ${escapeHtml(providerName)}</span>
+                    <div class="flex items-center gap-1">
+                        <button type="button" onclick="copyPlaygroundSnippet('${customId}', 'curl', this)" class="px-2 py-0.5 text-[9px] bg-slate-800 text-cyan-300 hover:text-white rounded border border-slate-700 cursor-pointer">Copy cURL</button>
+                        <button type="button" onclick="copyPlaygroundSnippet('${customId}', 'zone', this)" class="px-2 py-0.5 text-[9px] bg-amber-950/80 text-amber-300 hover:text-white rounded border border-amber-800/60 cursor-pointer">.zone</button>
+                        <button type="button" onclick="copyPlaygroundSnippet('${customId}', 'tf', this)" class="px-2 py-0.5 text-[9px] bg-purple-950/80 text-purple-300 hover:text-white rounded border border-purple-800/60 cursor-pointer">Terraform</button>
+                    </div>
+                </div>
+                <div class="bg-black/60 p-2 rounded border border-slate-800 text-slate-300 select-all font-mono">${escapeHtml(poc.curl)}</div>
+            `;
+        }
+
         async function runAudit() {
             const raw = document.getElementById('targetDomain').value.trim();
             if (!raw) {
@@ -411,22 +653,32 @@
             resContent.innerHTML = `
                 <div class="flex items-center gap-2 text-cyan-400">
                     <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-                    <span class="font-arcade text-[10px]">PROBING AUTHORITATIVE RESOLVERS (RFC-8484 DoH) FOR ${escapeHtml(domain)}...</span>
+                    <span class="font-arcade text-[10px]">PROBING RFC-8484 DoH ACROSS 10 SUBDOMAINS FOR ${escapeHtml(domain)}...</span>
                 </div>
-                <div class="text-slate-500 text-[11px]">Connecting to Google DoH &amp; Cloudflare Anycast resolvers...</div>
+                <div class="text-slate-500 text-[11px]">Querying Google DoH &amp; Cloudflare Anycast resolvers in parallel...</div>
+                <div class="mt-3 flex flex-wrap gap-1">
+                    ${PLAYGROUND_SUBDOMAINS.map(s => `<span class="px-1.5 py-0.5 rounded text-[9px] bg-slate-900 border border-slate-800 text-slate-400 font-mono">${escapeHtml(s)}.${escapeHtml(domain)}</span>`).join('')}
+                </div>
             `;
 
-            const [cnameData, aData] = await Promise.all([
+            const [apexCname, apexA, ...subResults] = await Promise.all([
                 queryDns(domain, 'CNAME'),
-                queryDns(domain, 'A')
+                queryDns(domain, 'A'),
+                ...PLAYGROUND_SUBDOMAINS.map(async (sub) => {
+                    const fqdn = `${sub}.${domain}`;
+                    const [cnameData, aData] = await Promise.all([
+                        queryDns(fqdn, 'CNAME'),
+                        queryDns(fqdn, 'A')
+                    ]);
+                    return { sub, fqdn, cnameData, aData };
+                })
             ]);
 
-            const cnameRecords = (cnameData && cnameData.Answer) ? cnameData.Answer.map(a => a.data) : [];
-            const aRecords = (aData && aData.Answer) ? aData.Answer.map(a => a.data) : [];
+            const apexCnameRecords = (apexCname && apexCname.Answer) ? apexCname.Answer.map(a => a.data) : [];
+            const apexARecords = (apexA && apexA.Answer) ? apexA.Answer.map(a => a.data) : [];
 
-            // Detect NXDOMAIN or unresolvable domain
-            const isNxdomain = ((!cnameData || cnameData.Status === 3) && (!aData || aData.Status === 3)) ||
-                               (cnameRecords.length === 0 && aRecords.length === 0);
+            const isNxdomain = ((!apexCname || apexCname.Status === 3) && (!apexA || apexA.Status === 3)) &&
+                               subResults.every(r => (!r.cnameData || r.cnameData.Status === 3) && (!r.aData || r.aData.Status === 3));
 
             if (isNxdomain) {
                 resContent.innerHTML = `
@@ -452,94 +704,131 @@
                 return;
             }
 
-            let danglingRisk = "Clean (0 Dangling Pointers)";
-            let score = 95;
-            let grade = "A+";
-            let cnameOutput = cnameRecords.length > 0 ? cnameRecords.join(', ') : 'Apex Direct (A Record)';
+            const rows = subResults.map(({ sub, fqdn, cnameData, aData }) => {
+                const cnameRec = (cnameData && cnameData.Answer) ? cnameData.Answer.find(a => a.type === 5 || a.type === 'CNAME') : null;
+                const cnameVal = cnameRec ? cnameRec.data.replace(/\.$/, '') : null;
+                const aRecs = (aData && aData.Answer) ? aData.Answer.filter(a => a.type === 1 || a.type === 'A').map(a => a.data) : [];
+                const providerSig = identifyProvider(cnameVal);
+                const providerName = providerSig ? providerSig.name : (cnameVal ? 'Custom SaaS' : null);
 
-            resContent.innerHTML = `
-                <div class="text-emerald-400 font-bold mb-2 flex items-center gap-2">
-                    <span>✓</span>
-                    <span class="font-arcade text-[10px]">GHOSTDNS PERIMETER SCAN COMPLETE</span>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-300">
-                    <div>Target Perimeter: <span class="text-white font-bold">${escapeHtml(domain)}</span></div>
-                    <div>Authoritative Resolvers: <span class="text-cyan-400">Google DoH &amp; Cloudflare</span></div>
-                    <div>Active CNAME Routing: <span class="text-slate-200 font-mono">${escapeHtml(cnameOutput)}</span></div>
-                    <div>Resolved A Records: <span class="text-slate-200 font-mono">${escapeHtml(aRecords.slice(0, 2).join(', ') || 'Active')}</span></div>
-                    <div>Perimeter Hygiene Score: <span class="text-emerald-400 font-bold">${score}/100 (${grade})</span></div>
-                    <div>Dangling SaaS CNAMEs: <span class="text-emerald-400 font-bold">${danglingRisk}</span></div>
-                </div>
-                <div class="text-slate-400 pt-2 border-t border-slate-800">
-                    DNS Drift Status: <span class="text-cyan-400 font-bold">Cryptographic Baseline Locked</span>
-                </div>
-                <div class="mt-2 pt-2 border-t border-slate-800 text-[11px] text-slate-400">
-                    Enable 24/7 continuous 15-minute takeover surveillance: <a href="#pricing" class="text-cyan-400 underline hover:text-cyan-300">GhostDNS Sentinel ($29/mo)</a>.
-                </div>
-            `;
+                let isDangling = false;
+                if (cnameVal && providerSig) {
+                    if (aRecs.length === 0 || (aData && aData.Status === 3)) {
+                        isDangling = true;
+                    }
+                }
+
+                return {
+                    subdomain: fqdn,
+                    cname: cnameVal,
+                    provider: providerName,
+                    isDangling: isDangling,
+                    hasA: aRecs.length > 0,
+                    poc: buildPocObject(fqdn, cnameVal, providerName)
+                };
+            });
+
+            const hasAnyDangling = rows.some(r => r.isDangling);
+            renderPlayground(domain, rows, hasAnyDangling, { apexCname: apexCnameRecords, apexA: apexARecords });
         }
 
         function simulateScenario(type) {
             const resArea = document.getElementById('auditResult');
-            const resContent = document.getElementById('auditContent');
             resArea.classList.remove('hidden');
 
+            const domain = 'candykittens.co.uk';
+            document.getElementById('targetDomain').value = domain;
+
+            let rows = [];
             if (type === 'unbounce') {
-                document.getElementById('targetDomain').value = 'promo.candykittens.co.uk';
-                resContent.innerHTML = `
-                    <div class="text-amber-400 font-bold mb-2 flex items-center gap-2">
-                        <span>⚠️</span>
-                        <span class="font-arcade text-[10px]">TAKEOVER ANOMALY DETECTED: DANGLING UNBOUNCE CNAME</span>
-                    </div>
-                    <div class="space-y-1 text-slate-300">
-                        <div>Target Subdomain: <span class="text-white font-bold">promo.candykittens.co.uk</span></div>
-                        <div>Target CNAME Pointer: <span class="text-amber-400 font-mono">unbouncepages.com</span></div>
-                        <div>HTTP Verification Probe: <span class="text-rose-400 font-bold font-mono">HTTP 404 (Unbounce Account Decommissioned)</span></div>
-                        <div>Takeover Surface Risk: <span class="text-rose-400 font-bold font-arcade text-[10px]">HIGH CRITICAL VULNERABILITY</span></div>
-                        <div>Attack Scenario: <span class="text-slate-300">Attacker can claim <code class="text-amber-300">promo.candykittens.co.uk</code> in a new Unbounce trial and publish malicious phishing forms under your verified TLS certificate.</span></div>
-                        <div>Remediation: <span class="text-emerald-400 font-mono">DELETE CNAME record promo.candykittens.co.uk in Cloudflare DNS immediately.</span></div>
-                    </div>
-                    <div class="mt-3 pt-2 border-t border-slate-800 text-[11px] text-slate-400">
-                        Prevent silent drift before attackers claim endpoints: <a href="#pricing" class="text-cyan-400 underline">Activate GhostDNS Sentinel ($29/mo)</a>.
-                    </div>
-                `;
+                rows = PLAYGROUND_SUBDOMAINS.map((sub) => {
+                    const fqdn = `${sub}.${domain}`;
+                    if (sub === 'promo') {
+                        return {
+                            subdomain: fqdn,
+                            cname: 'unbouncepages.com',
+                            provider: 'Unbounce',
+                            isDangling: true,
+                            hasA: false,
+                            poc: buildPocObject(fqdn, 'unbouncepages.com', 'Unbounce')
+                        };
+                    }
+                    if (sub === 'shop') {
+                        return {
+                            subdomain: fqdn,
+                            cname: 'shops.myshopify.com',
+                            provider: 'Shopify',
+                            isDangling: false,
+                            hasA: true,
+                            poc: buildPocObject(fqdn, 'shops.myshopify.com', 'Shopify')
+                        };
+                    }
+                    return {
+                        subdomain: fqdn,
+                        cname: null,
+                        provider: null,
+                        isDangling: false,
+                        hasA: false,
+                        poc: buildPocObject(fqdn, null, null)
+                    };
+                });
+                renderPlayground(domain, rows, true, { scenario: 'unbounce' });
             } else if (type === 's3') {
-                document.getElementById('targetDomain').value = 'assets.candykittens.co.uk';
-                resContent.innerHTML = `
-                    <div class="text-rose-400 font-bold mb-2 flex items-center gap-2">
-                        <span>🚨</span>
-                        <span class="font-arcade text-[10px]">CRITICAL HIJACK WARNING: ORPHANED AWS S3 BUCKET</span>
-                    </div>
-                    <div class="space-y-1 text-slate-300">
-                        <div>Target Subdomain: <span class="text-white font-bold">assets.candykittens.co.uk</span></div>
-                        <div>Target CNAME Pointer: <span class="text-rose-400 font-mono">candykittens-assets.s3.amazonaws.com</span></div>
-                        <div>AWS S3 Verification: <span class="text-rose-400 font-bold font-mono">NoSuchBucket Error (Bucket Deleted / Unclaimed)</span></div>
-                        <div>Takeover Surface Risk: <span class="text-rose-400 font-bold font-arcade text-[10px]">CRITICAL REMOTE CODE EXECUTION / SCRIPT INJECTION</span></div>
-                        <div>Attack Scenario: <span class="text-slate-300">Attacker can create bucket <code class="text-rose-300">candykittens-assets</code> in AWS US-East-1 and host malicious JavaScript executed in your customer checkout context.</span></div>
-                        <div>Remediation: <span class="text-emerald-400 font-mono">Re-claim the S3 bucket or remove DNS record assets.candykittens.co.uk.</span></div>
-                    </div>
-                    <div class="mt-3 pt-2 border-t border-slate-800 text-[11px] text-slate-400">
-                        24/7 automated S3 bucket surveillance: <a href="#pricing" class="text-cyan-400 underline">Enable GhostDNS Sentinel ($29/mo)</a>.
-                    </div>
-                `;
+                rows = PLAYGROUND_SUBDOMAINS.map((sub) => {
+                    const fqdn = `${sub}.${domain}`;
+                    if (sub === 'store' || sub === 'app') {
+                        return {
+                            subdomain: fqdn,
+                            cname: 'candykittens-assets.s3.amazonaws.com',
+                            provider: 'AWS S3',
+                            isDangling: true,
+                            hasA: false,
+                            poc: buildPocObject(fqdn, 'candykittens-assets.s3.amazonaws.com', 'AWS S3')
+                        };
+                    }
+                    if (sub === 'shop') {
+                        return {
+                            subdomain: fqdn,
+                            cname: 'shops.myshopify.com',
+                            provider: 'Shopify',
+                            isDangling: false,
+                            hasA: true,
+                            poc: buildPocObject(fqdn, 'shops.myshopify.com', 'Shopify')
+                        };
+                    }
+                    return {
+                        subdomain: fqdn,
+                        cname: null,
+                        provider: null,
+                        isDangling: false,
+                        hasA: false,
+                        poc: buildPocObject(fqdn, null, null)
+                    };
+                });
+                renderPlayground(domain, rows, true, { scenario: 's3' });
             } else {
-                document.getElementById('targetDomain').value = 'candykittens.co.uk';
-                resContent.innerHTML = `
-                    <div class="text-emerald-400 font-bold mb-2 flex items-center gap-2">
-                        <span>✓</span>
-                        <span class="font-arcade text-[10px]">PERIMETER SECURE: CLEAN SHOPIFY APEX</span>
-                    </div>
-                    <div class="space-y-1 text-slate-300">
-                        <div>Target Domain: <span class="text-white font-bold">candykittens.co.uk</span></div>
-                        <div>DNS Routing: <span class="text-emerald-400 font-mono">Apex Direct A Record (Shopify Anycast Edge)</span></div>
-                        <div>Dangling CNAMEs: <span class="text-emerald-400 font-bold">0 Detected across 9 monitored subdomains</span></div>
-                        <div>Drift Status: <span class="text-cyan-400 font-bold">Protected &amp; Locked</span></div>
-                        <div>Hygiene Score: <span class="text-emerald-400 font-bold font-arcade text-[10px]">95/100 (GRADE A+)</span></div>
-                    </div>
-                    <div class="mt-3 pt-2 border-t border-slate-800 text-[11px] text-slate-400">
-                        Maintain 100% perimeter hygiene across all campaigns: <a href="#pricing" class="text-cyan-400 underline">Enable GhostDNS Sentinel ($29/mo)</a>.
-                    </div>
-                `;
+                rows = PLAYGROUND_SUBDOMAINS.map((sub) => {
+                    const fqdn = `${sub}.${domain}`;
+                    if (sub === 'shop') {
+                        return {
+                            subdomain: fqdn,
+                            cname: 'shops.myshopify.com',
+                            provider: 'Shopify',
+                            isDangling: false,
+                            hasA: true,
+                            poc: buildPocObject(fqdn, 'shops.myshopify.com', 'Shopify')
+                        };
+                    }
+                    return {
+                        subdomain: fqdn,
+                        cname: null,
+                        provider: null,
+                        isDangling: false,
+                        hasA: false,
+                        poc: buildPocObject(fqdn, null, null)
+                    };
+                });
+                renderPlayground(domain, rows, false, { scenario: 'clean' });
             }
         }
 
@@ -569,8 +858,7 @@
                 return;
             }
             if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(`${shareText}
-${shareUrl}`);
+                navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
             }
         }
     </script>
