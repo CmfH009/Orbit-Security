@@ -412,6 +412,139 @@
         };
     }
 
+    // ==========================================
+    // 3c. Downloadable 1-Click DNS Fix Pack Exporter
+    // ==========================================
+
+    // REMEDIATION_BUNDLE_BUILDER_START
+    const RemediationBundleBuilder = {
+        sanitizeDomain(domain) {
+            const clean = String(domain || '')
+                .trim()
+                .toLowerCase()
+                .replace(/^https?:\/\//, '')
+                .replace(/\/.*$/, '')
+                .replace(/[^a-z0-9.-]/g, '')
+                .replace(/\.+$/, '');
+            return clean || 'example.com';
+        },
+
+        buildZoneFile(domain, dmarcVal, spfVal) {
+            const clean = this.sanitizeDomain(domain);
+            const dmarc = dmarcVal || 'v=DMARC1; p=quarantine; sp=quarantine; adkim=r; aspf=r;';
+            const spf = spfVal || 'v=spf1 include:_spf.google.com -all';
+            return [
+                `; Orbit Security BIND Zone Fix Pack for ${clean}`,
+                `$ORIGIN ${clean}.`,
+                '$TTL 300',
+                `_dmarc\tIN\tTXT\t"${dmarc}"`,
+                `@\tIN\tTXT\t"${spf}"`,
+                '@\tIN\tCAA\t0 issue "letsencrypt.org"',
+                '@\tIN\tCAA\t0 issue "digicert.com"'
+            ].join('\n');
+        },
+
+        buildTerraform(domain, dmarcVal, spfVal) {
+            const clean = this.sanitizeDomain(domain);
+            const dmarc = dmarcVal || 'v=DMARC1; p=quarantine; sp=quarantine; adkim=r; aspf=r;';
+            const spf = spfVal || 'v=spf1 include:_spf.google.com -all';
+            return [
+                `# Orbit Security Terraform Fix Pack for ${clean}`,
+                '# Apply with: terraform apply -var="cloudflare_zone_id=<zone_id>"',
+                'resource "cloudflare_record" "dmarc" {',
+                '  zone_id = var.cloudflare_zone_id',
+                '  name    = "_dmarc"',
+                `  content = "${dmarc}"`,
+                '  type    = "TXT"',
+                '  ttl     = 1',
+                '}',
+                '',
+                'resource "cloudflare_record" "spf" {',
+                '  zone_id = var.cloudflare_zone_id',
+                '  name    = "@"',
+                `  content = "${spf}"`,
+                '  type    = "TXT"',
+                '  ttl     = 1',
+                '}',
+                '',
+                'resource "cloudflare_record" "caa" {',
+                '  zone_id = var.cloudflare_zone_id',
+                '  name    = "@"',
+                '  type    = "CAA"',
+                '  ttl     = 1',
+                '  data {',
+                '    flags = "0"',
+                '    tag   = "issue"',
+                '    value = "letsencrypt.org"',
+                '  }',
+                '}'
+            ].join('\n');
+        },
+
+        buildSecurityTxt(domain, contactEmail, expires) {
+            const clean = this.sanitizeDomain(domain);
+            const contact = contactEmail || `security@${clean}`;
+            const expiry = expires || new Date(Date.now() + 365 * 86400000)
+                .toISOString()
+                .replace(/\.\d{3}Z$/, 'Z');
+            return [
+                `Contact: mailto:${contact}`,
+                `Expires: ${expiry}`,
+                `Canonical: https://${clean}/.well-known/security.txt`,
+                `Policy: https://${clean}/security`,
+                'Preferred-Languages: en'
+            ].join('\n') + '\n';
+        },
+
+        buildBundle(domain, dmarcVal, spfVal) {
+            return {
+                zone: this.buildZoneFile(domain, dmarcVal, spfVal),
+                terraform: this.buildTerraform(domain, dmarcVal, spfVal),
+                securityTxt: this.buildSecurityTxt(domain)
+            };
+        },
+
+        buildFromAudit(audit) {
+            const source = audit || {};
+            const dmarc = (source.dmarcParsed && source.dmarcParsed.raw) || '';
+            const spf = (source.spfResult && source.spfResult.raw) || '';
+            return this.buildBundle(source.domain || 'example.com', dmarc, spf);
+        },
+
+        triggerDownload(filename, content, mimeType) {
+            const blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = filename;
+            anchor.rel = 'noopener';
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+            setTimeout(() => URL.revokeObjectURL(url), 1500);
+        },
+
+        downloadBundle(auditOrDomain, dmarcVal, spfVal) {
+            const audit = (auditOrDomain && typeof auditOrDomain === 'object') ? auditOrDomain : null;
+            const domain = this.sanitizeDomain(audit ? audit.domain : auditOrDomain);
+            const bundle = audit
+                ? this.buildFromAudit(Object.assign({}, audit, { domain }))
+                : this.buildBundle(domain, dmarcVal, spfVal);
+            const files = [
+                ['remediation.zone', bundle.zone],
+                ['remediation.tf', bundle.terraform],
+                ['security.txt', bundle.securityTxt]
+            ];
+
+            files.forEach(([filename, content], index) => {
+                setTimeout(() => this.triggerDownload(filename, content), index * 150);
+            });
+
+            dispatchRadarTelemetry(domain, 'remediation_bundle_download', audit || null);
+        }
+    };
+    // REMEDIATION_BUNDLE_BUILDER_END
+
     const SAAS_TAKEOVER_PATTERNS = [
         { name: 'Unbounce', pattern: 'unbouncepages.com' },
         { name: 'AWS S3', pattern: 's3.amazonaws.com' },
@@ -1394,6 +1527,27 @@
         }
     }
 
+    function downloadDnsFixPack() {
+        const audit = window._lastAuditResult;
+        const input = document.getElementById('targetDomain');
+        const domain = (audit && audit.domain) || (input && input.value) || '';
+
+        if (!domain) {
+            showArcadeToast('Enter a domain and run a scan before exporting a fix pack.', 'warn');
+            return;
+        }
+
+        try {
+            RemediationBundleBuilder.downloadBundle(audit && audit.domain === domain ? audit : domain);
+
+            if (window.SimpleCat && SimpleCat.playCoin) SimpleCat.playCoin();
+            showArcadeToast('DNS Fix Pack exported: remediation.zone, remediation.tf, security.txt', 'warn');
+        } catch (err) {
+            console.error('[Orbit Radar] Fix pack export failed:', err);
+            showArcadeToast('Fix pack export failed. Please retry the scan.', 'error');
+        }
+    }
+
     async function handleAuditRequest(e) {
         e.preventDefault();
         const input = document.getElementById('targetDomain');
@@ -2266,7 +2420,9 @@ ${payload.url}`;
     window.switchHudTab = switchHudTab;
     window.copyRawTelemetry = copyRawTelemetry;
     window.simulateFlattenedSpf = simulateFlattenedSpf;
+    window.downloadDnsFixPack = downloadDnsFixPack;
     window.walkSpfLookupTree = walkSpfLookupTree;
+    window.RemediationBundleBuilder = RemediationBundleBuilder;
     window.handleAuditRequest = handleAuditRequest;
     window.toggleFaq = toggleFaq;
     window.copyShareableBadge = copyShareableBadge;
