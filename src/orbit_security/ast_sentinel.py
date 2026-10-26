@@ -169,6 +169,62 @@ class ASTCodeSentinel:
             "imports_count": len(visitor.imports) + len(visitor.imported_symbols),
         }
 
+    def auto_fix_missing_imports(self, file_path: Path) -> Tuple[bool, List[str]]:
+        """Autonomously injects missing standard library imports detected by AST inspection."""
+        inspection = self.inspect_file(file_path)
+        if inspection["ok"] or not inspection.get("missing_imports"):
+            return True, []
+
+        missing_mods = sorted({mi["module"] for mi in inspection["missing_imports"]})
+        if not missing_mods:
+            return True, []
+
+        path = Path(file_path)
+        content = path.read_text(encoding="utf-8")
+        lines = content.splitlines(keepends=True)
+
+        # Find safe injection line (after __future__ or module docstrings)
+        insert_idx = 0
+        in_docstring = False
+        docstring_char = None
+
+        for idx, line in enumerate(lines):
+            stripped = line.strip()
+            if not in_docstring:
+                if stripped.startswith('"""') or stripped.startswith("'''"):
+                    in_docstring = True
+                    docstring_char = stripped[:3]
+                    # Check if single line docstring
+                    if stripped.count(docstring_char) >= 2 and len(stripped) > 3:
+                        in_docstring = False
+                        insert_idx = idx + 1
+                    continue
+                elif stripped.startswith("from __future__"):
+                    insert_idx = idx + 1
+                    continue
+                elif stripped.startswith("#"):
+                    insert_idx = idx + 1
+                    continue
+                elif stripped.startswith("import ") or stripped.startswith("from "):
+                    insert_idx = idx
+                    break
+                elif stripped:
+                    insert_idx = idx
+                    break
+            else:
+                if docstring_char and docstring_char in stripped:
+                    in_docstring = False
+                    insert_idx = idx + 1
+                    continue
+
+        import_statements = [f"import {mod}\n" for mod in missing_mods]
+        new_lines = lines[:insert_idx] + import_statements + lines[insert_idx:]
+        path.write_text("".join(new_lines), encoding="utf-8")
+
+        # Re-verify
+        recheck = self.inspect_file(path)
+        return recheck["ok"], missing_mods
+
     def inspect_directory(self, dir_path: Path, max_files: int = 200) -> Dict[str, Any]:
         """Inspects all Python files in a directory."""
         dir_p = Path(dir_path)
@@ -318,6 +374,7 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description="AST Code Sentinel: Static Symbol & Import Verifier")
     parser.add_argument("--check", type=str, help="Check single file or directory")
+    parser.add_argument("--auto-fix", action="store_true", help="Autonomously patch missing standard library imports")
     parser.add_argument("--daemon", action="store_true", help="Run continuously in background")
     parser.add_argument("--interval", type=int, default=60, help="Check interval in seconds")
     args = parser.parse_args()
@@ -338,6 +395,10 @@ def main():
                 print("  ✓ All symbols and imports verified (0 omissions).")
                 sys.exit(0)
         else:
+            if args.auto_fix:
+                ok, fixed_mods = sentinel.auto_fix_missing_imports(target)
+                if fixed_mods:
+                    print(f"🔧 Auto-fixed missing imports: {', '.join(fixed_mods)}")
             res = sentinel.inspect_file(target)
             if res["ok"]:
                 print(f"✓ {target.name}: Clean syntax and verified imports.")
