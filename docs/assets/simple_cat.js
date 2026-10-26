@@ -2303,8 +2303,12 @@
     function createMobileCanvasStream() {
         const canvas = document.createElement("canvas");
         const isPortrait = typeof window !== "undefined" && window.innerHeight >= window.innerWidth;
-        canvas.width = isPortrait ? 720 : 1280;
-        canvas.height = isPortrait ? 1280 : 720;
+        const baseW = isPortrait ? 720 : 1280;
+        const baseH = isPortrait ? 1280 : 720;
+        const dpr = typeof window !== "undefined" && window.devicePixelRatio ? Math.min(window.devicePixelRatio, 2) : 1.5;
+        const renderScale = dpr > 1.2 ? 1.5 : 1.0;
+        canvas.width = Math.round(baseW * renderScale);
+        canvas.height = Math.round(baseH * renderScale);
         const ctx = canvas.getContext("2d");
 
         // Starfield & Particle State for Recording Clip
@@ -2312,8 +2316,8 @@
         const clipStars = [];
         for (let i = 0; i < 75; i++) {
             clipStars.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
+                x: Math.random() * baseW,
+                y: Math.random() * baseH,
                 size: Math.random() < 0.2 ? 3.5 : (Math.random() < 0.5 ? 2.5 : 1.5),
                 isCross: Math.random() < 0.3,
                 color: starColors[Math.floor(Math.random() * starColors.length)],
@@ -2336,6 +2340,23 @@
             c.arcTo(x, y + h, x, y, r);
             c.arcTo(x, y + w, x, y, r);
             c.closePath();
+        }
+
+        function drawRetroCrtOverlay(c, w, h) {
+            c.save();
+            // 1. CRT Horizontal Scanlines
+            c.fillStyle = 'rgba(0, 0, 0, 0.16)';
+            for (let y = 0; y < h; y += 4) {
+                c.fillRect(0, y, w, 2);
+            }
+            // 2. Phosphor Edge Vignette
+            const crtVignette = c.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.45, w / 2, h / 2, Math.max(w, h) * 0.72);
+            crtVignette.addColorStop(0, 'rgba(16, 185, 129, 0)');
+            crtVignette.addColorStop(0.7, 'rgba(2, 6, 23, 0.25)');
+            crtVignette.addColorStop(1, 'rgba(2, 6, 23, 0.65)');
+            c.fillStyle = crtVignette;
+            c.fillRect(0, 0, w, h);
+            c.restore();
         }
 
         function drawVectorAstroCat(c, cx, cy, scale, fCount) {
@@ -2570,8 +2591,10 @@
         const renderFrame = () => {
             if (!ctx) return;
             frameCount++;
-            const w = canvas.width;
-            const h = canvas.height;
+            ctx.save();
+            ctx.scale(renderScale, renderScale);
+            const w = baseW;
+            const h = baseH;
 
             // ---------------------------------------------------------------
             // 1. DEEP CYBER NEBULA & SPACE STARFIELD
@@ -2696,8 +2719,8 @@
             ctx.font = '13px "Courier New", Courier, monospace';
             ctx.fillText("RFC-8484 DNS-OVER-HTTPS • CFAA SAFE HARBOR", headX + 54, headY + 56);
 
-            // Right Timer Badge
-            const timerBoxW = isPortrait ? 120 : 140;
+            // Right Timer Badge (Real-time countdown to 3.5s)
+            const timerBoxW = isPortrait ? 130 : 150;
             const timerBoxX = headX + headW - timerBoxW - 14;
             ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
             roundRect(ctx, timerBoxX, headY + 18, timerBoxW, 44, 10);
@@ -2706,18 +2729,17 @@
             ctx.lineWidth = 1.4;
             ctx.stroke();
 
-            const mins = String(Math.floor(recSeconds / 60)).padStart(2, "0");
-            const secs = String(recSeconds % 60).padStart(2, "0");
-            const maxSecs = isPortrait ? "06" : "60";
+            const elapsedSecs = Math.min(3.5, frameCount / 30);
+            const secStr = elapsedSecs.toFixed(1);
             ctx.fillStyle = '#38bdf8';
-            ctx.font = 'bold 14px "Courier New", Courier, monospace';
-            ctx.fillText(`${mins}:${secs} / 00:${maxSecs}`, timerBoxX + 10, headY + 45);
+            ctx.font = 'bold 13px "Courier New", Courier, monospace';
+            ctx.fillText(`00:0${secStr} / 00:03.5`, timerBoxX + 10, headY + 45);
 
             // ---------------------------------------------------------------
-            // 3. TARGET PERIMETER SECURITY AUDIT CARD
+            // 3. TARGET PERIMETER SECURITY AUDIT CARD (DYNAMIC TELEMETRY)
             // ---------------------------------------------------------------
             const audit = (typeof window !== "undefined" && window._lastAuditResult) ? window._lastAuditResult : null;
-            const domainInput = (typeof document !== "undefined") ? document.getElementById("targetDomain") : null;
+            const domainInput = (typeof document !== "undefined") ? (document.getElementById("targetDomain") || document.getElementById("realScanDomain")) : null;
             
             // Auto-resolve domain: audit result -> live input -> localStorage unsent queue -> default
             let resolvedDomain = (audit && audit.domain) || (domainInput && domainInput.value && domainInput.value.trim());
@@ -2730,6 +2752,7 @@
                 } catch (_) {}
             }
             if (!resolvedDomain) resolvedDomain = "smartmouseco.com";
+            resolvedDomain = String(resolvedDomain).replace(/^https?:\/\//i, '').replace(/\/.*$/, '').toLowerCase();
 
             const activeScore = (audit && typeof audit.score === "number") ? audit.score : 95;
             const activeGrade = (audit && audit.grade) ? audit.grade : (activeScore >= 80 ? "A+" : (activeScore >= 50 ? "C" : "F"));
@@ -2744,7 +2767,6 @@
 
             // Score Color Coding
             const scoreColor = activeScore >= 80 ? '#10b981' : (activeScore >= 50 ? '#f59e0b' : '#ef4444');
-            const scoreGlow = activeScore >= 80 ? 'rgba(16, 185, 129, 0.45)' : (activeScore >= 50 ? 'rgba(245, 158, 11, 0.45)' : 'rgba(239, 68, 68, 0.45)');
 
             ctx.fillStyle = 'rgba(10, 18, 40, 0.94)';
             roundRect(ctx, cardX, cardY, cardW, cardH, 20);
@@ -2765,9 +2787,10 @@
             ctx.fillText("TARGET PERIMETER RECON", cardX + 34, cardY + 37);
 
             // Target Domain Name (Large & Crisp)
+            const domainDisplay = `TARGET: ${resolvedDomain.toUpperCase()}`;
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 28px "Courier New", Courier, monospace';
-            ctx.fillText(String(resolvedDomain).slice(0, 26), cardX + 24, cardY + 80);
+            ctx.font = domainDisplay.length > 22 ? 'bold 20px "Courier New", Courier, monospace' : 'bold 24px "Courier New", Courier, monospace';
+            ctx.fillText(domainDisplay.slice(0, 28), cardX + 24, cardY + 80);
 
             // Circular Cyber Score Gauge
             const gaugeRadius = isPortrait ? 44 : 36;
@@ -2816,7 +2839,7 @@
             ctx.font = 'bold 16px "Courier New", Courier, monospace';
             ctx.fillText(`GRADE ${activeGrade}`, gradeBadgeX + 16, gradeBadgeY + 24);
 
-            // Subtitle
+            // Subtitle Verdict
             ctx.fillStyle = '#94a3b8';
             ctx.font = '13px "Courier New", Courier, monospace';
             ctx.fillText(activeScore >= 80 ? "Perimeter Hardened • Zero Takeover Vectors" : "Attack Surface Vulnerable • Takeover Vector", cardX + 24, cardY + 164);
@@ -2826,10 +2849,11 @@
             const badgeY = isPortrait ? cardY + 195 : cardY + 140;
             const badgeH = isPortrait ? 80 : 54;
 
+            const isCnameOk = cnameStatus === "PASS" || cnameStatus === "SECURE";
             const metrics = [
                 { label: "DMARC", val: dmarcStatus === "PASS" ? "ENFORCED" : (dmarcStatus === "MISSING" ? "MISSING" : "MONITOR"), ok: dmarcStatus === "PASS" },
                 { label: "SPF", val: spfStatus === "PASS" ? "ENFORCED" : (spfStatus === "MISSING" ? "FAIL" : "SOFTFAIL"), ok: spfStatus === "PASS" },
-                { label: "CNAME", val: cnameStatus === "PASS" ? "SECURE" : "DANGLING", ok: cnameStatus === "PASS" }
+                { label: "CNAME", val: isCnameOk ? "SECURE" : "DANGLING", ok: isCnameOk }
             ];
 
             metrics.forEach((m, idx) => {
@@ -3011,19 +3035,20 @@
             ctx.font = 'bold 12px "Courier New", Courier, monospace';
             ctx.fillText("🐱 ASTRO-CAT COPILOT // ZERO-G TELEMETRY", 44, commsY + 26);
 
-            // Dynamic Live Dialogue
+            // Dynamic Live Dialogue referencing scanned domain
+            const statusVerb = activeScore >= 80 ? "secured" : "analyzed";
             const liveQuips = [
-                "Perimeter secured! RFC-8484 DNS verified with 0 exploit packets. 🐾",
-                "Zero dangling CNAMEs detected! DMARC blast shields online. 🛡️",
-                "Automated white-label audit report generated for client retainer! 💼",
-                "Full passive surveillance active. Client estate safe & monitored! 🚀"
+                `Perimeter ${statusVerb} for ${resolvedDomain}! Grade ${activeGrade} (${activeScore}/100). 🐾`,
+                `Zero-G DoH recon active: SPF & DMARC blast shields verified! 🛡️`,
+                `Automated audit report generated for ${resolvedDomain} retainer! 💼`,
+                `Continuous passive telemetry online. Domain monitored! 🚀`
             ];
-            const quipIdx = Math.floor(frameCount / 90) % liveQuips.length;
+            const quipIdx = Math.floor(frameCount / 45) % liveQuips.length;
             const liveQuip = liveQuips[quipIdx];
 
             ctx.fillStyle = '#f8fafc';
-            ctx.font = 'bold 14px "Courier New", Courier, monospace';
-            ctx.fillText(liveQuip.slice(0, isPortrait ? 44 : 76), 44, commsY + 54);
+            ctx.font = 'bold 13px "Courier New", Courier, monospace';
+            ctx.fillText(liveQuip.slice(0, isPortrait ? 48 : 76), 44, commsY + 54);
 
             // Animated Audio Equalizer Bars on Right
             const eqX = w - 90;
@@ -3041,8 +3066,15 @@
             ctx.fillStyle = '#10b981';
             ctx.font = 'bold 15px "Courier New", Courier, monospace';
             ctx.textAlign = 'center';
-            ctx.fillText("🌐 cmfh009.github.io/Orbit-Security   •   𝕏 @_arsoncode", w / 2, footY);
+            ctx.fillText("🌐 cmfh009.github.io/Orbit-Security   •   𝕏 @OrbitSecurity", w / 2, footY);
             ctx.textAlign = 'left';
+
+            // ---------------------------------------------------------------
+            // 7. CRT SCANLINES & PHOSPHOR OVERLAY
+            // ---------------------------------------------------------------
+            drawRetroCrtOverlay(ctx, w, h);
+
+            ctx.restore();
         };
 
         renderFrame();
@@ -3073,9 +3105,14 @@
             lastRecordedClipUrl = URL.createObjectURL(blob);
             const mimeType = fileExt === "mp4" ? "video/mp4" : "video/webm";
             try {
-                lastRecordedClipFile = new File([blob], filename, { type: mimeType });
+                lastRecordedClipFile = new File([blob], filename, { type: mimeType, lastModified: Date.now() });
             } catch (_) {
-                lastRecordedClipFile = null;
+                try {
+                    blob.name = filename;
+                    lastRecordedClipFile = blob;
+                } catch (_2) {
+                    lastRecordedClipFile = null;
+                }
             }
 
             let modal = document.getElementById("orbit-clip-share-modal");
@@ -3086,34 +3123,49 @@
             }
 
             const audit = (typeof window !== "undefined" && window._lastAuditResult) ? window._lastAuditResult : null;
-            const domain = (audit && audit.domain) ? audit.domain : "our domain perimeter";
-            const scoreStr = (audit && typeof audit.score === "number") ? ` (${audit.score}/100 Grade ${audit.grade})` : "";
-            const shareText = `Just recorded a live passive DNS & DMARC perimeter audit for ${domain}${scoreStr} with Astro-Cat on @OrbitSecurity! 🐱🛡️\n\nRun a free RFC-8484 scan:`;
+            const domainInput = (typeof document !== "undefined") ? (document.getElementById("targetDomain") || document.getElementById("realScanDomain")) : null;
+            let resolvedDomain = (audit && audit.domain) || (domainInput && domainInput.value && domainInput.value.trim());
+            if (!resolvedDomain) {
+                try {
+                    const stored = JSON.parse(localStorage.getItem('orbit_radar_probe_telemetry_v1') || '[]');
+                    if (Array.isArray(stored) && stored.length > 0 && stored[0].domain) {
+                        resolvedDomain = stored[0].domain;
+                    }
+                } catch (_) {}
+            }
+            if (!resolvedDomain) resolvedDomain = "smartmouseco.com";
+            resolvedDomain = String(resolvedDomain).replace(/^https?:\/\//i, '').replace(/\/.*$/, '').toLowerCase();
+
+            const scoreVal = (audit && typeof audit.score === "number") ? audit.score : 95;
+            const gradeVal = (audit && audit.grade) ? audit.grade : (scoreVal >= 80 ? "A+" : (scoreVal >= 50 ? "C" : "F"));
+            const scoreStr = ` (${scoreVal}/100 Grade ${gradeVal})`;
+            const shareText = `Just recorded a live passive DNS & DMARC perimeter audit for ${resolvedDomain}${scoreStr} with Astro-Cat on @OrbitSecurity! 🐱🛡️\n\nRun a free RFC-8484 scan:`;
             const shareUrl = "https://cmfh009.github.io/Orbit-Security/#audit-terminal";
             const xIntentUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
 
-            modal.className = "fixed bottom-20 right-4 sm:right-6 max-w-sm w-[calc(100vw-2rem)] p-4 rounded-2xl bg-slate-950/98 border-2 border-emerald-500 shadow-[0_0_40px_rgba(16,185,129,0.55)] backdrop-blur-2xl text-xs font-mono text-slate-200 space-y-3";
-            modal.style.cssText = "z-index: 999999 !important;";
+            modal.className = "fixed inset-x-3 bottom-3 sm:inset-x-auto sm:right-6 sm:bottom-20 max-w-sm max-h-[88dvh] overflow-y-auto p-3.5 sm:p-4 rounded-2xl bg-slate-950/98 border-2 border-emerald-500 shadow-[0_0_40px_rgba(16,185,129,0.55)] backdrop-blur-2xl text-xs font-mono text-slate-200 space-y-2.5 sm:space-y-3";
+            modal.style.cssText = "z-index: 999999 !important; box-sizing: border-box;";
+            modal.classList.remove("hidden");
             modal.innerHTML = `
-                <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
                     <div class="flex items-center gap-2 text-emerald-400 font-bold">
                         <span class="text-sm">🎬</span>
-                        <span class="font-arcade text-[10px] tracking-wider text-emerald-300">1080P 60FPS CLIP FOR X // ${fileExt.toUpperCase()}</span>
+                        <span class="font-arcade text-[10px] tracking-wider text-emerald-300">ARCADE HUD CLIP // ${fileExt.toUpperCase()}</span>
                     </div>
-                    <button type="button" onclick="document.getElementById('orbit-clip-share-modal').classList.add('hidden')" class="text-slate-400 hover:text-white text-lg px-1.5 py-0.5 rounded cursor-pointer">&times;</button>
+                    <button type="button" onclick="document.getElementById('orbit-clip-share-modal').classList.add('hidden')" class="text-slate-400 hover:text-white text-lg px-2 py-0.5 rounded cursor-pointer leading-none">&times;</button>
                 </div>
                 <div class="relative rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-900 shadow-inner">
-                    <video src="${lastRecordedClipUrl}" controls playsinline muted autoplay loop class="w-full max-h-52 bg-slate-950 object-contain"></video>
+                    <video src="${lastRecordedClipUrl}" controls playsinline webkit-playsinline muted autoplay loop class="w-full max-h-40 sm:max-h-52 bg-slate-950 object-contain"></video>
                 </div>
                 <p class="text-[11px] text-slate-300 leading-relaxed">
-                    Captured <code class="text-emerald-300 font-bold">${filename}</code>! Tap <strong>Share Clip</strong> to open the phone share sheet directly for X, or download below:
+                    Captured <code class="text-emerald-300 font-bold">${filename}</code> for <span class="text-white font-bold">${resolvedDomain}</span>! Tap <strong>Share Clip</strong> to open your phone share sheet for X, or download below:
                 </p>
                 <div class="flex flex-col gap-2">
                     <div class="flex items-center gap-2">
-                        <button type="button" id="orbit-native-share-clip-btn" class="flex-1 min-h-[44px] px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs uppercase cursor-pointer flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
+                        <button type="button" id="orbit-native-share-clip-btn" class="flex-1 min-h-[42px] px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs uppercase cursor-pointer flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all">
                             <span>📱 Share Clip</span>
                         </button>
-                        <a href="${lastRecordedClipUrl}" download="${filename}" class="flex-1 min-h-[44px] px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/40 font-bold text-xs uppercase cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+                        <a href="${lastRecordedClipUrl}" download="${filename}" class="flex-1 min-h-[42px] px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/40 font-bold text-xs uppercase cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 transition-all">
                             <span>⬇️ Save Video</span>
                         </a>
                     </div>
@@ -3125,27 +3177,53 @@
 
             const nativeBtn = document.getElementById("orbit-native-share-clip-btn");
             if (nativeBtn) {
-                nativeBtn.onclick = async () => {
+                nativeBtn.onclick = (e) => {
+                    e.preventDefault();
+                    function fallbackShare() {
+                        const dlLink = document.createElement("a");
+                        dlLink.href = lastRecordedClipUrl;
+                        dlLink.download = filename;
+                        document.body.appendChild(dlLink);
+                        dlLink.click();
+                        setTimeout(() => {
+                            try { document.body.removeChild(dlLink); } catch (_) {}
+                        }, 100);
+                        window.open(xIntentUrl, "_blank", "noopener,noreferrer");
+                    }
+
                     if (navigator.share) {
+                        let canShareFiles = false;
                         try {
-                            if (lastRecordedClipFile && navigator.canShare && navigator.canShare({ files: [lastRecordedClipFile] })) {
-                                await navigator.share({
-                                    files: [lastRecordedClipFile],
-                                    title: "Orbit Security — Astro-Cat Clip",
-                                    text: shareText,
-                                    url: shareUrl
-                                });
-                                return;
+                            if (lastRecordedClipFile && typeof navigator.canShare === "function") {
+                                canShareFiles = navigator.canShare({ files: [lastRecordedClipFile] });
                             }
-                            await navigator.share({
+                        } catch (_) {
+                            canShareFiles = false;
+                        }
+
+                        const shareData = canShareFiles
+                            ? {
+                                files: [lastRecordedClipFile],
                                 title: "Orbit Security — Astro-Cat Clip",
                                 text: shareText,
                                 url: shareUrl
+                              }
+                            : {
+                                title: "Orbit Security — Astro-Cat Clip",
+                                text: shareText,
+                                url: shareUrl
+                              };
+
+                        // Synchronous invocation in user gesture turn
+                        navigator.share(shareData)
+                            .then(() => {})
+                            .catch((err) => {
+                                if (err && err.name === "AbortError") return;
+                                fallbackShare();
                             });
-                            return;
-                        } catch (_) {}
+                        return;
                     }
-                    window.open(xIntentUrl, "_blank", "noopener,noreferrer");
+                    fallbackShare();
                 };
             }
         } catch (e) {
@@ -3200,45 +3278,8 @@
                     }
                 }
             } else {
-                // 2. MOBILE PHONES (iOS / Android): Broadcast-Grade 1080P 60FPS Video Clip!
-                // Mobile OSes disable in-browser tab recording. Instead of an artificial 2D canvas wireframe,
-                // mobile users get the real 1080P 60FPS Full HD Astro-Cat gameplay video (assets/orbit_astro_cat_gameplay_x.mp4).
-                const banner = document.getElementById("orbit-rec-banner");
-                if (banner) {
-                    banner.classList.remove("hidden");
-                    const timerEl = document.getElementById("orbit-rec-timer");
-                    if (timerEl) timerEl.textContent = "REC ● 1080P";
-                }
-                const dockRecBtn = document.getElementById("dock-rec-btn");
-                if (dockRecBtn) dockRecBtn.innerHTML = '<span class="text-rose-400 animate-pulse">REC ● 1080P</span>';
-                const touchRecBtn = document.getElementById("touch-rec-btn");
-                if (touchRecBtn) touchRecBtn.innerHTML = '<span class="text-rose-400 animate-pulse">REC ● 1080P</span>';
-
-                playPowerUp();
-                showSpeechBubble("🎬 Capturing 1080P 60FPS Astro-Cat clip for X...", 2500, false, "ASTRO-CAT // 1080P CLIP");
-
-                const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-                const filename = `orbit-security-astro-cat-1080p-${timestamp}.mp4`;
-
-                try {
-                    const res = await fetch("assets/orbit_astro_cat_gameplay_x.mp4");
-                    if (res.ok) {
-                        const blob = await res.blob();
-                        setTimeout(() => {
-                            if (banner) banner.classList.add("hidden");
-                            if (dockRecBtn) dockRecBtn.innerHTML = '<span>📹 Clip</span>';
-                            if (touchRecBtn) touchRecBtn.innerHTML = '<span>📹 Record Clip for X</span>';
-                            playCoin();
-                            showSpeechBubble("🎬 1080P Full HD clip ready! Tap 'Share Clip' or 'Save Video' to share on X! 🚀", 7000, false, "ASTRO-CAT // CLIP SAVED");
-                            showClipSavedShareBanner(blob, "mp4", filename);
-                        }, 1200);
-                        return;
-                    }
-                } catch (fetchErr) {
-                    console.warn("Could not fetch 1080p master clip, falling back to canvas:", fetchErr);
-                }
-
-                // Resilient fallback if fetch fails
+                // 2. MOBILE PHONE BROWSERS (iOS Safari, Android Chrome, in-app WebViews):
+                // Broadcast-Grade High-DPI Arcade Canvas Recording with Dynamic Domain & Telemetry!
                 recStream = createMobileCanvasStream();
                 usingMobileCanvasFallback = true;
             }
@@ -3300,7 +3341,10 @@
             };
 
             mediaRecorder.onstop = () => {
-                clearInterval(recTimerInterval);
+                if (recTimerInterval) {
+                    clearInterval(recTimerInterval);
+                    recTimerInterval = null;
+                }
                 const banner = document.getElementById("orbit-rec-banner");
                 if (banner) banner.classList.add("hidden");
                 const dockRecBtn = document.getElementById("dock-rec-btn");
@@ -3318,23 +3362,29 @@
                 if (recordedChunks.length === 0) return;
 
                 const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || (fileExt === "mp4" ? "video/mp4" : "video/webm") });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.style.display = "none";
-                a.href = url;
                 const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
                 const filename = `orbit-security-astro-cat-${timestamp}.${fileExt}`;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                setTimeout(() => {
-                    document.body.removeChild(a);
-                    window.URL.revokeObjectURL(url);
-                    recordedChunks = [];
-                }, 150);
+
+                // On desktop, auto-download the recorded video file.
+                // On mobile, avoid background download that triggers unwanted navigation in iOS Safari;
+                // the modal provides direct 1-tap "Share Clip", "Save Video", and "Post on X" actions.
+                if (!isMobileOrTouchDevice()) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.style.display = "none";
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                        try { document.body.removeChild(a); } catch (_) {}
+                        window.URL.revokeObjectURL(url);
+                    }, 150);
+                }
+                recordedChunks = [];
 
                 playCoin();
-                showSpeechBubble("🎬 Clip ready! Preview below or tap 'Share Clip File' to post on X! 🚀", 7000, false, "ASTRO-CAT // CLIP SAVED");
+                showSpeechBubble("🎬 Clip ready! Preview below or tap 'Share Clip' to post on X! 🚀", 7000, false, "ASTRO-CAT // CLIP SAVED");
                 showClipSavedShareBanner(blob, fileExt, filename);
             };
 
@@ -3348,24 +3398,42 @@
 
             mediaRecorder.start(usingMobileCanvasFallback ? 250 : 1000);
             recSeconds = 0;
-            const maxRecSeconds = usingMobileCanvasFallback ? 6 : 60;
             const banner = document.getElementById("orbit-rec-banner");
             const timerEl = document.getElementById("orbit-rec-timer");
             if (banner) banner.classList.remove("hidden");
-            if (timerEl) timerEl.textContent = usingMobileCanvasFallback ? `00:00 / 00:0${maxRecSeconds}` : "00:00";
 
-            recTimerInterval = setInterval(() => {
-                recSeconds++;
-                const mins = String(Math.floor(recSeconds / 60)).padStart(2, "0");
-                const secs = String(recSeconds % 60).padStart(2, "0");
-                if (timerEl) {
-                    timerEl.textContent = usingMobileCanvasFallback ? `${mins}:${secs} / 00:0${maxRecSeconds}` : `${mins}:${secs}`;
-                }
+            if (usingMobileCanvasFallback) {
+                if (timerEl) timerEl.textContent = "REC ● 3.5s";
+                let remainingMs = 3500;
+                recTimerInterval = setInterval(() => {
+                    remainingMs -= 500;
+                    if (timerEl) {
+                        const secStr = Math.max(0, remainingMs / 1000).toFixed(1);
+                        timerEl.textContent = `REC ● ${secStr}s`;
+                    }
+                    if (remainingMs <= 0) {
+                        if (recTimerInterval) {
+                            clearInterval(recTimerInterval);
+                            recTimerInterval = null;
+                        }
+                        stopScreenRecording();
+                    }
+                }, 500);
+            } else {
+                if (timerEl) timerEl.textContent = "00:00";
+                recTimerInterval = setInterval(() => {
+                    recSeconds++;
+                    const mins = String(Math.floor(recSeconds / 60)).padStart(2, "0");
+                    const secs = String(recSeconds % 60).padStart(2, "0");
+                    if (timerEl) {
+                        timerEl.textContent = `${mins}:${secs}`;
+                    }
 
-                if (recSeconds >= maxRecSeconds) {
-                    stopScreenRecording();
-                }
-            }, 1000);
+                    if (recSeconds >= 60) {
+                        stopScreenRecording();
+                    }
+                }, 1000);
+            }
 
             const dockRecBtn = document.getElementById("dock-rec-btn");
             if (dockRecBtn) dockRecBtn.innerHTML = '<span class="text-rose-400 animate-pulse">⏹️ Stop Rec</span>';
@@ -3374,7 +3442,7 @@
 
             playPowerUp();
             if (usingMobileCanvasFallback) {
-                showSpeechBubble("📱 Recording 6-second HUD clip for X! Auto-saves in 6s or tap 'Stop & Share Clip' at top! 🐾", 6500, false, "ASTRO-CAT // MOBILE RECORDER");
+                showSpeechBubble("📱 Recording 3.5s arcade HUD clip for X! Auto-saving to share sheet... 🐾", 3800, false, "ASTRO-CAT // MOBILE RECORDER");
             } else {
                 showSpeechBubble("🎥 Recording clip (GPU optimized)! Flips & tricks ready! 🐾", 7500, false, "ASTRO-CAT // RECORDER");
             }
@@ -3389,6 +3457,10 @@
     }
 
     function stopScreenRecording() {
+        if (recTimerInterval) {
+            clearInterval(recTimerInterval);
+            recTimerInterval = null;
+        }
         if (mediaRecorder && mediaRecorder.state === "recording") {
             try {
                 if (typeof mediaRecorder.requestData === "function") {
@@ -4024,6 +4096,32 @@
             }
             #simple-cat-modal.cat-modal-open {
                 display: flex !important;
+            }
+
+            /* Safe Area & Viewport Constraints for Mobile Clip Share Modal */
+            #orbit-clip-share-modal {
+                position: fixed !important;
+                bottom: max(16px, env(safe-area-inset-bottom, 16px)) !important;
+                right: max(16px, env(safe-area-inset-right, 16px)) !important;
+                left: auto !important;
+                max-width: min(390px, calc(100vw - 32px)) !important;
+                width: calc(100vw - 32px) !important;
+                max-height: calc(100dvh - 32px) !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                z-index: 999999 !important;
+                box-sizing: border-box !important;
+            }
+            @media (max-width: 640px) {
+                #orbit-clip-share-modal {
+                    left: 50% !important;
+                    right: auto !important;
+                    transform: translateX(-50%) !important;
+                    width: calc(100vw - 24px) !important;
+                    max-width: calc(100vw - 24px) !important;
+                    bottom: max(12px, env(safe-area-inset-bottom, 12px)) !important;
+                    padding: 12px !important;
+                }
             }
 
             /* Floating Corner Dock Z-Index & Mobile Collision Guards */
