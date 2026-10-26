@@ -1408,6 +1408,19 @@
                 <button type="button" id="tour-next-btn" class="px-2.5 py-1 rounded bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-mono text-[10px] font-bold cursor-pointer transition-all shadow-sm">Next ➔</button>
                 <button type="button" id="tour-exit-btn" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-[10px] cursor-pointer transition-all">✕ Exit Tour</button>
             </div>
+            <div id="astro-clip-controls" class="hidden mt-2.5 pt-2 border-t border-emerald-500/30 flex flex-col gap-1.5">
+                <div class="flex items-center gap-1.5">
+                    <button type="button" id="bubble-share-btn" class="flex-1 min-h-[34px] px-2 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-mono font-bold text-[10px] uppercase cursor-pointer flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-all">
+                        <span>📱 Share</span>
+                    </button>
+                    <a id="bubble-dl-btn" href="#" download="" class="flex-1 min-h-[34px] px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/40 font-mono font-bold text-[10px] uppercase cursor-pointer flex items-center justify-center gap-1 active:scale-95 transition-all text-center">
+                        <span>⬇️ Save</span>
+                    </a>
+                </div>
+                <a id="bubble-x-btn" href="#" target="_blank" rel="noopener noreferrer" class="w-full min-h-[30px] px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white border border-slate-700 font-mono font-bold text-[10px] uppercase cursor-pointer flex items-center justify-center gap-1 active:scale-95 transition-all text-center">
+                    <span>𝕏 Post on X</span>
+                </a>
+            </div>
         `;
         document.body.appendChild(bubbleEl);
 
@@ -3176,56 +3189,86 @@
             `;
 
             const nativeBtn = document.getElementById("orbit-native-share-clip-btn");
+            const bubbleShareBtn = document.getElementById("bubble-share-btn");
+            const bubbleDlBtn = document.getElementById("bubble-dl-btn");
+            const bubbleXBtn = document.getElementById("bubble-x-btn");
+            const bubbleClipControls = document.getElementById("astro-clip-controls");
+
+            // Wire up speech bubble popup buttons directly
+            if (bubbleDlBtn) {
+                bubbleDlBtn.href = lastRecordedClipUrl;
+                bubbleDlBtn.download = filename;
+            }
+            if (bubbleXBtn) {
+                bubbleXBtn.href = xIntentUrl;
+            }
+            if (bubbleClipControls) {
+                bubbleClipControls.classList.remove("hidden");
+            }
+
+            function triggerNativeOrFallbackShare() {
+                function fallbackShare() {
+                    const dlLink = document.createElement("a");
+                    dlLink.href = lastRecordedClipUrl;
+                    dlLink.download = filename;
+                    document.body.appendChild(dlLink);
+                    dlLink.click();
+                    setTimeout(() => {
+                        try { document.body.removeChild(dlLink); } catch (_) {}
+                    }, 100);
+                    window.open(xIntentUrl, "_blank", "noopener,noreferrer");
+                }
+
+                if (navigator.share) {
+                    let canShareFiles = false;
+                    try {
+                        if (lastRecordedClipFile && typeof navigator.canShare === "function") {
+                            canShareFiles = navigator.canShare({ files: [lastRecordedClipFile] });
+                        }
+                    } catch (_) {
+                        canShareFiles = false;
+                    }
+
+                    const shareData = canShareFiles
+                        ? {
+                            files: [lastRecordedClipFile],
+                            title: "Orbit Security — Astro-Cat Clip",
+                            text: shareText,
+                            url: shareUrl
+                          }
+                        : {
+                            title: "Orbit Security — Astro-Cat Clip",
+                            text: shareText,
+                            url: shareUrl
+                          };
+
+                    // Synchronous invocation in user gesture turn
+                    navigator.share(shareData)
+                        .then(() => {})
+                        .catch((err) => {
+                            if (err && err.name === "AbortError") return;
+                            fallbackShare();
+                        });
+                    return;
+                }
+                fallbackShare();
+            }
+
             if (nativeBtn) {
                 nativeBtn.onclick = (e) => {
                     e.preventDefault();
-                    function fallbackShare() {
-                        const dlLink = document.createElement("a");
-                        dlLink.href = lastRecordedClipUrl;
-                        dlLink.download = filename;
-                        document.body.appendChild(dlLink);
-                        dlLink.click();
-                        setTimeout(() => {
-                            try { document.body.removeChild(dlLink); } catch (_) {}
-                        }, 100);
-                        window.open(xIntentUrl, "_blank", "noopener,noreferrer");
-                    }
-
-                    if (navigator.share) {
-                        let canShareFiles = false;
-                        try {
-                            if (lastRecordedClipFile && typeof navigator.canShare === "function") {
-                                canShareFiles = navigator.canShare({ files: [lastRecordedClipFile] });
-                            }
-                        } catch (_) {
-                            canShareFiles = false;
-                        }
-
-                        const shareData = canShareFiles
-                            ? {
-                                files: [lastRecordedClipFile],
-                                title: "Orbit Security — Astro-Cat Clip",
-                                text: shareText,
-                                url: shareUrl
-                              }
-                            : {
-                                title: "Orbit Security — Astro-Cat Clip",
-                                text: shareText,
-                                url: shareUrl
-                              };
-
-                        // Synchronous invocation in user gesture turn
-                        navigator.share(shareData)
-                            .then(() => {})
-                            .catch((err) => {
-                                if (err && err.name === "AbortError") return;
-                                fallbackShare();
-                            });
-                        return;
-                    }
-                    fallbackShare();
+                    triggerNativeOrFallbackShare();
                 };
             }
+            if (bubbleShareBtn) {
+                bubbleShareBtn.onclick = (e) => {
+                    e.preventDefault();
+                    triggerNativeOrFallbackShare();
+                };
+            }
+
+            // Keep Astro-Cat popup speech bubble active with the save & share options
+            showSpeechBubble(`🎬 Clip ready for ${resolvedDomain}! Tap 'Save' or 'Share' below: 🐾`, 15000, false, "ASTRO-CAT // CLIP SAVED");
         } catch (e) {
             console.warn("Could not render clip share modal:", e);
         }
@@ -3523,6 +3566,7 @@
         const bubbleText = document.getElementById("astro-bubble-text");
         const bubbleTitle = document.getElementById("astro-bubble-title");
         const tourControls = document.getElementById("astro-tour-controls");
+        const clipControls = document.getElementById("astro-clip-controls");
         if (!bubble || !bubbleText) return;
 
         bubbleText.innerText = text;
@@ -3555,6 +3599,14 @@
             }
         }
 
+        if (clipControls) {
+            if (customTitle && customTitle.includes("CLIP")) {
+                clipControls.classList.remove("hidden");
+            } else {
+                clipControls.classList.add("hidden");
+            }
+        }
+
         clearTimeout(copilot.speechTimer);
         if (duration > 0 && isFinite(duration)) {
             copilot.speechTimer = setTimeout(() => {
@@ -3565,6 +3617,8 @@
 
     function hideSpeechBubble() {
         const bubble = document.getElementById("astro-speech-bubble");
+        const clipControls = document.getElementById("astro-clip-controls");
+        if (clipControls) clipControls.classList.add("hidden");
         if (bubble) bubble.classList.add("hidden");
     }
 
@@ -4114,13 +4168,16 @@
             }
             @media (max-width: 640px) {
                 #orbit-clip-share-modal {
+                    top: 50% !important;
                     left: 50% !important;
                     right: auto !important;
-                    transform: translateX(-50%) !important;
-                    width: calc(100vw - 24px) !important;
-                    max-width: calc(100vw - 24px) !important;
-                    bottom: max(12px, env(safe-area-inset-bottom, 12px)) !important;
-                    padding: 12px !important;
+                    bottom: auto !important;
+                    transform: translate(-50%, -50%) !important;
+                    width: calc(100vw - 28px) !important;
+                    max-width: 380px !important;
+                    max-height: calc(100dvh - 32px) !important;
+                    padding: 14px !important;
+                    box-shadow: 0 0 60px rgba(0, 0, 0, 0.9), 0 0 40px rgba(16, 185, 129, 0.5) !important;
                 }
             }
 
@@ -4334,17 +4391,19 @@
                 position: fixed !important;
                 top: 0;
                 left: 0;
-                width: 230px;
-                background-color: rgba(15, 23, 42, 0.96);
+                width: 250px;
+                max-width: calc(100vw - 32px);
+                background-color: rgba(15, 23, 42, 0.98);
                 border: 2px solid #10b981;
-                border-radius: 12px;
+                border-radius: 14px;
                 padding: 10px 12px;
-                box-shadow: 0 0 25px rgba(16, 185, 129, 0.35), 4px 4px 0px #064e3b;
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
-                z-index: 99995 !important;
+                box-shadow: 0 0 30px rgba(16, 185, 129, 0.45), 4px 4px 0px #064e3b;
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                z-index: 999998 !important;
                 pointer-events: auto;
                 transition: opacity 0.2s;
+                box-sizing: border-box;
             }
             .astro-bubble-tail-down {
                 position: absolute;
