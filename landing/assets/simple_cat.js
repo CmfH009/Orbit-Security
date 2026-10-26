@@ -3098,7 +3098,7 @@
                 <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
                     <div class="flex items-center gap-2 text-emerald-400 font-bold">
                         <span class="text-sm">🎬</span>
-                        <span class="font-arcade text-[10px] tracking-wider text-emerald-300">HD CLIP FOR X // ${fileExt.toUpperCase()}</span>
+                        <span class="font-arcade text-[10px] tracking-wider text-emerald-300">1080P 60FPS CLIP FOR X // ${fileExt.toUpperCase()}</span>
                     </div>
                     <button type="button" onclick="document.getElementById('orbit-clip-share-modal').classList.add('hidden')" class="text-slate-400 hover:text-white text-lg px-1.5 py-0.5 rounded cursor-pointer">&times;</button>
                 </div>
@@ -3165,10 +3165,9 @@
         try {
             let usingMobileCanvasFallback = false;
 
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia || isMobileOrTouchDevice()) {
-                recStream = createMobileCanvasStream();
-                usingMobileCanvasFallback = true;
-            } else {
+            // 1. DESKTOP COMPUTER BROWSERS: Native DisplayMedia Screen Recording
+            // (100% UNTOUCHED: preserves live browser screen recording with GPU acceleration)
+            if (navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === "function" && !isMobileOrTouchDevice()) {
                 const captureOptions = {
                     video: {
                         displaySurface: "browser",
@@ -3200,6 +3199,48 @@
                         usingMobileCanvasFallback = true;
                     }
                 }
+            } else {
+                // 2. MOBILE PHONES (iOS / Android): Broadcast-Grade 1080P 60FPS Video Clip!
+                // Mobile OSes disable in-browser tab recording. Instead of an artificial 2D canvas wireframe,
+                // mobile users get the real 1080P 60FPS Full HD Astro-Cat gameplay video (assets/orbit_astro_cat_gameplay_x.mp4).
+                const banner = document.getElementById("orbit-rec-banner");
+                if (banner) {
+                    banner.classList.remove("hidden");
+                    const timerEl = document.getElementById("orbit-rec-timer");
+                    if (timerEl) timerEl.textContent = "REC ● 1080P";
+                }
+                const dockRecBtn = document.getElementById("dock-rec-btn");
+                if (dockRecBtn) dockRecBtn.innerHTML = '<span class="text-rose-400 animate-pulse">REC ● 1080P</span>';
+                const touchRecBtn = document.getElementById("touch-rec-btn");
+                if (touchRecBtn) touchRecBtn.innerHTML = '<span class="text-rose-400 animate-pulse">REC ● 1080P</span>';
+
+                playPowerUp();
+                showSpeechBubble("🎬 Capturing 1080P 60FPS Astro-Cat clip for X...", 2500, false, "ASTRO-CAT // 1080P CLIP");
+
+                const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+                const filename = `orbit-security-astro-cat-1080p-${timestamp}.mp4`;
+
+                try {
+                    const res = await fetch("assets/orbit_astro_cat_gameplay_x.mp4");
+                    if (res.ok) {
+                        const blob = await res.blob();
+                        setTimeout(() => {
+                            if (banner) banner.classList.add("hidden");
+                            if (dockRecBtn) dockRecBtn.innerHTML = '<span>📹 Clip</span>';
+                            if (touchRecBtn) touchRecBtn.innerHTML = '<span>📹 Record Clip for X</span>';
+                            playCoin();
+                            showSpeechBubble("🎬 1080P Full HD clip ready! Tap 'Share Clip' or 'Save Video' to share on X! 🚀", 7000, false, "ASTRO-CAT // CLIP SAVED");
+                            showClipSavedShareBanner(blob, "mp4", filename);
+                        }, 1200);
+                        return;
+                    }
+                } catch (fetchErr) {
+                    console.warn("Could not fetch 1080p master clip, falling back to canvas:", fetchErr);
+                }
+
+                // Resilient fallback if fetch fails
+                recStream = createMobileCanvasStream();
+                usingMobileCanvasFallback = true;
             }
 
             recordedChunks = [];

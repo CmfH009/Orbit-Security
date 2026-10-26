@@ -1151,8 +1151,10 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
         if status == 429:
             self.send_header("Retry-After", "60")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(body)
+        self.close_connection = True
 
     def do_OPTIONS(self):
         self.send_cors_headers(200, "text/plain")
@@ -1258,6 +1260,10 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
                 return
 
             if content_length < 0 or content_length > self.MAX_POST_BODY_BYTES:
+                try:
+                    self.rfile.read(min(content_length, 65536))
+                except Exception:
+                    pass
                 self._send_json_error(413, f"Payload exceeds {self.MAX_POST_BODY_BYTES} byte limit")
                 return
 
