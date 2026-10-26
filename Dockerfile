@@ -4,6 +4,8 @@
 # ==========================================
 FROM python:3.12-slim AS builder
 
+WORKDIR /app
+
 # Install only build deps, no runtime deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc libffi-dev libssl-dev \
@@ -12,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install uv and dependencies in isolated layer
 COPY pyproject.toml uv.lock ./
 RUN pip install --no-cache-dir uv && \
-    uv sync --frozen --no-dev && \
+    uv sync --no-dev --no-install-project && \
     uv pip freeze > /requirements.txt
 
 # ==========================================
@@ -32,12 +34,14 @@ WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /requirements.txt /requirements.txt
 COPY src/ ./src/
+COPY orbit/ ./orbit/
+COPY data/ ./data/
 COPY scripts/ ./scripts/
 
 # Security: Drop ALL capabilities (distroless does this by default)
 # Security: No network listeners except explicit port
 
-ENV PYTHONPATH=/app \
+ENV PYTHONPATH=/app/src:/app \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     UV_PROJECT_ENVIRONMENT=/app/.venv
