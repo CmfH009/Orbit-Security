@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml uv.lock README.md ./
 RUN pip install --no-cache-dir uv && \
     uv sync --no-dev --no-install-project && \
-    /app/.venv/bin/python -m pip freeze > /requirements.txt || true
+    (uv export --no-dev -o /requirements.txt || /app/.venv/bin/python -m pip freeze > /requirements.txt || touch /requirements.txt)
 
 # ==========================================
 # STAGE 2: Hardened non-root runtime (UID 65532)

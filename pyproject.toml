@@ -7,13 +7,6 @@ authors = [
     { name = "CmfH009", email = "carsonmail009@gmail.com" }
 ]
 requires-python = ">=3.13"
-
-[project.urls]
-Homepage = "https://cmfh009.github.io/Orbit-Security/"
-Documentation = "https://cmfh009.github.io/Orbit-Security/about.html"
-Repository = "https://github.com/CmfH009/Orbit-Security"
-Issues = "https://github.com/CmfH009/Orbit-Security/issues"
-Changelog = "https://github.com/CmfH009/Orbit-Security/blob/main/ROADMAP.md"
 dependencies = [
     "dnspython>=2.8.0",
     "httpx>=0.28.1",
@@ -39,6 +32,13 @@ dependencies = [
     "psutil>=5.9.0",
     "pyperclip>=1.8.2",
 ]
+
+[project.urls]
+Homepage = "https://cmfh009.github.io/Orbit-Security/"
+Documentation = "https://cmfh009.github.io/Orbit-Security/about.html"
+Repository = "https://github.com/CmfH009/Orbit-Security"
+Issues = "https://github.com/CmfH009/Orbit-Security/issues"
+Changelog = "https://github.com/CmfH009/Orbit-Security/blob/main/ROADMAP.md"
 
 [project.optional-dependencies]
 # Stealth browser stack for the X driver. Kept optional because the package
