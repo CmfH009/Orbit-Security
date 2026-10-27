@@ -498,26 +498,43 @@ req = urllib.request.urlopen('{server_url}/api/orbit/blackboard/stream')
 time.sleep(10)
 """])
 
-        time.sleep(0.5)
-        with bb._sub_lock:
-            assert len(bb._subscribers) == initial_sub_count + 1, "Subprocess failed to register as subscriber"
+        try:
+            t0 = time.time()
+            registered = False
+            while time.time() - t0 < 5.0:
+                with bb._sub_lock:
+                    if len(bb._subscribers) == initial_sub_count + 1:
+                        registered = True
+                        break
+                time.sleep(0.05)
+            assert registered, "Subprocess failed to register as subscriber"
 
-        # Abruptly kill the external client process
-        subproc.kill()
-        subproc.wait()
+            # Abruptly kill the external client process
+            subproc.kill()
+            subproc.wait()
 
-        # Publish 3 events to trigger write errors on the severed socket
-        for i in range(3):
-            bb.publish("CLEANUP_PING", {"seq": i})
-            time.sleep(0.05)
+            # Publish 3 events to trigger write errors on the severed socket
+            for i in range(3):
+                bb.publish("CLEANUP_PING", {"seq": i})
+                time.sleep(0.05)
 
-        time.sleep(0.3)
+            t0 = time.time()
+            cleaned = False
+            while time.time() - t0 < 5.0:
+                with bb._sub_lock:
+                    if len(bb._subscribers) == initial_sub_count:
+                        cleaned = True
+                        break
+                time.sleep(0.05)
 
-        with bb._sub_lock:
-            assert len(bb._subscribers) == initial_sub_count, (
+            assert cleaned, (
                 f"Subscriber queue was NOT cleaned up after disconnect! Leaked count: {len(bb._subscribers)}"
             )
-        print("\n[REAL SSE DISCONNECT PASS] Handler successfully detected external client termination and unsubscribed queue.")
+            print("\n[REAL SSE DISCONNECT PASS] Handler successfully detected external client termination and unsubscribed queue.")
+        finally:
+            if subproc.poll() is None:
+                subproc.kill()
+                subproc.wait()
 
 
 # ==============================================================================

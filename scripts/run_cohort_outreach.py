@@ -49,29 +49,29 @@ DEFAULT_VERIFICATION_PATH = PROJECT_ROOT / "data" / "contact_verification" / "ve
 RATE_LIMIT_SLEEP = 0.5  # seconds between scans (DNS-polite)
 
 
-def load_verification_cache(cache_path: Optional[Path] = None) -> Dict[str, Dict[str, Any]]:
+def load_verification_cache(cache_path: Optional[Path | str] = None) -> Dict[str, Dict[str, Any]]:
     """Loads existing contact verification records indexed by agency domain."""
-    path = cache_path or DEFAULT_VERIFICATION_PATH
+    path = Path(cache_path) if cache_path else DEFAULT_VERIFICATION_PATH
     if not path.exists():
         return {}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         results = data.get("results", [])
-        return {r.get("agency_domain", "").lower(): r for r in results if r.get("agency_domain")}
+        return {str(r.get("agency_domain", "")).lower(): r for r in results if r.get("agency_domain")}
     except Exception:
         return {}
 
 
 def preflight_verify_prospects(
     prospects: List[Dict[str, Any]],
-    cache_path: Optional[Path] = None,
+    cache_path: Optional[Path | str] = None,
     auto_substitute: bool = True,
     live_fallback: bool = False,
 ) -> Tuple[List[Dict[str, Any]], List[Tuple[Dict[str, Any], str]]]:
     """Pre-flight verification gate using verify_contacts to prevent guessing mailboxes.
 
     Filters out prospects whose mailboxes are classified as NO_MX or REFUTED
-    (without published replacement address).
+    (without published replacement address), or invalid prospects missing domain/email.
     If a published replacement address is known for a REFUTED prospect, updates contact_email.
 
     Returns:
@@ -92,8 +92,14 @@ def preflight_verify_prospects(
                 classify_fn = None
 
     for p in prospects:
-        domain = str(p.get("agency_domain", "")).strip().lower()
-        email = str(p.get("contact_email", "")).strip().lower()
+        raw_domain = p.get("agency_domain")
+        domain = str(raw_domain).strip().lower() if raw_domain is not None else ""
+        raw_email = p.get("contact_email")
+        email = str(raw_email).strip().lower() if raw_email is not None else ""
+
+        if not domain:
+            suppressed.append((p, "INVALID: missing or empty agency domain"))
+            continue
 
         record = cache.get(domain)
         if not record and classify_fn and domain:
@@ -103,12 +109,15 @@ def preflight_verify_prospects(
                 record = None
 
         if not record:
-            # Inconclusive / unverified -> allow through
-            allowed.append(p)
+            if not email:
+                suppressed.append((p, "MISSING_EMAIL: no contact email or verified replacement available"))
+            else:
+                # Inconclusive / unverified -> allow through
+                allowed.append(p)
             continue
 
         classification = str(record.get("classification", "")).upper()
-        replacements = [r.lower() for r in record.get("replacement_addresses", [])]
+        replacements = [str(r).lower() for r in record.get("replacement_addresses", []) if r]
 
         if classification == "NO_MX":
             suppressed.append((p, "NO_MX: domain publishes no mail exchanger"))
@@ -117,14 +126,20 @@ def preflight_verify_prospects(
                 # Already using verified replacement
                 allowed.append(p)
             elif auto_substitute and replacements:
-                old_email = p.get("contact_email")
                 p["contact_email"] = replacements[0]
                 allowed.append(p)
             else:
-                suppressed.append((p, f"REFUTED: mailbox '{email}' not published on agency site"))
+                suppressed.append((p, f"REFUTED: mailbox '{email or '<empty>'}' not published on agency site"))
         else:
             # CONFIRMED or UNKNOWN
-            allowed.append(p)
+            if not email:
+                if auto_substitute and replacements:
+                    p["contact_email"] = replacements[0]
+                    allowed.append(p)
+                else:
+                    suppressed.append((p, "MISSING_EMAIL: no contact email or verified replacement available"))
+            else:
+                allowed.append(p)
 
     return allowed, suppressed
 

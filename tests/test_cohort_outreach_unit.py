@@ -324,3 +324,41 @@ def test_main_verify_contacts_cli(capsys, tmp_path, monkeypatch):
     assert "Pre-flight gate: 1 allowed, 1 suppressed." in out
     assert "Good" in out
     assert "Bad MX" not in out.split("[DRY-RUN]")[1]
+
+
+def test_preflight_verify_missing_domain_and_email_handling(tmp_path):
+    """Verifies that missing domains and emails (including None) are handled robustly."""
+    cache_data = {
+        "results": [
+            {
+                "agency_domain": "has-replacement.com",
+                "classification": "CONFIRMED",
+                "replacement_addresses": ["found@has-replacement.com"],
+            }
+        ]
+    }
+    cache_path = tmp_path / "verification.json"
+    cache_path.write_text(json.dumps(cache_data), encoding="utf-8")
+
+    prospects = [
+        {"agency_name": "No Domain", "agency_domain": None, "contact_email": "x@nodomain.com"},
+        {"agency_name": "Empty Domain", "agency_domain": "", "contact_email": "x@emptydomain.com"},
+        {"agency_name": "None Email No Replace", "agency_domain": "noreplace.com", "contact_email": None},
+        {"agency_name": "Empty Email No Replace", "agency_domain": "noreplace.com", "contact_email": ""},
+        {"agency_name": "None Email With Replace", "agency_domain": "has-replacement.com", "contact_email": None},
+    ]
+
+    # Test with string path as well
+    allowed, suppressed = co.preflight_verify_prospects(prospects, cache_path=str(cache_path), auto_substitute=True)
+
+    allowed_names = [p["agency_name"] for p in allowed]
+    suppressed_names = [p["agency_name"] for p, _ in suppressed]
+
+    assert "No Domain" in suppressed_names
+    assert "Empty Domain" in suppressed_names
+    assert "None Email No Replace" in suppressed_names
+    assert "Empty Email No Replace" in suppressed_names
+    assert "None Email With Replace" in allowed_names
+
+    replaced = next(p for p in allowed if p["agency_name"] == "None Email With Replace")
+    assert replaced["contact_email"] == "found@has-replacement.com"
