@@ -10,6 +10,13 @@ It also marks the boundary between this package and its sibling repository.
 from pathlib import Path
 import os
 import sys
+import pytest
+
+@pytest.fixture(autouse=True)
+def _isolate_stripe_env(monkeypatch):
+    """Isolate test environment from production webhook secrets loaded via .env."""
+    monkeypatch.delenv("STRIPE_WEBHOOK_SECRET", raising=False)
+
 
 _REPO_ROOT = str(Path(__file__).resolve().parent)
 if _REPO_ROOT not in sys.path:

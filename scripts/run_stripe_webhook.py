@@ -21,6 +21,16 @@ SRC_DIR = REPO_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+try:
+    _sys_scripts = Path("A:/system/scripts")
+    if _sys_scripts.exists() and str(_sys_scripts) not in sys.path:
+        sys.path.insert(0, str(_sys_scripts))
+    import win_console
+    win_console.make_stdout_safe()
+    win_console.suppress_child_windows()
+except Exception:
+    pass
+
 from orbit_security.stripe_webhook import (
     StripeWebhookHandler,
     SubscriberManager,

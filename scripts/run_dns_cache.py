@@ -14,6 +14,15 @@ import os
 import signal
 import sys
 import time
+from pathlib import Path
+
+# Bootstrap the package on sys.path so this runner works from any working directory.
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _SCRIPTS_DIR.parent
+_SRC_DIR = _REPO_ROOT / "src"
+for _p in (_REPO_ROOT, _SRC_DIR, _SCRIPTS_DIR):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
 from orbit_security.dns_cache import (
     DEFAULT_CACHE_SIZE_MB,

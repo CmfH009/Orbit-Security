@@ -221,3 +221,106 @@ def test_main_agency_filter(capsys, tmp_path, monkeypatch):
     assert "Blue Stout" in out
     assert "Red Rocket" not in out
     assert "Prospects to process : 1" in out
+
+
+# ---------------------------------------------------------------- preflight_verify_prospects
+
+def test_preflight_verify_prospects_filtering_and_replacement(tmp_path):
+    """Verifies that NO_MX and unrecoverable REFUTED are suppressed, while replacements are substituted."""
+    cache_data = {
+        "results": [
+            {
+                "agency_domain": "noplace.com",
+                "classification": "NO_MX",
+                "replacement_addresses": [],
+            },
+            {
+                "agency_domain": "refuted-noreplace.com",
+                "classification": "REFUTED",
+                "replacement_addresses": [],
+            },
+            {
+                "agency_domain": "refuted-replaced.com",
+                "classification": "REFUTED",
+                "replacement_addresses": ["verified@refuted-replaced.com"],
+            },
+            {
+                "agency_domain": "confirmed.com",
+                "classification": "CONFIRMED",
+                "replacement_addresses": [],
+            },
+        ]
+    }
+    cache_path = tmp_path / "verification.json"
+    cache_path.write_text(json.dumps(cache_data), encoding="utf-8")
+
+    prospects = [
+        {"agency_name": "No MX Agency", "agency_domain": "noplace.com", "contact_email": "x@noplace.com"},
+        {"agency_name": "Refuted No Replace", "agency_domain": "refuted-noreplace.com", "contact_email": "guess@refuted-noreplace.com"},
+        {"agency_name": "Refuted Replace", "agency_domain": "refuted-replaced.com", "contact_email": "guess@refuted-replaced.com"},
+        {"agency_name": "Confirmed Agency", "agency_domain": "confirmed.com", "contact_email": "real@confirmed.com"},
+        {"agency_name": "Unknown Agency", "agency_domain": "unknown.com", "contact_email": "hello@unknown.com"},
+    ]
+
+    allowed, suppressed = co.preflight_verify_prospects(prospects, cache_path=cache_path, auto_substitute=True)
+
+    allowed_domains = [p["agency_domain"] for p in allowed]
+    assert "noplace.com" not in allowed_domains
+    assert "refuted-noreplace.com" not in allowed_domains
+    assert "refuted-replaced.com" in allowed_domains
+    assert "confirmed.com" in allowed_domains
+    assert "unknown.com" in allowed_domains
+
+    # Check auto-substitution
+    replaced_prospect = next(p for p in allowed if p["agency_domain"] == "refuted-replaced.com")
+    assert replaced_prospect["contact_email"] == "verified@refuted-replaced.com"
+
+    # Check suppression reasons
+    suppressed_reasons = {p["agency_domain"]: reason for p, reason in suppressed}
+    assert "NO_MX" in suppressed_reasons["noplace.com"]
+    assert "REFUTED" in suppressed_reasons["refuted-noreplace.com"]
+
+
+def test_main_verify_contacts_cli(capsys, tmp_path, monkeypatch):
+    """Verifies that --verify-contacts suppresses unverified prospects during execution."""
+    cache_data = {
+        "results": [
+            {
+                "agency_domain": "bad-mx.com",
+                "classification": "NO_MX",
+                "replacement_addresses": [],
+            },
+            {
+                "agency_domain": "good.com",
+                "classification": "CONFIRMED",
+                "replacement_addresses": [],
+            },
+        ]
+    }
+    cache_path = tmp_path / "verification.json"
+    cache_path.write_text(json.dumps(cache_data), encoding="utf-8")
+
+    prospects = [
+        {"agency_name": "Bad MX", "agency_domain": "bad-mx.com", "portfolio_domains": ["bad.com"], "contact_email": "x@bad-mx.com"},
+        {"agency_name": "Good", "agency_domain": "good.com", "portfolio_domains": ["good.com"], "contact_email": "x@good.com"},
+    ]
+    prospects_path = tmp_path / "prospects.json"
+    prospects_path.write_text(json.dumps(prospects), encoding="utf-8")
+
+    monkeypatch.setattr(co, "DEFAULT_PROSPECTS_PATH", prospects_path)
+    monkeypatch.setattr(co, "DEFAULT_VERIFICATION_PATH", cache_path)
+    monkeypatch.setattr(co, "DEFAULT_OUTPUT_DIR", tmp_path / "out")
+
+    monkeypatch.setattr(
+        sys, "argv",
+        ["run_cohort_outreach.py", "--verify-contacts", "--dry-run",
+         "--output-dir", str(tmp_path / "audits")],
+    )
+    co.main()
+
+    out = capsys.readouterr().out
+    assert "Suppressed 1 unverified/refuted mailboxes:" in out
+    assert "Bad MX (bad-mx.com): NO_MX" in out
+    assert "Pre-flight gate: 1 allowed, 1 suppressed." in out
+    assert "Good" in out
+    assert "Bad MX" not in out.split("[DRY-RUN]")[1]

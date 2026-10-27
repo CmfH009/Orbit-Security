@@ -24,6 +24,7 @@ import os
 import queue
 import sqlite3
 import sys
+import tempfile
 import threading
 import time
 from pathlib import Path
@@ -40,6 +41,31 @@ else:
     # Standalone or CI environment fallback within repository tree
     _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
     DEFAULT_BLACKBOARD_DB = _REPO_ROOT / "data" / "blackboard.db"
+
+
+def _running_under_pytest() -> bool:
+    """Detects an active pytest run without importing pytest."""
+    return bool(
+        os.environ.get("PYTEST_CURRENT_TEST")
+        or os.environ.get("PYTEST_VERSION")
+        or "pytest" in sys.modules
+    )
+
+
+def resolve_blackboard_path(db_path: Optional[Path] = None) -> Path:
+    """Resolves the blackboard DB path with explicit isolation guards.
+
+    Mirrors system/scripts/blackboard.py so both packages agree on the same
+    database, and so pytest runs never write into production state.
+    """
+    if db_path is not None:
+        return Path(db_path)
+    env_path = os.environ.get("ORBIT_BLACKBOARD_DB")
+    if env_path:
+        return Path(env_path)
+    if _running_under_pytest() and os.environ.get("ORBIT_ALLOW_PROD_BLACKBOARD") != "1":
+        return Path(tempfile.gettempdir()) / f"orbit_pytest_blackboard_{os.getpid()}.db"
+    return DEFAULT_BLACKBOARD_DB
 
 # Canonical Event Topics
 TOPIC_TELEMETRY = "telemetry"
@@ -70,7 +96,7 @@ class Blackboard:
     """Decoupled SQLite WAL Event Mesh for Orbit services."""
 
     def __init__(self, db_path: Optional[Path] = None):
-        self.db_path = Path(db_path) if db_path else DEFAULT_BLACKBOARD_DB
+        self.db_path = resolve_blackboard_path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._subscribers: Set[queue.Queue] = set()
         self._sub_lock = threading.Lock()

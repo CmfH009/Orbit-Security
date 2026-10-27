@@ -362,3 +362,84 @@ class OpenCodeRemediationSynthesizer:
                 )
         except Exception as ex:
             logger.error("Failed to publish remediation artifact to Blackboard: %s", ex)
+
+    def create_remediation_pull_request(
+        self,
+        artifact: RemediationPatchArtifact,
+        repo_target: str,
+        base_branch: str = "main",
+        dry_run: bool = False,
+    ) -> Dict[str, Any]:
+        """Packages a verified remediation patch into an automated GitHub pull request.
+
+        Args:
+            artifact: The verified remediation patch artifact.
+            repo_target: The GitHub repository identifier (e.g. 'org/repo').
+            base_branch: Target base branch (default: 'main').
+            dry_run: If True, simulates git/gh actions without executing network commands.
+
+        Returns:
+            Dict containing PR status, branch name, title, and generated PR URL or command.
+        """
+        import subprocess
+
+        comp = artifact.target_component or "remediation"
+        branch_name = f"fix/orbit-{comp}-{artifact.finding_id[:8]}"
+        title = f"fix(security): remediate {artifact.finding_id} ({comp.upper()})"
+        body = (
+            f"## Autonomous Orbit Security Remediation\n\n"
+            f"**Target Domain:** `{artifact.domain}`\n"
+            f"**Finding ID:** `{artifact.finding_id}`\n"
+            f"**Component:** `{comp}`\n\n"
+            f"### Verification Status\n"
+            f"- Static verification passed: `{artifact.verification_passed}`\n"
+            f"- Details: {artifact.verification_notes}\n\n"
+            f"### Proposed Patch Content\n"
+            f"```{comp}\n{artifact.patch_content}\n```\n\n"
+            f"---\n*Generated autonomously by Project ORBIT OpenCode Remediation Synthesizer.*"
+        )
+
+        result: Dict[str, Any] = {
+            "finding_id": artifact.finding_id,
+            "domain": artifact.domain,
+            "branch": branch_name,
+            "title": title,
+            "repo": repo_target,
+            "pr_url": None,
+            "success": False,
+            "dry_run": dry_run,
+        }
+
+        if dry_run:
+            result["success"] = True
+            result["pr_url"] = f"https://github.com/{repo_target}/pull/mock-orbit-{artifact.finding_id[:8]}"
+            result["command"] = f"gh pr create --repo {repo_target} --base {base_branch} --head {branch_name} --title \"{title}\""
+            return result
+
+        try:
+            # Check gh availability
+            gh_check = subprocess.run(["gh", "--version"], capture_output=True, text=True)
+            if gh_check.returncode != 0:
+                result["error"] = "GitHub CLI ('gh') is not installed or not in PATH."
+                return result
+
+            # Create branch, write patch file, commit and open PR via gh
+            cmd = [
+                "gh", "pr", "create",
+                "--repo", repo_target,
+                "--base", base_branch,
+                "--head", branch_name,
+                "--title", title,
+                "--body", body,
+            ]
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            if proc.returncode == 0:
+                result["success"] = True
+                result["pr_url"] = proc.stdout.strip()
+            else:
+                result["error"] = proc.stderr.strip()
+        except Exception as e:
+            result["error"] = str(e)
+
+        return result
+

@@ -39,6 +39,8 @@ DEFAULT_SHUTTLE_SECRET = "orbit-zero-trust-mesh-secret-v1"
 HEADER_SIGNATURE = "X-Orbit-Signature"
 HEADER_TIMESTAMP = "X-Orbit-Timestamp"
 HEADER_NODE_ID = "X-Orbit-Node-Id"
+HEADER_NODE_REGION = "X-Orbit-Node-Region"
+HEADER_NODE_PROVIDER = "X-Orbit-Node-Provider"
 
 
 class ShuttleAuth:
@@ -103,6 +105,8 @@ class EventShuttleSender:
         target_url: Optional[str] = None,
         secret: Optional[str] = None,
         node_id: Optional[str] = None,
+        node_region: Optional[str] = None,
+        node_provider: Optional[str] = None,
         cursor_file: Optional[Path] = None,
         batch_size: int = 50,
     ):
@@ -125,6 +129,8 @@ class EventShuttleSender:
         self.target_url = target_url.rstrip("/")
         self.secret = secret or ShuttleAuth.get_secret()
         self.node_id = node_id or os.environ.get("ORBIT_NODE_ID", "oracle-cloud-arm64-1")
+        self.node_region = node_region or os.environ.get("ORBIT_NODE_REGION", "us-ashburn-1")
+        self.node_provider = node_provider or os.environ.get("ORBIT_NODE_PROVIDER", "oracle")
         self.cursor_file = Path(cursor_file or DEFAULT_CURSOR_FILE)
         self.batch_size = max(1, min(batch_size, 500))
 
@@ -167,6 +173,8 @@ class EventShuttleSender:
 
         batch_envelope = {
             "origin_node": self.node_id,
+            "origin_region": self.node_region,
+            "origin_provider": self.node_provider,
             "timestamp": now_ts,
             "events_count": len(events),
             "events": events,
@@ -189,6 +197,8 @@ class EventShuttleSender:
             HEADER_SIGNATURE: signature,
             HEADER_TIMESTAMP: str(now_ts),
             HEADER_NODE_ID: self.node_id,
+            HEADER_NODE_REGION: self.node_region,
+            HEADER_NODE_PROVIDER: self.node_provider,
         }
 
         try:
@@ -320,11 +330,15 @@ class EventShuttleReceiver:
                     # Tag payload with provenance metadata
                     payload_enriched = dict(payload)
                     payload_enriched["_shuttle_origin"] = origin_node
+                    payload_enriched["_shuttle_region"] = str(data.get("origin_region", "unknown"))
+                    payload_enriched["_shuttle_provider"] = str(data.get("origin_provider", "unknown"))
                     payload_enriched["_shuttle_remote_id"] = ev.get("id")
                 else:
                     payload_enriched = {
                         "data": payload,
                         "_shuttle_origin": origin_node,
+                        "_shuttle_region": str(data.get("origin_region", "unknown")),
+                        "_shuttle_provider": str(data.get("origin_provider", "unknown")),
                         "_shuttle_remote_id": ev.get("id"),
                     }
 

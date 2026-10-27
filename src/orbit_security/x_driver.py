@@ -47,6 +47,54 @@ except ImportError:
     HAS_DESKTOP_BRIDGE = False
 
 
+def _reap_profile_holders(profile_dir: Path) -> int:
+    """Kills browsers still holding a persistent profile directory.
+
+    A persistent profile can only have one owner. When a parent daemon is force
+    killed, its chromium tree survives as an orphan and every later launch fails
+    with TargetClosedError ("profile in use") — permanently. Windows recycles the
+    dead parent's PID, so an orphan cannot be identified by parent lookup; the
+    profile path in the command line is the only reliable marker.
+
+    Returns the number of processes reaped.
+    """
+    if os.name != "nt":
+        return 0
+    try:
+        import psutil
+    except Exception:
+        return 0
+
+    try:
+        needle = str(profile_dir.resolve()).lower()
+    except Exception:
+        needle = str(profile_dir).lower()
+
+    me = os.getpid()
+    reaped = 0
+    try:
+        candidates = list(psutil.process_iter(["pid", "name", "cmdline"]))
+    except Exception:
+        return 0
+
+    for proc in candidates:
+        try:
+            info = proc.info
+            if info.get("pid") == me:
+                continue
+            if (info.get("name") or "").lower() != "chrome.exe":
+                continue
+            cmdline = info.get("cmdline") or []
+            if needle in " ".join(cmdline).lower():
+                proc.kill()
+                reaped += 1
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+        except Exception:
+            continue
+    return reaped
+
+
 @dataclass
 class TweetData:
     tweet_id: str
@@ -61,7 +109,11 @@ class TweetData:
 
 @dataclass
 class DriverConfig:
-    user_data_dir: Path = field(default_factory=lambda: Path("data/x_browser_profile"))
+    # Absolute, repo-anchored: a cwd-relative default silently forked the browser
+    # profile when a script ran with cwd=src, splitting the X auth state in two.
+    user_data_dir: Path = field(
+        default_factory=lambda: Path(__file__).resolve().parent.parent.parent / "data" / "x_browser_profile"
+    )
     headless: bool = True  # Strictly headless background mode
     slow_mo_ms: int = 50
     viewport_width: int = 1440
@@ -230,6 +282,37 @@ class OrbitXDriver:
         return self.restart()
 
     def start(self):
+        """Initializes the browser context; releases Playwright if initialization fails.
+
+        Without this wrapper a failed launch leaks the sync Playwright event loop
+        inside the process. The next attempt then dies with "Playwright Sync API
+        inside the asyncio loop", so a single transient failure would poison every
+        later retry until the daemon is restarted.
+        """
+        try:
+            return self._start_impl()
+        except Exception:
+            self._abort_start()
+            raise
+
+    def _abort_start(self) -> None:
+        """Best-effort teardown of a half-initialized driver."""
+        try:
+            if self.context:
+                self.context.close()
+        except Exception:
+            pass
+        try:
+            if self.playwright:
+                self.playwright.stop()
+        except Exception:
+            pass
+        self.context = None
+        self.page = None
+        self.playwright = None
+        self.is_authenticated = False
+
+    def _start_impl(self):
         """Initializes the browser context using Patchright persistent storage, CDP, or DesktopAutomationDriver."""
         if self.config.use_desktop_driver:
             if not self.desktop_driver and HAS_DESKTOP_BRIDGE and DesktopAutomationDriver:
@@ -270,27 +353,44 @@ class OrbitXDriver:
             "--window-size=1440,900",
         ]
 
+        def _launch():
+            return self.playwright.chromium.launch_persistent_context(
+                user_data_dir=str(self.config.user_data_dir.resolve()),
+                channel="chrome",
+                headless=self.config.headless,
+                slow_mo=self.config.slow_mo_ms,
+                viewport={"width": self.config.viewport_width, "height": self.config.viewport_height},
+                user_agent=self.config.user_agent,
+                proxy=self.config.proxy,
+                args=args,
+                accept_downloads=True,
+                ignore_https_errors=True,
+            )
+
         logger.info(f"Launching persistent stealth browser context: {self.config.user_data_dir.resolve()} (Headless: {self.config.headless}, Proxy: {self.config.proxy}, Channel: chrome)")
-        self.context = self.playwright.chromium.launch_persistent_context(
-            user_data_dir=str(self.config.user_data_dir.resolve()),
-            channel="chrome",
-            headless=self.config.headless,
-            slow_mo=self.config.slow_mo_ms,
-            viewport={"width": self.config.viewport_width, "height": self.config.viewport_height},
-            user_agent=self.config.user_agent,
-            proxy=self.config.proxy,
-            args=args,
-            accept_downloads=True,
-            ignore_https_errors=True,
-        )
+        try:
+            self.context = _launch()
+        except Exception as launch_error:
+            # A force-killed parent leaves chromium running as an orphan that keeps
+            # the profile locked (Chrome exit code 21 / TargetClosedError), and every
+            # later launch fails the same way. Only when a holder is actually found do
+            # we reap and retry once - a live browser owned by another caller is never
+            # killed speculatively.
+            reaped = _reap_profile_holders(self.config.user_data_dir)
+            if not reaped:
+                raise
+            logger.warning(
+                f"Launch failed ({launch_error.__class__.__name__}); reaped {reaped} stale "
+                f"browser process(es) holding {self.config.user_data_dir} and retrying"
+            )
+            time.sleep(0.5)
+            self.context = _launch()
 
         self.page = self.context.pages[0] if self.context.pages else self.context.new_page()
         self.page.set_default_timeout(self.config.timeout_ms)
 
         # Load authenticated session cookies from storage_state.json if present
         storage_file = self.config.user_data_dir / "storage_state.json"
-        if not storage_file.exists():
-            storage_file = Path("data/x_browser_profile/storage_state.json")
         if storage_file.exists():
             try:
                 with open(storage_file, "r", encoding="utf-8") as f:

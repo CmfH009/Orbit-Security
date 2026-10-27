@@ -37,6 +37,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from orbit_security.deliverability import DeliverabilityBlocked, assert_deliverable
 from orbit_security.mailer import EmailDispatcher
 from orbit_security.models import AgencyBranding
 from orbit_security.reporter import ReportGenerator
@@ -44,7 +45,88 @@ from orbit_security.scanner import OrbitSecurityScanner
 
 DEFAULT_PROSPECTS_PATH = PROJECT_ROOT / "data" / "new_prospects.json"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "data" / "generated_audits"
+DEFAULT_VERIFICATION_PATH = PROJECT_ROOT / "data" / "contact_verification" / "verification.json"
 RATE_LIMIT_SLEEP = 0.5  # seconds between scans (DNS-polite)
+
+
+def load_verification_cache(cache_path: Optional[Path] = None) -> Dict[str, Dict[str, Any]]:
+    """Loads existing contact verification records indexed by agency domain."""
+    path = cache_path or DEFAULT_VERIFICATION_PATH
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        results = data.get("results", [])
+        return {r.get("agency_domain", "").lower(): r for r in results if r.get("agency_domain")}
+    except Exception:
+        return {}
+
+
+def preflight_verify_prospects(
+    prospects: List[Dict[str, Any]],
+    cache_path: Optional[Path] = None,
+    auto_substitute: bool = True,
+    live_fallback: bool = False,
+) -> Tuple[List[Dict[str, Any]], List[Tuple[Dict[str, Any], str]]]:
+    """Pre-flight verification gate using verify_contacts to prevent guessing mailboxes.
+
+    Filters out prospects whose mailboxes are classified as NO_MX or REFUTED
+    (without published replacement address).
+    If a published replacement address is known for a REFUTED prospect, updates contact_email.
+
+    Returns:
+        (allowed_prospects, suppressed_prospects)
+    """
+    cache = load_verification_cache(cache_path)
+    allowed: List[Dict[str, Any]] = []
+    suppressed: List[Tuple[Dict[str, Any], str]] = []
+
+    classify_fn = None
+    if live_fallback:
+        try:
+            from scripts.verify_contacts import classify as classify_fn
+        except ImportError:
+            try:
+                from verify_contacts import classify as classify_fn
+            except ImportError:
+                classify_fn = None
+
+    for p in prospects:
+        domain = str(p.get("agency_domain", "")).strip().lower()
+        email = str(p.get("contact_email", "")).strip().lower()
+
+        record = cache.get(domain)
+        if not record and classify_fn and domain:
+            try:
+                record = classify_fn({"agency_domain": domain, "contact_email": email})
+            except Exception:
+                record = None
+
+        if not record:
+            # Inconclusive / unverified -> allow through
+            allowed.append(p)
+            continue
+
+        classification = str(record.get("classification", "")).upper()
+        replacements = [r.lower() for r in record.get("replacement_addresses", [])]
+
+        if classification == "NO_MX":
+            suppressed.append((p, "NO_MX: domain publishes no mail exchanger"))
+        elif classification == "REFUTED":
+            if email and email in replacements:
+                # Already using verified replacement
+                allowed.append(p)
+            elif auto_substitute and replacements:
+                old_email = p.get("contact_email")
+                p["contact_email"] = replacements[0]
+                allowed.append(p)
+            else:
+                suppressed.append((p, f"REFUTED: mailbox '{email}' not published on agency site"))
+        else:
+            # CONFIRMED or UNKNOWN
+            allowed.append(p)
+
+    return allowed, suppressed
 
 
 def slugify(name: str) -> str:
@@ -138,7 +220,33 @@ def main() -> None:
         action="store_true",
         help="Export .eml draft files to outbound_campaigns/audit_emails/ instead of sending live",
     )
+    parser.add_argument(
+        "--allow-high-bounce",
+        action="store_true",
+        help="Dispatch even if the historical bounce rate exceeds the safe ceiling (not recommended)",
+    )
+    parser.add_argument(
+        "--verify-contacts",
+        action="store_true",
+        help="Run contact verification pre-flight gate before dispatch to suppress REFUTED and NO_MX mailboxes",
+    )
+    parser.add_argument(
+        "--skip-verify-contacts",
+        action="store_true",
+        help="Skip pre-flight contact verification gate",
+    )
     args = parser.parse_args()
+
+    if args.send_email:
+        try:
+            sent, bounced, rate = assert_deliverable(force=args.allow_high_bounce)
+            print(
+                f"[deliverability] historical bounce rate {rate:.1%} "
+                f"({bounced}/{sent}) — dispatch permitted"
+            )
+        except DeliverabilityBlocked as exc:
+            print(f"\n[BLOCKED] {exc}\n")
+            sys.exit(2)
 
     prospects_path = DEFAULT_PROSPECTS_PATH
     if not prospects_path.exists():
@@ -160,6 +268,17 @@ def main() -> None:
     # Limit
     if args.limit is not None:
         prospects = prospects[: args.limit]
+
+    # Deliverability Pre-flight Gate
+    should_verify = args.verify_contacts or (args.send_email and not args.skip_verify_contacts)
+    if should_verify:
+        allowed, suppressed = preflight_verify_prospects(prospects)
+        if suppressed:
+            print(f"\n[verify_contacts] ⚠️ Suppressed {len(suppressed)} unverified/refuted mailboxes:")
+            for p_sup, reason in suppressed:
+                print(f"    - {p_sup.get('agency_name')} ({p_sup.get('agency_domain')}): {reason}")
+        print(f"[verify_contacts] Pre-flight gate: {len(allowed)} allowed, {len(suppressed)} suppressed.\n")
+        prospects = allowed
 
     output_dir = Path(args.output_dir)
 

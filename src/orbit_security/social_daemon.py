@@ -89,6 +89,9 @@ class SocialDaemon:
         self.running = False
         self.driver = driver
         self.driver_mode = driver_mode.lower()
+        # Set when the browser launches but the stored X session is logged out.
+        # Distinguishes "credentials expired" from "transient driver failure".
+        self._auth_failed = False
 
         self.base_dir = Path(__file__).resolve().parent.parent.parent
         self.is_custom_state = state_file is not None
@@ -158,12 +161,19 @@ class SocialDaemon:
                 drv.start()
                 if drv.is_authenticated:
                     self.driver = drv
+                    self._auth_failed = False
                     logger.info("Initialized headless OrbitXDriver (stealth Patchright via proxy).")
                     if hasattr(self, "harvester") and self.harvester:
                         self.harvester.driver = self.driver
                     return self.driver
                 else:
+                    # The browser is running but the X session is logged out. Keeping it
+                    # alive would leak this process's sync Playwright loop, and every
+                    # later launch in the same process then fails with
+                    # "Playwright Sync API inside the asyncio loop".
                     logger.warning("Headless OrbitXDriver started but authentication check was false.")
+                    self._auth_failed = True
+                    drv.close()
             except Exception as e:
                 logger.warning(f"Could not initialize headless OrbitXDriver: {e}")
 
@@ -268,6 +278,13 @@ class SocialDaemon:
         if not self.dry_run:
             self._ensure_driver()
             if not self.driver:
+                if self._auth_failed:
+                    logger.warning(
+                        "No active browser driver: the stored X session is logged out. "
+                        "Re-authenticate data/x_browser_profile to resume posting. Backing off 1h."
+                    )
+                    self._save_daemon_heartbeat("AUTH_EXPIRED")
+                    return {"status": "AUTH_EXPIRED"}
                 logger.warning("No active browser driver available for social cycle. Yielding.")
                 self._save_daemon_heartbeat("DRIVER_UNAVAILABLE")
                 return {"status": "DRIVER_UNAVAILABLE"}
@@ -586,6 +603,9 @@ class SocialDaemon:
             if status == "ERROR":
                 sleep_s = 300.0
                 logger.info(f"Cycle resulted in error. Retrying in {sleep_s / 60:.1f} minutes after recycling driver...")
+            elif status == "AUTH_EXPIRED":
+                sleep_s = 3600.0
+                logger.info("X session logged out. Sleeping 60 minutes before the next authentication check.")
             elif status in ("PACED_BY_HARDWARE", "DRIVER_UNAVAILABLE"):
                 sleep_s = 120.0
                 logger.info(f"Cycle yielded ({status}). Retrying in 2.0 minutes...")

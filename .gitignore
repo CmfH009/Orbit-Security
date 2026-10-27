@@ -87,8 +87,11 @@ data/outreach_fleet_pilot/
 data/bounced_agencies.json
 data/new_prospects.json
 data/clients.json
+data/archive/
 data/subscribers.json
 data/cohort_*
+data/*retarget*
+data/ct_watermark.json
 data/contact_verification/
 data/remediation/
 data/dispatched_followups.json

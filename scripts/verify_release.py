@@ -42,6 +42,20 @@ PUBLIC_PAGES = [
     "signup.html",
     "ghostdns/index.html",
     "portals/index.html",
+    "privacy.html",
+    "terms.html",
+    "refunds.html",
+    "disclaimer.html",
+    "stealthbridge/index.html",
+    "portals/wholegrain-digital.html",
+    "portals/moove-agency.html",
+    "portals/propeller.html",
+    "portals/eastside-co.html",
+    "portals/we-make-websites.html",
+    "portals/swanky.html",
+    "portals/barrel.html",
+    "portals/charle.html",
+    "portals/orbit-core.html",
 ]
 
 REQUIRED_ASSETS = [

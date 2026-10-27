@@ -13,8 +13,16 @@ import asyncio
 import json
 import os
 import sys
+from pathlib import Path
 from typing import Dict, List
 
+# Ensure local src/ is on sys.path (same pattern as other scripts/)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+SRC_DIR = PROJECT_ROOT / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from orbit_security.deliverability import DeliverabilityBlocked, assert_deliverable
 from orbit_security.mailer import EmailDispatcher
 
 RECONNECT_EMAILS = [
@@ -415,7 +423,24 @@ async def run_reconnect(send_live: bool = False):
 def main():
     parser = argparse.ArgumentParser(description="Orbit Security Reconnect Campaign Dispatcher")
     parser.add_argument("--send", action="store_true", help="Send live emails via SMTP")
+    parser.add_argument(
+        "--allow-high-bounce",
+        action="store_true",
+        help="Dispatch even if the historical bounce rate exceeds the safe ceiling",
+    )
     args = parser.parse_args()
+
+    if args.send:
+        try:
+            sent, bounced, rate = assert_deliverable(force=args.allow_high_bounce)
+            print(
+                f"[deliverability] historical bounce rate {rate:.1%} "
+                f"({bounced}/{sent}) — dispatch permitted"
+            )
+        except DeliverabilityBlocked as exc:
+            print(f"\n[BLOCKED] {exc}\n")
+            sys.exit(2)
+
     asyncio.run(run_reconnect(send_live=args.send))
 
 
