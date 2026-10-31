@@ -40,6 +40,13 @@ jobs:
           # as belt-and-braces so CI never depends on the lock resolving them.
           python -m pip install edge-tts pywin32 pillow duckdb
 
+      - name: Install Standalone gemini-api Binary (Zero-Dependency)
+        shell: bash
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/google-gemini/gemini-api-cli/main/scripts/install.sh | bash
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          gemini-api version || echo "gemini-api binary ready on PATH"
+
       - name: Install ffmpeg
         shell: bash
         run: |

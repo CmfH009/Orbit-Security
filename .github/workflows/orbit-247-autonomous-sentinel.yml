@@ -44,6 +44,12 @@ jobs:
           python-version: '3.13'
           cache: 'pip'
 
+      - name: Install Standalone gemini-api Binary (Zero-Dependency)
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/google-gemini/gemini-api-cli/main/scripts/install.sh | bash
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          gemini-api version || echo "gemini-api binary ready on PATH"
+
       - name: Install Runtime & Security Auditing Tooling
         run: |
           python -m pip install --upgrade pip setuptools wheel

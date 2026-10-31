@@ -25,6 +25,14 @@ import urllib.request
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
+try:
+    from orbit_security.gemini_cli_bridge import GeminiCLIBridge
+except ImportError:
+    try:
+        from gemini_cli_bridge import GeminiCLIBridge
+    except ImportError:
+        GeminiCLIBridge = None
+
 logger = logging.getLogger("orbit_security.triage_agent")
 
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434/api/chat"
@@ -58,10 +66,18 @@ class LocalTriageAgent:
         ollama_url: Optional[str] = None,
         model_name: Optional[str] = None,
         blackboard: Any = None,
+        gemini_bridge: Optional[Any] = None,
     ):
         self.ollama_url = ollama_url or os.environ.get("ORBIT_OLLAMA_URL", DEFAULT_OLLAMA_URL)
         self.model_name = model_name or os.environ.get("ORBIT_TRIAGE_MODEL", DEFAULT_MODEL)
         self._installed_models: List[str] = []
+        if gemini_bridge is not None:
+            self.gemini_bridge = gemini_bridge
+        elif GeminiCLIBridge is not None:
+            self.gemini_bridge = GeminiCLIBridge()
+        else:
+            self.gemini_bridge = None
+
         if blackboard is None:
             from orbit_security.blackboard import get_blackboard
             self.bb = get_blackboard()
@@ -122,6 +138,21 @@ class LocalTriageAgent:
             f"and executive summary."
         )
 
+        # 1. Attempt zero-dependency gemini-api CLI triage first if key or bridge is active
+        if self.gemini_bridge and (os.environ.get("GEMINI_API_KEY") or getattr(self.gemini_bridge, "force_cli", False)):
+            try:
+                spec, cli_res = self.gemini_bridge.triage_vulnerability(
+                    event_type=event_type,
+                    payload=payload,
+                    fallback_agent=None,
+                    timeout=timeout,
+                )
+                if spec:
+                    self._publish_triage_complete(spec, target, event_type)
+                    return spec
+            except Exception as gex:
+                logger.debug(f"gemini-api bridge triage bypass: {gex}")
+
         # Attempt live Ollama inference
         if self.is_ollama_available():
             active_model = self.resolve_available_model()
@@ -178,6 +209,26 @@ class LocalTriageAgent:
                 attack_vector="NETWORK",
                 remediation_patch="Remove dangling CNAME DNS record or claim the orphaned cloud bucket/app.",
                 executive_summary=f"Dangling CNAME record allows unauthenticated takeover of target subdomain on {provider}.",
+            )
+        elif event_type == "DNS_DRIFT_DETECTED":
+            domain = payload.get("domain", "target.domain")
+            return TriageRemediationSpec(
+                cve_id="DRIFT-DNS-UNEXPECTED",
+                threat_level="HIGH",
+                cvss_score=7.5,
+                attack_vector="NETWORK",
+                remediation_patch="Reconcile DNS zone file against authorized baseline; investigate unauthorized DNS modifications.",
+                executive_summary=f"Unscheduled DNS drift detected on {domain}. Perimeter configuration diverges from verified baseline.",
+            )
+        elif event_type == "EPSS_SCORE_SURGE":
+            cve = payload.get("cve_id", "CVE-SURGE")
+            return TriageRemediationSpec(
+                cve_id=cve,
+                threat_level="HIGH",
+                cvss_score=8.2,
+                attack_vector="NETWORK",
+                remediation_patch="Prioritize remediation patch within 24 hours due to surging EPSS exploit probability.",
+                executive_summary=f"EPSS score surge detected for {cve}. High probability of active exploitation.",
             )
         return TriageRemediationSpec(
             cve_id=cve,
