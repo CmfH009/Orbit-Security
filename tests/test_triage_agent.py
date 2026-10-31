@@ -140,3 +140,55 @@ def test_local_triage_agent_model_auto_resolution(tmp_path):
         resolved = agent.resolve_available_model()
         assert resolved == "orbit-sentinel:latest"
 
+
+def test_triage_deterministic_fallback_dns_drift_and_epss(tmp_path):
+    bb = Blackboard(db_path=tmp_path / "bb.db")
+    agent = LocalTriageAgent(ollama_url="http://127.0.0.1:99999/api/chat", blackboard=bb)
+
+    # Test DNS drift triage
+    spec_drift = agent.triage_vulnerability(
+        event_type="DNS_DRIFT_DETECTED",
+        payload={"domain": "shop.example.com", "drift": "CNAME altered"},
+    )
+    assert spec_drift.cve_id == "DRIFT-DNS-UNEXPECTED"
+    assert spec_drift.threat_level == "HIGH"
+    assert spec_drift.cvss_score == 7.5
+
+    # Test EPSS surge triage
+    spec_epss = agent.triage_vulnerability(
+        event_type="EPSS_SCORE_SURGE",
+        payload={"domain": "api.example.com", "cve_id": "CVE-2024-9999", "epss_score": 0.94},
+    )
+    assert spec_epss.cve_id == "CVE-2024-9999"
+    assert spec_epss.threat_level == "HIGH"
+    assert spec_epss.cvss_score == 8.2
+
+
+def test_triage_agent_with_gemini_bridge(tmp_path):
+    bb = Blackboard(db_path=tmp_path / "bb.db")
+    mock_bridge = MagicMock()
+    mock_bridge.is_available.return_value = True
+
+    mock_spec = TriageRemediationSpec(
+        cve_id="CVE-2024-5555",
+        threat_level="CRITICAL",
+        cvss_score=9.1,
+        attack_vector="NETWORK",
+        remediation_patch="Upgrade immediately",
+        executive_summary="Critical zero-day triaged via gemini-api",
+    )
+    mock_bridge.triage_vulnerability.return_value = (mock_spec, MagicMock(failed_over=False))
+
+    agent = LocalTriageAgent(gemini_bridge=mock_bridge, blackboard=bb)
+
+    with patch.dict("os.environ", {"GEMINI_API_KEY": "dummy_key"}):
+        spec = agent.triage_vulnerability(
+            event_type="CISA_KEV_MATCH_DETECTED",
+            payload={"domain": "cloud.example.com", "cve_id": "CVE-2024-5555"},
+        )
+        assert spec.cve_id == "CVE-2024-5555"
+        assert spec.threat_level == "CRITICAL"
+        assert spec.cvss_score == 9.1
+        mock_bridge.triage_vulnerability.assert_called_once()
+
+

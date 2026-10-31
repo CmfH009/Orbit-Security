@@ -253,7 +253,8 @@ class TestJsRouteExtractor:
         mock_js_ctx = mock_js_resp.__enter__.return_value
         mock_js_ctx.read.return_value = b"const endpoint = '/api/internal/fleet'; const s3 = 'https://my-bucket.s3.amazonaws.com';"
 
-        with patch("urllib.request.urlopen", side_effect=[mock_html_resp, mock_js_resp]):
+        with patch("urllib.request.urlopen", side_effect=[mock_html_resp, mock_js_resp]), \
+             patch("orbit_security.recon_harvester.is_safe_host", return_value=True):
             res = JsRouteExtractor.analyze_target_scripts("https://target.com")
             assert "/api/internal/fleet" in res["api_routes"]
             assert "my-bucket.s3.amazonaws.com" in res["cloud_storage"]

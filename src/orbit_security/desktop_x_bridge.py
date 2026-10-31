@@ -303,6 +303,12 @@ class DesktopAutomationDriver:
                         break  # Non-handle error, don't retry
 
         if hasattr(self.auto, "focus_window"):
+            # Re-verify handle before delegating to desktop_automation.focus_window
+            if HAS_WIN32 and not win32gui.IsWindow(win["hwnd"]):
+                fresh_win = self.find_x_window(allow_any_chrome=True)
+                if not fresh_win:
+                    return False
+                win = fresh_win
             ok, msg = self.auto.focus_window(win["title"])
             if ok:
                 time.sleep(self.config.action_delay)

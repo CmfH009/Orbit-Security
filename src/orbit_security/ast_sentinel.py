@@ -225,6 +225,10 @@ class ASTCodeSentinel:
         recheck = self.inspect_file(path)
         return recheck["ok"], missing_mods
 
+    def scan_directory(self, dir_path: Path, max_files: int = 200) -> Dict[str, Any]:
+        """Alias for inspect_directory to support recursive orchestrator calls."""
+        return self.inspect_directory(dir_path, max_files=max_files)
+
     def inspect_directory(self, dir_path: Path, max_files: int = 200) -> Dict[str, Any]:
         """Inspects all Python files in a directory."""
         dir_p = Path(dir_path)

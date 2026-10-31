@@ -50,6 +50,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_SUBSCRIBERS_FILE = PROJECT_ROOT / "data" / "subscribers.json"
 DEFAULT_CERTIFICATES_DIR = PROJECT_ROOT / "data" / "certificates"
 DEFAULT_CLIENTS_FILE = PROJECT_ROOT / "data" / "clients.json"
+DEFAULT_STRIPE_TOLERANCE_SECONDS = int(os.environ.get("STRIPE_WEBHOOK_TOLERANCE", "600"))
 
 
 # ============================================================================
@@ -71,7 +72,7 @@ def verify_stripe_signature(
     payload: bytes,
     sig_header: Optional[str],
     secret: Optional[str],
-    tolerance: int = 300,
+    tolerance: int = DEFAULT_STRIPE_TOLERANCE_SECONDS,
 ) -> bool:
     """Verifies Stripe HMAC-SHA256 signature with replay tolerance."""
     if not secret:
@@ -304,7 +305,11 @@ class SubscriberManager:
         try:
             with open(self.subscribers_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                return data if isinstance(data, list) else []
+                if isinstance(data, list):
+                    return data
+                if isinstance(data, dict) and isinstance(data.get("subscribers"), list):
+                    return data["subscribers"]
+                return []
         except Exception as e:
             logger.warning(f"Error reading subscribers file: {e}")
             return []
@@ -409,12 +414,14 @@ class StripeWebhookHandler:
         sla_generator: Optional[SlaCertificateGenerator] = None,
         fleet_registry: Optional[FleetRegistry] = None,
         retainer_manager: Optional[AgencyRetainerManager] = None,
+        signature_tolerance: int = DEFAULT_STRIPE_TOLERANCE_SECONDS,
     ):
         self.webhook_secret = webhook_secret or os.environ.get("STRIPE_WEBHOOK_SECRET")
         self.subscriber_mgr = subscriber_manager or SubscriberManager()
         self.sla_generator = sla_generator or SlaCertificateGenerator()
         self.fleet_registry = fleet_registry or FleetRegistry()
         self.retainer_manager = retainer_manager or AgencyRetainerManager()
+        self.signature_tolerance = signature_tolerance
 
     def register_client_for_monitoring(
         self,
@@ -445,7 +452,12 @@ class StripeWebhookHandler:
         """Validates payload signature and executes provisioning actions."""
         # 1. Verify signature
         if self.webhook_secret:
-            if not verify_stripe_signature(payload_bytes, sig_header, self.webhook_secret):
+            if not verify_stripe_signature(
+                payload_bytes,
+                sig_header,
+                self.webhook_secret,
+                tolerance=self.signature_tolerance,
+            ):
                 logger.error("Stripe webhook signature validation failed.")
                 return {"status": "ERROR", "message": "Invalid Stripe signature"}
 

@@ -3,6 +3,9 @@ import re
 import sys
 from html.parser import HTMLParser
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 DOCS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "docs"))
 LANDING_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "landing"))
 

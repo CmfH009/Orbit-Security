@@ -178,7 +178,7 @@ class SocialDaemon:
                 logger.warning(f"Could not initialize headless OrbitXDriver: {e}")
 
         # 2. Desktop driver only if explicitly requested via driver_mode='desktop'
-        if self.driver_mode == "desktop":
+        if self.driver_mode in ("desktop", "auto"):
             try:
                 from orbit_security.desktop_x_bridge import DesktopAutomationDriver
                 desktop_drv = DesktopAutomationDriver()

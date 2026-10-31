@@ -27,7 +27,7 @@ from orbit_security.threat_radar import (
     CVEImpactSynthesizer,
     ThreatAdvisoryDrafter,
     ThreatRadarSwarm,
-    DUMMY_PGP_KEY_ID,
+    ORBIT_INTEGRITY_KEY_ID,
 )
 from orbit_security.blackboard import (
     TOPIC_THREAT_INTEL,
@@ -136,11 +136,17 @@ class TestThreatAdvisoryDrafter(unittest.TestCase):
         self.drafter = ThreatAdvisoryDrafter(pgp_key_id="0xORBIT9F2A71BC")
 
     def test_generate_pgp_signature_block(self):
-        """generate_pgp_signature_block creates structured ASCII-armored PGP block."""
-        block = self.drafter.generate_pgp_signature_block("Sample advisory payload text")
+        """generate_pgp_signature_block creates structured SHA-256 cryptographic integrity & PGP block."""
+        import hashlib
+        payload = "Sample advisory payload text"
+        block = self.drafter.generate_pgp_signature_block(payload)
+        expected_sha = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+        self.assertIn("-----BEGIN ORBIT SHA256 INTEGRITY BLOCK-----", block)
+        self.assertIn("-----END ORBIT SHA256 INTEGRITY BLOCK-----", block)
         self.assertIn("-----BEGIN PGP SIGNATURE-----", block)
         self.assertIn("-----END PGP SIGNATURE-----", block)
-        self.assertIn("Key-ID: 0xORBIT9F2A71BC", block)
+        self.assertIn(f"Key-ID: {ORBIT_INTEGRITY_KEY_ID}", block)
+        self.assertIn(f"SHA256-Digest: {expected_sha}", block)
         self.assertIn("Version: Project ORBIT Sovereign Security Sentinel v1.4", block)
 
     def test_draft_responsible_disclosure(self):

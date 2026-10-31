@@ -14,6 +14,7 @@ Emits blackboard events:
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -51,18 +52,30 @@ GROWTH_PRICING_TIERS = {
     "starter": {
         "name": "Starter Retainer",
         "monthly_usd": 2500,
+        "deal_desk_tier": "monitoring",
+        "self_serve_monthly_usd": 59,
+        "stripe_price_id": os.getenv("STRIPE_PRICE_STARTER", "price_1USR84AP6kIX0ollNh7k7SNM"),
+        "checkout_url": os.getenv("STRIPE_MONITORING_LINK", "https://buy.stripe.com/8x29ASgAk3V15X2el6cs801"),
         "features": ["Continuous DNS & Subdomain Monitoring", "Automated DMARC/SPF/BIMI Auditing", "Monthly Executive Report"],
         "target_audience": "Boutique Shopify Agencies (<20 stores)"
     },
     "pro": {
         "name": "Pro Growth Retainer",
         "monthly_usd": 5000,
+        "deal_desk_tier": "remediation",
+        "self_serve_monthly_usd": 250,
+        "stripe_price_id": os.getenv("STRIPE_PRICE_SCALE", "price_1USR85AP6kIX0ollRMyjmKJT"),
+        "checkout_url": os.getenv("STRIPE_PAYMENT_LINK", "https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800"),
         "features": ["Everything in Starter", "Automated Takeover Remediation", "Bi-Weekly Vulnerability Scans", "Dedicated Slack/Discord Channel"],
         "target_audience": "Mid-tier Enterprise Studios (20-100 stores)"
     },
     "sovereign": {
         "name": "Sovereign Enterprise Retainer",
         "monthly_usd": 10000,
+        "deal_desk_tier": "enterprise",
+        "self_serve_monthly_usd": 1500,
+        "stripe_price_id": os.getenv("STRIPE_PRICE_ENTERPRISE", "price_1USR86AP6kIX0ollj35zlEqI"),
+        "checkout_url": os.getenv("STRIPE_ENTERPRISE_LINK", "https://buy.stripe.com/5kQ14mbg0bnt716a4Qcs802"),
         "features": ["Full Perimeter Bug Bounty Sentinel", "Zero-Day CVE Impact Briefs", "Custom White-Label Client Portals", "Direct Architect Hotline"],
         "target_audience": "Tier-1 Agency Fleets & High-GMV Merchants"
     }
@@ -288,15 +301,84 @@ class MarketingGrowthSwarm:
         }
 
 
-def main():
-    swarm = MarketingGrowthSwarm()
-    sample_targets = [
-        {"agency_id": "avex", "agency_name": "Avex Designs", "domain": "avexdesigns.com", "score": 35, "rescued_score": 85},
-        {"agency_id": "anatta", "agency_name": "Anatta", "domain": "anatta.io", "score": 40, "rescued_score": 80},
+def _load_real_leads_pipeline(repo_root: Path) -> List[Dict[str, Any]]:
+    """Loads real agency leads from data/leads_pipeline.json, data/staged_outreach.json, or pilot_manifest.json."""
+    leads: List[Dict[str, Any]] = []
+    data_dir = repo_root / "data"
+
+    candidate_files = [
+        data_dir / "leads_pipeline.json",
+        data_dir / "staged_outreach.json",
+        data_dir / "outreach_fleet_pilot" / "pilot_manifest.json",
+        data_dir / "agency_retainers.json",
     ]
-    res = swarm.run_cycle(sample_targets)
+
+    for path in candidate_files:
+        if not path.exists():
+            continue
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            items = []
+            if isinstance(raw, list):
+                items = raw
+            elif isinstance(raw, dict):
+                items = raw.get("agencies") or raw.get("leads") or raw.get("targets") or []
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                agency_id = str(item.get("agency_id") or item.get("id") or "agency").strip()
+                agency_name = str(item.get("agency_name") or item.get("name") or agency_id).strip()
+                domain = str(item.get("domain") or item.get("agency_domain") or item.get("website", "").replace("https://", "")).strip()
+                contact_email = str(item.get("contact_email") or item.get("support_email") or "").strip()
+                contact_name = contact_email.split("@")[0].title() if "@" in contact_email else "Technical Director"
+                score = int(item.get("score") or 55)
+                rescued_score = max(score + 25, min(95, int(item.get("rescued_score") or 88)))
+                leads.append({
+                    "agency_id": agency_id,
+                    "agency_name": agency_name,
+                    "contact_name": contact_name,
+                    "domain": domain,
+                    "score": score,
+                    "rescued_score": rescued_score,
+                    "vulnerabilities": item.get("vulnerabilities", ["dmarc_alignment", "subdomain_hygiene"]),
+                })
+            if leads:
+                break
+        except Exception:
+            continue
+
+    return leads
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    parser = argparse.ArgumentParser(description="Orbit Marketing & Brand Growth Swarm")
+    parser.add_argument("--once", action="store_true", help="Run a single growth sweep and exit")
+    parser.add_argument("--daemon", action="store_true", help="Run continuously in daemon mode")
+    parser.add_argument("--interval", type=int, default=300, help="Sweep interval in seconds (default: 300)")
+    args = parser.parse_args(argv)
+
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    swarm = MarketingGrowthSwarm()
+
+    def _execute() -> Dict[str, Any]:
+        targets = _load_real_leads_pipeline(repo_root)
+        return swarm.run_cycle(targets)
+
+    if args.daemon:
+        print(f"[*] Orbit Marketing & Growth Swarm active (Interval: {args.interval}s)")
+        while True:
+            try:
+                res = _execute()
+                cnt = res.get("campaign", {}).get("targets_count", 0)
+                print(f"[{time.strftime('%H:%M:%S')}] Growth Swarm: staged campaign across {cnt} real agency leads.")
+            except Exception as exc:
+                print(f"[{time.strftime('%H:%M:%S')}] Growth Swarm error: {exc}")
+            time.sleep(max(5, args.interval))
+
+    res = _execute()
     print(json.dumps(res, indent=2))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

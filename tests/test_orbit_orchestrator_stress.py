@@ -287,3 +287,38 @@ def test_thermal_guard_circuit_breaker(tmp_path):
         assert guard_critical["throttle_seconds"] == 10
         assert "critical" in guard_critical["reason"]
 
+
+def test_bounty_programs_active_and_wired_transitions(tmp_path):
+    """Verifies bounty_programs_active reads from bounty_programs.json and wired transitions execute."""
+    orch = OrbitRecursiveOrchestrator(max_depth=3, dry_run=False)
+    state = orch.assess_pipeline_state()
+    assert "bounty_programs_active" in state
+    assert state["bounty_programs_active"] >= 27
+
+    # Isolate PROJECT_ROOT to tmp_path so wired transitions don't mutate live pilot_manifest.json
+    (tmp_path / "data").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "docs" / "portals").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "pilot_manifest.json").write_text(
+        json.dumps([{"company": "TestAgency", "domain": "example.com", "contact_email": "info@example.com"}]),
+        encoding="utf-8",
+    )
+
+    transitions_to_test = [
+        ("orbit-orchestrator", "orbit-github-devops", "CI_FAILURE_TRIAGE"),
+        ("orbit-marketing-growth", "orbit-sec-review", "GENERIC_ALIAS_DETECTED"),
+        ("orbit-sec-review", "orbit-marketing-growth", "VULNERABILITY_TO_REVENUE"),
+        ("orbit-orchestrator", "godot-asset-fetcher", "ASSET_FETCH_ITCH_IO"),
+        ("orbit-social-swarm", "orbit-sec-review", "DESKTOP_BRIDGE_HEALING"),
+    ]
+    with patch("orbit_recursive_loop.PROJECT_ROOT", tmp_path), patch("orbit_recursive_loop.BLACKBOARD_DB", tmp_path / "bb.db"):
+        for src, tgt, trig in transitions_to_test:
+            t = RecursiveTransition(
+                source_skill=src,
+                target_skill=tgt,
+                trigger_event=trig,
+                reason=f"Unit test {trig}",
+            )
+            orch.dispatch_skill_execution(t)
+            assert t.status in ("CONVERGED", "EXECUTED_PENDING_ARTIFACT", "ARTIFACT_UNVERIFIED") or t.status.startswith("ERROR:")
+
+

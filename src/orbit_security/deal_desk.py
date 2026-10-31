@@ -76,7 +76,9 @@ class RetainerDealDeskConcierge:
         primary_client_domain: Optional[str] = None,
         portfolio_domains: Optional[List[str]] = None,
         portfolio_title: Optional[str] = None,
-        portfolio_subtitle: Optional[str] = None
+        portfolio_subtitle: Optional[str] = None,
+        findings_count: int = 0,
+        findings: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """Provisions a dedicated co-branded client security portal HTML document."""
         # Sanitize clean_id to strictly alphanumeric + underscores to prevent path traversal
@@ -108,6 +110,30 @@ class RetainerDealDeskConcierge:
         safe_tier_name = html.escape(str(tier_info["tier_name"]))
         safe_checkout_url = html.escape(str(tier_info["checkout_url"]))
 
+        total_findings = max(int(findings_count or 0), len(findings or []))
+        if total_findings > 0:
+            dns_status = f"⚠ DNS Drift: {total_findings} FINDING(S) FLAGGED"
+            cdn_status = "⚠ CDN Scripts: AUDIT REQUIRED"
+            bulk_status = f"⚠ Bulk Sender: {total_findings} DMARC/SPF ISSUE(S)"
+            secrets_status = "✓ Leaked Secrets: ZERO"
+            scope_color = "var(--amber)"
+            scope_badges_html = (
+                f"⚠ DNS Sentinel: {total_findings} Exposure(s) Detected<br>\n"
+                f"          ⚠ {total_findings} DMARC / Perimeter Vulnerabilities<br>\n"
+                f"          ⚡ Subdomain Takeover Guard: REMEDIATION STAGED"
+            )
+        else:
+            dns_status = '<span style="color: var(--emerald);">✓</span> DNS Drift: SECURE'
+            cdn_status = '<span style="color: var(--emerald);">✓</span> CDN Scripts: VERIFIED'
+            bulk_status = '<span style="color: var(--emerald);">✓</span> Bulk Sender: COMPLIANT'
+            secrets_status = '<span style="color: var(--emerald);">✓</span> Leaked Secrets: ZERO'
+            scope_color = "var(--emerald)"
+            scope_badges_html = (
+                "✓ DNS Sentinel: LOCKED<br>\n"
+                "          ✓ 0 DMARC Vulnerabilities<br>\n"
+                "          ✓ Subdomain Takeover Guard: ARMED"
+            )
+
         portfolio_section_html = ""
         if portfolio_domains:
             domain_cards = []
@@ -117,13 +143,13 @@ class RetainerDealDeskConcierge:
         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; padding: 12px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-weight: 700; font-size: 13px; color: var(--text);">{sd}</span>
-            <span style="font-size: 10px; color: var(--emerald); font-weight: 700; font-family: 'JetBrains Mono', monospace;">LIVE MONITORED</span>
+            <span style="font-size: 10px; color: {scope_color}; font-weight: 700; font-family: 'JetBrains Mono', monospace;">LIVE MONITORED</span>
           </div>
           <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 6px; line-height: 1.4;">
-            <span style="color: var(--emerald);">✓</span> DNS Drift: SECURE<br>
-            <span style="color: var(--emerald);">✓</span> CDN Scripts: VERIFIED<br>
-            <span style="color: var(--emerald);">✓</span> Bulk Sender: COMPLIANT<br>
-            <span style="color: var(--emerald);">✓</span> Leaked Secrets: ZERO
+            {dns_status}<br>
+            {cdn_status}<br>
+            {bulk_status}<br>
+            {secrets_status}
           </div>
         </div>""")
             joined_cards = "\n".join(domain_cards)
@@ -248,10 +274,8 @@ class RetainerDealDeskConcierge:
           Perimeter audits active for <strong>{safe_client_dom}</strong> and all affiliated subdomains. 
           DNS/CNAME hijacking and SPF/DMARC spoofing are actively guarded with zero false positives.
         </p>
-        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--emerald); margin-top: 10px;">
-          ✓ DNS Sentinel: LOCKED<br>
-          ✓ 0 DMARC Vulnerabilities<br>
-          ✓ Subdomain Takeover Guard: ARMED
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {scope_color}; margin-top: 10px;">
+          {scope_badges_html}
         </div>
       </div>
 
@@ -364,7 +388,9 @@ class RetainerDealDeskConcierge:
             agency_id=clean_agency_id,
             agency_name=raw_agency_name,
             tier=tier_key,
-            primary_client_domain=lead_data.get("client_domain") or lead_data.get("primary_client_domain")
+            primary_client_domain=lead_data.get("client_domain") or lead_data.get("primary_client_domain"),
+            findings_count=int(lead_data.get("findings_count") or 0),
+            findings=lead_data.get("findings"),
         )
 
         checkout_url = portal_res.get("checkout_url", tier["checkout_url"])
@@ -486,10 +512,24 @@ def main():
                 pass
             time.sleep(args.interval)
 
-    # Default action: Generate sample preview for Avex Designs
-    res = concierge.generate_portal_for_agency("avex_designs", "Avex Designs", tier="remediation")
-    print("Retainer Deal Desk Concierge: Ready.")
-    print(f"Sample Portal Staged: {res['portal_path']} (${res['monthly_usd']}/mo)")
+    # Default action when no CLI args are passed: process pending leads from data/leads_pipeline.json or print status cleanly
+    leads_pipeline_path = REPO_ROOT / "data" / "leads_pipeline.json"
+    processed_count = 0
+    if leads_pipeline_path.exists():
+        try:
+            raw_leads = json.loads(leads_pipeline_path.read_text(encoding="utf-8"))
+            items = raw_leads if isinstance(raw_leads, list) else raw_leads.get("leads", [])
+            for item in items:
+                if isinstance(item, dict) and item.get("status") in ("PENDING", "READY_TO_BUY", "INQUIRY_PRICING"):
+                    concierge.process_inbound_lead(item)
+                    processed_count += 1
+        except Exception:
+            pass
+    existing_portals = concierge.list_portals()
+    print(
+        f"Retainer Deal Desk Concierge: Ready. "
+        f"(Active Portals: {len(existing_portals)}, Pending Leads Processed: {processed_count})"
+    )
 
 
 if __name__ == "__main__":
