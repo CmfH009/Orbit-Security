@@ -64,7 +64,7 @@ class BountyRollingDaemon:
         self.state_file = Path(state_file or DEFAULT_RADAR_STATE_PATH)
         self.offline = offline
         self.blackboard = blackboard
-        self.prober = BountyActiveProber(state_file=self.state_file)
+        self.prober = BountyActiveProber(state_file=self.state_file, blackboard=self.blackboard)
         self.worker = BountyRollingWorker(
             prober=self.prober,
             programs_path=self.programs_path,
@@ -199,6 +199,7 @@ class BountyRollingDaemon:
             return None
 
         logger.info(f"Executing focused sweep for program: {target.name} ({target.program_id})")
+        self.prober.blackboard = self._get_blackboard()
         ct_summary = self.sweep_ct_logs_for_program(program_id)
         cloud_summary = self.sweep_cloud_sentinels_for_program(program_id)
         confirmed = self.worker.execute_single_program_sweep(target, offline=self.offline)
@@ -213,7 +214,11 @@ class BountyRollingDaemon:
 
     def sweep_one_cycle(self) -> Optional[Dict[str, Any]]:
         """Sweeps next program in round-robin sequence."""
-        return self.worker.run_one_cycle(offline=self.offline)
+        self.prober.blackboard = self._get_blackboard()
+        cycle_res = self.worker.run_one_cycle(offline=self.offline)
+        if cycle_res and "program_id" in cycle_res:
+            cycle_res["cloud_sentinel_sweep"] = self.sweep_cloud_sentinels_for_program(cycle_res["program_id"])
+        return cycle_res
 
     def run_loop(self):
         """Runs the continuous daemon loop with hardware governor."""

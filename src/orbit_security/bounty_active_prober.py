@@ -87,12 +87,14 @@ class BountyActiveProber:
         portal_exporter: Optional[ClientThreatPortalExporter] = None,
         disclosures_dir: Optional[Path] = None,
         state_file: Optional[Path] = None,
+        blackboard: Any = None,
     ):
         self.xh_probe = xh_probe or XHProbe()
         self.sandbox = sandbox or OperatorExploitSandbox()
         self.portal_exporter = portal_exporter or ClientThreatPortalExporter()
         self.disclosures_dir = Path(disclosures_dir or DEFAULT_DISCLOSURES_DIR)
         self.state_file = Path(state_file or DEFAULT_RADAR_STATE_PATH)
+        self.blackboard = blackboard
         self.disclosures_dir.mkdir(parents=True, exist_ok=True)
         self.state_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -111,40 +113,44 @@ class BountyActiveProber:
         probe_dict: Optional[Dict[str, Any]] = None
         probe_body: str = ""
         probe_status: Optional[int] = None
+        eff_bb = blackboard if blackboard is not None else self.blackboard
 
         try:
             probe_res: ProbeResult = self.xh_probe.probe(f"https://{host}", timeout_sec=5.0, offline=offline)
             probe_dict = probe_res.to_dict()
-            probe_body = getattr(probe_res, "body_preview", "") or ""
+            probe_body = getattr(probe_res, "body", None) or getattr(probe_res, "body_preview", "") or ""
             probe_status = getattr(probe_res, "status_code", None)
             audit = probe_res.security_audit
+            norm_headers = {str(k).lower(): str(v) for k, v in (getattr(probe_res, "headers", None) or {}).items()}
 
-            # 1. Missing HSTS Check
-            if not audit.has_hsts:
-                findings.append(ActiveProbeFinding(
-                    program_id="generic",
-                    target_domain=host,
-                    flaw_type="missing_hsts",
-                    severity="MEDIUM",
-                    score=5.0,
-                    evidence="Strict-Transport-Security header omitted",
-                    remediation="Add Strict-Transport-Security: max-age=31536000; includeSubDomains",
-                    raw_probe=probe_dict
-                ))
+            if probe_status and probe_status > 0:
+                # 1. Missing HSTS Check
+                has_hsts = getattr(audit, "has_hsts", "strict-transport-security" in norm_headers) if audit else ("strict-transport-security" in norm_headers)
+                if not has_hsts:
+                    findings.append(ActiveProbeFinding(
+                        program_id="generic",
+                        target_domain=host,
+                        flaw_type="missing_hsts",
+                        severity="MEDIUM",
+                        score=5.0,
+                        evidence="Strict-Transport-Security header omitted",
+                        remediation="Add Strict-Transport-Security: max-age=31536000; includeSubDomains",
+                        raw_probe=probe_dict
+                    ))
 
-            # 2. CORS Wildcard Origin Check
-            cors = probe_res.headers.get("access-control-allow-origin", "")
-            if cors == "*":
-                findings.append(ActiveProbeFinding(
-                    program_id="generic",
-                    target_domain=host,
-                    flaw_type="cors_wildcard",
-                    severity="HIGH",
-                    score=7.5,
-                    evidence="Access-Control-Allow-Origin: * detected",
-                    remediation="Restrict Access-Control-Allow-Origin to authenticated origins",
-                    raw_probe=probe_dict
-                ))
+                # 2. CORS Wildcard Origin Check
+                cors = norm_headers.get("access-control-allow-origin", "").strip()
+                if cors == "*":
+                    findings.append(ActiveProbeFinding(
+                        program_id="generic",
+                        target_domain=host,
+                        flaw_type="cors_wildcard",
+                        severity="HIGH",
+                        score=7.5,
+                        evidence="Access-Control-Allow-Origin: * detected",
+                        remediation="Restrict Access-Control-Allow-Origin to authenticated origins",
+                        raw_probe=probe_dict
+                    ))
 
             # 3. Certificate Expiry Check
             if probe_res.certificate:
@@ -164,15 +170,25 @@ class BountyActiveProber:
         except Exception as e:
             logger.debug(f"Active probe on {host} encountered: {e}")
 
+        https_reachable = bool(probe_status and probe_status > 0)
+
         # 4. Cloud Storage Bucket Takeover / Public Listing Sentinel
         try:
-            effective_body = mock_cloud_body if mock_cloud_body is not None else (probe_body if (offline or probe_body) else None)
+            if mock_cloud_body is not None:
+                effective_body: Optional[str] = mock_cloud_body
+            elif offline or https_reachable:
+                effective_body = probe_body
+            elif cname_target:
+                effective_body = None
+            else:
+                effective_body = ""
+
             bucket_res = CloudBucketTakeoverSentinel.audit_target(
                 target_domain=host,
                 cname_target=cname_target,
                 mock_body=effective_body,
                 mock_status=probe_status,
-                blackboard=blackboard,
+                blackboard=eff_bb,
             )
             if bucket_res and bucket_res.get("vulnerable"):
                 sev = getattr(bucket_res.get("severity"), "value", bucket_res.get("severity", "HIGH"))
@@ -193,12 +209,12 @@ class BountyActiveProber:
 
         # 5. GraphQL Schema Introspection Sentinel
         try:
-            eff_gql_mocks = mock_graphql_paths if mock_graphql_paths is not None else ({} if offline else None)
+            eff_gql_mocks = mock_graphql_paths if mock_graphql_paths is not None else ({} if (offline or not https_reachable) else None)
             gql_res = GraphQLIntrospectionSentinel.audit_target(
                 target_domain=host,
                 timeout=3.5,
                 mock_paths=eff_gql_mocks,
-                blackboard=blackboard,
+                blackboard=eff_bb,
             )
             if gql_res and gql_res.get("vulnerable"):
                 sev = getattr(gql_res.get("severity"), "value", gql_res.get("severity", "MEDIUM"))
@@ -218,12 +234,12 @@ class BountyActiveProber:
 
         # 6. CORS Misconfiguration Sentinel (Arbitrary / Null Origin with Credentials)
         try:
-            eff_cors_mocks = mock_cors_responses if mock_cors_responses is not None else ({} if offline else None)
+            eff_cors_mocks = mock_cors_responses if mock_cors_responses is not None else ({} if (offline or not https_reachable) else None)
             cors_res = CorsMisconfigurationSentinel.audit_target(
                 target_domain=host,
                 timeout=3.5,
                 mock_responses=eff_cors_mocks,
-                blackboard=blackboard,
+                blackboard=eff_bb,
             )
             if cors_res and cors_res.get("vulnerable"):
                 flaw = str(cors_res.get("flaw_type", ""))
@@ -249,30 +265,37 @@ class BountyActiveProber:
         self,
         program: BountyProgram,
         max_subdomains: int = 10,
-        offline: bool = False
+        offline: bool = False,
+        blackboard: Any = None,
     ) -> List[ActiveProbeFinding]:
         """Expands program scope and runs active probing across candidate subdomains."""
         anomalies: List[ActiveProbeFinding] = []
         prefixes = HIGH_FREQUENCY_PREFIXES[:max_subdomains]
+        prev_bb = self.blackboard
+        if blackboard is not None:
+            self.blackboard = blackboard
 
-        for root in program.in_scope:
-            base = root.replace("*.", "")
-            # Probe root domain
-            root_findings = self.probe_host_active(base, offline=offline)
-            for f in root_findings:
-                f.program_id = program.program_id
-                if is_vulnerability_in_scope(program, f.flaw_type):
-                    anomalies.append(f)
+        try:
+            for root in program.in_scope:
+                base = root.replace("*.", "")
+                # Probe root domain
+                root_findings = self.probe_host_active(base, offline=offline)
+                for f in root_findings:
+                    f.program_id = program.program_id
+                    if is_vulnerability_in_scope(program, f.flaw_type):
+                        anomalies.append(f)
 
-            # Probe top wildcard subdomains
-            if root.startswith("*."):
-                for pfx in prefixes:
-                    sub = f"{pfx}.{base}"
-                    sub_findings = self.probe_host_active(sub, offline=offline)
-                    for f in sub_findings:
-                        f.program_id = program.program_id
-                        if is_vulnerability_in_scope(program, f.flaw_type):
-                            anomalies.append(f)
+                # Probe top wildcard subdomains
+                if root.startswith("*."):
+                    for pfx in prefixes:
+                        sub = f"{pfx}.{base}"
+                        sub_findings = self.probe_host_active(sub, offline=offline)
+                        for f in sub_findings:
+                            f.program_id = program.program_id
+                            if is_vulnerability_in_scope(program, f.flaw_type):
+                                anomalies.append(f)
+        finally:
+            self.blackboard = prev_bb
 
         return anomalies
 

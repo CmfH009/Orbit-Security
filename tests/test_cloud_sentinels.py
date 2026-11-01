@@ -493,3 +493,140 @@ class TestActiveSweepsAndDaemonBlackboardWiring:
         assert "GRAPHQL_INTROSPECTION_EXPOSED" in event_types
         assert "CORS_MISCONFIGURATION_DETECTED" in event_types
 
+    def test_graphql_and_cors_live_transport_failure_short_circuits(self):
+        import urllib.error
+        import urllib.request
+
+        with patch("orbit_security.cloud_sentinels.is_safe_host", return_value=True), patch(
+            "urllib.request.urlopen",
+            side_effect=urllib.error.URLError("Connection refused"),
+        ) as mock_urlopen:
+            gql_res = GraphQLIntrospectionSentinel.audit_target("dead.target.com", timeout=0.5)
+            assert gql_res is None
+            assert mock_urlopen.call_count == 1
+
+        with patch("orbit_security.cloud_sentinels.is_safe_host", return_value=True), patch(
+            "urllib.request.urlopen",
+            side_effect=urllib.error.URLError("Connection refused"),
+        ) as mock_urlopen_cors:
+            cors_res = CorsMisconfigurationSentinel.audit_target("dead.target.com", timeout=0.5)
+            assert cors_res is None
+            assert mock_urlopen_cors.call_count == 1
+
+    def test_probe_host_active_unreachable_offline_false_skips_redundant_probes(self, tmp_path):
+        from orbit_security.bounty_active_prober import BountyActiveProber
+        from orbit_security.tools.xh_probe import ProbeResult, SecurityHeaderAudit
+
+        prober = BountyActiveProber(
+            disclosures_dir=tmp_path / "disclosures",
+            state_file=tmp_path / "state.json",
+        )
+        prober.xh_probe.probe = MagicMock(
+            return_value=ProbeResult(
+                url="https://unreachable.target.com",
+                status_code=0,
+                headers={},
+                body="",
+                security_audit=SecurityHeaderAudit(
+                    grade="F", score=0, present_headers={}, missing_headers=[], recommendations=[]
+                ),
+            )
+        )
+
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            findings = prober.probe_host_active("unreachable.target.com", offline=False)
+            assert findings == []
+            assert mock_urlopen.call_count == 0
+
+    def test_probe_host_active_hsts_cors_cert_and_body_extraction(self, tmp_path):
+        from orbit_security.bounty_active_prober import BountyActiveProber
+        from orbit_security.tools.xh_probe import CertificateInfo, ProbeResult, SecurityHeaderAudit
+
+        prober = BountyActiveProber(
+            disclosures_dir=tmp_path / "disclosures",
+            state_file=tmp_path / "state.json",
+        )
+        prober.xh_probe.probe = MagicMock(
+            return_value=ProbeResult(
+                url="https://bucket.target.com",
+                status_code=404,
+                headers={"Access-Control-Allow-Origin": "*"},
+                body="<Error><Code>NoSuchBucket</Code></Error>",
+                security_audit=SecurityHeaderAudit(
+                    grade="F",
+                    score=0,
+                    present_headers={},
+                    missing_headers=["strict-transport-security"],
+                    recommendations=[],
+                ),
+                certificate=CertificateInfo(days_remaining=5),
+            )
+        )
+
+        findings = prober.probe_host_active(
+            "bucket.target.com",
+            offline=False,
+            cname_target="bucket.target.com.s3.amazonaws.com",
+            mock_graphql_paths={},
+            mock_cors_responses={},
+        )
+        flaw_types = {f.flaw_type for f in findings}
+        assert "missing_hsts" in flaw_types
+        assert "cors_wildcard" in flaw_types
+        assert "expiring_certificate" in flaw_types
+        assert "cloud_storage_takeover" in flaw_types
+
+    def test_sandbox_script_generation_and_verification_for_cloud_sentinels(self):
+        from orbit_security.exploit_sandbox import OperatorExploitSandbox, ScriptGenerator
+
+        gql_finding = {
+            "target_domain": "api.target.com",
+            "flaw_type": "graphql_introspection",
+            "endpoint_path": "/api/graphql",
+            "evidence": "Production GraphQL schema introspection is enabled at 'https://api.target.com/api/graphql'.",
+        }
+        py_gql = ScriptGenerator.generate_python_script(gql_finding)
+        curl_gql = ScriptGenerator.generate_curl_script(gql_finding)
+        assert "https://api.target.com/api/graphql" in py_gql
+        assert "https://api.target.com/api/graphql" in curl_gql
+
+        null_cors_finding = {
+            "target_domain": "auth.target.com",
+            "flaw_type": "cors_null_origin_with_credentials",
+            "evidence": "Dangerous CORS policy on 'auth.target.com': Server explicitly trusts Origin 'null'",
+        }
+        py_null = ScriptGenerator.generate_python_script(null_cors_finding)
+        assert '"Origin": "null"' in py_null
+        rep_null = OperatorExploitSandbox.verify_vulnerability(
+            null_cors_finding,
+            mock_execution={
+                "exit_code": 0,
+                "stdout": "STATUS: 200\nACAO: null\nACAC: true\n",
+                "stderr": "",
+                "status_code": 200,
+                "response_headers": {"acao": "null", "acac": "true"},
+            },
+        )
+        assert rep_null.diff.is_confirmed is True
+        assert rep_null.diff.confidence_score >= 0.90
+
+        arb_cors_finding = {
+            "target_domain": "api.target.com",
+            "flaw_type": "cors_arbitrary_origin_with_credentials",
+            "evidence": "Server blindly reflects untrusted Origin 'https://untrusted-adversary.com'",
+        }
+        py_arb = ScriptGenerator.generate_python_script(arb_cors_finding)
+        assert '"Origin": "https://untrusted-adversary.com"' in py_arb
+        rep_arb = OperatorExploitSandbox.verify_vulnerability(
+            arb_cors_finding,
+            mock_execution={
+                "exit_code": 0,
+                "stdout": "STATUS: 200\nACAO: https://untrusted-adversary.com\nACAC: true\n",
+                "stderr": "",
+                "status_code": 200,
+                "response_headers": {"acao": "https://untrusted-adversary.com", "acac": "true"},
+            },
+        )
+        assert rep_arb.diff.is_confirmed is True
+        assert rep_arb.diff.confidence_score >= 0.90
+

@@ -648,6 +648,11 @@ class GraphQLIntrospectionSentinel:
                             if isinstance(data_obj, dict) and "__schema" in data_obj:
                                 result = cls._build_vulnerability(target_domain, path, data_obj)
                                 break
+                except urllib.error.HTTPError:
+                    continue
+                except (urllib.error.URLError, TimeoutError, OSError):
+                    # Host is unreachable at TCP/TLS/DNS layer; abort remaining paths to prevent compounded timeouts
+                    break
                 except Exception:
                     continue
 
@@ -787,8 +792,10 @@ class CorsMisconfigurationSentinel:
         if result is None:
             if mock_responses is not None:
                 headers_null = mock_responses.get(cls.NULL_ORIGIN, {})
-            else:
+            elif headers_origin:
                 headers_null = cls.probe_cors_headers(url, cls.NULL_ORIGIN, timeout=timeout)
+            else:
+                headers_null = {}
 
             acao_null = headers_null.get("access-control-allow-origin", "").strip()
             acac_null = headers_null.get("access-control-allow-credentials", "").strip().lower()

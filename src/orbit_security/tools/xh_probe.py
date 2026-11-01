@@ -74,6 +74,10 @@ class SecurityHeaderAudit:
     missing_headers: List[str]
     recommendations: List[str]
 
+    @property
+    def has_hsts(self) -> bool:
+        return "strict-transport-security" in {k.lower() for k in (self.present_headers or {})}
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "grade": self.grade,
@@ -96,6 +100,10 @@ class ProbeResult:
     security_audit: Optional[SecurityHeaderAudit] = None
     certificate: Optional[CertificateInfo] = None
     raw_output: str = ""
+
+    @property
+    def body_preview(self) -> str:
+        return self.body[:500] if self.body else ""
 
     def to_dict(self) -> Dict[str, Any]:
         return {

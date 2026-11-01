@@ -64,7 +64,7 @@ jobs:
 
       - name: "Unit & Security Invariant Verification"
         run: |
-          PYTHONPATH=src pytest tests/test_input_sanitizer.py tests/test_orbit_recon.py tests/test_infra_validation.py tests/test_radar_telemetry.py tests/test_cloud_sentinels.py tests/test_inbox_guardrail.py tests/test_inbox_triage_bridge.py -v
+          PYTHONPATH=src pytest tests/test_input_sanitizer.py tests/test_orbit_recon.py tests/test_infra_validation.py tests/test_radar_telemetry.py tests/test_cloud_sentinels.py tests/test_bounty_active_prober.py tests/test_inbox_guardrail.py tests/test_inbox_triage_bridge.py -v
 
       - name: "Refresh Compacted CISA KEV + EPSS Radar Feed & Cloud/Email/TLS Sentinels"
         run: |
@@ -74,7 +74,9 @@ jobs:
           from orbit_security.tools.compact_radar_feed import compact_radar_dataset
           from orbit_security.cloud_sentinels import (
               CloudBucketTakeoverSentinel,
+              CorsMisconfigurationSentinel,
               EmailAuthPolicyAnalyzer,
+              GraphQLIntrospectionSentinel,
               PassiveTlsCipherSentinel,
           )
           bb = get_blackboard()
@@ -99,7 +101,20 @@ jobs:
               targets=[{"domain": "orbit-security.io", "mock_body": "OK", "mock_status": 200}],
               blackboard=bb,
           )
-          print(f"Email Posture Check: {email_check['severity']} | TLS Posture: {tls_check['severity']} | Cloud Fleet Swept: {bucket_sweep['total_swept']}")
+          gql_check = GraphQLIntrospectionSentinel.audit_target(
+              target_domain="orbit-security.io",
+              mock_paths={},
+              blackboard=bb,
+          )
+          cors_check = CorsMisconfigurationSentinel.audit_target(
+              target_domain="orbit-security.io",
+              mock_responses={},
+              blackboard=bb,
+          )
+          print(
+              f"Email Posture Check: {email_check['severity']} | TLS Posture: {tls_check['severity']} "
+              f"| Cloud Fleet Swept: {bucket_sweep['total_swept']} | GQL: {bool(gql_check)} | CORS: {bool(cors_check)}"
+          )
           PY
 
       - name: "Autonomous Perimeter Recon & DNS Hygiene Audit"
