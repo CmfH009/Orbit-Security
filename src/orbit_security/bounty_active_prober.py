@@ -47,6 +47,11 @@ from orbit_security.bounty_radar import (
     HIGH_FREQUENCY_PREFIXES,
     is_vulnerability_in_scope,
 )
+from orbit_security.cloud_sentinels import (
+    CloudBucketTakeoverSentinel,
+    CorsMisconfigurationSentinel,
+    GraphQLIntrospectionSentinel,
+)
 from orbit_security.tools.xh_probe import XHProbe, ProbeResult
 from orbit_security.tools.attack_tree import from_osint_findings, tree_to_mermaid
 from orbit_security.exploit_sandbox import OperatorExploitSandbox, SandboxVerificationReport
@@ -91,12 +96,27 @@ class BountyActiveProber:
         self.disclosures_dir.mkdir(parents=True, exist_ok=True)
         self.state_file.parent.mkdir(parents=True, exist_ok=True)
 
-    def probe_host_active(self, host: str, offline: bool = False) -> List[ActiveProbeFinding]:
-        """Probes a specific target host for TLS, header, and SaaS CNAME anomalies."""
+    def probe_host_active(
+        self,
+        host: str,
+        offline: bool = False,
+        cname_target: Optional[str] = None,
+        mock_cloud_body: Optional[str] = None,
+        mock_graphql_paths: Optional[Dict[str, Dict[str, Any]]] = None,
+        mock_cors_responses: Optional[Dict[str, Dict[str, str]]] = None,
+        blackboard: Any = None,
+    ) -> List[ActiveProbeFinding]:
+        """Probes a specific target host for TLS, header, SaaS CNAME, and cloud misconfiguration anomalies."""
         findings: List[ActiveProbeFinding] = []
+        probe_dict: Optional[Dict[str, Any]] = None
+        probe_body: str = ""
+        probe_status: Optional[int] = None
 
         try:
             probe_res: ProbeResult = self.xh_probe.probe(f"https://{host}", timeout_sec=5.0, offline=offline)
+            probe_dict = probe_res.to_dict()
+            probe_body = getattr(probe_res, "body_preview", "") or ""
+            probe_status = getattr(probe_res, "status_code", None)
             audit = probe_res.security_audit
 
             # 1. Missing HSTS Check
@@ -109,7 +129,7 @@ class BountyActiveProber:
                     score=5.0,
                     evidence="Strict-Transport-Security header omitted",
                     remediation="Add Strict-Transport-Security: max-age=31536000; includeSubDomains",
-                    raw_probe=probe_res.to_dict()
+                    raw_probe=probe_dict
                 ))
 
             # 2. CORS Wildcard Origin Check
@@ -123,7 +143,7 @@ class BountyActiveProber:
                     score=7.5,
                     evidence="Access-Control-Allow-Origin: * detected",
                     remediation="Restrict Access-Control-Allow-Origin to authenticated origins",
-                    raw_probe=probe_res.to_dict()
+                    raw_probe=probe_dict
                 ))
 
             # 3. Certificate Expiry Check
@@ -138,11 +158,90 @@ class BountyActiveProber:
                         score=6.0,
                         evidence=f"TLS certificate expires in {days} days",
                         remediation="Automate ACME SSL certificate renewal",
-                        raw_probe=probe_res.to_dict()
+                        raw_probe=probe_dict
                     ))
 
         except Exception as e:
             logger.debug(f"Active probe on {host} encountered: {e}")
+
+        # 4. Cloud Storage Bucket Takeover / Public Listing Sentinel
+        try:
+            effective_body = mock_cloud_body if mock_cloud_body is not None else (probe_body if (offline or probe_body) else None)
+            bucket_res = CloudBucketTakeoverSentinel.audit_target(
+                target_domain=host,
+                cname_target=cname_target,
+                mock_body=effective_body,
+                mock_status=probe_status,
+                blackboard=blackboard,
+            )
+            if bucket_res and bucket_res.get("vulnerable"):
+                sev = getattr(bucket_res.get("severity"), "value", bucket_res.get("severity", "HIGH"))
+                findings.append(ActiveProbeFinding(
+                    program_id="generic",
+                    target_domain=host,
+                    flaw_type=str(bucket_res.get("flaw_type", "cloud_storage_takeover")),
+                    severity=str(sev).upper(),
+                    score=float(bucket_res.get("cvss_score", 8.6)),
+                    cname_target=bucket_res.get("cname_target"),
+                    provider=bucket_res.get("provider"),
+                    evidence=str(bucket_res.get("evidence", "")),
+                    remediation=str(bucket_res.get("remediation", "")),
+                    raw_probe=probe_dict,
+                ))
+        except Exception as e:
+            logger.debug(f"Cloud bucket sentinel on {host} encountered: {e}")
+
+        # 5. GraphQL Schema Introspection Sentinel
+        try:
+            eff_gql_mocks = mock_graphql_paths if mock_graphql_paths is not None else ({} if offline else None)
+            gql_res = GraphQLIntrospectionSentinel.audit_target(
+                target_domain=host,
+                timeout=3.5,
+                mock_paths=eff_gql_mocks,
+                blackboard=blackboard,
+            )
+            if gql_res and gql_res.get("vulnerable"):
+                sev = getattr(gql_res.get("severity"), "value", gql_res.get("severity", "MEDIUM"))
+                findings.append(ActiveProbeFinding(
+                    program_id="generic",
+                    target_domain=host,
+                    flaw_type=str(gql_res.get("flaw_type", "graphql_introspection")),
+                    severity=str(sev).upper(),
+                    score=float(gql_res.get("cvss_score", 5.3)),
+                    provider=gql_res.get("provider", "GraphQL"),
+                    evidence=str(gql_res.get("evidence", "")),
+                    remediation=str(gql_res.get("remediation", "")),
+                    raw_probe=probe_dict,
+                ))
+        except Exception as e:
+            logger.debug(f"GraphQL sentinel on {host} encountered: {e}")
+
+        # 6. CORS Misconfiguration Sentinel (Arbitrary / Null Origin with Credentials)
+        try:
+            eff_cors_mocks = mock_cors_responses if mock_cors_responses is not None else ({} if offline else None)
+            cors_res = CorsMisconfigurationSentinel.audit_target(
+                target_domain=host,
+                timeout=3.5,
+                mock_responses=eff_cors_mocks,
+                blackboard=blackboard,
+            )
+            if cors_res and cors_res.get("vulnerable"):
+                flaw = str(cors_res.get("flaw_type", ""))
+                if flaw in ("cors_arbitrary_origin_with_credentials", "cors_null_origin_with_credentials"):
+                    sev = getattr(cors_res.get("severity"), "value", cors_res.get("severity", "HIGH"))
+                    findings.append(ActiveProbeFinding(
+                        program_id="generic",
+                        target_domain=host,
+                        flaw_type=flaw,
+                        severity=str(sev).upper(),
+                        score=float(cors_res.get("cvss_score", 8.1)),
+                        provider=cors_res.get("provider", "API Gateway CORS"),
+                        evidence=str(cors_res.get("evidence", "")),
+                        remediation=str(cors_res.get("remediation", "")),
+                        raw_probe=probe_dict,
+                    ))
+        except Exception as e:
+            logger.debug(f"CORS sentinel on {host} encountered: {e}")
 
         return findings
 

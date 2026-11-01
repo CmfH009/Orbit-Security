@@ -122,6 +122,7 @@ class CloudBucketTakeoverSentinel:
         cname_target: Optional[str] = None,
         mock_body: Optional[str] = None,
         mock_status: Optional[int] = None,
+        blackboard: Any = None,
     ) -> Optional[Dict[str, Any]]:
         """Audits target for orphaned cloud storage bucket takeover or public listing."""
         provider = cls.identify_provider_from_cname(cname_target or "")
@@ -134,10 +135,12 @@ class CloudBucketTakeoverSentinel:
         if not body:
             return None
 
+        result: Optional[Dict[str, Any]] = None
+
         # Check for Open Public Bucket Listing (Data Exposure)
         for open_fp in cls.OPEN_LISTING_FINGERPRINTS:
             if open_fp.lower() in body.lower():
-                return {
+                result = {
                     "vulnerable": True,
                     "flaw_type": "open_cloud_bucket",
                     "provider": provider or "Cloud Storage",
@@ -151,38 +154,61 @@ class CloudBucketTakeoverSentinel:
                     "remediation": "Disable public READ permissions on the cloud storage bucket and remove 'AllUsers' / 'AllAuthenticatedUsers' ACL grants.",
                     "bounty_viability": "HIGH_CONFIDENCE",
                 }
+                break
 
         # Check for Orphaned / Dangling Bucket Takeover
-        providers_to_check = [provider] if provider else list(cls.TAKEOVER_FINGERPRINTS.keys())
-        for prov in providers_to_check:
-            fps = cls.TAKEOVER_FINGERPRINTS.get(prov, [])
-            for fp in fps:
-                if fp.lower() in body.lower():
-                    cname_str = f" pointing to '{cname_target}'" if cname_target else ""
-                    evidence = (
-                        f"Dangling {prov} storage bucket detected on '{target_domain}'{cname_str}. "
-                        f"Response body matches unallocated bucket signature: '{fp}'."
-                    )
-                    remediation = (
-                        f"Either create/claim the matching {prov} bucket name in your cloud account to prevent third-party "
-                        "registration, or remove the dangling DNS CNAME record."
-                    )
-                    return {
-                        "vulnerable": True,
-                        "flaw_type": "cloud_storage_takeover",
-                        "provider": prov,
-                        "cname_target": cname_target,
-                        "target_domain": target_domain,
-                        "severity": Severity.HIGH,
-                        "cvss_score": 8.6,
-                        "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:N/I:H/A:N",
-                        "cwe_id": "CWE-284: Improper Access Control",
-                        "evidence": evidence,
-                        "remediation": remediation,
-                        "bounty_viability": "HIGH_CONFIDENCE",
-                    }
+        if result is None:
+            providers_to_check = [provider] if provider else list(cls.TAKEOVER_FINGERPRINTS.keys())
+            for prov in providers_to_check:
+                fps = cls.TAKEOVER_FINGERPRINTS.get(prov, [])
+                for fp in fps:
+                    if fp.lower() in body.lower():
+                        cname_str = f" pointing to '{cname_target}'" if cname_target else ""
+                        evidence = (
+                            f"Dangling {prov} storage bucket detected on '{target_domain}'{cname_str}. "
+                            f"Response body matches unallocated bucket signature: '{fp}'."
+                        )
+                        remediation = (
+                            f"Either create/claim the matching {prov} bucket name in your cloud account to prevent third-party "
+                            "registration, or remove the dangling DNS CNAME record."
+                        )
+                        result = {
+                            "vulnerable": True,
+                            "flaw_type": "cloud_storage_takeover",
+                            "provider": prov,
+                            "cname_target": cname_target,
+                            "target_domain": target_domain,
+                            "severity": Severity.HIGH,
+                            "cvss_score": 8.6,
+                            "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:N/I:H/A:N",
+                            "cwe_id": "CWE-284: Improper Access Control",
+                            "evidence": evidence,
+                            "remediation": remediation,
+                            "bounty_viability": "HIGH_CONFIDENCE",
+                        }
+                        break
+                if result is not None:
+                    break
 
-        return None
+        if result is not None and blackboard is not None:
+            try:
+                blackboard.publish(
+                    event_type="DANGLING_CLOUD_RESOURCE_DETECTED",
+                    payload={
+                        "domain": target_domain,
+                        "provider": result.get("provider"),
+                        "cname_target": cname_target,
+                        "flaw_type": result.get("flaw_type"),
+                        "severity": str(getattr(result.get("severity"), "value", result.get("severity"))),
+                        "evidence": result.get("evidence"),
+                    },
+                    source="cloud_resource_sweeper",
+                    topic="perimeter",
+                )
+            except Exception as exc:
+                logger.debug(f"Blackboard publish error in CloudBucketTakeoverSentinel.audit_target: {exc}")
+
+        return result
 
     @classmethod
     def sweep_cloud_fleet(
@@ -204,26 +230,10 @@ class CloudBucketTakeoverSentinel:
                 cname_target=cname_target,
                 mock_body=mock_body,
                 mock_status=mock_status,
+                blackboard=blackboard,
             )
             if res and res.get("vulnerable"):
                 findings.append(res)
-                if blackboard is not None:
-                    try:
-                        blackboard.publish(
-                            event_type="DANGLING_CLOUD_RESOURCE_DETECTED",
-                            payload={
-                                "domain": domain,
-                                "provider": res.get("provider"),
-                                "cname_target": cname_target,
-                                "flaw_type": res.get("flaw_type"),
-                                "severity": str(getattr(res.get("severity"), "value", res.get("severity"))),
-                                "evidence": res.get("evidence"),
-                            },
-                            source="cloud_resource_sweeper",
-                            topic="perimeter",
-                        )
-                    except Exception as exc:
-                        logger.debug(f"Blackboard publish error in sweep_cloud_fleet: {exc}")
 
         return {
             "total_swept": len(targets or []),
@@ -602,6 +612,7 @@ class GraphQLIntrospectionSentinel:
         target_domain: str,
         timeout: float = 3.5,
         mock_paths: Optional[Dict[str, Dict[str, Any]]] = None,
+        blackboard: Any = None,
     ) -> Optional[Dict[str, Any]]:
         """Probes common GraphQL endpoints for active schema introspection."""
         host = target_domain.split(":")[0].strip().lower()
@@ -614,30 +625,51 @@ class GraphQLIntrospectionSentinel:
             "Accept": "application/json",
         }
 
+        result: Optional[Dict[str, Any]] = None
+
         # Handle Mocked Paths for deterministic testing
         if mock_paths is not None:
             for path, resp_dict in mock_paths.items():
                 data = resp_dict.get("data", {})
                 if isinstance(data, dict) and "__schema" in data:
-                    return cls._build_vulnerability(target_domain, path, data)
-            return None
+                    result = cls._build_vulnerability(target_domain, path, data)
+                    break
+        else:
+            # Live Probing
+            for path in cls.COMMON_GRAPHQL_PATHS:
+                url = f"https://{host}{path}"
+                try:
+                    req = urllib.request.Request(url, data=cls.INTROSPECTION_QUERY, headers=headers, method="POST")
+                    with urllib.request.urlopen(req, timeout=timeout) as resp:
+                        if getattr(resp, "status", getattr(resp, "code", 0)) == 200:
+                            raw = resp.read().decode("utf-8", errors="ignore")
+                            data_json = json.loads(raw)
+                            data_obj = data_json.get("data")
+                            if isinstance(data_obj, dict) and "__schema" in data_obj:
+                                result = cls._build_vulnerability(target_domain, path, data_obj)
+                                break
+                except Exception:
+                    continue
 
-        # Live Probing
-        for path in cls.COMMON_GRAPHQL_PATHS:
-            url = f"https://{host}{path}"
+        if result is not None and blackboard is not None:
             try:
-                req = urllib.request.Request(url, data=cls.INTROSPECTION_QUERY, headers=headers, method="POST")
-                with urllib.request.urlopen(req, timeout=timeout) as resp:
-                    if getattr(resp, "status", getattr(resp, "code", 0)) == 200:
-                        raw = resp.read().decode("utf-8", errors="ignore")
-                        data_json = json.loads(raw)
-                        data_obj = data_json.get("data")
-                        if isinstance(data_obj, dict) and "__schema" in data_obj:
-                            return cls._build_vulnerability(target_domain, path, data_obj)
-            except Exception:
-                continue
+                blackboard.publish(
+                    event_type="GRAPHQL_INTROSPECTION_EXPOSED",
+                    payload={
+                        "domain": target_domain,
+                        "endpoint_path": result.get("endpoint_path"),
+                        "flaw_type": result.get("flaw_type"),
+                        "severity": str(getattr(result.get("severity"), "value", result.get("severity"))),
+                        "cvss_score": result.get("cvss_score"),
+                        "evidence": result.get("evidence"),
+                    },
+                    source="graphql_introspection_sentinel",
+                    topic="perimeter",
+                )
+            except Exception as exc:
+                logger.debug(f"Blackboard publish error in GraphQLIntrospectionSentinel: {exc}")
 
-        return None
+        return result
 
     @classmethod
     def _build_vulnerability(cls, target_domain: str, path: str, schema_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -707,6 +739,7 @@ class CorsMisconfigurationSentinel:
         target_domain: str,
         timeout: float = 3.5,
         mock_responses: Optional[Dict[str, Dict[str, str]]] = None,
+        blackboard: Any = None,
     ) -> Optional[Dict[str, Any]]:
         """Audits domain for arbitrary CORS reflection with credentials."""
         host = target_domain.split(":")[0].strip().lower()
@@ -714,10 +747,11 @@ class CorsMisconfigurationSentinel:
             return None
 
         url = f"https://{host}"
+        result: Optional[Dict[str, Any]] = None
 
         # 1. Test Arbitrary Untrusted Origin Reflection
-        if mock_responses and cls.TEST_ORIGIN in mock_responses:
-            headers_origin = mock_responses[cls.TEST_ORIGIN]
+        if mock_responses is not None:
+            headers_origin = mock_responses.get(cls.TEST_ORIGIN, {})
         else:
             headers_origin = cls.probe_cors_headers(url, cls.TEST_ORIGIN, timeout=timeout)
 
@@ -735,7 +769,7 @@ class CorsMisconfigurationSentinel:
                 "strict server-side whitelist before echoing in Access-Control-Allow-Origin. Never enable Access-Control-Allow-Credentials "
                 "for untrusted or dynamic origins."
             )
-            return {
+            result = {
                 "vulnerable": True,
                 "flaw_type": "cors_arbitrary_origin_with_credentials",
                 "provider": "API Gateway CORS",
@@ -750,42 +784,43 @@ class CorsMisconfigurationSentinel:
             }
 
         # 2. Test Null Origin Trust
-        if mock_responses and cls.NULL_ORIGIN in mock_responses:
-            headers_null = mock_responses[cls.NULL_ORIGIN]
-        else:
-            headers_null = cls.probe_cors_headers(url, cls.NULL_ORIGIN, timeout=timeout)
+        if result is None:
+            if mock_responses is not None:
+                headers_null = mock_responses.get(cls.NULL_ORIGIN, {})
+            else:
+                headers_null = cls.probe_cors_headers(url, cls.NULL_ORIGIN, timeout=timeout)
 
-        acao_null = headers_null.get("access-control-allow-origin", "").strip()
-        acac_null = headers_null.get("access-control-allow-credentials", "").strip().lower()
+            acao_null = headers_null.get("access-control-allow-origin", "").strip()
+            acac_null = headers_null.get("access-control-allow-credentials", "").strip().lower()
 
-        if acao_null == "null" and acac_null == "true":
-            evidence = (
-                f"Dangerous CORS policy on '{target_domain}': Server explicitly trusts Origin 'null' "
-                "with Access-Control-Allow-Credentials set to true. "
-                "Sandboxed iframes (e.g. <iframe sandbox='allow-scripts'>) and local file contexts send Origin: null, "
-                "allowing attackers to bypass same-origin protections."
-            )
-            remediation = (
-                "Remove 'null' from trusted origin lists. 'null' origins can be easily generated by sandboxed iframes and "
-                "attacker-controlled data URI contexts."
-            )
-            return {
-                "vulnerable": True,
-                "flaw_type": "cors_null_origin_with_credentials",
-                "provider": "API Gateway CORS",
-                "target_domain": target_domain,
-                "severity": Severity.HIGH,
-                "cvss_score": 7.1,
-                "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:L/A:N",
-                "cwe_id": "CWE-942: Permissive Cross-domain Policy with Untrusted Domains",
-                "evidence": evidence,
-                "remediation": remediation,
-                "bounty_viability": "HIGH_CONFIDENCE",
-            }
+            if acao_null == "null" and acac_null == "true":
+                evidence = (
+                    f"Dangerous CORS policy on '{target_domain}': Server explicitly trusts Origin 'null' "
+                    "with Access-Control-Allow-Credentials set to true. "
+                    "Sandboxed iframes (e.g. <iframe sandbox='allow-scripts'>) and local file contexts send Origin: null, "
+                    "allowing attackers to bypass same-origin protections."
+                )
+                remediation = (
+                    "Remove 'null' from trusted origin lists. 'null' origins can be easily generated by sandboxed iframes and "
+                    "attacker-controlled data URI contexts."
+                )
+                result = {
+                    "vulnerable": True,
+                    "flaw_type": "cors_null_origin_with_credentials",
+                    "provider": "API Gateway CORS",
+                    "target_domain": target_domain,
+                    "severity": Severity.HIGH,
+                    "cvss_score": 7.1,
+                    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:L/A:N",
+                    "cwe_id": "CWE-942: Permissive Cross-domain Policy with Untrusted Domains",
+                    "evidence": evidence,
+                    "remediation": remediation,
+                    "bounty_viability": "HIGH_CONFIDENCE",
+                }
 
         # 3. Informational Wildcard with sensitive header
-        if acao_origin == "*":
-            return {
+        if result is None and acao_origin == "*":
+            result = {
                 "vulnerable": True,
                 "flaw_type": "cors_wildcard_origin",
                 "provider": "API Gateway CORS",
@@ -799,4 +834,21 @@ class CorsMisconfigurationSentinel:
                 "bounty_viability": "INFORMATIONAL_LOW",
             }
 
-        return None
+        if result is not None and blackboard is not None:
+            try:
+                blackboard.publish(
+                    event_type="CORS_MISCONFIGURATION_DETECTED",
+                    payload={
+                        "domain": target_domain,
+                        "flaw_type": result.get("flaw_type"),
+                        "severity": str(getattr(result.get("severity"), "value", result.get("severity"))),
+                        "cvss_score": result.get("cvss_score"),
+                        "evidence": result.get("evidence"),
+                    },
+                    source="cors_misconfiguration_sentinel",
+                    topic="perimeter",
+                )
+            except Exception as exc:
+                logger.debug(f"Blackboard publish error in CorsMisconfigurationSentinel: {exc}")
+
+        return result

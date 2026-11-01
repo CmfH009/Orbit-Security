@@ -36,6 +36,11 @@ from orbit_security.bounty_radar import (
     DEFAULT_RADAR_STATE_PATH,
 )
 from orbit_security.cert_transparency import CtStreamDaemon
+from orbit_security.cloud_sentinels import (
+    CloudBucketTakeoverSentinel,
+    CorsMisconfigurationSentinel,
+    GraphQLIntrospectionSentinel,
+)
 
 LOGS_DIR = WORKSPACE_ROOT / "system" / "logs"
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
@@ -52,11 +57,13 @@ class BountyRollingDaemon:
         state_file: Optional[Path] = None,
         ct_watermark_file: Optional[Path] = None,
         offline: bool = False,
+        blackboard: Any = None,
     ):
         self.interval_sec = interval_sec
         self.programs_path = Path(programs_path or DEFAULT_BOUNTY_DATA_PATH)
         self.state_file = Path(state_file or DEFAULT_RADAR_STATE_PATH)
         self.offline = offline
+        self.blackboard = blackboard
         self.prober = BountyActiveProber(state_file=self.state_file)
         self.worker = BountyRollingWorker(
             prober=self.prober,
@@ -65,6 +72,15 @@ class BountyRollingDaemon:
         )
         self.ct_daemon = CtStreamDaemon(watermark_file=ct_watermark_file)
         self.running = False
+
+    def _get_blackboard(self) -> Any:
+        if self.blackboard is not None:
+            return self.blackboard
+        try:
+            from orbit_security.blackboard import get_blackboard
+            return get_blackboard()
+        except Exception:
+            return None
 
     def setup_logging(self, verbose: bool = False):
         level = logging.DEBUG if verbose else logging.INFO
@@ -106,6 +122,74 @@ class BountyRollingDaemon:
             "takeover_findings": takeover_findings,
         }
 
+    def sweep_cloud_sentinels_for_program(
+        self,
+        program_id: str,
+        blackboard: Any = None,
+        mock_targets: Optional[List[Dict[str, Any]]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Sweeps a program's perimeter with CloudBucketTakeoverSentinel, GraphQLIntrospectionSentinel, and CorsMisconfigurationSentinel."""
+        programs = self.worker.load_programs()
+        target = next((p for p in programs if p.program_id == program_id), None)
+        if not target:
+            logger.error(f"Program ID '{program_id}' not found in active catalog.")
+            return None
+
+        bb = blackboard if blackboard is not None else self._get_blackboard()
+        if mock_targets is not None:
+            fleet_targets = mock_targets
+        else:
+            fleet_targets = [
+                {
+                    "domain": root.replace("*.", ""),
+                    "mock_body": "" if self.offline else None,
+                    "mock_graphql_paths": {} if self.offline else None,
+                    "mock_cors_responses": {} if self.offline else None,
+                }
+                for root in target.in_scope
+            ]
+
+        bucket_sweep = CloudBucketTakeoverSentinel.sweep_cloud_fleet(
+            targets=fleet_targets,
+            blackboard=bb,
+        )
+        graphql_findings: List[Dict[str, Any]] = []
+        cors_findings: List[Dict[str, Any]] = []
+
+        for item in fleet_targets:
+            dom = str(item.get("domain", "") or "").strip()
+            if not dom:
+                continue
+            gql_mock = item.get("mock_graphql_paths") if "mock_graphql_paths" in item else ({} if self.offline else None)
+            gql_res = GraphQLIntrospectionSentinel.audit_target(
+                target_domain=dom,
+                mock_paths=gql_mock,
+                blackboard=bb,
+            )
+            if gql_res and gql_res.get("vulnerable"):
+                graphql_findings.append(gql_res)
+
+            cors_mock = item.get("mock_cors_responses") if "mock_cors_responses" in item else ({} if self.offline else None)
+            cors_res = CorsMisconfigurationSentinel.audit_target(
+                target_domain=dom,
+                mock_responses=cors_mock,
+                blackboard=bb,
+            )
+            if cors_res and cors_res.get("vulnerable"):
+                cors_findings.append(cors_res)
+
+        all_cloud_findings = list(bucket_sweep.get("findings", [])) + graphql_findings + cors_findings
+        return {
+            "program_id": target.program_id,
+            "program_name": target.name,
+            "total_swept": len(fleet_targets),
+            "bucket_findings": bucket_sweep.get("findings", []),
+            "graphql_findings": graphql_findings,
+            "cors_findings": cors_findings,
+            "vulnerable_count": len(all_cloud_findings),
+            "findings": all_cloud_findings,
+        }
+
     def sweep_program(self, program_id: str) -> Optional[Dict[str, Any]]:
         """Executes targeted sweep for a single specified program."""
         programs = self.worker.load_programs()
@@ -116,6 +200,7 @@ class BountyRollingDaemon:
 
         logger.info(f"Executing focused sweep for program: {target.name} ({target.program_id})")
         ct_summary = self.sweep_ct_logs_for_program(program_id)
+        cloud_summary = self.sweep_cloud_sentinels_for_program(program_id)
         confirmed = self.worker.execute_single_program_sweep(target, offline=self.offline)
         return {
             "program_id": target.program_id,
@@ -123,6 +208,7 @@ class BountyRollingDaemon:
             "confirmed_count": len(confirmed),
             "findings": confirmed,
             "ct_discovery": ct_summary,
+            "cloud_sentinel_sweep": cloud_summary,
         }
 
     def sweep_one_cycle(self) -> Optional[Dict[str, Any]]:

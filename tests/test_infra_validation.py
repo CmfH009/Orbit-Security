@@ -138,3 +138,60 @@ def test_environment_file_and_deploy_oracle_sentinel_renderer(tmp_path):
     assert "http://100.88.42.10:9090/api/orbit/blackboard/shuttle" in rendered_text
     assert "oracle-arm64-prod-1" in rendered_text
 
+
+def test_litestream_wal_replication_config():
+    """Verifies Litestream continuous SQLite WAL replication specification for blackboard.db and orbit_events.db."""
+    litestream_file = INFRA_DIR / "litestream.yml"
+    assert litestream_file.exists(), f"Missing Litestream config at {litestream_file}"
+
+    cfg = yaml.safe_load(litestream_file.read_text(encoding="utf-8"))
+    assert isinstance(cfg, dict)
+    assert cfg.get("addr") == "127.0.0.1:9091"
+
+    dbs = cfg.get("dbs", [])
+    assert len(dbs) >= 2
+    db_paths = {d["path"]: d for d in dbs if isinstance(d, dict) and "path" in d}
+    assert "/opt/orbit-security/data/blackboard.db" in db_paths
+    assert "/opt/orbit-security/data/orbit_events.db" in db_paths
+
+    for path, db_spec in db_paths.items():
+        replicas = db_spec.get("replicas", [])
+        replica_types = {r.get("type") for r in replicas if isinstance(r, dict)}
+        assert "file" in replica_types, f"Missing local rolling file replica for {path}"
+        assert "s3" in replica_types, f"Missing S3 object storage replica for {path}"
+
+
+def test_multi_cloud_zero_trust_matrix_and_shuttle_handshake():
+    """Verifies Multi-Cloud Zero-Trust Matrix (Oracle/AWS/GCP/DO) and live HMAC shuttle replication."""
+    matrix_file = INFRA_DIR / "cloud_init_multi_cloud_matrix.yaml"
+    assert matrix_file.exists()
+    matrix_yaml = yaml.safe_load(matrix_file.read_text(encoding="utf-8"))
+    assert "ufw" in matrix_yaml.get("packages", [])
+    runcmd_joined = "\n".join(str(c) for c in matrix_yaml.get("runcmd", []))
+    assert "ufw default deny incoming" in runcmd_joined
+    assert "ufw allow 41641/udp" in runcmd_joined
+    assert "ufw allow in on tailscale0" in runcmd_joined
+
+    from orbit_security.tools.deploy_oracle_sentinel import (
+        export_multi_cloud_init_matrix,
+        verify_cockpit_shuttle_handshake,
+    )
+
+    exported = export_multi_cloud_init_matrix(tailscale_hostname="orbit-mesh-node", cockpit_port=9090)
+    providers = exported["providers"]
+    assert {"oracle_arm64", "aws_graviton", "gcp_e2_micro", "digitalocean_droplet"} <= set(providers.keys())
+    for prov_name, prov_cfg in providers.items():
+        assert prov_cfg["wireguard_port"] == "41641/udp"
+        assert "ufw default deny incoming" in prov_cfg["user_data"]
+
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        free_port = s.getsockname()[1]
+
+    handshake = verify_cockpit_shuttle_handshake(port=free_port, node_id="oracle-arm64-verify-test")
+    assert handshake["ok"] is True
+    assert handshake["shuttle_result"]["ok"] is True
+    assert handshake["shuttle_result"]["count"] >= 1
+
+

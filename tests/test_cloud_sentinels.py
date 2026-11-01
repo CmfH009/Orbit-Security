@@ -335,3 +335,161 @@ class TestBountySweeperCloudIntegration:
 
         cors_vuln = next(v for v in vulns if v.flaw_type == "cors_arbitrary_origin_with_credentials")
         assert cors_vuln.cvss_score == 8.1
+
+
+class TestPassiveTlsAndEmailSentinels:
+    """Tests PassiveTlsCipherSentinel and EmailAuthPolicyAnalyzer edge cases and Blackboard emission."""
+
+    def test_tls_posture_deprecated_protocol_weak_cipher_expired_and_san_mismatch(self, tmp_path):
+        from orbit_security.blackboard import Blackboard
+        from orbit_security.cloud_sentinels import PassiveTlsCipherSentinel
+
+        bb = Blackboard(db_path=tmp_path / "tls_bb.db")
+        res = PassiveTlsCipherSentinel.evaluate_tls_posture(
+            domain="legacy.target.com",
+            tls_version="TLSv1.0",
+            cipher_suite="TLS_RSA_WITH_RC4_128_MD5",
+            days_remaining=-5,
+            san_domains=["other.target.com", "*.sub.target.com"],
+            blackboard=bb,
+        )
+        assert res["vulnerable"] is True
+        assert res["severity"] == "CRITICAL"
+        codes = {i["code"] for i in res["issues"]}
+        assert "DEPRECATED_TLS_PROTOCOL" in codes
+        assert "WEAK_CIPHER_SUITE" in codes
+        assert "CERTIFICATE_EXPIRED" in codes
+        assert "SAN_HOSTNAME_MISMATCH" in codes
+
+        events = bb.get_recent(limit=10, topic="perimeter")
+        assert any(e["event_type"] == "TLS_POSTURE_ANOMALY" for e in events)
+
+    def test_tls_posture_wildcard_san_and_healthy_cert(self):
+        from orbit_security.cloud_sentinels import PassiveTlsCipherSentinel
+
+        res = PassiveTlsCipherSentinel.evaluate_tls_posture(
+            domain="api.target.com",
+            tls_version="TLSv1.3",
+            cipher_suite="TLS_AES_256_GCM_SHA384",
+            days_remaining=60,
+            san_domains=["*.target.com"],
+        )
+        assert res["vulnerable"] is False
+        assert res["severity"] == "SAFE"
+        assert res["issues"] == []
+
+    def test_email_auth_policy_analyzer_spoofable_and_lookup_limit(self, tmp_path):
+        from orbit_security.blackboard import Blackboard
+        from orbit_security.cloud_sentinels import EmailAuthPolicyAnalyzer
+
+        bb = Blackboard(db_path=tmp_path / "email_bb.db")
+        spf_many = "v=spf1 " + " ".join(f"include:spf{i}.example.com" for i in range(11)) + " +all"
+        res = EmailAuthPolicyAnalyzer.analyze_email_security_posture(
+            domain="spoofable.example.com",
+            spf_record=spf_many,
+            dmarc_record="v=DMARC1; p=none; pct=50",
+            dkim_selectors={"default": "v=DKIM1; k=rsa; p=short"},
+            blackboard=bb,
+        )
+        assert res["spoofable"] is True
+        assert res["severity"] == "CRITICAL"
+        codes = {f["code"] for f in res["findings"]}
+        assert "SPF_PERMISSIVE_PLUS_ALL" in codes
+        assert "SPF_LOOKUP_LIMIT_EXCEEDED" in codes
+        assert "DMARC_POLICY_NONE" in codes
+        assert "DMARC_PARTIAL_PCT" in codes
+        assert "DKIM_NO_VALID_SELECTORS" in codes
+
+        events = bb.get_recent(limit=10, topic="perimeter")
+        assert any(e["event_type"] == "EMAIL_AUTH_POSTURE_EVALUATED" for e in events)
+
+
+class TestActiveSweepsAndDaemonBlackboardWiring:
+    """Tests wiring of cloud_sentinels.py into BountyActiveProber and BountyRollingDaemon with SQLite WAL Blackboard."""
+
+    def test_bounty_active_prober_invokes_cloud_sentinels(self, tmp_path):
+        from orbit_security.blackboard import Blackboard
+        from orbit_security.bounty_active_prober import BountyActiveProber
+
+        bb = Blackboard(db_path=tmp_path / "prober_bb.db")
+        prober = BountyActiveProber(
+            disclosures_dir=tmp_path / "disclosures",
+            state_file=tmp_path / "state.json",
+        )
+
+        findings = prober.probe_host_active(
+            host="cloud.target.com",
+            offline=True,
+            cname_target="cloud.target.com.s3.amazonaws.com",
+            mock_cloud_body="<Error><Code>NoSuchBucket</Code></Error>",
+            mock_graphql_paths={
+                "/graphql": {"data": {"__schema": {"queryType": {"name": "Query"}}}}
+            },
+            mock_cors_responses={
+                CorsMisconfigurationSentinel.TEST_ORIGIN: {
+                    "access-control-allow-origin": CorsMisconfigurationSentinel.TEST_ORIGIN,
+                    "access-control-allow-credentials": "true",
+                }
+            },
+            blackboard=bb,
+        )
+
+        flaw_types = {f.flaw_type for f in findings}
+        assert "cloud_storage_takeover" in flaw_types
+        assert "graphql_introspection" in flaw_types
+        assert "cors_arbitrary_origin_with_credentials" in flaw_types
+
+        events = bb.get_recent(limit=20, topic="perimeter")
+        event_types = {e["event_type"] for e in events}
+        assert "DANGLING_CLOUD_RESOURCE_DETECTED" in event_types
+        assert "GRAPHQL_INTROSPECTION_EXPOSED" in event_types
+        assert "CORS_MISCONFIGURATION_DETECTED" in event_types
+
+    def test_bounty_rolling_daemon_sweeps_cloud_sentinels_into_blackboard(self, tmp_path):
+        from orbit_security.blackboard import Blackboard
+        from orbit_security.bounty_rolling_daemon import BountyRollingDaemon
+
+        bb = Blackboard(db_path=tmp_path / "daemon_bb.db")
+        daemon = BountyRollingDaemon(
+            state_file=tmp_path / "radar_state.json",
+            ct_watermark_file=tmp_path / "ct_watermark.json",
+            offline=True,
+            blackboard=bb,
+        )
+
+        mock_targets = [
+            {
+                "domain": "assets.shopify.com",
+                "cname_target": "assets.shopify.com.s3.amazonaws.com",
+                "mock_body": "<Error><Code>NoSuchBucket</Code></Error>",
+                "mock_status": 404,
+                "mock_graphql_paths": {
+                    "/api/graphql": {"data": {"__schema": {"queryType": {"name": "RootQuery"}}}}
+                },
+                "mock_cors_responses": {
+                    CorsMisconfigurationSentinel.NULL_ORIGIN: {
+                        "access-control-allow-origin": "null",
+                        "access-control-allow-credentials": "true",
+                    }
+                },
+            }
+        ]
+
+        summary = daemon.sweep_cloud_sentinels_for_program(
+            "shopify",
+            blackboard=bb,
+            mock_targets=mock_targets,
+        )
+        assert summary is not None
+        assert summary["program_id"] == "shopify"
+        assert summary["vulnerable_count"] == 3
+        assert len(summary["bucket_findings"]) == 1
+        assert len(summary["graphql_findings"]) == 1
+        assert len(summary["cors_findings"]) == 1
+
+        events = bb.get_recent(limit=20, topic="perimeter")
+        event_types = {e["event_type"] for e in events}
+        assert "DANGLING_CLOUD_RESOURCE_DETECTED" in event_types
+        assert "GRAPHQL_INTROSPECTION_EXPOSED" in event_types
+        assert "CORS_MISCONFIGURATION_DETECTED" in event_types
+

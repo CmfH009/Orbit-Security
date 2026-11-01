@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import socket
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.request
@@ -20,10 +21,14 @@ from typing import Any, Dict, Optional
 
 import yaml
 
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+SRC_DIR = REPO_ROOT / "src"
+if str(SRC_DIR) not in sys.path and SRC_DIR.exists():
+    sys.path.insert(0, str(SRC_DIR))
+
 from orbit_security.blackboard import Blackboard, get_blackboard
 from orbit_security.event_shuttle import EventShuttleReceiver, EventShuttleSender, ShuttleAuth
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 INFRA_DIR = REPO_ROOT / "infra"
 CLOUD_INIT_TEMPLATE = INFRA_DIR / "cloud_init_oracle_free.yaml"
 DEFAULT_RENDERED_PATH = REPO_ROOT / "data" / "rendered_oracle_cloud_init.yaml"

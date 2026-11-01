@@ -64,14 +64,20 @@ jobs:
 
       - name: "Unit & Security Invariant Verification"
         run: |
-          PYTHONPATH=src pytest tests/test_input_sanitizer.py tests/test_orbit_recon.py tests/test_infra_validation.py tests/test_radar_telemetry.py -v
+          PYTHONPATH=src pytest tests/test_input_sanitizer.py tests/test_orbit_recon.py tests/test_infra_validation.py tests/test_radar_telemetry.py tests/test_cloud_sentinels.py tests/test_inbox_guardrail.py tests/test_inbox_triage_bridge.py -v
 
-      - name: "Refresh Compacted CISA KEV + EPSS Radar Feed & Email/TLS Posture"
+      - name: "Refresh Compacted CISA KEV + EPSS Radar Feed & Cloud/Email/TLS Sentinels"
         run: |
           PYTHONPATH=src python - <<'PY'
+          from orbit_security.blackboard import get_blackboard
           from orbit_security.cisa_kev import CisaKevCatalog
           from orbit_security.tools.compact_radar_feed import compact_radar_dataset
-          from orbit_security.cloud_sentinels import EmailAuthPolicyAnalyzer
+          from orbit_security.cloud_sentinels import (
+              CloudBucketTakeoverSentinel,
+              EmailAuthPolicyAnalyzer,
+              PassiveTlsCipherSentinel,
+          )
+          bb = get_blackboard()
           feed = compact_radar_dataset(cisa_kev_data=CisaKevCatalog().catalog_data or {}, epss_data={})
           print(f"Compacted KEV+EPSS radar entries: {len(feed.get('vulnerabilities', []))}")
           email_check = EmailAuthPolicyAnalyzer.analyze_email_security_posture(
@@ -79,8 +85,21 @@ jobs:
               spf_record="v=spf1 include:_spf.google.com -all",
               dmarc_record="v=DMARC1; p=reject; rua=mailto:dmarc@orbit-security.io; pct=100",
               dkim_selectors={"google": "v=DKIM1; k=rsa; p=" + ("A" * 360)},
+              blackboard=bb,
           )
-          print(f"Email Posture Check: {email_check['severity']}")
+          tls_check = PassiveTlsCipherSentinel.evaluate_tls_posture(
+              domain="orbit-security.io",
+              tls_version="TLSv1.3",
+              cipher_suite="TLS_AES_256_GCM_SHA384",
+              days_remaining=90,
+              san_domains=["orbit-security.io", "*.orbit-security.io"],
+              blackboard=bb,
+          )
+          bucket_sweep = CloudBucketTakeoverSentinel.sweep_cloud_fleet(
+              targets=[{"domain": "orbit-security.io", "mock_body": "OK", "mock_status": 200}],
+              blackboard=bb,
+          )
+          print(f"Email Posture Check: {email_check['severity']} | TLS Posture: {tls_check['severity']} | Cloud Fleet Swept: {bucket_sweep['total_swept']}")
           PY
 
       - name: "Autonomous Perimeter Recon & DNS Hygiene Audit"
