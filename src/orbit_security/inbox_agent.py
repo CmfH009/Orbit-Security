@@ -360,81 +360,153 @@ class InboxAgent:
         portal_path = deal_desk_result.get("portal_path") or portal_info.get("portal_path", "")
         checkout_url = deal_desk_result.get("checkout_url") or portal_info.get("checkout_url", "")
 
-        # 3. Triage Bridge & Guardrail Verification for inquiries / unclear messages
-        if intent in (LeadIntent.UNCLEAR, LeadIntent.INQUIRY_PRICING, LeadIntent.INQUIRY_TECHNICAL):
-            decision = self.triage_bridge.triage_inbound_message(
-                sender_email, subject, message_body
-            )
-
-            # Publish INBOUND_LEAD_TRIAGED to blackboard
+        # 3. Triage Bridge & Guardrail Verification for inquiries / unclear messages / human requests
+        if intent in (LeadIntent.UNCLEAR, LeadIntent.INQUIRY_PRICING, LeadIntent.INQUIRY_TECHNICAL, LeadIntent.REQUEST_HUMAN):
             try:
-                from orbit_security.blackboard import publish_event
-                publish_event(
-                    event_type="INBOUND_LEAD_TRIAGED",
-                    payload={
-                        "sender": sender_email,
-                        "subject": subject,
-                        "intent": decision.intent,
-                        "confidence": decision.confidence,
-                        "recommended_action": decision.recommended_action.value if hasattr(decision.recommended_action, "value") else str(decision.recommended_action),
-                        "suggested_tier": decision.suggested_tier,
-                        "provider": getattr(decision, "provider_resolved", "GEMINI_CLI"),
-                        "timestamp": time.time(),
-                    },
-                    source="inbox_agent",
-                    topic="leads",
+                decision = self.triage_bridge.triage_inbound_message(
+                    sender_email, subject, message_body
                 )
-            except Exception as e:
-                print(f"[!] Blackboard publish failed for INBOUND_LEAD_TRIAGED: {e}")
 
-            rec_action = decision.recommended_action.value if hasattr(decision.recommended_action, "value") else str(decision.recommended_action)
-            draft_reply_body = decision.draft_reply_body
-
-            if rec_action == TriageAction.AUTONOMOUS_REPLY.value and draft_reply_body:
-                eval_res = self.guardrail.evaluate(
-                    draft_reply=draft_reply_body,
-                    sender=sender_email,
-                    subject=subject,
-                    inbound_headers=inbound_headers,
-                    leads_state=self.state,
-                )
-                if eval_res.status == GuardrailStatus.APPROVED:
-                    draft_sub = decision.draft_reply_subject or f"Re: {subject.replace('Re: ', '')}"
-                    self.dispatcher.send_email(
-                        recipient_email=sender_email,
-                        subject=draft_sub,
-                        body_text=draft_reply_body,
+                # Publish INBOUND_LEAD_TRIAGED to blackboard
+                try:
+                    from orbit_security.blackboard import publish_event
+                    publish_event(
+                        event_type="INBOUND_LEAD_TRIAGED",
+                        payload={
+                            "sender": sender_email,
+                            "subject": subject,
+                            "intent": decision.intent,
+                            "confidence": decision.confidence,
+                            "recommended_action": decision.recommended_action.value if hasattr(decision.recommended_action, "value") else str(decision.recommended_action),
+                            "suggested_tier": decision.suggested_tier,
+                            "provider": getattr(decision, "provider_resolved", "GEMINI_CLI"),
+                            "timestamp": time.time(),
+                        },
+                        source="inbox_agent",
+                        topic="leads",
                     )
-                    lead_state = self.state["leads"].setdefault(sender_email, {})
-                    lead_state["auto_replies_count"] = lead_state.get("auto_replies_count", 0) + 1
-                    lead_state["last_auto_reply_at"] = time.time()
-                    lead_state["status"] = "AUTONOMOUS_REPLY_SENT"
-                    self.guardrail.record_dispatch(sender_email)
+                except Exception as e:
+                    print(f"[!] Blackboard publish failed for INBOUND_LEAD_TRIAGED: {e}")
 
-                    try:
-                        from orbit_security.blackboard import publish_event
-                        publish_event(
-                            event_type="AUTONOMOUS_REPLY_SENT",
-                            payload={
-                                "recipient": sender_email,
-                                "subject": draft_sub,
-                                "intent": decision.intent,
-                                "suggested_tier": decision.suggested_tier,
-                                "provider": getattr(decision, "provider_resolved", "GEMINI_CLI"),
-                                "timestamp": time.time(),
-                            },
-                            source="inbox_agent",
-                            topic="leads",
+                rec_action = decision.recommended_action.value if hasattr(decision.recommended_action, "value") else str(decision.recommended_action)
+                draft_reply_body = decision.draft_reply_body
+
+                if rec_action == TriageAction.AUTONOMOUS_REPLY.value and draft_reply_body:
+                    eval_res = self.guardrail.evaluate(
+                        draft_reply=draft_reply_body,
+                        sender=sender_email,
+                        subject=subject,
+                        inbound_headers=inbound_headers,
+                        leads_state=self.state,
+                    )
+                    if eval_res.status == GuardrailStatus.APPROVED:
+                        draft_sub = decision.draft_reply_subject or f"Re: {subject.replace('Re: ', '')}"
+                        self.dispatcher.send_email(
+                            recipient_email=sender_email,
+                            subject=draft_sub,
+                            body_text=draft_reply_body,
                         )
-                    except Exception as e:
-                        print(f"[!] Blackboard publish failed for AUTONOMOUS_REPLY_SENT: {e}")
+                        lead_state = self.state["leads"].setdefault(sender_email, {})
+                        lead_state["auto_replies_count"] = lead_state.get("auto_replies_count", 0) + 1
+                        lead_state["last_auto_reply_at"] = time.time()
+                        lead_state["status"] = "AUTONOMOUS_REPLY_SENT"
+                        self.guardrail.record_dispatch(sender_email)
 
+                        try:
+                            from orbit_security.blackboard import publish_event
+                            publish_event(
+                                event_type="AUTONOMOUS_REPLY_SENT",
+                                payload={
+                                    "recipient": sender_email,
+                                    "subject": draft_sub,
+                                    "intent": decision.intent,
+                                    "suggested_tier": decision.suggested_tier,
+                                    "provider": getattr(decision, "provider_resolved", "GEMINI_CLI"),
+                                    "timestamp": time.time(),
+                                },
+                                source="inbox_agent",
+                                topic="leads",
+                            )
+                        except Exception as e:
+                            print(f"[!] Blackboard publish failed for AUTONOMOUS_REPLY_SENT: {e}")
+
+                        self._save_state()
+
+                        decision_data = decision.model_dump() if hasattr(decision, "model_dump") else (decision.dict() if hasattr(decision, "dict") else decision)
+                        return {
+                            "ok": True,
+                            "status": "AUTONOMOUS_REPLY_SENT",
+                            "sender": sender_email,
+                            "agency_name": agency_name,
+                            "domain": domain,
+                            "intent": decision.intent,
+                            "tier": decision.suggested_tier or tier,
+                            "portal": portal_info,
+                            "portal_path": portal_path,
+                            "portal_url": portal_path,
+                            "checkout_url": checkout_url,
+                            "stripe_checkout_url": checkout_url,
+                            "draft_reply": draft_reply_body,
+                            "deal_desk_result": deal_desk_result,
+                            "decision": decision_data,
+                        }
+                    else:
+                        lead_state = self.state["leads"].setdefault(sender_email, {})
+                        lead_state["status"] = "HELD_FOR_REVIEW"
+                        lead_state["violation_code"] = eval_res.violation_code
+                        lead_state["violation_layer"] = eval_res.violation_layer
+                        lead_state["reason"] = eval_res.reason
+
+                        try:
+                            from orbit_security.blackboard import publish_event
+                            publish_event(
+                                event_type="AUTONOMOUS_REPLY_BLOCKED",
+                                payload={
+                                    "recipient": sender_email,
+                                    "violation_layer": eval_res.violation_layer,
+                                    "violation_code": eval_res.violation_code,
+                                    "reason": eval_res.reason,
+                                    "action_taken": "HELD_FOR_REVIEW",
+                                    "timestamp": time.time(),
+                                },
+                                source="inbox_agent",
+                                topic="leads",
+                            )
+                        except Exception as e:
+                            print(f"[!] Blackboard publish failed for AUTONOMOUS_REPLY_BLOCKED: {e}")
+
+                        self._save_state()
+
+                        decision_data = decision.model_dump() if hasattr(decision, "model_dump") else (decision.dict() if hasattr(decision, "dict") else decision)
+                        return {
+                            "ok": False,
+                            "status": "HELD_FOR_REVIEW",
+                            "violation_code": eval_res.violation_code,
+                            "reason": eval_res.reason,
+                            "violation_layer": eval_res.violation_layer,
+                            "sender": sender_email,
+                            "agency_name": agency_name,
+                            "domain": domain,
+                            "intent": decision.intent,
+                            "tier": decision.suggested_tier or tier,
+                            "portal": portal_info,
+                            "portal_path": portal_path,
+                            "portal_url": portal_path,
+                            "checkout_url": checkout_url,
+                            "stripe_checkout_url": checkout_url,
+                            "draft_reply": draft_reply_body,
+                            "deal_desk_result": deal_desk_result,
+                            "decision": decision_data,
+                        }
+                else:
+                    lead_state = self.state["leads"].setdefault(sender_email, {})
+                    lead_state["status"] = rec_action
                     self._save_state()
-
                     decision_data = decision.model_dump() if hasattr(decision, "model_dump") else (decision.dict() if hasattr(decision, "dict") else decision)
                     return {
                         "ok": True,
-                        "status": "AUTONOMOUS_REPLY_SENT",
+                        "status": rec_action,
+                        "action": rec_action,
                         "sender": sender_email,
                         "agency_name": agency_name,
                         "domain": domain,
@@ -445,79 +517,54 @@ class InboxAgent:
                         "portal_url": portal_path,
                         "checkout_url": checkout_url,
                         "stripe_checkout_url": checkout_url,
-                        "draft_reply": draft_reply_body,
+                        "draft_reply": draft_reply_body or deal_desk_result.get("draft_reply", ""),
                         "deal_desk_result": deal_desk_result,
                         "decision": decision_data,
                     }
-                else:
-                    lead_state = self.state["leads"].setdefault(sender_email, {})
-                    lead_state["status"] = "HELD_FOR_REVIEW"
-                    lead_state["violation_code"] = eval_res.violation_code
-                    lead_state["violation_layer"] = eval_res.violation_layer
-                    lead_state["reason"] = eval_res.reason
-
-                    try:
-                        from orbit_security.blackboard import publish_event
-                        publish_event(
-                            event_type="AUTONOMOUS_REPLY_BLOCKED",
-                            payload={
-                                "recipient": sender_email,
-                                "violation_layer": eval_res.violation_layer,
-                                "violation_code": eval_res.violation_code,
-                                "reason": eval_res.reason,
-                                "action_taken": "HELD_FOR_REVIEW",
-                                "timestamp": time.time(),
-                            },
-                            source="inbox_agent",
-                            topic="leads",
-                        )
-                    except Exception as e:
-                        print(f"[!] Blackboard publish failed for AUTONOMOUS_REPLY_BLOCKED: {e}")
-
-                    self._save_state()
-
-                    decision_data = decision.model_dump() if hasattr(decision, "model_dump") else (decision.dict() if hasattr(decision, "dict") else decision)
-                    return {
-                        "ok": False,
-                        "status": "HELD_FOR_REVIEW",
-                        "violation_code": eval_res.violation_code,
-                        "reason": eval_res.reason,
-                        "violation_layer": eval_res.violation_layer,
-                        "sender": sender_email,
-                        "agency_name": agency_name,
-                        "domain": domain,
-                        "intent": decision.intent,
-                        "tier": decision.suggested_tier or tier,
-                        "portal": portal_info,
-                        "portal_path": portal_path,
-                        "portal_url": portal_path,
-                        "checkout_url": checkout_url,
-                        "stripe_checkout_url": checkout_url,
-                        "draft_reply": draft_reply_body,
-                        "deal_desk_result": deal_desk_result,
-                        "decision": decision_data,
-                    }
-            else:
+            except Exception as e:
+                print(f"[!] Unexpected error in triage/guardrail/dispatch: {e}")
                 lead_state = self.state["leads"].setdefault(sender_email, {})
-                lead_state["status"] = rec_action
+                lead_state["status"] = "HELD_FOR_REVIEW"
+                lead_state["reason"] = f"INTERNAL_ERROR: {e}"
+                lead_state["error"] = str(e)
+
+                try:
+                    from orbit_security.blackboard import publish_event
+                    publish_event(
+                        event_type="AUTONOMOUS_REPLY_BLOCKED",
+                        payload={
+                            "recipient": sender_email,
+                            "violation_layer": "LAYER_INTERNAL_ERROR",
+                            "violation_code": "INTERNAL_ERROR",
+                            "reason": f"INTERNAL_ERROR: {e}",
+                            "action_taken": "HELD_FOR_REVIEW",
+                            "timestamp": time.time(),
+                        },
+                        source="inbox_agent",
+                        topic="leads",
+                    )
+                except Exception:
+                    pass
+
                 self._save_state()
-                decision_data = decision.model_dump() if hasattr(decision, "model_dump") else (decision.dict() if hasattr(decision, "dict") else decision)
+
                 return {
-                    "ok": True,
-                    "status": rec_action,
+                    "ok": False,
+                    "status": "HELD_FOR_REVIEW",
+                    "error": str(e),
+                    "reason": f"INTERNAL_ERROR: {e}",
                     "sender": sender_email,
                     "agency_name": agency_name,
                     "domain": domain,
-                    "intent": decision.intent,
-                    "tier": decision.suggested_tier or tier,
+                    "intent": intent.value if hasattr(intent, "value") else str(intent),
+                    "tier": tier,
                     "portal": portal_info,
                     "portal_path": portal_path,
                     "portal_url": portal_path,
                     "checkout_url": checkout_url,
                     "stripe_checkout_url": checkout_url,
-                    "draft_reply": draft_reply_body or deal_desk_result.get("draft_reply", ""),
+                    "draft_reply": deal_desk_result.get("draft_reply", ""),
                     "deal_desk_result": deal_desk_result,
-                    "decision": decision_data,
                 }
 
         # Non-inquiry / non-unclear (e.g. READY_TO_BUY, NOT_INTERESTED)
@@ -817,6 +864,13 @@ class InboxAgent:
                 clean_sender_match = re.search(r"<(.+?)>", sender)
                 clean_email = clean_sender_match.group(1) if clean_sender_match else sender.strip()
 
+                # Extract inbound email headers
+                inbound_headers: Dict[str, str] = {}
+                for h_name in ["Auto-Submitted", "X-Autoreply", "X-Autorespond", "Precedence", "In-Reply-To", "References", "Message-ID"]:
+                    h_val = msg.get(h_name)
+                    if h_val:
+                        inbound_headers[h_name] = str(h_val)
+
                 # Extract text body
                 body = ""
                 if msg.is_multipart():
@@ -957,12 +1011,53 @@ class InboxAgent:
                 lead_result = self.process_inbound_lead(
                     lead_data_or_sender=clean_email,
                     subject=subject,
-                    message_body=body
+                    message_body=body,
+                    headers=inbound_headers,
                 )
 
-                if lead_result.get("status") == "AUTONOMOUS_REPLY_SENT":
+                lead_status = lead_result.get("status")
+                resolved_intent = lead_result.get("intent") or (intent.value if hasattr(intent, "value") else str(intent))
+
+                if lead_status == "AUTONOMOUS_REPLY_SENT":
                     reply_text = lead_result.get("draft_reply", "")
                     needs_escalation = False
+                elif lead_status in ("HELD_FOR_REVIEW", "ESCALATE_TO_CARSON") or lead_result.get("action") == "ESCALATE_TO_CARSON":
+                    reply_text = ""
+                    needs_escalation = True
+                    # Strictly do NOT send email to prospect (clean_email)
+                    # Alert operator (Carson) instead if dispatcher is configured
+                    if lead_status == "HELD_FOR_REVIEW":
+                        alert_sub = f"⚠️ [GUARDRAIL HELD FOR REVIEW] Inbound Lead Blocked: {clean_email}"
+                        alert_body = (
+                            f"Carson,\n\n"
+                            f"An inbound email from {clean_email} was held for human review by the Autonomous Reply Guardrail.\n\n"
+                            f"Violation Code: {lead_result.get('violation_code', 'UNKNOWN')}\n"
+                            f"Violation Layer: {lead_result.get('violation_layer', 'UNKNOWN')}\n"
+                            f"Reason: {lead_result.get('reason', '')}\n\n"
+                            f"Subject: {subject}\n"
+                            f"--- Message Body ---\n{body}\n--------------------\n\n"
+                            f"- Orbit Security Autonomous Guardrail Sentinel"
+                        )
+                    else:
+                        alert_sub = f"🚨 [TRIAGE ESCALATION] Inbound Lead Escalated to Founder: {clean_email}"
+                        alert_body = (
+                            f"Carson,\n\n"
+                            f"An inbound lead from {clean_email} was triaged for founder follow-up.\n\n"
+                            f"Subject: {subject}\n"
+                            f"Intent: {resolved_intent}\n"
+                            f"Reasoning: {lead_result.get('decision', {}).get('reasoning', '') if isinstance(lead_result.get('decision'), dict) else ''}\n\n"
+                            f"--- Message Body ---\n{body}\n--------------------\n\n"
+                            f"- Orbit Security Autonomous Triage Sentinel"
+                        )
+                    try:
+                        if self.dispatcher.is_configured():
+                            self.dispatcher.send_email(
+                                recipient_email=self.operator_email,
+                                subject=alert_sub,
+                                body_text=alert_body,
+                            )
+                    except Exception as e:
+                        print(f"[!] Failed to dispatch escalation email to operator: {e}")
                 else:
                     reply_text, needs_escalation = self.handle_message(
                         sender_email=clean_email,
@@ -982,7 +1077,7 @@ class InboxAgent:
                 self.state[message_key] = {
                     "sender": clean_email,
                     "subject": subject,
-                    "intent": intent.value,
+                    "intent": resolved_intent,
                     "escalated": needs_escalation,
                     "portal_path": lead_result.get("portal_path", ""),
                     "checkout_url": lead_result.get("checkout_url", ""),

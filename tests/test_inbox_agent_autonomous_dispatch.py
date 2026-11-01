@@ -6,13 +6,13 @@ from unittest.mock import MagicMock, patch
 
 from orbit_security.inbox_agent import InboxAgent
 from orbit_security.inbox_triage_bridge import InboundTriageDecision, TriageAction
-from orbit_security.inbox_guardrail import AutonomousReplyGuardrail, GuardrailStatus
+from orbit_security.inbox_guardrail import AutonomousReplyGuardrail, GuardrailStatus, GuardrailEvaluationResult
 
 
 @pytest.fixture(autouse=True)
 def cleanup_portals():
     yield
-    for name in ["agency123.html", "acme.html", "enterprise.html"]:
+    for name in ["agency123.html", "acme.html", "enterprise.html", "charleagency.html"]:
         for parent in ["docs/portals", "landing/portals"]:
             p = os.path.join(parent, name)
             if os.path.exists(p):
@@ -146,3 +146,177 @@ def test_inbound_lead_escalates_to_carson(temp_state_file):
     assert result["status"] == "ESCALATE_TO_CARSON"
     agent.dispatcher.send_email.assert_not_called()
     assert agent.state["leads"]["partner@enterprise.com"]["status"] == "ESCALATE_TO_CARSON"
+
+
+def test_process_inbound_lead_fail_safe_error_handling(temp_state_file):
+    agent = InboxAgent(state_file=temp_state_file)
+    mock_bridge = MagicMock()
+    mock_bridge.triage_inbound_message.side_effect = RuntimeError("Bridge subprocess connection refused")
+    agent.triage_bridge = mock_bridge
+
+    result = agent.process_inbound_lead(
+        lead_data_or_sender={"sender": "cto@agency123.com", "subject": "Pricing inquiry", "body": "What are your rates?"}
+    )
+    assert result["status"] == "HELD_FOR_REVIEW"
+    assert "Bridge subprocess connection refused" in result["error"]
+    assert "INTERNAL_ERROR" in result["reason"]
+
+    # Verify state was atomically persisted with internal error
+    with open(temp_state_file, "r") as sf:
+        state = json.load(sf)
+        assert state["leads"]["cto@agency123.com"]["status"] == "HELD_FOR_REVIEW"
+        assert "INTERNAL_ERROR" in state["leads"]["cto@agency123.com"]["reason"]
+
+
+def test_poll_inbox_does_not_bypass_guardrail_on_held_for_review(temp_state_file):
+    agent = InboxAgent(state_file=temp_state_file)
+    agent.dispatcher = MagicMock()
+    agent.dispatcher.is_configured.return_value = True
+
+    # Seed spammer with auto-reply count 1
+    agent.state["leads"]["spammer@charleagency.com"] = {"auto_replies_count": 1}
+    agent._save_state()
+
+    raw_msg = (
+        b"From: cto@charleagency.com\r\n"
+        b"To: carsonmail009@gmail.com\r\n"
+        b"Subject: Re: Security notice regarding charleagency.com\r\n"
+        b"Content-Type: text/plain; charset=utf-8\r\n\r\n"
+        b"What are your rates for client retainers?\r\n"
+    )
+
+    mock_mail = MagicMock()
+    mock_mail.search.return_value = ("OK", [b"1"])
+    mock_mail.fetch.return_value = ("OK", [(b"1", raw_msg)])
+
+    mock_bridge = MagicMock()
+    mock_bridge.triage_inbound_message.return_value = InboundTriageDecision(
+        sender="cto@charleagency.com",
+        subject="Re: Security notice regarding charleagency.com",
+        intent="INQUIRY_PRICING",
+        confidence=0.9,
+        reasoning="Inquiry about rates",
+        recommended_action=TriageAction.AUTONOMOUS_REPLY,
+        draft_reply_subject="Re: Security notice",
+        draft_reply_body="Price is $499/mo.\n\nBest,\nCarson Haynes",
+    )
+    agent.triage_bridge = mock_bridge
+
+    # Mock guardrail to return BLOCKED (e.g. rate limit / anti-loop)
+    agent.guardrail = MagicMock()
+    agent.guardrail.evaluate.return_value = GuardrailEvaluationResult(
+        status=GuardrailStatus.BLOCKED,
+        violation_layer="LAYER_1_ANTI_LOOP",
+        violation_code="ANTI_LOOP_DETECTED",
+        reason="Thread limit exceeded",
+    )
+
+    with patch("imaplib.IMAP4_SSL", return_value=mock_mail):
+        with patch.dict(os.environ, {"IMAP_SERVER": "imap.test.local", "IMAP_USER": "test@test.local", "IMAP_PASSWORD": "secret"}):
+            processed = agent.poll_inbox()
+
+    # Verify prospect NEVER received an email
+    for call in agent.dispatcher.send_email.call_args_list:
+        assert call.kwargs.get("recipient_email") != "cto@charleagency.com"
+
+    # Verify operator was alerted
+    operator_calls = [
+        call for call in agent.dispatcher.send_email.call_args_list
+        if call.kwargs.get("recipient_email") == "carsonmail009@gmail.com"
+    ]
+    assert len(operator_calls) >= 1
+    assert "GUARDRAIL HELD FOR REVIEW" in operator_calls[0].kwargs.get("subject")
+
+    # Verify intent in state matches resolved intent
+    state_entry = next((v for k, v in agent.state.items() if isinstance(v, dict) and v.get("sender") == "cto@charleagency.com"), None)
+    assert state_entry is not None
+    assert state_entry["intent"] == "INQUIRY_PRICING"
+    assert state_entry["escalated"] is True
+
+
+def test_poll_inbox_passes_inbound_headers_to_process_lead(temp_state_file):
+    agent = InboxAgent(state_file=temp_state_file)
+    agent.dispatcher = MagicMock()
+    agent.dispatcher.is_configured.return_value = True
+
+    raw_msg = (
+        b"From: rep@charleagency.com\r\n"
+        b"To: carsonmail009@gmail.com\r\n"
+        b"Subject: Re: Security notice regarding charleagency.com\r\n"
+        b"Auto-Submitted: auto-replied\r\n"
+        b"X-Autoreply: yes\r\n"
+        b"Precedence: bulk\r\n"
+        b"Content-Type: text/plain; charset=utf-8\r\n\r\n"
+        b"I am out of the office.\r\n"
+    )
+
+    mock_mail = MagicMock()
+    mock_mail.search.return_value = ("OK", [b"1"])
+    mock_mail.fetch.return_value = ("OK", [(b"1", raw_msg)])
+
+    captured_headers = {}
+    orig_process = agent.process_inbound_lead
+
+    def mock_process(*args, **kwargs):
+        nonlocal captured_headers
+        captured_headers = kwargs.get("headers", {})
+        return orig_process(*args, **kwargs)
+
+    agent.process_inbound_lead = mock_process
+
+    with patch("imaplib.IMAP4_SSL", return_value=mock_mail):
+        with patch.dict(os.environ, {"IMAP_SERVER": "imap.test.local", "IMAP_USER": "test@test.local", "IMAP_PASSWORD": "secret"}):
+            agent.poll_inbox()
+
+    assert captured_headers.get("Auto-Submitted") == "auto-replied"
+    assert captured_headers.get("X-Autoreply") == "yes"
+    assert captured_headers.get("Precedence") == "bulk"
+
+
+def test_poll_inbox_escalate_to_carson_does_not_send_reply_to_prospect(temp_state_file):
+    agent = InboxAgent(state_file=temp_state_file)
+    agent.dispatcher = MagicMock()
+    agent.dispatcher.is_configured.return_value = True
+
+    raw_msg = (
+        b"From: partner@charleagency.com\r\n"
+        b"To: carsonmail009@gmail.com\r\n"
+        b"Subject: Re: Security notice regarding charleagency.com\r\n"
+        b"Content-Type: text/plain; charset=utf-8\r\n\r\n"
+        b"Can Carson jump on a call?\r\n"
+    )
+
+    mock_mail = MagicMock()
+    mock_mail.search.return_value = ("OK", [b"1"])
+    mock_mail.fetch.return_value = ("OK", [(b"1", raw_msg)])
+
+    mock_bridge = MagicMock()
+    mock_bridge.triage_inbound_message.return_value = InboundTriageDecision(
+        sender="partner@charleagency.com",
+        subject="Re: Security notice regarding charleagency.com",
+        intent="REQUEST_HUMAN",
+        confidence=0.98,
+        reasoning="Requested phone call with founder",
+        recommended_action=TriageAction.ESCALATE_TO_CARSON,
+        draft_reply_subject="Re: Security notice",
+        draft_reply_body="Thanks for contacting us.",
+        provider_resolved="GEMINI_CLI"
+    )
+    agent.triage_bridge = mock_bridge
+
+    with patch("imaplib.IMAP4_SSL", return_value=mock_mail):
+        with patch.dict(os.environ, {"IMAP_SERVER": "imap.test.local", "IMAP_USER": "test@test.local", "IMAP_PASSWORD": "secret"}):
+            agent.poll_inbox()
+
+    # Verify prospect NEVER received an email
+    for call in agent.dispatcher.send_email.call_args_list:
+        assert call.kwargs.get("recipient_email") != "partner@charleagency.com"
+
+    # Verify operator received alert
+    operator_calls = [
+        call for call in agent.dispatcher.send_email.call_args_list
+        if call.kwargs.get("recipient_email") == "carsonmail009@gmail.com"
+    ]
+    assert len(operator_calls) >= 1
+    assert "TRIAGE ESCALATION" in operator_calls[0].kwargs.get("subject")
+
