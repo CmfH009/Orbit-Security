@@ -110,8 +110,8 @@ class Blackboard:
             timeout=10.0,
             check_same_thread=False
         )
-        conn.execute("PRAGMA journal_mode = WAL;")
-        conn.execute("PRAGMA synchronous = NORMAL;")
+        sync_mode = "OFF" if _running_under_pytest() else "NORMAL"
+        conn.execute(f"PRAGMA synchronous = {sync_mode};")
         conn.execute("PRAGMA busy_timeout = 10000;")
         conn.row_factory = sqlite3.Row
         try:
@@ -137,6 +137,7 @@ class Blackboard:
 
     def _init_db(self):
         with self._connection() as conn:
+            conn.execute("PRAGMA journal_mode = WAL;")
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS blackboard_events (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
