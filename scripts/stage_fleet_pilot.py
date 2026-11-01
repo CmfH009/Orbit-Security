@@ -492,7 +492,14 @@ https://cmfh009.github.io/Orbit-Security/
         txt_path.write_text(f"Subject: {subject}\n\n{body}", encoding="utf-8")
 
         eml_path = agency_dir / "pitch_email.eml"
-        pitch_message_id = existing.get("message_id") or f"<{clean_id}.{batch_id}@orbit-security.io>"
+        existing_eml_mid = None
+        if not existing.get("message_id") and eml_path.exists() and not force:
+            try:
+                with open(eml_path, "rb") as _ef:
+                    existing_eml_mid = email.message_from_binary_file(_ef).get("Message-ID")
+            except Exception:
+                existing_eml_mid = None
+        pitch_message_id = existing.get("message_id") or existing_eml_mid or f"<{clean_id}.{batch_id}@orbit-security.io>"
         dispatcher.export_eml(
             recipient_email=contact_email,
             subject=subject,
@@ -680,8 +687,9 @@ def main():
                 a[ts_field] = datetime.now(timezone.utc).isoformat()
                 success += 1
             except Exception as ex:
-                a["dispatch_status"] = "FAILED"
-                a["dispatch_error"] = str(ex)
+                a[status_field] = "FAILED"
+                error_field = "followup_dispatch_error" if args.followup else "dispatch_error"
+                a[error_field] = str(ex)
                 failed += 1
                 print(f"    ❌ Dispatch failed: {ex}")
         else:

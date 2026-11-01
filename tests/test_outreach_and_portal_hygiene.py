@@ -69,6 +69,50 @@ class TestOSINTVerifierMXAndRecovery:
             assert res["email"] == expected_email
             assert res["syntax_valid"] is True
 
+    def test_audit_outreach_manifest_detects_bounced_and_respects_verified_recovery_aliases(self, tmp_path):
+        """Bounced non-generic addresses must be queued for recovery with verified_recovery_email, while non-bounced verified recovery aliases are not false-flagged."""
+        verifier = ExecutiveOSINTVerifier(workspace_root=tmp_path)
+        manifest_file = tmp_path / "pilot_manifest.json"
+        manifest_file.write_text(
+            json.dumps(
+                {
+                    "agencies": [
+                        {
+                            "id": "avex_designs",
+                            "name": "Avex Designs",
+                            "domain": "avexdesigns.com",
+                            "contact_email": "john@avexdesigns.com",
+                            "dispatch_status": "BOUNCED",
+                        },
+                        {
+                            "id": "ask_phill",
+                            "name": "Ask Phill",
+                            "domain": "askphill.com",
+                            "contact_email": "phill@askphill.com",
+                            "dispatch_status": "BOUNCED",
+                        },
+                        {
+                            "id": "chromatic",
+                            "name": "Chromatic",
+                            "domain": "chromatichq.com",
+                            "contact_email": "info@chromatichq.com",
+                            "dispatch_status": "STAGED",
+                        },
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        audit = verifier.audit_outreach_manifest(manifest_file)
+        assert audit["ok"] is True
+        assert audit["total_agencies"] == 3
+        assert audit["verified_contacts"] == 1
+        assert audit["generic_or_bounced_count"] == 2
+        assert audit["recoverable_count"] == 2
+        rec_map = {r["agency_id"]: r["recommended_email"] for r in audit["recoverable"]}
+        assert rec_map["avex_designs"] == "newbusiness@avexdesigns.com"
+        assert rec_map["ask_phill"] == "sales@askphill.com"
+
 
 class TestStageFleetPilotFollowupAndHeaders:
     """Verifies RFC 5322 In-Reply-To/References headers and --followup SENT filtering."""
@@ -129,6 +173,32 @@ class TestStageFleetPilotFollowupAndHeaders:
         assert "Alley Interactive (alley.com)" not in out
         assert "Avex Designs (avexdesigns.com)" not in out
 
+    def test_followup_failure_does_not_overwrite_initial_pitch_dispatch_status(self, tmp_path, monkeypatch):
+        import scripts.stage_fleet_pilot as sfp
+
+        out_dir = tmp_path / "outreach"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        monkeypatch.setattr(sfp, "OUTPUT_DIR", out_dir)
+        monkeypatch.setattr(sfp, "REPO_ROOT", tmp_path)
+
+        seeded_manifest = {
+            "batch_id": "fleet_pilot_01",
+            "agencies": [
+                {"id": "10up", "dispatch_status": "SENT", "dispatched_at": "2026-10-01T00:00:00+00:00"},
+            ],
+        }
+        (out_dir / "pilot_manifest.json").write_text(json.dumps(seeded_manifest), encoding="utf-8")
+
+        with patch.object(EmailDispatcher, "is_configured", return_value=True):
+            with patch.object(EmailDispatcher, "send_raw_eml", side_effect=RuntimeError("SMTP temporary error")):
+                monkeypatch.setattr("sys.argv", ["stage_fleet_pilot.py", "--followup", "--agency", "10up", "--send", "--sleep", "0"])
+                sfp.main()
+
+        saved = json.loads((out_dir / "pilot_manifest.json").read_text(encoding="utf-8"))
+        ag_10up = next(a for a in saved["agencies"] if a["id"] == "10up")
+        assert ag_10up["dispatch_status"] == "SENT"
+        assert ag_10up["followup_dispatch_status"] == "FAILED"
+
 
 class TestDealDeskSubstDrivePortalSync:
     """Verifies RetainerDealDeskConcierge syncs to subproject landing/portals when workspace_root is root drive."""
@@ -152,3 +222,18 @@ class TestDealDeskSubstDrivePortalSync:
         assert (docs_portals / "absolute_web.html").read_text(encoding="utf-8") == (
             landing_portals / "absolute_web.html"
         ).read_text(encoding="utf-8")
+
+    def test_generate_portal_with_custom_portals_dir_does_not_leak_to_repo_landing(self, tmp_path):
+        from orbit_security.deal_desk import REPO_ROOT
+
+        custom_portals = tmp_path / "custom_portals"
+        concierge = RetainerDealDeskConcierge(portals_dir=custom_portals)
+        res = concierge.generate_portal_for_agency(
+            agency_id="isolated_fuzz_portal_check",
+            agency_name="Isolated Fuzz Portal",
+        )
+        assert res["ok"] is True
+        assert (custom_portals / "isolated_fuzz_portal_check.html").exists()
+        assert not (REPO_ROOT / "landing" / "portals" / "isolated_fuzz_portal_check.html").exists()
+        assert not (REPO_ROOT / "docs" / "portals" / "isolated_fuzz_portal_check.html").exists()
+
