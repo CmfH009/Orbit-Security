@@ -375,6 +375,12 @@ class ASTCodeSentinel:
 
 
 def main():
+    for _stream in (sys.stdout, sys.stderr):
+        if _stream and hasattr(_stream, "reconfigure"):
+            try:
+                _stream.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
     import argparse
     parser = argparse.ArgumentParser(description="AST Code Sentinel: Static Symbol & Import Verifier")
     parser.add_argument("--check", type=str, help="Check single file or directory")

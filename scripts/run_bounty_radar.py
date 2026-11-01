@@ -41,6 +41,12 @@ from orbit_security.bounty_radar import (
 
 
 def main():
+    for _stream in (sys.stdout, sys.stderr):
+        if _stream and hasattr(_stream, "reconfigure"):
+            try:
+                _stream.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
     parser = argparse.ArgumentParser(
         description="Orbit Security: Automated Bug Bounty Radar & HackerOne Takeover Sweeper (Act III)"
     )

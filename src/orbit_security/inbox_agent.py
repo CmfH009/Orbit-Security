@@ -342,8 +342,14 @@ class InboxAgent:
         # 2. Invoke RetainerDealDeskConcierge.process_inbound_lead(...)
         deal_desk_result = {}
         try:
-            from orbit_security.deal_desk import RetainerDealDeskConcierge
-            concierge = RetainerDealDeskConcierge()
+            from pathlib import Path as _Path
+            from orbit_security.deal_desk import REPO_ROOT as _REPO_ROOT, RetainerDealDeskConcierge
+            _state_path = _Path(self.state_file).resolve()
+            _is_temp_state = not str(_state_path).lower().startswith(str(_REPO_ROOT.resolve()).lower())
+            concierge = RetainerDealDeskConcierge(
+                workspace_root=_state_path.parent if _is_temp_state else None,
+                portals_dir=(_state_path.parent / "portals") if _is_temp_state else None,
+            )
             desk_input = {
                 "sender": sender_email,
                 "subject": subject,

@@ -67,8 +67,6 @@ def setup_daemon_logging():
         except Exception:
             pass
 
-setup_daemon_logging()
-
 
 class SocialDaemon:
     """Master runner for the autonomous social outreach and intelligence pipeline."""
@@ -572,8 +570,13 @@ class SocialDaemon:
         effective = max(1800.0, self.nominal_interval + jitter)
         return effective
 
+    def run_forever(self):
+        """Alias for run_loop() to start the continuous 24/7 daemon loop."""
+        return self.run_loop()
+
     def run_loop(self):
         """Continuous 24/7 background execution loop."""
+        setup_daemon_logging()
         self.running = True
         logger.info(
             f"Orbit Social Daemon started (Nominal Cadence: {self.nominal_interval}s, DryRun: {self.dry_run})"

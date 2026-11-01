@@ -181,6 +181,8 @@ def test_tts_disk_artifact_invocation(bridge, tmp_path):
 
 def test_dry_run_generate_integration(bridge):
     """Executes live offline --dry-run call against local gemini-api binary."""
+    if not bridge.is_available():
+        pytest.skip("gemini-api binary not installed")
     res = bridge.generate(prompt="Test connection", dry_run=True)
     assert res.exit_code == 0
     assert res.success is True

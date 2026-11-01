@@ -174,6 +174,9 @@ def main():
 
     apply_process_priority()
 
+    from orbit_security.social_daemon import setup_daemon_logging
+    setup_daemon_logging()
+
     daemon = SocialDaemon(
         nominal_interval_seconds=args.interval,
         dry_run=args.dry_run,
