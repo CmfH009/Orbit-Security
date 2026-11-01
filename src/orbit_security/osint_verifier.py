@@ -335,23 +335,29 @@ class ExecutiveOSINTVerifier:
             "note": "Standard pattern heuristics (no prior OSINT anchor)"
         }
 
-    def verify_leadership_contact(self, domain: str) -> Dict[str, Any]:
+    def verify_leadership_contact(self, domain: str, prefer_recovery: bool = False) -> Dict[str, Any]:
         """Validates leadership contact, RFC 5322 syntax, and MX resolution for an agency domain."""
         mx_res = self.verify_domain_mx(domain)
-        lead_res = self.resolve_leadership(domain)
+        lead_res = self.resolve_leadership(domain, prefer_recovery=prefer_recovery)
         verified_email = lead_res.get("verified_email") or lead_res.get("email", "")
         syntax_res = self.verify_email_syntax(verified_email) if verified_email else {"valid": False, "is_generic_alias": True}
+        is_resolved_osint = bool(lead_res.get("resolved"))
         return {
             "domain": domain,
             "mx_verified": mx_res.get("ok", False),
             "mx_records": mx_res.get("mx_records", []),
-            "leadership_resolved": lead_res.get("resolved", False),
+            "leadership_resolved": is_resolved_osint,
             "executive_name": lead_res.get("name") or lead_res.get("executive_name", ""),
             "executive_title": lead_res.get("title") or lead_res.get("executive_title", ""),
             "email": verified_email,
             "email_syntax_valid": syntax_res.get("valid", False),
             "is_generic_alias": syntax_res.get("is_generic_alias", True),
-            "deliverable": bool(mx_res.get("ok") and lead_res.get("resolved") and syntax_res.get("valid") and not syntax_res.get("is_generic_alias"))
+            "deliverable": bool(
+                mx_res.get("ok")
+                and is_resolved_osint
+                and syntax_res.get("valid")
+                and (not syntax_res.get("is_generic_alias") or is_resolved_osint)
+            ),
         }
 
     def audit_outreach_manifest(self, manifest_path: Optional[Path] = None) -> Dict[str, Any]:
@@ -373,24 +379,44 @@ class ExecutiveOSINTVerifier:
 
         for ag in agencies:
             em = ag.get("contact_email", "")
+            dom = ag.get("domain", "")
+            clean_dom = dom.strip().lower().replace("https://", "").replace("http://", "").split("/")[0].split(":")[0].rstrip(".")
+            is_bounced = ag.get("dispatch_status") == "BOUNCED"
             syn = self.verify_email_syntax(em)
-            if not syn["valid"] or syn.get("is_generic_alias"):
+
+            osint_entry = KNOWN_LEADERSHIP_OSINT.get(clean_dom, {})
+            known_verified_emails = {
+                osint_entry.get("verified_email", "").lower(),
+                osint_entry.get("verified_recovery_email", "").lower(),
+            } - {""}
+            is_known_verified_contact = (not is_bounced) and (em.strip().lower() in known_verified_emails)
+
+            if is_bounced or not syn["valid"] or (syn.get("is_generic_alias") and not is_known_verified_contact):
                 generic_aliases.append({
                     "agency_id": ag.get("id"),
                     "agency_name": ag.get("name"),
-                    "domain": ag.get("domain"),
+                    "domain": dom,
                     "contact_email": em,
                     "dispatch_status": ag.get("dispatch_status")
                 })
-                dom = ag.get("domain", "")
-                osint_match = self.resolve_leadership(dom)
+                osint_match = self.resolve_leadership(dom, prefer_recovery=is_bounced)
                 if osint_match.get("resolved"):
-                    recoverable.append({
-                        "agency_id": ag.get("id"),
-                        "current_email": em,
-                        "recommended_email": osint_match["verified_email"],
-                        "executive": f"{osint_match['executive_name']} ({osint_match['executive_title']})"
-                    })
+                    rec_email = osint_match["verified_email"]
+                    if rec_email.lower() == em.strip().lower():
+                        alt_match = self.resolve_leadership(dom, prefer_recovery=True)
+                        alt_email = alt_match.get("verified_email", "")
+                        if alt_email and alt_email.lower() != em.strip().lower():
+                            rec_email = alt_email
+                            osint_match = alt_match
+                        elif is_bounced:
+                            rec_email = ""
+                    if rec_email:
+                        recoverable.append({
+                            "agency_id": ag.get("id"),
+                            "current_email": em,
+                            "recommended_email": rec_email,
+                            "executive": f"{osint_match['executive_name']} ({osint_match['executive_title']})"
+                        })
             else:
                 verified += 1
 
@@ -418,6 +444,12 @@ class ExecutiveOSINTVerifier:
 
 
 def main():
+    for _stream in (sys.stdout, sys.stderr):
+        if _stream and hasattr(_stream, "reconfigure"):
+            try:
+                _stream.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
     import argparse
     parser = argparse.ArgumentParser(description="Executive OSINT Verifier: Outreach Hygiene & Contact Resolution")
     parser.add_argument("--verify", type=str, help="Verify email syntax and generic alias status")

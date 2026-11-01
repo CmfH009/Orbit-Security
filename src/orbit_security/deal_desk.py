@@ -296,14 +296,11 @@ class RetainerDealDeskConcierge:
 </html>
 """
         portal_file.write_text(portal_html, encoding="utf-8")
-        if (
-            self.workspace_root.resolve() == REPO_ROOT.resolve()
-            or self.portals_dir.resolve() == PORTALS_OUTPUT_DIR.resolve()
-        ):
+        if self.portals_dir.resolve() == PORTALS_OUTPUT_DIR.resolve():
             landing_portal_file = REPO_ROOT / "landing" / "portals" / portal_file.name
             if landing_portal_file.parent.exists():
                 landing_portal_file.write_text(portal_html, encoding="utf-8")
-        elif self.workspace_root:
+        elif self.workspace_root and self.workspace_root.resolve() != REPO_ROOT.resolve():
             subproject_landing = self.workspace_root / "projects" / "orbit-security" / "landing" / "portals"
             if subproject_landing.exists():
                 landing_portal_file = subproject_landing / portal_file.name
@@ -471,6 +468,12 @@ class RetainerDealDeskConcierge:
 
 
 def main():
+    for _stream in (sys.stdout, sys.stderr):
+        if _stream and hasattr(_stream, "reconfigure"):
+            try:
+                _stream.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
     import argparse
     parser = argparse.ArgumentParser(description="Retainer Deal Desk Concierge: Revenue Conversion & Portal Generator")
     parser.add_argument("--create-portal", type=str, help="Create portal for agency (e.g. 'Avex Designs')")
