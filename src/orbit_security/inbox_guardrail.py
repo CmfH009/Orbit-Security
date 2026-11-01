@@ -197,7 +197,10 @@ class AutonomousReplyGuardrail:
 
             # --- Layer 4: Rate Limiter & Suppression ---
             domain_times = [t for t in self._domain_history.get(domain, []) if now - t < self.domain_window_seconds]
-            self._domain_history[domain] = domain_times
+            if not domain_times and domain in self._domain_history:
+                del self._domain_history[domain]
+            elif domain_times:
+                self._domain_history[domain] = domain_times
             if len(domain_times) >= 1:
                 return GuardrailEvaluationResult(
                     status=GuardrailStatus.BLOCKED,

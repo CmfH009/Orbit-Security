@@ -320,3 +320,86 @@ def test_poll_inbox_escalate_to_carson_does_not_send_reply_to_prospect(temp_stat
     assert len(operator_calls) >= 1
     assert "TRIAGE ESCALATION" in operator_calls[0].kwargs.get("subject")
 
+
+def test_poll_inbox_archive_no_action_suppresses_canned_replies(temp_state_file):
+    agent = InboxAgent(state_file=temp_state_file)
+    agent.dispatcher = MagicMock()
+    agent.dispatcher.is_configured.return_value = True
+
+    raw_msg = (
+        b"From: marketing@charleagency.com\r\n"
+        b"To: carsonmail009@gmail.com\r\n"
+        b"Subject: Re: Security notice regarding charleagency.com\r\n"
+        b"Content-Type: text/plain; charset=utf-8\r\n\r\n"
+        b"This is an automated digest with no response needed.\r\n"
+    )
+
+    mock_mail = MagicMock()
+    mock_mail.search.return_value = ("OK", [b"1"])
+    mock_mail.fetch.return_value = ("OK", [(b"1", raw_msg)])
+
+    mock_bridge = MagicMock()
+    mock_bridge.triage_inbound_message.return_value = InboundTriageDecision(
+        sender="marketing@charleagency.com",
+        subject="Re: Security notice regarding charleagency.com",
+        intent="UNCLEAR",
+        confidence=0.99,
+        reasoning="Automated marketing digest, no action needed",
+        recommended_action=TriageAction.ARCHIVE_NO_ACTION,
+        draft_reply_subject=None,
+        draft_reply_body=None,
+        provider_resolved="GEMINI_CLI"
+    )
+    agent.triage_bridge = mock_bridge
+
+    with patch("imaplib.IMAP4_SSL", return_value=mock_mail):
+        with patch.dict(os.environ, {"IMAP_SERVER": "imap.test.local", "IMAP_USER": "test@test.local", "IMAP_PASSWORD": "secret"}):
+            processed = agent.poll_inbox()
+
+    # Zero emails should be dispatched (neither to prospect nor operator)
+    assert agent.dispatcher.send_email.call_count == 0
+    assert len(processed) == 1
+    assert processed[0]["needs_escalation"] is False
+
+
+def test_poll_inbox_suppress_unsubscribe_suppresses_canned_replies(temp_state_file):
+    agent = InboxAgent(state_file=temp_state_file)
+    agent.dispatcher = MagicMock()
+    agent.dispatcher.is_configured.return_value = True
+
+    raw_msg = (
+        b"From: optout@charleagency.com\r\n"
+        b"To: carsonmail009@gmail.com\r\n"
+        b"Subject: Re: Security notice regarding charleagency.com\r\n"
+        b"Content-Type: text/plain; charset=utf-8\r\n\r\n"
+        b"Please remove us from your mailing list.\r\n"
+    )
+
+    mock_mail = MagicMock()
+    mock_mail.search.return_value = ("OK", [b"1"])
+    mock_mail.fetch.return_value = ("OK", [(b"1", raw_msg)])
+
+    mock_bridge = MagicMock()
+    mock_bridge.triage_inbound_message.return_value = InboundTriageDecision(
+        sender="optout@charleagency.com",
+        subject="Re: Security notice regarding charleagency.com",
+        intent="UNCLEAR",
+        confidence=0.97,
+        reasoning="Prospect requested unsubscription, suppress automated responses",
+        recommended_action=TriageAction.SUPPRESS_UNSUBSCRIBE,
+        draft_reply_subject=None,
+        draft_reply_body=None,
+        provider_resolved="GEMINI_CLI"
+    )
+    agent.triage_bridge = mock_bridge
+
+    with patch("imaplib.IMAP4_SSL", return_value=mock_mail):
+        with patch.dict(os.environ, {"IMAP_SERVER": "imap.test.local", "IMAP_USER": "test@test.local", "IMAP_PASSWORD": "secret"}):
+            processed = agent.poll_inbox()
+
+    # Zero emails should be dispatched (neither canned reply to prospect nor alert to operator)
+    assert agent.dispatcher.send_email.call_count == 0
+    assert len(processed) == 1
+    assert processed[0]["needs_escalation"] is False
+
+

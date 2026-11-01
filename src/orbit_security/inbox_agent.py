@@ -1021,6 +1021,9 @@ class InboxAgent:
                 if lead_status == "AUTONOMOUS_REPLY_SENT":
                     reply_text = lead_result.get("draft_reply", "")
                     needs_escalation = False
+                elif lead_status in ("ARCHIVE_NO_ACTION", "SUPPRESS_UNSUBSCRIBE") or lead_result.get("action") in ("ARCHIVE_NO_ACTION", "SUPPRESS_UNSUBSCRIBE"):
+                    reply_text = ""
+                    needs_escalation = False
                 elif lead_status in ("HELD_FOR_REVIEW", "ESCALATE_TO_CARSON") or lead_result.get("action") == "ESCALATE_TO_CARSON":
                     reply_text = ""
                     needs_escalation = True

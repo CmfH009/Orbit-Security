@@ -211,7 +211,16 @@ def test_domain_history_pruned_and_unknown_fallback():
         subject="Inquiry",
     )
     assert res.status == GuardrailStatus.APPROVED
-    assert len(guard._domain_history["prune.com"]) == 0
+    assert "prune.com" not in guard._domain_history
+
+    # Fresh uncontacted domain leaves strictly zero memory footprint
+    res_fresh = guard.evaluate(
+        draft_reply="Our monitoring retainer is $499/mo.\n\nBest,\nCarson Haynes",
+        sender="user@fresh-never-seen.com",
+        subject="Inquiry",
+    )
+    assert res_fresh.status == GuardrailStatus.APPROVED
+    assert "fresh-never-seen.com" not in guard._domain_history
 
     # Sender with no @ falls back to unknown
     guard.record_dispatch("raw-sender-no-at")
