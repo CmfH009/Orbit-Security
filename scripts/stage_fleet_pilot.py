@@ -492,12 +492,14 @@ https://cmfh009.github.io/Orbit-Security/
         txt_path.write_text(f"Subject: {subject}\n\n{body}", encoding="utf-8")
 
         eml_path = agency_dir / "pitch_email.eml"
+        pitch_message_id = existing.get("message_id") or f"<{clean_id}.{batch_id}@orbit-security.io>"
         dispatcher.export_eml(
             recipient_email=contact_email,
             subject=subject,
             body_text=body,
             pdf_attachment_path=None,
             output_eml_path=str(eml_path),
+            message_id=pitch_message_id,
         )
 
         # 1-Touch Day 5 Follow-Up Note: drops direct link to pre-staged co-branded portal
@@ -523,12 +525,16 @@ https://cmfh009.github.io/Orbit-Security/
         followup_txt.write_text(f"Subject: {followup_subject}\n\n{followup_body}", encoding="utf-8")
 
         followup_eml = agency_dir / "followup_email.eml"
+        followup_message_id = existing.get("followup_message_id") or f"<{clean_id}.{batch_id}.followup@orbit-security.io>"
         dispatcher.export_eml(
             recipient_email=contact_email,
             subject=followup_subject,
             body_text=followup_body,
             pdf_attachment_path=None,
             output_eml_path=str(followup_eml),
+            in_reply_to=pitch_message_id,
+            references=pitch_message_id,
+            message_id=followup_message_id,
         )
 
         agency_entry = {
@@ -539,6 +545,7 @@ https://cmfh009.github.io/Orbit-Security/
             "focus": agency["focus"],
             "contact_title": agency["contact_title"],
             "subject": subject,
+            "message_id": pitch_message_id,
             "portal_url": portal_url,
             "draft_file": str(txt_path.relative_to(REPO_ROOT)),
             "eml_file": str(eml_path.relative_to(REPO_ROOT)),
@@ -550,6 +557,10 @@ https://cmfh009.github.io/Orbit-Security/
             agency_entry["recovered_at"] = recovered_at
         if existing.get("dispatched_at"):
             agency_entry["dispatched_at"] = existing["dispatched_at"]
+        if existing.get("followup_dispatch_status"):
+            agency_entry["followup_dispatch_status"] = existing["followup_dispatch_status"]
+        if existing.get("followup_dispatched_at"):
+            agency_entry["followup_dispatched_at"] = existing["followup_dispatched_at"]
         manifest["agencies"].append(agency_entry)
 
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
@@ -557,6 +568,12 @@ https://cmfh009.github.io/Orbit-Security/
 
 
 def main():
+    for _stream in (sys.stdout, sys.stderr):
+        if _stream and hasattr(_stream, "reconfigure"):
+            try:
+                _stream.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
     parser = argparse.ArgumentParser(
         description="Orbit Security: Partner-First Agency Fleet Outreach Generator & Dispatcher"
     )
@@ -586,10 +603,17 @@ def main():
             print(f"No agency found matching '{args.agency}'")
             return 1
 
+    if args.followup:
+        total_before_filter = len(agencies)
+        agencies = [a for a in agencies if a.get("dispatch_status") == "SENT"]
+        skipped_non_sent = total_before_filter - len(agencies)
+    else:
+        skipped_non_sent = 0
+
     print("=" * 76)
     print(" 🚀 ORBIT SECURITY: PARTNER-FIRST AGENCY FLEET PILOT")
     print("=" * 76)
-    print(f" Targets Staged:  {len(agencies)} agencies")
+    print(f" Targets Staged:  {len(agencies)} agencies" + (f" ({skipped_non_sent} non-SENT skipped)" if skipped_non_sent else ""))
     if is_simulated:
         mode_label = "🧪 VERIFIED SIMULATED DISPATCH"
     elif is_live:
@@ -611,6 +635,9 @@ def main():
     failed = 0
 
     for idx, a in enumerate(agencies, 1):
+        if args.followup and a.get("dispatch_status") != "SENT":
+            print(f"\n[{idx}/{len(agencies)}] ⏭️ [SKIPPED] {a['name']} ({a['domain']}) — dispatch_status is {a.get('dispatch_status')} (must be SENT)")
+            continue
         rel_eml = a.get(eml_field) or a.get("eml_file")
         print(f"\n[{idx}/{len(agencies)}] {a['name']} ({a['domain']})")
         print(f"    Recipient:  {a['contact_email']} [{a['contact_title']}]")

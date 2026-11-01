@@ -65,7 +65,7 @@ class RetainerDealDeskConcierge:
         else:
             self.workspace_root = REPO_ROOT
             self.portals_dir = portals_dir or PORTALS_OUTPUT_DIR
-            self._is_repo_workspace = (self.portals_dir == PORTALS_OUTPUT_DIR)
+            self._is_repo_workspace = (self.portals_dir.resolve() == PORTALS_OUTPUT_DIR.resolve())
         self.portals_dir.mkdir(parents=True, exist_ok=True)
 
     def generate_portal_for_agency(
@@ -296,12 +296,19 @@ class RetainerDealDeskConcierge:
 </html>
 """
         portal_file.write_text(portal_html, encoding="utf-8")
-        if self.workspace_root == REPO_ROOT or self.portals_dir == PORTALS_OUTPUT_DIR:
+        if (
+            self.workspace_root.resolve() == REPO_ROOT.resolve()
+            or self.portals_dir.resolve() == PORTALS_OUTPUT_DIR.resolve()
+        ):
             landing_portal_file = REPO_ROOT / "landing" / "portals" / portal_file.name
             if landing_portal_file.parent.exists():
                 landing_portal_file.write_text(portal_html, encoding="utf-8")
         elif self.workspace_root:
-            landing_portal_file = self.workspace_root / "landing" / "portals" / portal_file.name
+            subproject_landing = self.workspace_root / "projects" / "orbit-security" / "landing" / "portals"
+            if subproject_landing.exists():
+                landing_portal_file = subproject_landing / portal_file.name
+            else:
+                landing_portal_file = self.workspace_root / "landing" / "portals" / portal_file.name
             if landing_portal_file.parent.exists():
                 landing_portal_file.write_text(portal_html, encoding="utf-8")
 

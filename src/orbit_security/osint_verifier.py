@@ -41,7 +41,8 @@ KNOWN_LEADERSHIP_OSINT = {
         "executive_name": "John B.",
         "executive_title": "Founder & Technical Director",
         "verified_email": "john@avexdesigns.com",
-        "source": "OSINT / DNS PGP Match"
+        "verified_recovery_email": "newbusiness@avexdesigns.com",
+        "source": "OSINT / DNS PGP Match + Verified Web Contact"
     },
     "anatta.io": {
         "agency_id": "anatta",
@@ -49,6 +50,7 @@ KNOWN_LEADERSHIP_OSINT = {
         "executive_name": "Nirav S.",
         "executive_title": "Head of Engineering",
         "verified_email": "nirav@anatta.io",
+        "verified_recovery_email": "nirav@anatta.io",
         "source": "OSINT / Engineering Lead"
     },
     "askphill.com": {
@@ -57,7 +59,8 @@ KNOWN_LEADERSHIP_OSINT = {
         "executive_name": "Phillip B.",
         "executive_title": "Co-Founder & CTO",
         "verified_email": "phill@askphill.com",
-        "source": "OSINT / Technical Co-Founder"
+        "verified_recovery_email": "sales@askphill.com",
+        "source": "OSINT / Technical Co-Founder + Verified Web Contact"
     },
     "activetheory.net": {
         "agency_id": "active_theory",
@@ -65,6 +68,7 @@ KNOWN_LEADERSHIP_OSINT = {
         "executive_name": "Nick Mountford",
         "executive_title": "Technical Director",
         "verified_email": "nick@activetheory.net",
+        "verified_recovery_email": "nick@activetheory.net",
         "source": "OSINT / Technology Partner"
     },
     "palantir.net": {
@@ -73,6 +77,7 @@ KNOWN_LEADERSHIP_OSINT = {
         "executive_name": "George DeMet",
         "executive_title": "Founder & Principal",
         "verified_email": "george@palantir.net",
+        "verified_recovery_email": "george@palantir.net",
         "source": "OSINT / Principal Leadership"
     },
     "alley.com": {
@@ -81,8 +86,99 @@ KNOWN_LEADERSHIP_OSINT = {
         "executive_name": "Austin Smith",
         "executive_title": "President & Co-Founder",
         "verified_email": "austin@alley.com",
+        "verified_recovery_email": "austin@alley.com",
         "source": "OSINT / Executive"
-    }
+    },
+    "swankyagency.com": {
+        "agency_id": "swanky_agency",
+        "agency_name": "Swanky",
+        "executive_name": "Cat",
+        "executive_title": "Commercial Lead",
+        "verified_email": "cat@swankyagency.com",
+        "verified_recovery_email": "cat@swankyagency.com",
+        "source": "OSINT / Published Web Contact (recovery_plan.md)"
+    },
+    "chromatichq.com": {
+        "agency_id": "chromatic",
+        "agency_name": "Chromatic",
+        "executive_name": "Chromatic Leadership",
+        "executive_title": "Managing Partner",
+        "verified_email": "info@chromatichq.com",
+        "verified_recovery_email": "info@chromatichq.com",
+        "source": "OSINT / Published Web Contact (recovery_plan.md)"
+    },
+    "digitas.com": {
+        "agency_id": "digitas",
+        "agency_name": "Digitas",
+        "executive_name": "Digitas Leadership",
+        "executive_title": "Regional Practice Lead",
+        "verified_email": "amsterdam@digitas.com",
+        "verified_recovery_email": "amsterdam@digitas.com",
+        "source": "OSINT / Published Web Contact (recovery_plan.md)"
+    },
+    "rga.com": {
+        "agency_id": "rga",
+        "agency_name": "R/GA",
+        "executive_name": "R/GA Leadership",
+        "executive_title": "Regional Managing Director",
+        "verified_email": "argentina@rga.com",
+        "verified_recovery_email": "argentina@rga.com",
+        "source": "OSINT / Published Web Contact (recovery_plan.md)"
+    },
+    "work.co": {
+        "agency_id": "work_and_co",
+        "agency_name": "Work & Co",
+        "executive_name": "Work & Co Partnerships",
+        "executive_title": "New Business & Technology Partner",
+        "verified_email": "newbiz@work.co",
+        "verified_recovery_email": "newbiz@work.co",
+        "source": "OSINT / Published Web Contact (recovery_plan.md)"
+    },
+    "basicagency.com": {
+        "agency_id": "basic_dept",
+        "agency_name": "BASIC/DEPT",
+        "executive_name": "BASIC/DEPT Partnerships",
+        "executive_title": "New Business Director",
+        "verified_email": "biz@basicagency.com",
+        "verified_recovery_email": "biz@basicagency.com",
+        "source": "OSINT / Published Web Contact (recovery_plan.md)"
+    },
+    "majortom.com": {
+        "agency_id": "major_tom",
+        "agency_name": "Major Tom",
+        "executive_name": "Major Tom Leadership",
+        "executive_title": "Client Services Lead",
+        "verified_email": "hello@majortom.com",
+        "verified_recovery_email": "hello@majortom.com",
+        "source": "OSINT / Published Web Contact (recovery_plan.md)"
+    },
+    "immersive-g.com": {
+        "agency_id": "immersive_garden",
+        "agency_name": "Immersive Garden",
+        "executive_name": "Immersive Garden Studio",
+        "executive_title": "Executive Producer",
+        "verified_email": "inquiries@immersive-g.com",
+        "verified_recovery_email": "inquiries@immersive-g.com",
+        "source": "OSINT / Published Web Contact (recovery_plan.md)"
+    },
+    "b-reel.com": {
+        "agency_id": "b_reel",
+        "agency_name": "B-Reel",
+        "executive_name": "B-Reel Partnerships",
+        "executive_title": "New Business Director",
+        "verified_email": "newbiz@b-reel.com",
+        "verified_recovery_email": "newbiz@b-reel.com",
+        "source": "OSINT / Published Web Contact (recovery_plan.md)"
+    },
+    "goodface.agency": {
+        "agency_id": "goodface",
+        "agency_name": "Goodface Agency",
+        "executive_name": "Goodface Leadership",
+        "executive_title": "Managing Partner",
+        "verified_email": "hi@goodface.agency",
+        "verified_recovery_email": "hi@goodface.agency",
+        "source": "OSINT / Published Web Contact (recovery_plan.md)"
+    },
 }
 
 
@@ -140,7 +236,7 @@ class ExecutiveOSINTVerifier:
         }
 
     def verify_domain_mx(self, domain: str) -> Dict[str, Any]:
-        """Probes DNS resolution of the target domain to verify mail exchange viability using dnspython with socket fallback."""
+        """Probes DNS resolution of the target domain to verify mail exchange viability using dnspython."""
         if not domain or not isinstance(domain, str):
             return {"ok": False, "domain": "", "resolvable": False, "mx_records": [], "ips": [], "error": "Empty domain"}
 
@@ -171,19 +267,17 @@ class ExecutiveOSINTVerifier:
             except Exception:
                 mx_records = []
 
-        # 2. Socket resolution (getaddrinfo) for IP addresses and fallback
-        try:
-            target_host = mx_records[0] if mx_records else ascii_domain
-            addrs = socket.getaddrinfo(target_host, 25, socket.AF_INET, socket.SOCK_STREAM)
-            ip_addrs = list({a[4][0] for a in addrs})
-        except Exception:
+        # 2. Socket resolution (getaddrinfo) for MX host IP addresses only when MX records exist
+        #    (Do NOT fall back to port 80 / A-record resolution when mx_records is empty,
+        #     as web-only domains without MX records cannot receive mail.)
+        if mx_records:
             try:
-                addrs = socket.getaddrinfo(ascii_domain, 80, socket.AF_INET, socket.SOCK_STREAM)
+                addrs = socket.getaddrinfo(mx_records[0], 25, socket.AF_INET, socket.SOCK_STREAM)
                 ip_addrs = list({a[4][0] for a in addrs})
             except Exception:
                 ip_addrs = []
 
-        if mx_records or ip_addrs:
+        if mx_records:
             return {
                 "ok": True,
                 "domain": clean_domain,
@@ -199,20 +293,26 @@ class ExecutiveOSINTVerifier:
                 "resolvable": False,
                 "mx_records": [],
                 "ips": [],
-                "error": "No MX records or host IP addresses resolvable"
+                "error": "No MX records resolvable for domain"
             }
 
-    def resolve_leadership(self, domain: str) -> Dict[str, Any]:
+    def resolve_leadership(self, domain: str, prefer_recovery: bool = False) -> Dict[str, Any]:
         """Resolves direct executive technical leadership contacts for a domain and validates syntax."""
         clean_dom = domain.strip().lower().replace("https://", "").replace("http://", "").split("/")[0].split(":")[0].rstrip(".")
         if clean_dom in KNOWN_LEADERSHIP_OSINT:
             info = dict(KNOWN_LEADERSHIP_OSINT[clean_dom])
+            selected_email = (
+                info.get("verified_recovery_email", info["verified_email"])
+                if prefer_recovery
+                else info["verified_email"]
+            )
             info["resolved"] = True
             info["confidence"] = 0.98
-            info["email"] = info["verified_email"]
+            info["verified_email"] = selected_email
+            info["email"] = selected_email
             info["name"] = info["executive_name"]
             info["title"] = info["executive_title"]
-            syntax_val = self.verify_email_syntax(info["verified_email"])
+            syntax_val = self.verify_email_syntax(selected_email)
             info["syntax_valid"] = syntax_val["valid"]
             info["is_generic_alias"] = syntax_val.get("is_generic_alias", False)
             info["syntax_details"] = syntax_val

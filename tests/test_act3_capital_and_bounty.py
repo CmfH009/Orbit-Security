@@ -308,10 +308,26 @@ class TestAct3DaemonIntegration:
         assert hasattr(supervisor, "bounty_state")
         assert supervisor.bounty_state.get("status") == "INITIALIZED"
 
-    def test_bounty_sweep_cli_execution_quick(self):
-        worker = BountyRadarSupervisorWorker()
-        # Execute quick mock sweep
-        res = worker.execute_sweep(force_now=True, program_id="shopify", quick=True)
+    def test_bounty_sweep_cli_execution_quick(self, tmp_path):
+        worker = BountyRadarSupervisorWorker(workspace_root=tmp_path)
+        with patch("orbit_security.bounty_radar.BountyTakeoverSweeper.sweep_program") as mock_sweep:
+            mock_sweep.return_value = {
+                "program_id": "shopify",
+                "program_name": "Shopify",
+                "domains_scanned": 2,
+                "vulnerabilities": [],
+            }
+            res = worker.execute_sweep(
+                force_now=True,
+                program_id="shopify",
+                quick=True,
+                use_passive_ct=False,
+                audit_cloud_buckets=False,
+                audit_graphql=False,
+                audit_cors=False,
+                save_disclosures=False,
+                sync_attack_graph=False,
+            )
         assert res.get("status") == "COMPLETED"
         assert res.get("programs_scanned") == 1
         assert "vulnerabilities_found" in res

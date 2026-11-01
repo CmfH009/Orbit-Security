@@ -36,6 +36,8 @@ class EmailDispatcher:
         body_text: str,
         pdf_attachment_path: Optional[str] = None,
         in_reply_to: Optional[str] = None,
+        references: Optional[str] = None,
+        message_id: Optional[str] = None,
     ) -> MIMEMultipart:
         msg = MIMEMultipart()
         sender_header = f"{self.sender_name} <{self.smtp_user}>" if self.smtp_user else self.sender_name
@@ -43,9 +45,13 @@ class EmailDispatcher:
         msg["To"] = recipient_email
         msg["Subject"] = subject
         msg["Reply-To"] = self.smtp_user or recipient_email
+        if message_id:
+            msg["Message-ID"] = message_id
         if in_reply_to:
             msg["In-Reply-To"] = in_reply_to
-            msg["References"] = in_reply_to
+            msg["References"] = references or in_reply_to
+        elif references:
+            msg["References"] = references
 
         # Attach text body
         msg.attach(MIMEText(body_text, "plain", "utf-8"))
@@ -66,9 +72,20 @@ class EmailDispatcher:
         body_text: str,
         pdf_attachment_path: Optional[str],
         output_eml_path: str,
+        in_reply_to: Optional[str] = None,
+        references: Optional[str] = None,
+        message_id: Optional[str] = None,
     ) -> str:
         """Exports a standard .eml draft file that opens natively in any desktop mail client (Outlook, Mail, etc.)."""
-        msg = self.build_message(recipient_email, subject, body_text, pdf_attachment_path)
+        msg = self.build_message(
+            recipient_email,
+            subject,
+            body_text,
+            pdf_attachment_path,
+            in_reply_to=in_reply_to,
+            references=references,
+            message_id=message_id,
+        )
         os.makedirs(os.path.dirname(os.path.abspath(output_eml_path)), exist_ok=True)
         with open(output_eml_path, "wb") as f:
             f.write(msg.as_bytes())
