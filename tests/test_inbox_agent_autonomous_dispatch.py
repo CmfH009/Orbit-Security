@@ -403,3 +403,134 @@ def test_poll_inbox_suppress_unsubscribe_suppresses_canned_replies(temp_state_fi
     assert processed[0]["needs_escalation"] is False
 
 
+def test_poll_inbox_ready_to_buy_escalates_to_carson_without_emailing_prospect(temp_state_file):
+    agent = InboxAgent(state_file=temp_state_file)
+    agent.dispatcher = MagicMock()
+    agent.dispatcher.is_configured.return_value = True
+
+    raw_msg = (
+        b"From: ceo@charleagency.com\r\n"
+        b"To: carsonmail009@gmail.com\r\n"
+        b"Subject: Re: Security notice regarding charleagency.com\r\n"
+        b"Content-Type: text/plain; charset=utf-8\r\n\r\n"
+        b"We want to buy the Growth plan. Send details to pay.\r\n"
+    )
+
+    mock_mail = MagicMock()
+    mock_mail.search.return_value = ("OK", [b"1"])
+    mock_mail.fetch.return_value = ("OK", [(b"1", raw_msg)])
+
+    with patch("imaplib.IMAP4_SSL", return_value=mock_mail):
+        with patch.dict(os.environ, {"IMAP_SERVER": "imap.test.local", "IMAP_USER": "test@test.local", "IMAP_PASSWORD": "secret"}):
+            processed = agent.poll_inbox()
+
+    assert len(processed) == 1
+    assert processed[0]["needs_escalation"] is True
+
+    # Prospect NEVER received an email
+    for call in agent.dispatcher.send_email.call_args_list:
+        assert call.kwargs.get("recipient_email") != "ceo@charleagency.com"
+
+    # Operator received high-priority Stripe escalation
+    operator_calls = [
+        call for call in agent.dispatcher.send_email.call_args_list
+        if call.kwargs.get("recipient_email") == "carsonmail009@gmail.com"
+    ]
+    assert len(operator_calls) >= 1
+    assert "Lead Ready for Stripe Payment Link" in operator_calls[0].kwargs.get("subject")
+
+    # State updated
+    state_entry = next((v for k, v in agent.state.items() if isinstance(v, dict) and v.get("sender") == "ceo@charleagency.com"), None)
+    assert state_entry is not None
+    assert state_entry["intent"] == "READY_TO_BUY"
+    assert state_entry["escalated"] is True
+
+
+def test_poll_inbox_legacy_outbound_reply_blocked_by_guardrail(temp_state_file):
+    agent = InboxAgent(state_file=temp_state_file)
+    agent.dispatcher = MagicMock()
+    agent.dispatcher.is_configured.return_value = True
+
+    raw_msg = (
+        b"From: dev@charleagency.com\r\n"
+        b"To: carsonmail009@gmail.com\r\n"
+        b"Subject: Re: Security notice regarding charleagency.com\r\n"
+        b"Content-Type: text/plain; charset=utf-8\r\n\r\n"
+        b"Not interested at this time.\r\n"
+    )
+
+    mock_mail = MagicMock()
+    mock_mail.search.return_value = ("OK", [b"1"])
+    mock_mail.fetch.return_value = ("OK", [(b"1", raw_msg)])
+
+    # Mock guardrail to block legacy reply
+    agent.guardrail = MagicMock()
+    agent.guardrail.evaluate.return_value = GuardrailEvaluationResult(
+        status=GuardrailStatus.BLOCKED,
+        violation_layer="LAYER_3_CANONICAL_FACTS",
+        violation_code="UNAUTHORIZED_EXTERNAL_LINK",
+        reason="Reply contains unauthorized link",
+    )
+
+    with patch("imaplib.IMAP4_SSL", return_value=mock_mail):
+        with patch.dict(os.environ, {"IMAP_SERVER": "imap.test.local", "IMAP_USER": "test@test.local", "IMAP_PASSWORD": "secret"}):
+            processed = agent.poll_inbox()
+
+    assert len(processed) == 1
+    assert processed[0]["needs_escalation"] is True
+
+    # Prospect NEVER received an email
+    for call in agent.dispatcher.send_email.call_args_list:
+        assert call.kwargs.get("recipient_email") != "dev@charleagency.com"
+
+    # Operator received alert about the block
+    operator_calls = [
+        call for call in agent.dispatcher.send_email.call_args_list
+        if call.kwargs.get("recipient_email") == "carsonmail009@gmail.com"
+    ]
+    assert len(operator_calls) >= 1
+    assert "GUARDRAIL HELD FOR REVIEW" in operator_calls[0].kwargs.get("subject")
+
+
+def test_poll_inbox_legacy_outbound_reply_sent_when_guardrail_approves(temp_state_file):
+    agent = InboxAgent(state_file=temp_state_file)
+    agent.dispatcher = MagicMock()
+    agent.dispatcher.is_configured.return_value = True
+
+    raw_msg = (
+        b"From: lead@charleagency.com\r\n"
+        b"To: carsonmail009@gmail.com\r\n"
+        b"Subject: Re: Security notice regarding charleagency.com\r\n"
+        b"Content-Type: text/plain; charset=utf-8\r\n\r\n"
+        b"Please remove us from your list, not interested.\r\n"
+    )
+
+    mock_mail = MagicMock()
+    mock_mail.search.return_value = ("OK", [b"1"])
+    mock_mail.fetch.return_value = ("OK", [(b"1", raw_msg)])
+
+    agent.guardrail = MagicMock()
+    agent.guardrail.evaluate.return_value = GuardrailEvaluationResult(
+        status=GuardrailStatus.APPROVED,
+        violation_layer=None,
+        violation_code=None,
+        reason="Approved",
+    )
+
+    with patch("imaplib.IMAP4_SSL", return_value=mock_mail):
+        with patch.dict(os.environ, {"IMAP_SERVER": "imap.test.local", "IMAP_USER": "test@test.local", "IMAP_PASSWORD": "secret"}):
+            processed = agent.poll_inbox()
+
+    assert len(processed) == 1
+
+    # Prospect received email
+    prospect_calls = [
+        call for call in agent.dispatcher.send_email.call_args_list
+        if call.kwargs.get("recipient_email") == "lead@charleagency.com"
+    ]
+    assert len(prospect_calls) == 1
+    assert "Re: Security notice regarding charleagency.com" in prospect_calls[0].kwargs.get("subject")
+    agent.guardrail.record_dispatch.assert_called_once_with("lead@charleagency.com")
+    assert agent.state["leads"]["lead@charleagency.com"]["status"] == "AUTONOMOUS_REPLY_SENT"
+
+

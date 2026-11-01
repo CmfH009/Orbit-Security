@@ -1,6 +1,7 @@
 import json
 import pytest
 from unittest.mock import MagicMock, patch
+from orbit_security.gemini_cli_bridge import GeminiCLIBridge, GeminiCLIResult
 from orbit_security.inbox_triage_bridge import (
     InboxTriageBridge,
     InboundTriageDecision,
@@ -80,3 +81,38 @@ def test_bridge_falls_back_to_deterministic_when_all_llms_offline():
         decision = bridge.triage_inbound_message("prospect@dev.com", "Re: Urgent Issue", "Can you fix our DNS?")
         assert decision.provider_resolved == "DETERMINISTIC_FALLBACK"
         assert decision.recommended_action == TriageAction.ESCALATE_TO_CARSON
+
+
+def test_inbox_triage_bridge_defaults_to_gemini_cli_bridge():
+    bridge = InboxTriageBridge()
+    assert bridge.gemini_bridge is not None
+    assert isinstance(bridge.gemini_bridge, GeminiCLIBridge)
+
+
+def test_bridge_uses_real_gemini_cli_bridge_instance():
+    bridge = InboxTriageBridge()
+    mock_decision_dict = {
+        "sender": "prospect@dev.com",
+        "subject": "Re: Orbit Audit",
+        "intent": "INQUIRY_PRICING",
+        "confidence": 0.95,
+        "reasoning": "Pricing inquiry handled via GeminiCLIBridge",
+        "recommended_action": "AUTONOMOUS_REPLY",
+        "suggested_tier": "monitoring",
+        "portal_link_requested": True,
+        "draft_reply_subject": "Re: Orbit Audit",
+        "draft_reply_body": "Our monitoring retainer is $499/mo.\n\nBest,\nCarson Haynes",
+        "provider_resolved": "GEMINI_CLI"
+    }
+
+    with patch.object(bridge.gemini_bridge, "execute_cli") as mock_exec:
+        mock_exec.return_value = GeminiCLIResult(
+            exit_code=0,
+            success=True,
+            data=mock_decision_dict,
+            stdout=json.dumps(mock_decision_dict),
+        )
+        decision = bridge.triage_inbound_message("prospect@dev.com", "Re: Orbit Audit", "What is your pricing?")
+        assert decision.provider_resolved == "GEMINI_CLI"
+        assert decision.suggested_tier == "monitoring"
+        assert "$499/mo" in decision.draft_reply_body

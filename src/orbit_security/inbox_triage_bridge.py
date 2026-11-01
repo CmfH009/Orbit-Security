@@ -4,7 +4,7 @@ from enum import Enum
 import json
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 import urllib.request
 import urllib.error
 from pydantic import BaseModel, Field
@@ -40,7 +40,14 @@ class InboxTriageBridge:
     """Manages 3-tier failover for inbound email triage and response generation."""
 
     def __init__(self, gemini_bridge: Optional[Any] = None, ollama_url: Optional[str] = None):
-        self.gemini_bridge = gemini_bridge
+        if gemini_bridge is not None:
+            self.gemini_bridge = gemini_bridge
+        else:
+            try:
+                from orbit_security.gemini_cli_bridge import GeminiCLIBridge
+                self.gemini_bridge = GeminiCLIBridge()
+            except Exception:
+                self.gemini_bridge = None
         self.ollama_url = ollama_url or os.environ.get("ORBIT_OLLAMA_URL", "http://127.0.0.1:11434/api/chat")
 
     def triage_inbound_message(

@@ -27,6 +27,7 @@ from orbit_security.gemini_cli_bridge import (
     GeminiAuthError,
 )
 from orbit_security.triage_agent import LocalTriageAgent, TriageRemediationSpec
+from orbit_security.inbox_triage_bridge import InboundTriageDecision, TriageAction
 
 
 @pytest.fixture
@@ -204,3 +205,92 @@ async def test_generate_async_execution(bridge):
         assert res.success is True
         assert res.failed_over is True
         assert res.data["async_triage"] is True
+
+
+def test_execute_json_success_with_schema(bridge):
+    payload = {
+        "sender": "lead@agency.com",
+        "subject": "Re: Pricing",
+        "intent": "INQUIRY_PRICING",
+        "confidence": 0.95,
+        "reasoning": "Agency asked for monitoring price.",
+        "recommended_action": "AUTONOMOUS_REPLY",
+        "suggested_tier": "monitoring",
+        "portal_link_requested": False,
+        "draft_reply_subject": "Re: Pricing",
+        "draft_reply_body": "Monitoring is $499/mo.\n\nBest,\nCarson Haynes",
+        "provider_resolved": "GEMINI_CLI",
+    }
+    with patch.object(bridge, "execute_cli") as mock_exec:
+        mock_exec.return_value = GeminiCLIResult(
+            exit_code=0,
+            success=True,
+            data=payload,
+            stdout=json.dumps(payload),
+        )
+        res = bridge.execute_json("Analyze this message", schema=InboundTriageDecision)
+        assert res.success is True
+        assert res.exit_code == 0
+        assert isinstance(res.data, InboundTriageDecision)
+        assert res.data.intent == "INQUIRY_PRICING"
+        assert res.data.recommended_action == TriageAction.AUTONOMOUS_REPLY
+
+
+def test_execute_json_markdown_wrapped_json(bridge):
+    payload = {"status": "ok", "count": 42}
+    wrapped_text = f"```json\n{json.dumps(payload)}\n```"
+
+    with patch.object(bridge, "execute_cli") as mock_exec:
+        mock_exec.return_value = GeminiCLIResult(
+            exit_code=0,
+            success=True,
+            data=wrapped_text,
+            stdout=wrapped_text,
+        )
+        res = bridge.execute_json("Extract data")
+        assert res.success is True
+        assert res.data == payload
+
+
+def test_execute_json_invalid_json_returns_error(bridge):
+    with patch.object(bridge, "execute_cli") as mock_exec:
+        mock_exec.return_value = GeminiCLIResult(
+            exit_code=0,
+            success=True,
+            data="Not valid json at all",
+            stdout="Not valid json at all",
+        )
+        res = bridge.execute_json("Extract data")
+        assert res.success is False
+        assert res.exit_code == 1
+        assert res.error_type == "JSON_DECODE_ERROR"
+
+
+def test_execute_json_schema_validation_error(bridge):
+    # Missing required fields according to InboundTriageDecision
+    bad_payload = {"sender": "lead@agency.com"}
+    with patch.object(bridge, "execute_cli") as mock_exec:
+        mock_exec.return_value = GeminiCLIResult(
+            exit_code=0,
+            success=True,
+            data=bad_payload,
+            stdout=json.dumps(bad_payload),
+        )
+        res = bridge.execute_json("Analyze", schema=InboundTriageDecision)
+        assert res.success is False
+        assert res.exit_code == 1
+        assert res.error_type == "SCHEMA_VALIDATION_ERROR"
+
+
+def test_execute_json_subprocess_failure_forwarded(bridge):
+    with patch.object(bridge, "execute_cli") as mock_exec:
+        mock_exec.return_value = GeminiCLIResult(
+            exit_code=2,
+            success=False,
+            error_type="USAGE_ERROR",
+            error_message="Unknown flag",
+        )
+        res = bridge.execute_json("Analyze", schema=InboundTriageDecision)
+        assert res.success is False
+        assert res.exit_code == 2
+        assert res.error_type == "USAGE_ERROR"

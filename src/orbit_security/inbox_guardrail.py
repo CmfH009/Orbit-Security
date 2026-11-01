@@ -5,6 +5,7 @@ from enum import Enum
 import re
 import time
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlsplit
 
 CANONICAL_PRICING: Dict[str, Dict[str, Any]] = {
     "monitoring": {
@@ -55,7 +56,7 @@ class PromptInjectionSanitizer:
 
         # 2. Neutralize XML and code fences (case-insensitive)
         text = re.sub(
-            r"(?i)<(/?)(\s*)(system|prompt|context)(\s*)>",
+            r"(?i)<(/?)(\s*)(system|prompt|context)([^>]*)>",
             lambda m: f"[{m.group(1)}{m.group(3).lower()}]",
             text,
         )
@@ -131,12 +132,19 @@ class AutonomousReplyGuardrail:
                     violation_code="AUTO_RESPONDER_DETECTED",
                     reason=f"Inbound header Auto-Submitted: {auto_sub}"
                 )
-            if "x-autoreply" in headers_lower:
+            if "x-autoreply" in headers_lower or "x-autorespond" in headers_lower:
                 return GuardrailEvaluationResult(
                     status=GuardrailStatus.BLOCKED,
                     violation_layer="LAYER_1_ANTI_LOOP",
                     violation_code="AUTO_RESPONDER_DETECTED",
-                    reason="X-Autoreply header detected."
+                    reason="Auto-reply header detected."
+                )
+            if headers_lower.get("precedence") in ("bulk", "junk", "list"):
+                return GuardrailEvaluationResult(
+                    status=GuardrailStatus.BLOCKED,
+                    violation_layer="LAYER_1_ANTI_LOOP",
+                    violation_code="AUTO_RESPONDER_DETECTED",
+                    reason=f"Precedence header is '{headers_lower.get('precedence')}'."
                 )
             if re.search(r"(?i)^(?:automatic reply|out of office|undeliverable|delivery status notification)", subject or ""):
                 return GuardrailEvaluationResult(
@@ -167,6 +175,15 @@ class AutonomousReplyGuardrail:
                     reason="Draft reply leaks filesystem paths."
                 )
 
+            approved_signoffs = ["carson haynes", "founder, orbit security", "orbit security concierge"]
+            if not any(signoff in body_lower for signoff in approved_signoffs):
+                return GuardrailEvaluationResult(
+                    status=GuardrailStatus.BLOCKED,
+                    violation_layer="LAYER_2_LEAK_GUARD",
+                    violation_code="SIGN_OFF_INTEGRITY_VIOLATION",
+                    reason="Draft reply is missing approved sign-off."
+                )
+
             # --- Layer 3: Canonical Facts Gate ---
             price_matches = re.findall(r"\$((?:\d{1,3}(?:,\d{3})+|\d+))(?!\d)", draft_reply)
             valid_prices = set()
@@ -193,6 +210,22 @@ class AutonomousReplyGuardrail:
                         violation_layer="LAYER_3_CANONICAL_FACTS",
                         violation_code="UNAUTHORIZED_SCOPE_PROMISE",
                         reason=f"Draft promises out-of-scope deliverable: '{promise}'"
+                    )
+
+            urls = re.findall(r"https?://[^\s<>\"']+", draft_reply)
+            for u in urls:
+                netloc = urlsplit(u).netloc.lower().split(":")[0]
+                if not (
+                    netloc == "orbit-security.com"
+                    or netloc.endswith(".orbit-security.com")
+                    or netloc == "cal.com"
+                    or netloc.endswith(".cal.com")
+                ):
+                    return GuardrailEvaluationResult(
+                        status=GuardrailStatus.BLOCKED,
+                        violation_layer="LAYER_3_CANONICAL_FACTS",
+                        violation_code="UNAUTHORIZED_EXTERNAL_LINK",
+                        reason=f"Draft reply contains unauthorized external URL: {u}",
                     )
 
             # --- Layer 4: Rate Limiter & Suppression ---

@@ -568,18 +568,19 @@ class InboxAgent:
                 }
 
         # Non-inquiry / non-unclear (e.g. READY_TO_BUY, NOT_INTERESTED)
-        lead_status = intent.value if hasattr(intent, "value") else str(intent)
+        resolved_status = "ESCALATE_TO_CARSON" if intent == LeadIntent.READY_TO_BUY else (intent.value if hasattr(intent, "value") else str(intent))
         lead_state = self.state["leads"].setdefault(sender_email, {})
-        lead_state["status"] = lead_status
+        lead_state["status"] = resolved_status
         self._save_state()
 
         return {
             "ok": True,
-            "status": lead_status,
+            "status": resolved_status,
+            "action": TriageAction.ESCALATE_TO_CARSON.value if intent == LeadIntent.READY_TO_BUY else None,
             "sender": sender_email,
             "agency_name": agency_name,
             "domain": domain,
-            "intent": lead_status,
+            "intent": intent.value if hasattr(intent, "value") else str(intent),
             "tier": tier,
             "portal": portal_info,
             "portal_path": portal_path,
@@ -1024,7 +1025,12 @@ class InboxAgent:
                 elif lead_status in ("ARCHIVE_NO_ACTION", "SUPPRESS_UNSUBSCRIBE") or lead_result.get("action") in ("ARCHIVE_NO_ACTION", "SUPPRESS_UNSUBSCRIBE"):
                     reply_text = ""
                     needs_escalation = False
-                elif lead_status in ("HELD_FOR_REVIEW", "ESCALATE_TO_CARSON") or lead_result.get("action") == "ESCALATE_TO_CARSON":
+                elif (
+                    lead_status in ("HELD_FOR_REVIEW", "ESCALATE_TO_CARSON")
+                    or lead_result.get("action") == "ESCALATE_TO_CARSON"
+                    or resolved_intent == "READY_TO_BUY"
+                    or intent == LeadIntent.READY_TO_BUY
+                ):
                     reply_text = ""
                     needs_escalation = True
                     # Strictly do NOT send email to prospect (clean_email)
@@ -1040,6 +1046,24 @@ class InboxAgent:
                             f"Subject: {subject}\n"
                             f"--- Message Body ---\n{body}\n--------------------\n\n"
                             f"- Orbit Security Autonomous Guardrail Sentinel"
+                        )
+                    elif resolved_intent == "READY_TO_BUY" or intent == LeadIntent.READY_TO_BUY:
+                        stripe_link = os.getenv("STRIPE_PAYMENT_LINK", "https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800")
+                        alert_sub = f"🔥 [ACTION REQUIRED] Lead Ready for Stripe Payment Link: {clean_email}"
+                        alert_body = (
+                            f"Carson,\n\n"
+                            f"A prospective agency lead is ready to move forward and requested payment/onboarding details!\n\n"
+                            f"Lead Email: {clean_email}\n"
+                            f"Subject Thread: {subject}\n\n"
+                            f"--- Lead's Message ---\n{body}\n--------------------\n\n"
+                            f"ACTION NEEDED:\n"
+                            f"Reply to {clean_email} with your live Stripe Payment Link:\n"
+                            f"👉 {stripe_link}\n\n"
+                            f"Suggested 1-click reply:\n"
+                            f"\"Hi there, here is your direct link to activate Orbit Security for your client roster:\n"
+                            f"{stripe_link}\n\n"
+                            f"Once completed, your dashboard and monthly co-branded audits will be active immediately. Looking forward to working together! - Carson\"\n\n"
+                            f"- Orbit Security Autonomous Inbox Agent"
                         )
                     else:
                         alert_sub = f"🚨 [TRIAGE ESCALATION] Inbound Lead Escalated to Founder: {clean_email}"
@@ -1068,14 +1092,57 @@ class InboxAgent:
                         message_body=body
                     )
 
-                    # Send reply
+                    # Send reply only if approved by guardrail
                     if reply_text and self.dispatcher.is_configured():
-                        self.dispatcher.send_email(
-                            recipient_email=clean_email,
-                            subject=f"Re: {subject.replace('Re: ', '')}",
-                            body_text=reply_text
+                        eval_res = self.guardrail.evaluate(
+                            draft_reply=reply_text,
+                            sender=clean_email,
+                            subject=subject,
+                            inbound_headers=inbound_headers,
+                            leads_state=self.state,
                         )
-                        print(f"    [✔] Automated response sent to {clean_email}")
+                        if eval_res.status == GuardrailStatus.APPROVED:
+                            self.dispatcher.send_email(
+                                recipient_email=clean_email,
+                                subject=f"Re: {subject.replace('Re: ', '')}",
+                                body_text=reply_text
+                            )
+                            lead_state = self.state["leads"].setdefault(clean_email, {})
+                            lead_state["auto_replies_count"] = lead_state.get("auto_replies_count", 0) + 1
+                            lead_state["last_auto_reply_at"] = time.time()
+                            lead_state["status"] = "AUTONOMOUS_REPLY_SENT"
+                            self.guardrail.record_dispatch(clean_email)
+                            self._save_state()
+                            print(f"    [✔] Automated response sent to {clean_email}")
+                        else:
+                            print(f"    [!] Outbound reply to {clean_email} BLOCKED by guardrail ({eval_res.violation_code}): {eval_res.reason}")
+                            needs_escalation = True
+                            lead_state = self.state["leads"].setdefault(clean_email, {})
+                            lead_state["status"] = "HELD_FOR_REVIEW"
+                            lead_state["violation_code"] = eval_res.violation_code
+                            lead_state["violation_layer"] = eval_res.violation_layer
+                            lead_state["reason"] = eval_res.reason
+                            self._save_state()
+
+                            alert_sub = f"⚠️ [GUARDRAIL HELD FOR REVIEW] Outbound Reply Blocked: {clean_email}"
+                            alert_body = (
+                                f"Carson,\n\n"
+                                f"An outbound reply to {clean_email} was held for human review by the Autonomous Reply Guardrail.\n\n"
+                                f"Violation Code: {eval_res.violation_code}\n"
+                                f"Violation Layer: {eval_res.violation_layer}\n"
+                                f"Reason: {eval_res.reason}\n\n"
+                                f"Subject: {subject}\n"
+                                f"--- Draft Reply ---\n{reply_text}\n--------------------\n\n"
+                                f"- Orbit Security Autonomous Guardrail Sentinel"
+                            )
+                            try:
+                                self.dispatcher.send_email(
+                                    recipient_email=self.operator_email,
+                                    subject=alert_sub,
+                                    body_text=alert_body,
+                                )
+                            except Exception as ex:
+                                print(f"[!] Failed to dispatch escalation email to operator: {ex}")
 
                 self.state[message_key] = {
                     "sender": clean_email,

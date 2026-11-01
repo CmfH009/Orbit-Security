@@ -23,11 +23,15 @@ import json
 import logging
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
-from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING
 from dataclasses import dataclass, field
+
+if TYPE_CHECKING:
+    from pydantic import BaseModel
 
 logger = logging.getLogger("orbit_security.gemini_cli_bridge")
 
@@ -386,6 +390,101 @@ class GeminiCLIBridge:
                 logger.error(f"Async failover execution failed: {fex}")
 
         return result
+
+    def execute_json(
+        self,
+        prompt: str,
+        schema: Optional[Type[BaseModel]] = None,
+        timeout: float = 30.0,
+    ) -> GeminiCLIResult:
+        """Executes gemini-api CLI requesting JSON output, parsing stdout into dict or schema."""
+        schema_instruction = ""
+        if schema is not None:
+            if hasattr(schema, "model_json_schema"):
+                try:
+                    schema_json = json.dumps(schema.model_json_schema())
+                    schema_instruction = f"\nRespond strictly with JSON adhering to this schema:\n{schema_json}\nDo not include code markdown blocks or additional text."
+                except Exception:
+                    schema_instruction = "\nRespond strictly with valid JSON. Do not include markdown code blocks or additional text."
+            else:
+                schema_instruction = "\nRespond strictly with valid JSON. Do not include markdown code blocks or additional text."
+
+        full_prompt = prompt + schema_instruction
+        args = ["generate", full_prompt, "--stream=false", "-o", "json"]
+        res = self.execute_cli(args, timeout=timeout)
+        if not res.success:
+            return res
+
+        raw_obj = res.data
+        if isinstance(raw_obj, str):
+            clean_str = raw_obj.strip()
+            if clean_str.startswith("```"):
+                clean_str = re.sub(r"^```(?:json)?\s*", "", clean_str)
+                clean_str = re.sub(r"\s*```$", "", clean_str)
+            try:
+                raw_obj = json.loads(clean_str)
+            except Exception as e:
+                logger.warning(f"execute_json failed to parse JSON string: {e}")
+                return GeminiCLIResult(
+                    exit_code=1,
+                    success=False,
+                    stdout=res.stdout,
+                    stderr=f"JSON parsing error: {e}",
+                    error_type="JSON_DECODE_ERROR",
+                    error_message=str(e),
+                )
+        elif isinstance(raw_obj, dict):
+            if "candidates" in raw_obj and isinstance(raw_obj["candidates"], list):
+                for cand in raw_obj["candidates"]:
+                    content = cand.get("content", {})
+                    parts = content.get("parts", []) if isinstance(content, dict) else []
+                    for part in parts:
+                        text_val = part.get("text", "") if isinstance(part, dict) else ""
+                        if text_val and text_val.strip().startswith(("{", "[")):
+                            try:
+                                raw_obj = json.loads(text_val.strip())
+                                break
+                            except Exception:
+                                pass
+            elif "response" in raw_obj and isinstance(raw_obj["response"], str):
+                resp_text = raw_obj["response"].strip()
+                if resp_text.startswith(("{", "[")):
+                    try:
+                        raw_obj = json.loads(resp_text)
+                    except Exception:
+                        pass
+
+        if schema is not None and isinstance(raw_obj, dict):
+            try:
+                if hasattr(schema, "model_validate"):
+                    validated = schema.model_validate(raw_obj)
+                else:
+                    validated = schema(**raw_obj)
+                return GeminiCLIResult(
+                    exit_code=0,
+                    success=True,
+                    data=validated,
+                    stdout=res.stdout,
+                    stderr=res.stderr,
+                )
+            except Exception as e:
+                logger.warning(f"execute_json failed schema validation for {schema}: {e}")
+                return GeminiCLIResult(
+                    exit_code=1,
+                    success=False,
+                    stdout=res.stdout,
+                    stderr=f"Schema validation error: {e}",
+                    error_type="SCHEMA_VALIDATION_ERROR",
+                    error_message=str(e),
+                )
+
+        return GeminiCLIResult(
+            exit_code=0,
+            success=True,
+            data=raw_obj,
+            stdout=res.stdout,
+            stderr=res.stderr,
+        )
 
     def tts(
         self,
