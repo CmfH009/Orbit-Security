@@ -406,6 +406,14 @@ class Blackboard:
             })
         return events
 
+    def get_max_event_id(self) -> int:
+        """Returns the maximum event ID currently recorded in the blackboard."""
+        with self._connection() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT COALESCE(MAX(id), 0) FROM blackboard_events;")
+            row = cur.fetchone()
+            return int(row[0]) if row and row[0] is not None else 0
+
     def mark_processed(self, event_id: int) -> bool:
         """Marks an event as processed."""
         with self._connection() as conn:
@@ -592,6 +600,14 @@ def publish_event(
 
 def get_recent_events(limit: int = 50, event_type: Optional[str] = None) -> List[Dict[str, Any]]:
     return get_blackboard().get_recent(limit=limit, event_type=event_type)
+
+
+def get_events_after(after_id: int = 0, limit: int = 100, topic: Optional[str] = None, event_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    return get_blackboard().get_events_after(after_id=after_id, limit=limit, topic=topic, event_type=event_type)
+
+
+def get_max_event_id() -> int:
+    return get_blackboard().get_max_event_id()
 
 
 def subscribe(maxsize: int = 100) -> queue.Queue:
