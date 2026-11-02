@@ -466,11 +466,17 @@ class RadarTelemetryService:
         leads_file: Optional[Path] = None,
         campaigns_dir: Optional[Path] = None,
         dedup_window_seconds: float = 3.0,
+        radar_webhook_url: Optional[str] = None,
+        slack_webhook_url: Optional[str] = None,
     ):
         effective_data = get_effective_data_dir()
         self.queries_file = Path(queries_file) if queries_file else (effective_data / "radar_queries.jsonl")
         self.queries_file.parent.mkdir(parents=True, exist_ok=True)
         self.dedup_window_seconds = dedup_window_seconds
+        # Explicit overrides keep alerting testable without mutating process env,
+        # which background enrichment threads read at dispatch time.
+        self.radar_webhook_url = radar_webhook_url
+        self.slack_webhook_url = slack_webhook_url
         self._lock = threading.Lock()
         self._recent_probes_cache: Dict[str, float] = {}
         leads_path = leads_file or (effective_data / "radar_enriched_leads.json" if effective_data != DATA_DIR else DEFAULT_ENRICHED_LEADS_FILE)
@@ -696,11 +702,12 @@ class RadarTelemetryService:
     ) -> None:
         """Dispatches a rich embed alert to configured Discord / Slack webhooks."""
         discord_url = (
-            os.environ.get("ORBIT_RADAR_WEBHOOK_URL")
+            self.radar_webhook_url
+            or os.environ.get("ORBIT_RADAR_WEBHOOK_URL")
             or os.environ.get("ORBIT_DISCORD_WEBHOOK_URL")
             or os.environ.get("DISCORD_WEBHOOK_URL")
         )
-        slack_url = os.environ.get("SLACK_WEBHOOK_URL")
+        slack_url = self.slack_webhook_url or os.environ.get("SLACK_WEBHOOK_URL")
 
         if not discord_url and not slack_url:
             return

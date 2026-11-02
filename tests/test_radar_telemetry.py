@@ -40,6 +40,23 @@ from orbit_security.blackboard import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _isolate_webhook_env(monkeypatch):
+    """Keeps radar alerts from reaching real Discord/Slack endpoints during tests.
+
+    Enrichment threads resolve webhook URLs from ``os.environ`` at dispatch time, so
+    an inherited ``.env`` value would let unrelated tests post live records to a real
+    workspace. Tests that exercise webhook delivery inject the URL explicitly.
+    """
+    for var in (
+        "ORBIT_RADAR_WEBHOOK_URL",
+        "ORBIT_DISCORD_WEBHOOK_URL",
+        "DISCORD_WEBHOOK_URL",
+        "SLACK_WEBHOOK_URL",
+    ):
+        monkeypatch.delenv(var, raising=False)
+
+
 @pytest.fixture
 def temp_service(tmp_path):
     log_file = tmp_path / "test_radar_queries.jsonl"
@@ -362,7 +379,7 @@ class TestUserAgentAndDiscordEmbeds:
         assert any("Shopify" in v and "Cloudflare" in v for v in field_Map.values())
         assert any("smartmouseco_com_security_audit.pdf" in v for v in field_Map.values())
 
-    def test_discord_webhook_http_dispatch(self, tmp_path, monkeypatch):
+    def test_discord_webhook_http_dispatch(self, tmp_path):
         import http.server
 
         received = []
@@ -385,12 +402,12 @@ class TestUserAgentAndDiscordEmbeds:
 
         try:
             webhook_url = f"http://127.0.0.1:{port}/webhook"
-            monkeypatch.setenv("ORBIT_RADAR_WEBHOOK_URL", webhook_url)
 
             service = RadarTelemetryService(
                 queries_file=tmp_path / "wh_queries.jsonl",
                 leads_file=tmp_path / "wh_leads.json",
                 campaigns_dir=tmp_path / "outbound_campaigns",
+                radar_webhook_url=webhook_url,
             )
             res = service.record_query(
                 {
@@ -403,8 +420,8 @@ class TestUserAgentAndDiscordEmbeds:
                 enrich_async=False,
             )
             assert res["ok"] is True
-            assert len(received) >= 1
-            payload = received[-1]
+            assert len(received) == 1
+            payload = received[0]
             assert "embeds" in payload
             embed = payload["embeds"][0]
             assert "smartmouseco.com" in embed["title"]
