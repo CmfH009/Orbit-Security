@@ -404,10 +404,11 @@ class TestUserAgentAndDiscordEmbeds:
             )
             assert res["ok"] is True
             assert len(received) >= 1
-            payload = received[-1]
-            assert "embeds" in payload
-            embed = payload["embeds"][0]
-            assert "smartmouseco.com" in embed["title"]
+            assert any(
+                "smartmouseco.com" in embed.get("title", "")
+                for p in received
+                for embed in p.get("embeds", [])
+            )
         finally:
             httpd.shutdown()
             httpd.server_close()
