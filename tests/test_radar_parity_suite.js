@@ -10,6 +10,8 @@ const path = require('path');
 // 1. Mock Browser Environment
 const elements = {};
 function createMockElement(id, tagName = 'div') {
+    const classListSet = new Set();
+    const styleProps = {};
     return {
         id,
         tagName,
@@ -18,12 +20,26 @@ function createMockElement(id, tagName = 'div') {
         textContent: '',
         innerHTML: '',
         classList: {
-            contains: (cls) => false,
-            add: () => {},
-            remove: () => {},
-            toggle: () => {}
+            contains: (cls) => classListSet.has(cls),
+            add: (...classes) => classes.forEach(c => classListSet.add(c)),
+            remove: (...classes) => classes.forEach(c => classListSet.delete(c)),
+            toggle: (c) => classListSet.has(c) ? (classListSet.delete(c), false) : (classListSet.add(c), true)
         },
-        style: {},
+        style: new Proxy(styleProps, {
+            get(target, prop) {
+                if (prop === 'setProperty') {
+                    return (k, v) => { target[k] = v; };
+                }
+                if (prop === 'getPropertyValue') {
+                    return (k) => target[k] || '';
+                }
+                return target[prop] || '';
+            },
+            set(target, prop, value) {
+                target[prop] = value;
+                return true;
+            }
+        }),
         disabled: false,
         appendChild: () => {},
         removeChild: () => {},
@@ -51,19 +67,27 @@ const mockDoc = {
     querySelectorAll: () => []
 };
 
-let lastPdfArgs = null;
+let lastPdfArgs = {};
 const mockPdfLib = {
     PDFDocument: {
         create: async () => ({
             addPage: () => ({
                 getSize: () => ({ width: 595.28, height: 841.89 }),
-                drawRectangle: () => {},
+                drawRectangle: (options) => {
+                    if (options && options.y && options.height === 8) {
+                        lastPdfArgs.renderedColor = options.color;
+                    }
+                },
                 drawText: (text, options) => {
                     if (text.includes('/ 100')) {
                         lastPdfArgs.renderedScore = text;
                     }
                     if (text.startsWith('GRADE:')) {
                         lastPdfArgs.renderedGrade = text;
+                    }
+                    if (options && options.size >= 12 && options.color && !text.includes('/ 100')) {
+                        lastPdfArgs.renderedAgency = text;
+                        lastPdfArgs.agencyColor = options.color;
                     }
                 }
             }),
@@ -83,11 +107,36 @@ const mockNav = {
     }
 };
 
+class MockFileReader {
+    constructor() {
+        this.onload = null;
+        this.onerror = null;
+        this.result = null;
+    }
+    readAsDataURL(file) {
+        if (file && file.__failRead) {
+            setTimeout(() => {
+                if (typeof this.onerror === 'function') {
+                    this.onerror(new Error('Mock read failure'));
+                }
+            }, 0);
+            return;
+        }
+        setTimeout(() => {
+            this.result = `data:${file.type || 'image/png'};base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==`;
+            if (typeof this.onload === 'function') {
+                this.onload({ target: { result: this.result } });
+            }
+        }, 0);
+    }
+}
+
 const mockStorage = {};
 const sandbox = {
     window: {},
     document: mockDoc,
     navigator: mockNav,
+    FileReader: MockFileReader,
     localStorage: {
         getItem: (k) => mockStorage[k] || null,
         setItem: (k, v) => { mockStorage[k] = String(v); },
@@ -603,6 +652,156 @@ async function runTests() {
     assert(indexHtml.includes('visualAttackTreeContainer'), 'landing/index.html includes visual attack tree container');
     assert(indexHtml.includes('OrbitAttackTree'), 'landing/index.html integrates OrbitAttackTree engine');
     assert(indexHtml.includes('<noscript>') && indexHtml.includes('Visual Attack Tree // Subdomain Takeover Sequence'), 'landing/index.html includes accessible noscript attack tree fallback');
+
+    // ==========================================
+    // Testing Scenario 10: Interactive White-Label Portal Customizer Sandbox
+    // ==========================================
+    console.log('\nTesting Scenario 10: Interactive White-Label Portal Customizer Sandbox');
+
+    // 1. Verify Sandbox Controls in landing/index.html
+    assert(indexHtml.includes('id="portals"'), 'landing/index.html includes #portals section');
+    assert(indexHtml.includes('id="portalAgencyNameInput"'), 'landing/index.html includes #portalAgencyNameInput');
+    assert(indexHtml.includes('id="portalSwatch-emerald"'), 'landing/index.html includes Orbit Emerald swatch');
+    assert(indexHtml.includes('id="portalSwatch-cyan"'), 'landing/index.html includes Cyber Cyan swatch');
+    assert(indexHtml.includes('id="portalSwatch-indigo"'), 'landing/index.html includes Indigo swatch');
+    assert(indexHtml.includes('id="portalSwatch-violet"'), 'landing/index.html includes Electric Violet swatch');
+    assert(indexHtml.includes('id="portalSwatch-amber"'), 'landing/index.html includes Amber Gold swatch');
+    assert(indexHtml.includes('id="portalSwatch-crimson"'), 'landing/index.html includes Crimson swatch');
+    assert(indexHtml.includes('id="portalColorPicker"'), 'landing/index.html includes custom hex color picker');
+    assert(indexHtml.includes('id="portalColorHexInput"'), 'landing/index.html includes custom hex text input');
+    assert(indexHtml.includes('id="portalLogoDropzone"'), 'landing/index.html includes logo drag-and-drop zone');
+    assert(indexHtml.includes('id="portalLogoInput"'), 'landing/index.html includes hidden logo file input');
+    assert(indexHtml.includes('id="portalResetLogoBtn"'), 'landing/index.html includes 1-click Reset Logo button');
+    assert(indexHtml.includes('id="portalMockupCard"'), 'landing/index.html includes Live Portal Mockup card');
+    assert(indexHtml.includes('id="portalMockupAgencyName"'), 'landing/index.html includes mockup agency name header');
+    assert(indexHtml.includes('id="portalMockupLogoImg"'), 'landing/index.html includes mockup custom logo image');
+    assert(indexHtml.includes('id="portalMockupDefaultMark"'), 'landing/index.html includes mockup default shield brand mark');
+    assert(indexHtml.includes('id="portalMockupTierBadge"'), 'landing/index.html includes mockup tier badge');
+    assert(indexHtml.includes('id="portalMockupScoreVal"'), 'landing/index.html includes mockup score ring value');
+    assert(indexHtml.includes('id="portalMockupScoreRingCircle"'), 'landing/index.html includes mockup SVG circular score ring');
+    assert(indexHtml.includes('id="portalMockupGradeBadge"'), 'landing/index.html includes mockup health grade badge');
+    assert(indexHtml.includes('id="portalMockupLaunchBtn"'), 'landing/index.html includes Launch Live Demo Portal button');
+    assert(indexHtml.includes('id="portalMockupInviteBtn"'), 'landing/index.html includes Copy Client Invite Link button');
+    assert(indexHtml.includes('id="portalMockupResetBtn"'), 'landing/index.html includes Reset Branding button');
+
+    // 2. Verify Exposed Customizer API on window
+    assert(typeof sandbox.window.applyPortalBrandColor === 'function', 'applyPortalBrandColor is exposed on window');
+    assert(typeof sandbox.window.applyPortalAgencyName === 'function', 'applyPortalAgencyName is exposed on window');
+    assert(typeof sandbox.window.handlePortalLogoFile === 'function', 'handlePortalLogoFile is exposed on window');
+    assert(typeof sandbox.window.applyPortalLogo === 'function', 'applyPortalLogo is exposed on window');
+    assert(typeof sandbox.window.resetPortalLogo === 'function', 'resetPortalLogo is exposed on window');
+    assert(typeof sandbox.window.resetPortalBranding === 'function', 'resetPortalBranding is exposed on window');
+    assert(typeof sandbox.window.copyClientInviteLink === 'function', 'copyClientInviteLink is exposed on window');
+
+    // 3. Agency Name Synchronization & Persistence
+    sandbox.window.applyPortalAgencyName('Vanguard Digital Partners', true);
+    assert(mockDoc.getElementById('portalMockupAgencyName').textContent === 'Vanguard Digital Partners', 'Mockup displays updated agency name');
+    assert(mockDoc.getElementById('radarAgencyName').value === 'Vanguard Digital Partners', 'radarAgencyName input synchronized');
+    assert(mockDoc.getElementById('customAgencyName').value === 'Vanguard Digital Partners', 'customAgencyName input synchronized');
+    assert(mockDoc.getElementById('portalAgencyNameInput').value === 'Vanguard Digital Partners', 'portalAgencyNameInput synchronized');
+    assert(mockStorage['orbit_agency_name'] === 'Vanguard Digital Partners', 'Agency name persisted in localStorage');
+    assert(mockDoc.getElementById('portalMockupUrlDisplay').textContent.includes('vanguarddigitalpartners'), 'Mockup URL display updated with sanitized domain slug');
+
+    // 4. Brand Accent Color Swatches, Score Rings & Custom Hex Picker
+    sandbox.window.applyPortalBrandColor('#06b6d4', 'cyan');
+    assert(mockStorage['orbit_brand_color'] === '#06b6d4', 'Cyber Cyan persisted in localStorage');
+    assert(mockDoc.getElementById('portalActiveColorLabel').textContent === '#06b6d4', 'Active color label reflects Cyber Cyan');
+    assert(mockDoc.getElementById('portalColorPicker').value === '#06b6d4', 'Color picker value synchronized');
+    assert(mockDoc.getElementById('portalMockupScoreRingCircle').style.stroke === '#06b6d4', 'Mockup SVG score ring stroke reflects Cyber Cyan');
+
+    sandbox.window.applyPortalBrandColor('#8b5cf6', 'violet');
+    assert(mockStorage['orbit_brand_color'] === '#8b5cf6', 'Electric Violet persisted in localStorage');
+    assert(mockDoc.getElementById('portalMockupTierBadge').style.color === '#8b5cf6', 'Mockup tier badge reflects Electric Violet');
+    assert(mockDoc.getElementById('portalMockupScoreRingCircle').style.stroke === '#8b5cf6', 'Mockup SVG score ring stroke reflects Electric Violet');
+
+    sandbox.window.applyPortalBrandColor('#f59e0b', 'amber');
+    assert(mockStorage['orbit_brand_color'] === '#f59e0b', 'Amber Gold persisted in localStorage');
+
+    sandbox.window.applyPortalBrandColor('#f43f5e', 'crimson');
+    assert(mockStorage['orbit_brand_color'] === '#f43f5e', 'Crimson persisted in localStorage');
+
+    sandbox.window.applyPortalBrandColor('#3b82f6', 'custom');
+    assert(mockStorage['orbit_brand_color'] === '#3b82f6', 'Custom hex code persisted in localStorage');
+    assert(mockDoc.getElementById('portalMockupScoreVal').style.color === '#3b82f6', 'Mockup score value reflects custom hex');
+    assert(mockDoc.getElementById('portalMockupScoreRingCircle').style.stroke === '#3b82f6', 'Mockup SVG score ring reflects custom hex');
+
+    // Test 3-character hex shorthand normalization (#0ff -> #00ffff)
+    sandbox.window.applyPortalBrandColor('#0ff', 'custom');
+    assert(mockStorage['orbit_brand_color'] === '#00ffff', '3-character hex shorthand #0ff normalizes to 6-digit #00ffff');
+    assert(mockDoc.getElementById('portalActiveColorLabel').textContent === '#00ffff', 'Active label reflects normalized 6-digit hex');
+
+    // Test custom hex persistence across session load (no regression to emerald)
+    sandbox.AuditStore.saveBranding('Apex Elite', '#ff00aa', 'custom');
+    const loadedBrand = sandbox.AuditStore.loadBranding();
+    assert(loadedBrand && loadedBrand.color === '#ff00aa', 'loadBranding accurately restores custom hex color without wiping');
+    sandbox.window.applyPortalBrandColor(loadedBrand.color, loadedBrand.colorName);
+    assert(mockStorage['orbit_brand_color'] === '#ff00aa', 'applyPortalBrandColor retains custom hex #ff00aa without falling back to emerald');
+
+    // 5. Logo File Validation & FileReader Upload
+    const invalidFile = { name: 'malware.exe', type: 'application/x-msdownload', size: 1024 };
+    const invalidRes = sandbox.window.handlePortalLogoFile(invalidFile);
+    assert(invalidRes === false, 'handlePortalLogoFile rejects non-image executable file');
+
+    const oversizeFile = { name: 'huge_logo.png', type: 'image/png', size: 5 * 1024 * 1024 };
+    const oversizeRes = sandbox.window.handlePortalLogoFile(oversizeFile);
+    assert(oversizeRes === false, 'handlePortalLogoFile rejects file exceeding 2MB');
+
+    const validFile = { name: 'agency_logo.png', type: 'image/png', size: 10240 };
+    const validRes = sandbox.window.handlePortalLogoFile(validFile);
+    assert(validRes === true, 'handlePortalLogoFile accepts valid PNG image');
+
+    // Test error handling in FileReader
+    const errorFile = { name: 'broken.png', type: 'image/png', size: 1024, __failRead: true };
+    const errorRes = sandbox.window.handlePortalLogoFile(errorFile);
+    assert(errorRes === true, 'handlePortalLogoFile attempts read on valid format');
+
+    // Test applyPortalLogo directly
+    const testDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    sandbox.window.applyPortalLogo(testDataUrl, 'agency_logo.png');
+    assert(mockDoc.getElementById('portalMockupLogoImg').src === testDataUrl, 'Mockup logo img src set to data URL');
+    assert(mockStorage['orbit_agency_logo'] === testDataUrl, 'Logo data URL persisted in localStorage');
+
+    // 6. 1-Click Reset to Default Orbit Logo
+    sandbox.window.resetPortalLogo();
+    assert(mockDoc.getElementById('portalMockupLogoImg').src === '', 'Mockup logo img cleared on reset');
+    assert(mockStorage['orbit_agency_logo'] === undefined || mockStorage['orbit_agency_logo'] === null, 'Logo removed from localStorage');
+
+    // 7. Copy Client Invite Link
+    const inviteUrl = sandbox.window.copyClientInviteLink();
+    assert(inviteUrl.includes('orbit-core.html') && inviteUrl.includes('agency='), 'copyClientInviteLink generates valid portal URL with agency query');
+    assert(clipboardText.includes('orbit-core.html'), 'Invite URL copied to clipboard');
+
+    // 8. 1-Click Reset All Branding
+    sandbox.window.resetPortalBranding();
+    assert(mockDoc.getElementById('portalMockupAgencyName').textContent === 'Apex Digital Studio', 'Reset branding restores default agency name');
+    assert(mockStorage['orbit_brand_color'] === '#10b981', 'Reset branding restores Orbit Emerald');
+
+    // 9. Multi-Tab Broadcast Synchronization
+    sandbox.window.applyPortalAgencyName('Original Agency', true);
+    sandbox.window.applyPortalBrandColor('#10b981', 'emerald');
+    // Simulate incoming broadcast from sibling tab
+    sandbox.window.applyPortalAgencyName('Sibling Tab Security', true);
+    sandbox.window.applyPortalBrandColor('#6366f1', 'indigo');
+    sandbox.window.applyPortalLogo(testDataUrl, 'remote-logo.png');
+    assert(mockDoc.getElementById('portalAgencyNameInput').value === 'Sibling Tab Security', 'Remote tab sync updates portalAgencyNameInput');
+    assert(mockDoc.getElementById('portalMockupAgencyName').textContent === 'Sibling Tab Security', 'Remote tab sync updates portalMockupAgencyName');
+    assert(mockStorage['orbit_brand_color'] === '#6366f1', 'Remote tab sync updates brand color to Indigo');
+    assert(mockDoc.getElementById('portalMockupLogoImg').src === testDataUrl, 'Remote tab sync updates mockup logo');
+
+    // 10. Synergy with PDF Generation
+    lastPdfArgs = {};
+    sandbox.window.applyPortalAgencyName('Custom Enterprise Agency', true);
+    sandbox.window.applyPortalBrandColor('#6366f1', 'indigo');
+    await sandbox.window.generateInstantPdfForDomain('client-test.com', 92, 'A+');
+    assert(lastPdfArgs.renderedScore === '92 / 100', 'PDF generation successfully renders score with custom branding');
+    assert(lastPdfArgs.renderedAgency === 'CUSTOM ENTERPRISE AGENCY', 'PDF generation renders custom agency name in header banner');
+    assert(lastPdfArgs.renderedColor && Math.abs(lastPdfArgs.renderedColor.r - 99/255) < 0.02, 'PDF top accent bar renders Indigo primaryColor');
+
+    // Test generateInstantPdf() resolves from portal customizer input
+    lastPdfArgs = {};
+    sandbox.window.applyPortalAgencyName('Global Threat Sentinels', true);
+    await sandbox.window.generateInstantPdf();
+    assert(lastPdfArgs.renderedAgency === 'GLOBAL THREAT SENTINELS', 'generateInstantPdf() uses agency name from portal customizer');
 
     console.log(`\n========================================`);
     console.log(`ALL ${passed}/${total} AUDIT ENGINE & PDF PARITY TESTS PASSED!`);

@@ -382,7 +382,7 @@
         <div class="container">
             <p>
                 © 2026 <strong>Orbit Security Labs</strong> &bull;
-                White-label client audit portal for <strong>orbit-core</strong> &bull;
+                White-label client audit portal for <strong id="portalAgencyFooter">orbit-core</strong> &bull;
                 <a href="../index.html#audit-preview">Executive Audit Studio</a> &bull;
                 <a href="../signup.html">Upgrade Retainer</a> &bull;
                 <a href="../fleet.html">Fleet Command</a> &bull;
@@ -390,5 +390,49 @@
             </p>
         </div>
     </footer>
+    <script>
+        (function() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const queryAgency = params.get('agency');
+                const agency = (queryAgency || localStorage.getItem('orbit_agency_name') || '').trim();
+                const brandColor = (localStorage.getItem('orbit_brand_color') || '#10b981').trim();
+                const logo = localStorage.getItem('orbit_agency_logo');
+
+                if (agency) {
+                    const nameEl = document.querySelector('.brand-name');
+                    if (nameEl) nameEl.textContent = agency;
+                    const footerAgency = document.getElementById('portalAgencyFooter');
+                    if (footerAgency) footerAgency.textContent = agency;
+                    const slug = agency.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    const mailLink = document.querySelector('a[href^="mailto:"]');
+                    if (mailLink) {
+                        mailLink.href = `mailto:ops@${slug || 'orbit-core'}.example.com`;
+                        mailLink.textContent = `✉ ops@${slug || 'orbit-core'}.example.com`;
+                    }
+                }
+
+                if (brandColor && /^#[0-9a-f]{6}$/i.test(brandColor)) {
+                    const brandMark = document.querySelector('.brand-mark');
+                    if (brandMark) brandMark.style.background = `linear-gradient(135deg, ${brandColor}, #0f172a)`;
+                    document.querySelectorAll('.btn-primary').forEach(b => {
+                        b.style.backgroundColor = brandColor;
+                        b.style.borderColor = brandColor;
+                    });
+                    document.querySelectorAll('.meta-link, .nav-btn-highlight').forEach(el => {
+                        el.style.color = brandColor;
+                        el.style.borderColor = brandColor + '55';
+                    });
+                }
+
+                if (logo) {
+                    const brandMark = document.querySelector('.brand-mark');
+                    if (brandMark) {
+                        brandMark.innerHTML = `<img src="${logo}" alt="${agency || 'Agency'} Logo" style="width:100%;height:100%;object-fit:contain;padding:2px;border-radius:8px;">`;
+                    }
+                }
+            } catch (_) {}
+        })();
+    </script>
 </body>
 </html>

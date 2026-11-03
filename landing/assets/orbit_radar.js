@@ -66,17 +66,22 @@
 
     // Apply synced data from other tabs
     function applyBrandingFromSync(payload) {
-        const { agencyName, brandColorHex, brandColorName } = payload;
-        const radarInput = document.getElementById('radarAgencyName');
-        const studioInput = document.getElementById('customAgencyName');
-        const display = document.getElementById('brandNameDisplay');
-        if (radarInput && radarInput.value !== agencyName) radarInput.value = agencyName;
-        if (studioInput && studioInput.value !== agencyName) studioInput.value = agencyName;
-        if (display) display.textContent = agencyName;
-        if (brandColorHex) currentBrandColorHex = brandColorHex;
-        if (brandColorName) {
-            currentBrandColorName = brandColorName;
-            setBrandColor(brandColorName);
+        if (!payload) return;
+        const { agencyName, brandColorHex, brandColorName, logoDataUrl } = payload;
+        if (agencyName !== undefined) {
+            applyPortalAgencyName(agencyName, true);
+        }
+        if (brandColorHex) {
+            applyPortalBrandColor(brandColorHex, brandColorName);
+        } else if (brandColorName) {
+            applyPortalBrandColor(brandColorName);
+        }
+        if (logoDataUrl !== undefined) {
+            if (logoDataUrl) {
+                applyPortalLogo(logoDataUrl, 'synced-logo.png');
+            } else {
+                resetPortalLogo();
+            }
         }
     }
 
@@ -629,95 +634,553 @@
             }).join('');
         },
 
-        saveBranding(name, colorHex, colorName) {
+        saveBranding(name, colorHex, colorName, logoDataUrl) {
+            const cleanName = (name || '').trim();
+            const cleanColor = (colorHex || '#10b981').toLowerCase();
+            const cleanKey = colorName || 'emerald';
+
+            // Always save individual keys first so quota or serialization never drops name or color
+            if (cleanName) {
+                try { localStorage.setItem('orbit_agency_name', cleanName); } catch (_) {}
+            }
+            if (cleanColor) {
+                try { localStorage.setItem('orbit_brand_color', cleanColor); } catch (_) {}
+            }
+            if (logoDataUrl !== undefined) {
+                if (logoDataUrl) {
+                    try { localStorage.setItem('orbit_agency_logo', logoDataUrl); } catch (_) {}
+                } else {
+                    try { localStorage.removeItem('orbit_agency_logo'); } catch (_) {}
+                }
+            }
+
+            const existingLogo = logoDataUrl !== undefined ? logoDataUrl : (localStorage.getItem('orbit_agency_logo') || null);
             try {
                 localStorage.setItem(this._sessionKey(this.KEY_BRANDING), JSON.stringify({ 
-                    name, 
-                    color: colorHex,
-                    colorName: colorName 
+                    name: cleanName, 
+                    color: cleanColor,
+                    colorName: cleanKey,
+                    logo: existingLogo 
                 }));
-                if (name) {
-                    try { localStorage.setItem('orbit_agency_name', name); } catch (_) {}
-                }
-                // Broadcast to other tabs in same session
-                broadcast('branding_update', { agencyName: name, brandColorHex: colorHex, brandColorName: colorName });
-            } catch (e) {}
+            } catch (_) {}
+
+            // Broadcast to other tabs in same session
+            broadcast('branding_update', { agencyName: cleanName, brandColorHex: cleanColor, brandColorName: cleanKey, logoDataUrl: existingLogo });
         },
 
         loadBranding() {
             try {
                 const raw = localStorage.getItem(this._sessionKey(this.KEY_BRANDING));
-                if (raw) return JSON.parse(raw);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && parsed.color && !parsed.colorName) {
+                        parsed.colorName = 'custom';
+                    }
+                    return parsed;
+                }
                 const fallback = localStorage.getItem('orbit_agency_name');
-                if (fallback) return { name: fallback, color: '#10B981', colorName: 'emerald' };
+                const fallbackColor = localStorage.getItem('orbit_brand_color') || '#10b981';
+                const fallbackLogo = localStorage.getItem('orbit_agency_logo');
+                if (fallback || fallbackColor) {
+                    let determinedKey = 'custom';
+                    if (typeof PORTAL_BRAND_PRESETS !== 'undefined') {
+                        for (const [k, v] of Object.entries(PORTAL_BRAND_PRESETS)) {
+                            if (v.hex.toLowerCase() === fallbackColor.toLowerCase()) {
+                                determinedKey = k;
+                                break;
+                            }
+                        }
+                    }
+                    return { name: fallback || 'Apex Digital Studio', color: fallbackColor, colorName: determinedKey, logo: fallbackLogo };
+                }
             } catch (e) {}
             return null;
         }
     };
 
     // ==========================================
-    // 5. Agency Co-Branding Studio
+    // 5. Agency Co-Branding Studio & Portal Customizer Sandbox
     // ==========================================
 
-    let currentBrandColorHex = '#10B981';
+    const PORTAL_BRAND_PRESETS = {
+        emerald: { name: 'Orbit Emerald',  hex: '#10b981', textColor: '#020617', label: 'Emerald' },
+        cyan:    { name: 'Cyber Cyan',     hex: '#06b6d4', textColor: '#020617', label: 'Cyan' },
+        indigo:  { name: 'Indigo',         hex: '#6366f1', textColor: '#ffffff', label: 'Indigo' },
+        violet:  { name: 'Electric Violet', hex: '#8b5cf6', textColor: '#ffffff', label: 'Violet' },
+        amber:   { name: 'Amber Gold',     hex: '#f59e0b', textColor: '#020617', label: 'Amber' },
+        crimson: { name: 'Crimson',        hex: '#f43f5e', textColor: '#ffffff', label: 'Crimson' }
+    };
+
+    let currentBrandColorHex = '#10b981';
     let currentBrandColorName = 'emerald';
 
-    function updateCustomBranding() {
-        const input = document.getElementById('customAgencyName');
-        const radarInput = document.getElementById('radarAgencyName');
-        const display = document.getElementById('brandNameDisplay');
-        const name = input ? input.value.trim() : 'Your Agency';
-        if (display) display.textContent = name || 'Your Agency';
-        // Sync radar input
-        if (radarInput && radarInput.value !== name) radarInput.value = name;
-        AuditStore.saveBranding(name, currentBrandColorHex, currentBrandColorName);
+    function applyPortalBrandColor(colorOrHex, presetKey) {
+        let hex = '#10b981';
+        let key = presetKey || 'emerald';
+
+        if (PORTAL_BRAND_PRESETS[colorOrHex]) {
+            hex = PORTAL_BRAND_PRESETS[colorOrHex].hex;
+            key = colorOrHex;
+        } else if (typeof colorOrHex === 'string') {
+            let clean = colorOrHex.trim();
+            if (!clean.startsWith('#')) clean = '#' + clean;
+            if (/^#[0-9a-f]{3}$/i.test(clean)) {
+                clean = '#' + clean[1] + clean[1] + clean[2] + clean[2] + clean[3] + clean[3];
+            }
+            if (/^#[0-9a-f]{6}$/i.test(clean)) {
+                hex = clean.toLowerCase();
+                key = 'custom';
+                for (const [k, v] of Object.entries(PORTAL_BRAND_PRESETS)) {
+                    if (v.hex.toLowerCase() === hex) {
+                        key = k;
+                        break;
+                    }
+                }
+            } else if (PORTAL_BRAND_PRESETS[key]) {
+                hex = PORTAL_BRAND_PRESETS[key].hex;
+            }
+        } else if (PORTAL_BRAND_PRESETS[key]) {
+            hex = PORTAL_BRAND_PRESETS[key].hex;
+        }
+
+        currentBrandColorHex = hex;
+        currentBrandColorName = key;
+
+        // 1. Update Customizer Swatches & Color Picker
+        Object.keys(PORTAL_BRAND_PRESETS).forEach(k => {
+            const btn = document.getElementById('portalSwatch-' + k);
+            if (btn) {
+                if (k === key) {
+                    btn.classList.add('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-slate-900', 'border-white', 'scale-105');
+                } else {
+                    btn.classList.remove('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-slate-900', 'border-white', 'scale-105');
+                }
+            }
+        });
+
+        const colorPicker = document.getElementById('portalColorPicker');
+        const colorHexInput = document.getElementById('portalColorHexInput');
+        const colorLabel = document.getElementById('portalActiveColorLabel');
+        if (colorPicker && colorPicker.value.toLowerCase() !== hex) colorPicker.value = hex;
+        if (colorHexInput && colorHexInput.value.toLowerCase() !== hex) colorHexInput.value = hex;
+        if (colorLabel) colorLabel.textContent = hex;
+
+        // 2. Update Live Interactive Portal Mockup Card
+        const mockup = document.getElementById('portalMockupCard');
+        if (mockup) {
+            if (mockup.style && typeof mockup.style.setProperty === 'function') {
+                mockup.style.setProperty('--portal-accent', hex);
+                mockup.style.setProperty('--portal-accent-glow', hex + '44');
+            }
+            mockup.style.borderColor = hex + '66';
+        }
+
+        const logoContainer = document.getElementById('portalMockupLogoContainer');
+        if (logoContainer) {
+            logoContainer.style.borderColor = hex + '55';
+        }
+
+        const brandMark = document.getElementById('portalMockupDefaultMark');
+        if (brandMark) {
+            brandMark.style.background = `linear-gradient(135deg, ${hex}, #0f172a)`;
+        }
+
+        const tierBadge = document.getElementById('portalMockupTierBadge');
+        if (tierBadge) {
+            tierBadge.style.color = hex;
+            tierBadge.style.borderColor = hex + '55';
+            tierBadge.style.backgroundColor = hex + '1a';
+        }
+
+        const scoreBadge = document.getElementById('portalMockupGradeBadge');
+        if (scoreBadge) {
+            scoreBadge.style.color = hex;
+            scoreBadge.style.borderColor = hex + '55';
+            scoreBadge.style.backgroundColor = hex + '1a';
+        }
+
+        const scoreVal = document.getElementById('portalMockupScoreVal');
+        if (scoreVal) {
+            scoreVal.style.color = hex;
+        }
+
+        const scoreRing = document.getElementById('portalMockupScoreRingCircle');
+        if (scoreRing) {
+            scoreRing.style.stroke = hex;
+        }
+
+        // Relative luminance for WCAG accessible text contrast on buttons
+        let textColor = '#020617';
+        if (PORTAL_BRAND_PRESETS[key]) {
+            textColor = PORTAL_BRAND_PRESETS[key].textColor;
+        } else {
+            const r = parseInt(hex.slice(1, 3), 16) || 0;
+            const g = parseInt(hex.slice(3, 5), 16) || 0;
+            const b = parseInt(hex.slice(5, 7), 16) || 0;
+            const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+            textColor = lum > 0.55 ? '#020617' : '#ffffff';
+        }
+
+        const launchBtn = document.getElementById('portalMockupLaunchBtn');
+        if (launchBtn) {
+            launchBtn.style.backgroundColor = hex;
+            launchBtn.style.color = textColor;
+            launchBtn.style.boxShadow = `0 4px 14px ${hex}44`;
+        }
+
+        const pdfBtn = document.getElementById('portalMockupPdfBtn');
+        if (pdfBtn) {
+            pdfBtn.style.backgroundColor = hex;
+            pdfBtn.style.color = textColor;
+        }
+
+        // 3. Keep Audit Studio Synchronized
+        const auditGradeBadge = document.getElementById('brandGradeBadge');
+        const auditExportBtn = document.getElementById('btnExportPdf');
+        const auditBrandName = document.getElementById('brandNameDisplay');
+        if (auditGradeBadge) {
+            auditGradeBadge.style.color = hex;
+            auditGradeBadge.style.borderColor = hex + '55';
+            auditGradeBadge.style.backgroundColor = hex + '1a';
+        }
+        if (auditExportBtn) {
+            auditExportBtn.style.backgroundColor = hex;
+            auditExportBtn.style.color = textColor;
+        }
+        if (auditBrandName) {
+            auditBrandName.style.color = hex;
+        }
+        document.querySelectorAll('.brand-color-btn').forEach(btn => {
+            btn.classList.remove('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-slate-900', 'border-white', 'scale-105');
+        });
+        const activeAuditBtn = document.getElementById(`brandColorBtn-${key}`);
+        if (activeAuditBtn) {
+            activeAuditBtn.classList.add('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-slate-900', 'border-white', 'scale-105');
+        }
+
+        // 4. Persistence
+        try {
+            localStorage.setItem('orbit_brand_color', hex);
+        } catch (_) {}
+        const currentAgency = (document.getElementById('portalAgencyNameInput')?.value || document.getElementById('customAgencyName')?.value || 'Apex Digital Studio').trim();
+        AuditStore.saveBranding(currentAgency, hex, key);
+        if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
+        return hex;
     }
 
     function setBrandColor(color) {
-        currentBrandColorName = color;
-        const badge = document.getElementById('brandGradeBadge');
-        const exportBtn = document.getElementById('btnExportPdf');
-        const brandName = document.getElementById('brandNameDisplay');
-        
-        // Remove active state rings from all palette swatch buttons
-        document.querySelectorAll('.brand-color-btn').forEach(btn => {
-            btn.classList.remove('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-slate-900', 'border-white', 'scale-105');
-            const dot = btn.querySelector('.brand-dot');
-            if (dot) dot.classList.remove('ring-2', 'ring-white/80');
+        return applyPortalBrandColor(color);
+    }
+
+    function applyPortalAgencyName(name, syncOtherInputs = true) {
+        const cleanName = (name || '').trim();
+        const displayName = cleanName || 'Apex Digital Studio';
+
+        // 1. Update Live Portal Mockup
+        const mockupName = document.getElementById('portalMockupAgencyName');
+        if (mockupName) mockupName.textContent = displayName;
+
+        const mockupUrl = document.getElementById('portalMockupUrlDisplay');
+        if (mockupUrl) {
+            const slug = (cleanName || 'apex').toLowerCase().replace(/[^a-z0-9]/g, '');
+            mockupUrl.textContent = `security.${slug || 'apex'}.example.com`;
+        }
+
+        // 2. Synchronize Input Fields
+        if (syncOtherInputs) {
+            const portalInput = document.getElementById('portalAgencyNameInput');
+            const radarInput = document.getElementById('radarAgencyName');
+            const studioInput = document.getElementById('customAgencyName');
+
+            if (portalInput && portalInput.value !== name) portalInput.value = name;
+            if (radarInput && radarInput.value !== name) radarInput.value = name;
+            if (studioInput && studioInput.value !== name) studioInput.value = name;
+        }
+
+        // 3. Update Other Displays on Page
+        const display = document.getElementById('brandNameDisplay');
+        if (display) display.textContent = cleanName || 'Your Agency';
+
+        document.querySelectorAll('.flipbook-agency-name').forEach(el => {
+            el.textContent = displayName;
         });
 
-        const activeBtn = document.getElementById(`brandColorBtn-${color}`);
-        if (activeBtn) {
-            activeBtn.classList.add('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-slate-900', 'border-white', 'scale-105');
-            const dot = activeBtn.querySelector('.brand-dot');
-            if (dot) dot.classList.add('ring-2', 'ring-white/80');
+        // 4. Persistence
+        try {
+            localStorage.setItem('orbit_agency_name', cleanName);
+        } catch (_) {}
+        AuditStore.saveBranding(cleanName, currentBrandColorHex, currentBrandColorName);
+        return cleanName;
+    }
+
+    function updateCustomBranding() {
+        const input = document.getElementById('customAgencyName');
+        const name = input ? input.value : 'Your Agency';
+        applyPortalAgencyName(name, true);
+    }
+
+    function handlePortalLogoFile(file) {
+        if (!file) return false;
+
+        const validMimes = ['image/png', 'image/svg+xml', 'image/jpeg', 'image/jpg', 'image/webp'];
+        const validExts = /\.(png|svg|jpe?g|webp)$/i;
+        const mimeOk = file.type && validMimes.includes(file.type.toLowerCase());
+        const extOk = validExts.test(file.name || '');
+
+        if (!mimeOk && !extOk) {
+            showArcadeToast('SYNTAX FAULT: Invalid logo format. Please upload PNG, SVG, JPG, or WebP.', 'error');
+            return false;
         }
 
-        if (color === 'cyan') {
-            currentBrandColorHex = '#06B6D4';
-            if (badge) badge.className = 'px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors bg-cyan-500/10 border border-cyan-500/30 text-cyan-400';
-            if (exportBtn) exportBtn.className = 'min-h-[48px] px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-cyan-500/20 cursor-pointer';
-            if (brandName) brandName.className = 'text-cyan-400 font-bold';
-        } else if (color === 'indigo') {
-            currentBrandColorHex = '#6366F1';
-            if (badge) badge.className = 'px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors bg-indigo-500/10 border border-indigo-500/30 text-indigo-400';
-            if (exportBtn) exportBtn.className = 'min-h-[48px] px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-indigo-500/20 cursor-pointer';
-            if (brandName) brandName.className = 'text-indigo-400 font-bold';
-        } else if (color === 'violet') {
-            currentBrandColorHex = '#A855F7';
-            if (badge) badge.className = 'px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors bg-purple-500/10 border border-purple-500/30 text-purple-400';
-            if (exportBtn) exportBtn.className = 'min-h-[48px] px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-400 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-purple-500/20 cursor-pointer';
-            if (brandName) brandName.className = 'text-purple-400 font-bold';
-        } else {
-            currentBrandColorHex = '#10B981';
-            if (badge) badge.className = 'px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors bg-emerald-500/10 border border-emerald-500/30 text-emerald-400';
-            if (exportBtn) exportBtn.className = 'min-h-[48px] px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 cursor-pointer';
-            if (brandName) brandName.className = 'text-emerald-400 font-bold';
+        if (file.size && file.size > 2 * 1024 * 1024) {
+            showArcadeToast('PAYLOAD FAULT: Logo file exceeds 2MB limit.', 'error');
+            return false;
         }
 
-        const agencyName = document.getElementById('customAgencyName')?.value?.trim() || 'Apex Digital Studio';
-        AuditStore.saveBranding(agencyName, currentBrandColorHex, color);
+        const reader = new (window.FileReader || FileReader)();
+        reader.onload = function(e) {
+            const dataUrl = e.target.result;
+            applyPortalLogo(dataUrl, file.name || 'custom-logo.png');
+            showArcadeToast('✓ Custom agency logo uploaded successfully!');
+        };
+        reader.onerror = function() {
+            showArcadeToast('IO FAULT: Failed to read logo file.', 'error');
+        };
+        reader.readAsDataURL(file);
+        return true;
+    }
+
+    function applyPortalLogo(dataUrl, fileName = 'custom-logo.png') {
+        if (!dataUrl) return;
+
+        // Mockup Header Logo
+        const mockupLogoImg = document.getElementById('portalMockupLogoImg');
+        const defaultMark = document.getElementById('portalMockupDefaultMark');
+        if (mockupLogoImg) {
+            mockupLogoImg.src = dataUrl;
+            mockupLogoImg.classList.remove('hidden');
+        }
+        if (defaultMark) {
+            defaultMark.classList.add('hidden');
+        }
+
+        // Dropzone Preview
+        const previewContainer = document.getElementById('portalLogoPreviewContainer');
+        const previewImg = document.getElementById('portalLogoPreviewImg');
+        const fileNameEl = document.getElementById('portalLogoFileName');
+        const dropPrompt = document.getElementById('portalLogoDropPrompt');
+
+        if (previewContainer) previewContainer.classList.remove('hidden');
+        if (previewImg) previewImg.src = dataUrl;
+        if (fileNameEl) fileNameEl.textContent = fileName;
+        if (dropPrompt) dropPrompt.classList.add('hidden');
+
+        try {
+            localStorage.setItem('orbit_agency_logo', dataUrl);
+        } catch (_) {}
+
+        const currentAgency = (document.getElementById('portalAgencyNameInput')?.value || 'Apex Digital Studio').trim();
+        AuditStore.saveBranding(currentAgency, currentBrandColorHex, currentBrandColorName, dataUrl);
+    }
+
+    function resetPortalLogo() {
+        const mockupLogoImg = document.getElementById('portalMockupLogoImg');
+        const defaultMark = document.getElementById('portalMockupDefaultMark');
+        if (mockupLogoImg) {
+            mockupLogoImg.src = '';
+            mockupLogoImg.classList.add('hidden');
+        }
+        if (defaultMark) {
+            defaultMark.classList.remove('hidden');
+        }
+
+        const previewContainer = document.getElementById('portalLogoPreviewContainer');
+        const previewImg = document.getElementById('portalLogoPreviewImg');
+        const dropPrompt = document.getElementById('portalLogoDropPrompt');
+        const fileInput = document.getElementById('portalLogoInput');
+
+        if (previewContainer) previewContainer.classList.add('hidden');
+        if (previewImg) previewImg.src = '';
+        if (dropPrompt) dropPrompt.classList.remove('hidden');
+        if (fileInput) fileInput.value = '';
+
+        try {
+            localStorage.removeItem('orbit_agency_logo');
+        } catch (_) {}
+
+        const currentAgency = (document.getElementById('portalAgencyNameInput')?.value || 'Apex Digital Studio').trim();
+        AuditStore.saveBranding(currentAgency, currentBrandColorHex, currentBrandColorName, null);
+        showArcadeToast('✓ Reset to default Orbit logo');
         if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
+    }
+
+    function resetPortalBranding() {
+        applyPortalAgencyName('Apex Digital Studio', true);
+        applyPortalBrandColor('#10b981', 'emerald');
+        resetPortalLogo();
+
+        try {
+            localStorage.setItem('orbit_agency_name', 'Apex Digital Studio');
+            localStorage.setItem('orbit_brand_color', '#10b981');
+            localStorage.removeItem('orbit_agency_logo');
+        } catch (_) {}
+
+        showArcadeToast('✓ All portal branding reset to default');
+        if (window.SimpleCat && SimpleCat.playPowerUp) SimpleCat.playPowerUp();
+    }
+
+    function copyClientInviteLink() {
+        const agency = (document.getElementById('portalAgencyNameInput')?.value || 'Apex Digital Studio').trim();
+        const origin = (window.location && window.location.origin) ? window.location.origin : 'https://cmfh009.github.io';
+        let pathname = (window.location && window.location.pathname) ? window.location.pathname : '/Orbit-Security/';
+        if (!pathname.endsWith('/')) {
+            pathname = pathname.substring(0, pathname.lastIndexOf('/') + 1);
+        }
+        const inviteUrl = `${origin}${pathname}portals/orbit-core.html?agency=${encodeURIComponent(agency)}&ref=invite`;
+
+        const fallbackCopy = (text) => {
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+            } catch (_) {}
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(inviteUrl).catch(() => fallbackCopy(inviteUrl));
+        } else {
+            fallbackCopy(inviteUrl);
+        }
+
+        if (window.SimpleCat && SimpleCat.playPowerUp) SimpleCat.playPowerUp();
+        showArcadeToast('✓ Client invite link copied to clipboard!');
+
+        const btnText = document.getElementById('portalCopyInviteBtnText');
+        if (btnText) {
+            const orig = btnText.textContent;
+            btnText.textContent = '✓ Copied Invite Link!';
+            setTimeout(() => { btnText.textContent = orig; }, 2200);
+        }
+        const mockupBtn = document.getElementById('portalMockupInviteBtn');
+        if (mockupBtn) {
+            const origHtml = mockupBtn.innerHTML;
+            mockupBtn.innerHTML = '<span>✓</span><span>Copied Invite Link!</span>';
+            setTimeout(() => { mockupBtn.innerHTML = origHtml; }, 2200);
+        }
+        return inviteUrl;
+    }
+
+    let _portalCustomizerInitialized = false;
+
+    function initPortalCustomizer() {
+        if (_portalCustomizerInitialized) return;
+        _portalCustomizerInitialized = true;
+
+        const savedName = localStorage.getItem('orbit_agency_name');
+        const savedColor = localStorage.getItem('orbit_brand_color');
+        const savedLogo = localStorage.getItem('orbit_agency_logo');
+
+        if (savedName) {
+            applyPortalAgencyName(savedName, true);
+        } else {
+            const initialName = document.getElementById('portalAgencyNameInput')?.value || 'Apex Digital Studio';
+            applyPortalAgencyName(initialName, false);
+        }
+
+        if (savedColor) {
+            applyPortalBrandColor(savedColor);
+        } else {
+            applyPortalBrandColor('#10b981', 'emerald');
+        }
+
+        if (savedLogo) {
+            applyPortalLogo(savedLogo, 'saved-logo.png');
+        }
+
+        const portalInput = document.getElementById('portalAgencyNameInput');
+        if (portalInput) {
+            portalInput.addEventListener('input', (e) => {
+                applyPortalAgencyName(e.target.value, true);
+            });
+        }
+
+        Object.keys(PORTAL_BRAND_PRESETS).forEach(k => {
+            const btn = document.getElementById('portalSwatch-' + k);
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    applyPortalBrandColor(PORTAL_BRAND_PRESETS[k].hex, k);
+                });
+            }
+        });
+
+        const colorPicker = document.getElementById('portalColorPicker');
+        if (colorPicker) {
+            colorPicker.addEventListener('input', (e) => {
+                applyPortalBrandColor(e.target.value, 'custom');
+            });
+        }
+
+        const colorHexInput = document.getElementById('portalColorHexInput');
+        if (colorHexInput) {
+            const handleHexInput = (e) => {
+                let v = e.target.value.trim();
+                if (!v.startsWith('#')) v = '#' + v;
+                if (/^#[0-9a-f]{3}$/i.test(v) || /^#[0-9a-f]{6}$/i.test(v)) {
+                    applyPortalBrandColor(v, 'custom');
+                }
+            };
+            colorHexInput.addEventListener('input', handleHexInput);
+            colorHexInput.addEventListener('change', handleHexInput);
+        }
+
+        const logoInput = document.getElementById('portalLogoInput');
+        if (logoInput) {
+            logoInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    handlePortalLogoFile(e.target.files[0]);
+                }
+            });
+        }
+
+        const dropzone = document.getElementById('portalLogoDropzone');
+        if (dropzone) {
+            dropzone.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.add('border-emerald-400', 'bg-emerald-500/10');
+            });
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+                dropzone.classList.add('border-emerald-400', 'bg-emerald-500/10');
+            });
+            dropzone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!e.currentTarget.contains(e.relatedTarget)) {
+                    dropzone.classList.remove('border-emerald-400', 'bg-emerald-500/10');
+                }
+            });
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.remove('border-emerald-400', 'bg-emerald-500/10');
+                if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    handlePortalLogoFile(e.dataTransfer.files[0]);
+                }
+            });
+            dropzone.addEventListener('click', (e) => {
+                if (e.target.id !== 'portalResetLogoBtn' && !e.target.closest('#portalResetLogoBtn')) {
+                    if (logoInput) logoInput.click();
+                }
+            });
+        }
     }
 
     function switchReportView(viewId) {
@@ -793,17 +1256,18 @@
     }
 
     async function generateInstantPdf() {
-        const agencyName = (document.getElementById('customAgencyName')?.value || 'Apex Digital Studio').trim();
+        const portalAgencyInput = document.getElementById('portalAgencyNameInput');
+        const agencyName = (portalAgencyInput?.value?.trim() || document.getElementById('customAgencyName')?.value?.trim() || document.getElementById('radarAgencyName')?.value?.trim() || localStorage.getItem('orbit_agency_name') || 'Apex Digital Studio').trim();
         await generateInstantPdfForDomain('clientbrand.com', 94, 'A', agencyName);
     }
 
     async function generateInstantPdfForDomain(targetDomain, score = 90, grade = 'A', agencyName = null, customFindings = null) {
         const cleanDomain = targetDomain.replace(/[^a-zA-Z0-9.-]/g, '');
-        let finalAgencyName = (agencyName || document.getElementById('radarAgencyName')?.value || document.getElementById('customAgencyName')?.value || localStorage.getItem('orbit_agency_name') || 'Orbit Security Certified Client').trim();
+        let finalAgencyName = (agencyName || document.getElementById('portalAgencyNameInput')?.value || document.getElementById('radarAgencyName')?.value || document.getElementById('customAgencyName')?.value || localStorage.getItem('orbit_agency_name') || 'Orbit Security Certified Client').trim();
         if (!finalAgencyName || finalAgencyName === cleanDomain) {
             finalAgencyName = 'Orbit Security';
         }
-        const brandColor = currentBrandColorHex || '#10B981';
+        const brandColor = currentBrandColorHex || localStorage.getItem('orbit_brand_color') || '#10B981';
 
         try {
             await ensurePdfLib();
@@ -2486,31 +2950,27 @@ ${payload.url}`;
         initKeyboardNavigation();
         initIdleGovernor();
         AuditStore.renderHistory();
+        initPortalCustomizer();
 
         // Restore saved agency branding
         const savedBrand = AuditStore.loadBranding();
         const savedAgencyName = savedBrand?.name || localStorage.getItem('orbit_agency_name');
         if (savedAgencyName) {
-            const studioInput = document.getElementById('customAgencyName');
-            const radarInput = document.getElementById('radarAgencyName');
-            const display = document.getElementById('brandNameDisplay');
-            if (studioInput && !studioInput.value) studioInput.value = savedAgencyName;
-            if (radarInput && !radarInput.value) radarInput.value = savedAgencyName;
-            if (display) display.textContent = savedAgencyName;
+            applyPortalAgencyName(savedAgencyName, true);
         }
         if (savedBrand) {
-            if (savedBrand.colorName) {
-                setBrandColor(savedBrand.colorName);
-            } else if (savedBrand.color) {
-                if (savedBrand.color === '#06B6D4') setBrandColor('cyan');
-                else if (savedBrand.color === '#6366F1') setBrandColor('indigo');
-                else if (savedBrand.color === '#A855F7') setBrandColor('violet');
-                else setBrandColor('emerald');
-            } else {
-                setBrandColor('emerald');
+            if (savedBrand.color) {
+                applyPortalBrandColor(savedBrand.color, savedBrand.colorName);
+            } else if (savedBrand.colorName) {
+                applyPortalBrandColor(savedBrand.colorName);
             }
         } else {
-            setBrandColor('emerald');
+            const savedColor = localStorage.getItem('orbit_brand_color');
+            if (savedColor) {
+                applyPortalBrandColor(savedColor);
+            } else {
+                applyPortalBrandColor('#10b981', 'emerald');
+            }
         }
 
         // ==========================================
@@ -2520,28 +2980,23 @@ ${payload.url}`;
         // Sync agency name inputs in real-time
         const studioAgencyInput = document.getElementById('customAgencyName');
         const radarAgencyInput = document.getElementById('radarAgencyName');
-        
-        if (studioAgencyInput) {
-            studioAgencyInput.addEventListener('input', () => {
-                const raw = studioAgencyInput.value;
-                const name = raw.trim();
-                if (radarAgencyInput && radarAgencyInput.value !== raw) radarAgencyInput.value = raw;
-                const display = document.getElementById('brandNameDisplay');
-                if (display) display.textContent = name || 'Your Agency';
-                try { localStorage.setItem('orbit_agency_name', name); } catch (_) {}
-                AuditStore.saveBranding(name, currentBrandColorHex, currentBrandColorName);
+        const portalAgencyInput = document.getElementById('portalAgencyNameInput');
+
+        if (portalAgencyInput) {
+            portalAgencyInput.addEventListener('input', () => {
+                applyPortalAgencyName(portalAgencyInput.value, true);
             });
         }
-        
+
+        if (studioAgencyInput) {
+            studioAgencyInput.addEventListener('input', () => {
+                applyPortalAgencyName(studioAgencyInput.value, true);
+            });
+        }
+
         if (radarAgencyInput) {
             radarAgencyInput.addEventListener('input', () => {
-                const raw = radarAgencyInput.value;
-                const name = raw.trim();
-                if (studioAgencyInput && studioAgencyInput.value !== raw) studioAgencyInput.value = raw;
-                const display = document.getElementById('brandNameDisplay');
-                if (display) display.textContent = name || 'Your Agency';
-                try { localStorage.setItem('orbit_agency_name', name); } catch (_) {}
-                AuditStore.saveBranding(name, currentBrandColorHex, currentBrandColorName);
+                applyPortalAgencyName(radarAgencyInput.value, true);
             });
         }
 
@@ -3144,7 +3599,8 @@ ${payload.url}`;
             return;
         }
         
-        const agencyName = (radarAgencyInput?.value?.trim() || studioAgencyInput?.value?.trim() || 'Apex Digital Studio').trim();
+        const portalAgencyInput = document.getElementById('portalAgencyNameInput');
+        const agencyName = (portalAgencyInput?.value?.trim() || radarAgencyInput?.value?.trim() || studioAgencyInput?.value?.trim() || localStorage.getItem('orbit_agency_name') || 'Apex Digital Studio').trim();
         showArcadeToast(`Generating perimeter audit PDF for ${domain}...`);
         dispatchRadarTelemetry(domain, 'hud_pdf', { score: clientScore, grade: clientGrade });
         
@@ -3194,7 +3650,8 @@ ${payload.url}`;
             return;
         }
 
-        const agencyName = (radarAgencyInput?.value?.trim() || studioAgencyInput?.value?.trim() || 'Apex Digital Studio').trim();
+        const portalAgencyInput = document.getElementById('portalAgencyNameInput');
+        const agencyName = (portalAgencyInput?.value?.trim() || radarAgencyInput?.value?.trim() || studioAgencyInput?.value?.trim() || localStorage.getItem('orbit_agency_name') || 'Apex Digital Studio').trim();
         
         if (btn) {
             btn.disabled = true;
@@ -3398,7 +3855,8 @@ ${payload.url}`;
             return;
         }
 
-        const agencyName = (radarAgencyInput?.value?.trim() || studioAgencyInput?.value?.trim() || 'Apex Digital Studio').trim();
+        const portalAgencyInput = document.getElementById('portalAgencyNameInput');
+        const agencyName = (portalAgencyInput?.value?.trim() || radarAgencyInput?.value?.trim() || studioAgencyInput?.value?.trim() || localStorage.getItem('orbit_agency_name') || 'Apex Digital Studio').trim();
         
         try {
             showArcadeToast(`Auditing ${domain} via live DoH sentinels...`);
@@ -5167,6 +5625,7 @@ ${payload.url}`;
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
             initKevEpssRadar();
+            initPortalCustomizer();
             renderEpssHorizonChart();
             initBountyRadarStatuspage();
             initCrtArcadeShaderCanvas();
@@ -5177,6 +5636,7 @@ ${payload.url}`;
     } else {
         setTimeout(() => {
             initKevEpssRadar();
+            initPortalCustomizer();
             renderEpssHorizonChart();
             initBountyRadarStatuspage();
             initCrtArcadeShaderCanvas();
@@ -5209,5 +5669,15 @@ ${payload.url}`;
     window.initBountyRadarStatuspage = initBountyRadarStatuspage;
     window.initCrtArcadeShaderCanvas = initCrtArcadeShaderCanvas;
     window.toggleCrtArcadeShader = toggleCrtArcadeShader;
+    window.AuditStore = AuditStore;
+    window.PORTAL_BRAND_PRESETS = PORTAL_BRAND_PRESETS;
+    window.applyPortalBrandColor = applyPortalBrandColor;
+    window.applyPortalAgencyName = applyPortalAgencyName;
+    window.handlePortalLogoFile = handlePortalLogoFile;
+    window.applyPortalLogo = applyPortalLogo;
+    window.resetPortalLogo = resetPortalLogo;
+    window.resetPortalBranding = resetPortalBranding;
+    window.copyClientInviteLink = copyClientInviteLink;
+    window.initPortalCustomizer = initPortalCustomizer;
 
 })();
