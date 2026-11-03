@@ -18,6 +18,7 @@ import random
 import shutil
 import subprocess
 import sys
+import re
 from typing import Any, Dict, List, Optional
 
 from orbit_security.content_queue import ContentQueue
@@ -26,6 +27,8 @@ from orbit_security.marketing_strategy import ContentPillar
 from orbit_security.social_state import SocialStateManager
 
 logger = logging.getLogger(__name__)
+
+URL_RE = re.compile(r"https?://[^\s]+")
 
 
 @dataclass
@@ -47,7 +50,16 @@ class SocialDraft:
 
     @property
     def character_count(self) -> int:
-        return len(self.text)
+        """Computes official X weighted character count (every http(s) URL counts as 23 chars)."""
+        text = self.text or ""
+        total = 0
+        cursor = 0
+        for match in URL_RE.finditer(text):
+            total += len(text[cursor:match.start()])
+            total += 23
+            cursor = match.end()
+        total += len(text[cursor:])
+        return total
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
