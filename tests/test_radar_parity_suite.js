@@ -1010,6 +1010,95 @@ async function runTests() {
     assert(orbitCoreHtml.includes('0.299 * r + 0.587 * g + 0.114 * b'), 'orbit-core.html calculates luminance for button text');
     assert(orbitCoreHtml.includes("document.createElement('img')"), 'orbit-core.html creates logo img via DOM node to prevent XSS');
 
+    // 16. Multi-Hop CNAME Resolution Chain to SaaS (Prong B)
+    DoHService.query = async (name, type) => {
+        if (name.startsWith('_dmarc.')) return { success: true, status: 0, answer: [{ type: 16, data: '"v=DMARC1; p=reject;"' }] };
+        if (type === 16) return { success: true, status: 0, answer: [{ type: 16, data: '"v=spf1 -all"' }] };
+        if (type === 15) return { success: true, status: 0, answer: [{ type: 15, data: '10 mx.chain-saas.com' }] };
+        if (name === 'cdn.chain-saas.com' && type === 5) {
+            return { success: true, status: 0, answer: [{ type: 5, data: 'edge-alias.proxy-routing.net' }] };
+        }
+        if (name === 'edge-alias.proxy-routing.net' && type === 1) {
+            // Target query resolves through an intermediate CNAME to S3
+            return {
+                success: true,
+                status: 0,
+                answer: [
+                    { type: 5, data: 'orphaned-media.s3.amazonaws.com.' },
+                    { type: 1, data: '52.216.1.1' }
+                ]
+            };
+        }
+        if (type === 1) return { success: true, status: 0, answer: [{ type: 1, data: '198.51.100.10' }] };
+        return { success: true, status: 0, answer: [] };
+    };
+    const auditChainSaas = await performClientDohAudit('chain-saas.com');
+    assert(auditChainSaas.cnameStatus === 'warn', 'Multi-hop CNAME chain resolving to S3 flags WARN');
+    assert(auditChainSaas.cnameScore === 15, 'Multi-hop CNAME chain awards 15 pts');
+    assert(auditChainSaas.cnameTarget.includes('orphaned-media.s3.amazonaws.com'), 'cnameTarget reflects canonical cloud target in chain');
+    assert(auditChainSaas.findings[0].status === 'WARN', 'Finding 1 is WARN for chained cloud route');
+
+    // 17. Multi-Hop CNAME Resolution Chain to Azure NXDOMAIN (Prong A Grade F)
+    DoHService.query = async (name, type) => {
+        if (name.startsWith('_dmarc.')) return { success: true, status: 0, answer: [{ type: 16, data: '"v=DMARC1; p=reject;"' }] };
+        if (type === 16) return { success: true, status: 0, answer: [{ type: 16, data: '"v=spf1 -all"' }] };
+        if (type === 15) return { success: true, status: 0, answer: [{ type: 15, data: '10 mx.chain-nx.com' }] };
+        if (name === 'app.chain-nx.com' && type === 5) {
+            return { success: true, status: 0, answer: [{ type: 5, data: 'corp-edge.gateway.net' }] };
+        }
+        if (name === 'corp-edge.gateway.net' && type === 1) {
+            // Intermediate CNAME chains to retired Azure app that returns NXDOMAIN
+            return {
+                success: true,
+                status: 3,
+                answer: [
+                    { type: 5, data: 'retired-corp.azurewebsites.net.' }
+                ]
+            };
+        }
+        if (type === 1) return { success: true, status: 0, answer: [{ type: 1, data: '198.51.100.11' }] };
+        return { success: true, status: 0, answer: [] };
+    };
+    const auditChainNx = await performClientDohAudit('chain-nx.com');
+    assert(auditChainNx.cnameStatus === 'critical', 'Multi-hop CNAME chain resolving to NXDOMAIN Azure triggers critical status');
+    assert(auditChainNx.cnameScore === 0, 'Multi-hop NXDOMAIN CNAME sets cnameScore to 0');
+    assert(auditChainNx.grade === 'F', 'Multi-hop NXDOMAIN CNAME forces overall Grade F');
+    assert(auditChainNx.takeoverWarning.includes('Microsoft Azure App Service'), 'takeoverWarning identifies Azure from chained CNAME target');
+
+    // 18. Case-Insensitive PDF Findings Resolution
+    lastPdfArgs = {};
+    sandbox.window._lastAuditResult = {
+        domain: 'case-test.com',
+        findings: [
+            { category: 'SUBDOMAIN TAKEOVER SENTINEL', desc: 'Custom finding 1', status: 'PASS' },
+            { category: 'EMAIL SPOOFING PROTECTION (DMARC)', desc: 'Custom finding 2', status: 'PASS' },
+            { category: 'SENDER POLICY FRAMEWORK (SPF)', desc: 'Custom finding 3', status: 'PASS' },
+            { category: 'MAIL INBOUND ROUTING (MX)', desc: 'Custom finding 4', status: 'PASS' },
+            { category: 'TLS / SSL CERTIFICATE EXPIRY', desc: 'Custom finding 5', status: 'PASS' }
+        ]
+    };
+    await generateInstantPdfForDomain('CASE-TEST.COM', 88, 'B');
+    assert(lastPdfArgs.renderedScore === '88 / 100', 'Case-insensitive domain PDF generates score');
+    const caseRects = (lastPdfArgs.rectangles || []).filter(r => r.width === 595.28 - 80 && r.height === 36);
+    assert(caseRects.length === 5, 'Case-insensitive domain match renders audited findings instead of defaults');
+
+    // 19. PDF Generation with Multi-Line / Newline Agency Name (No pdf-lib Crash)
+    lastPdfArgs = {};
+    await generateInstantPdfForDomain('client-sanitize.com', 95, 'A+', 'Pasted Multi-Line\nAgency Name\r\n');
+    assert(lastPdfArgs.renderedAgency === 'PASTED MULTI-LINE AGENCY NAME', 'Agency name with newlines is sanitized and rendered');
+
+    // 20. Copy Client Invite Link Propagates Brand Color
+    sandbox.window.applyPortalBrandColor('#6366f1', 'indigo');
+    const brandedInviteUrl = sandbox.window.copyClientInviteLink();
+    assert(brandedInviteUrl.includes('color=%236366f1'), 'copyClientInviteLink() includes URL-encoded &color= query parameter');
+
+    // 21. orbit-core.html Relative Luminance Threshold >= 0.5 for Emerald Accessibility
+    assert(orbitCoreHtml.includes('lum >= 0.5 ?'), 'orbit-core.html uses lum >= 0.5 threshold for WCAG contrast');
+    const rEmerald = 16, gEmerald = 185, bEmerald = 129;
+    const lumEmerald = (0.299 * rEmerald + 0.587 * gEmerald + 0.114 * bEmerald) / 255;
+    const textColorEmerald = lumEmerald >= 0.5 ? '#090b12' : '#ffffff';
+    assert(textColorEmerald === '#090b12', 'Orbit Emerald (#10b981) resolves to dark accessible text (#090b12)');
+
     console.log(`\n========================================`);
     console.log(`ALL ${passed}/${total} AUDIT ENGINE & PDF PARITY TESTS PASSED!`);
     console.log(`========================================`);

@@ -4394,6 +4394,10 @@
             clearInterval(defenseState.touchRightInterval);
             defenseState.touchRightInterval = null;
         }
+        if (defenseState.touchFireInterval) {
+            clearInterval(defenseState.touchFireInterval);
+            defenseState.touchFireInterval = null;
+        }
         defenseState.keys = {};
         playGameOver();
         const goOverlay = document.getElementById("defense-gameover-overlay");
@@ -4417,6 +4421,10 @@
             clearInterval(defenseState.touchRightInterval);
             defenseState.touchRightInterval = null;
         }
+        if (defenseState.touchFireInterval) {
+            clearInterval(defenseState.touchFireInterval);
+            defenseState.touchFireInterval = null;
+        }
         defenseState.keys = {};
         playVictory();
         const cleanBonus = defenseState.threatsDefeated === defenseState.threatsTotal ? 500 : 250;
@@ -4426,10 +4434,12 @@
         const sVal = document.getElementById("victory-score");
         const tVal = document.getElementById("victory-threats");
         const cVal = document.getElementById("victory-combo");
+        const bVal = document.getElementById("victory-bonus");
 
         if (sVal) sVal.textContent = String(defenseState.score);
         if (tVal) tVal.textContent = `${defenseState.threatsDefeated} / ${defenseState.threatsTotal}`;
         if (cVal) cVal.textContent = `x${defenseState.maxCombo}`;
+        if (bVal) bVal.textContent = `+${cleanBonus} PTS`;
         if (vicOverlay) vicOverlay.classList.remove("hidden");
     }
 
@@ -4460,6 +4470,15 @@
                         t.vx = Math.cos(newAngle) * currentSpeed;
                         t.vy = Math.sin(newAngle) * currentSpeed;
                     });
+                }
+                if (Array.isArray(defenseState.pulses)) {
+                    defenseState.pulses.forEach(p => { p.x += dx; p.y += dy; });
+                }
+                if (Array.isArray(defenseState.sparks)) {
+                    defenseState.sparks.forEach(s => { s.x += dx; s.y += dy; });
+                }
+                if (Array.isArray(defenseState.floatingScores)) {
+                    defenseState.floatingScores.forEach(fs => { fs.x += dx; fs.y += dy; });
                 }
             }
         }
@@ -4529,10 +4548,22 @@
         }
 
         if (touchFire) {
-            touchFire.addEventListener("pointerdown", (e) => {
+            const startFire = (e) => {
                 e.preventDefault();
                 fireDefensePulse();
-            });
+                if (defenseState.touchFireInterval) clearInterval(defenseState.touchFireInterval);
+                defenseState.touchFireInterval = setInterval(() => { fireDefensePulse(); }, 160);
+            };
+            const stopFire = () => {
+                if (defenseState.touchFireInterval) {
+                    clearInterval(defenseState.touchFireInterval);
+                    defenseState.touchFireInterval = null;
+                }
+            };
+            touchFire.addEventListener("pointerdown", startFire);
+            touchFire.addEventListener("pointerup", stopFire);
+            touchFire.addEventListener("pointerleave", stopFire);
+            touchFire.addEventListener("pointercancel", stopFire);
         }
 
         const canvas = document.getElementById("defenseCanvas");
@@ -4656,6 +4687,11 @@
             clearInterval(defenseState.touchRightInterval);
             defenseState.touchRightInterval = null;
         }
+        if (defenseState.touchFireInterval) {
+            clearInterval(defenseState.touchFireInterval);
+            defenseState.touchFireInterval = null;
+        }
+        defenseState.keys = {};
 
         window.removeEventListener("keydown", defenseKeyHandler);
         window.removeEventListener("keyup", defenseKeyUpHandler);

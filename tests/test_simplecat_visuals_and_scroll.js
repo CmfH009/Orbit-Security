@@ -398,16 +398,33 @@ test('Hashchange handler exits defense mode when navigating away from #arcadeDef
     assert(docsCatJs.includes('stopArcadeDefenseMode') && docsCatJs.includes('defenseState.active'), 'Hashchange must stop defense mode when hash clears');
 });
 
-test('triggerDefenseGameOver and triggerDefenseVictory cleanly clear touch intervals and reset keys', () => {
-    assert(docsCatJs.includes('clearInterval(defenseState.touchLeftInterval);') && docsCatJs.includes('defenseState.touchLeftInterval = null;'), 'GameOver/Victory must clear touchLeftInterval');
-    assert(docsCatJs.includes('clearInterval(defenseState.touchRightInterval);') && docsCatJs.includes('defenseState.touchRightInterval = null;'), 'GameOver/Victory must clear touchRightInterval');
-    assert(docsCatJs.includes('defenseState.keys = {};'), 'GameOver/Victory must reset active keys');
+test('triggerDefenseGameOver, triggerDefenseVictory, and stopArcadeDefenseMode cleanly clear all touch intervals and reset keys', () => {
+    assert(docsCatJs.includes('clearInterval(defenseState.touchLeftInterval);') && docsCatJs.includes('defenseState.touchLeftInterval = null;'), 'Must clear touchLeftInterval');
+    assert(docsCatJs.includes('clearInterval(defenseState.touchRightInterval);') && docsCatJs.includes('defenseState.touchRightInterval = null;'), 'Must clear touchRightInterval');
+    assert(docsCatJs.includes('clearInterval(defenseState.touchFireInterval);') && docsCatJs.includes('defenseState.touchFireInterval = null;'), 'Must clear touchFireInterval');
+    assert(docsCatJs.includes('defenseState.keys = {};'), 'Must reset active keys');
 });
 
-test('resizeDefenseCanvas adjusts threat coordinates and trajectories on orientation change', () => {
+test('defense-touch-fire supports repeat pulse interval on hold with pointercancel cleanup', () => {
+    assert(docsCatJs.includes('defenseState.touchFireInterval = setInterval'), 'touch-fire must initialize repeat firing interval on hold');
+    assert(docsCatJs.includes('touchFire.addEventListener("pointerup", stopFire);'), 'touch-fire must stop on pointerup');
+    assert(docsCatJs.includes('touchFire.addEventListener("pointercancel", stopFire);'), 'touch-fire must stop on pointercancel');
+    assert(docsCatJs.includes('touchFire.addEventListener("pointerleave", stopFire);'), 'touch-fire must stop on pointerleave');
+});
+
+test('triggerDefenseVictory dynamically updates victory-bonus element based on wave damage', () => {
+    assert(docsCatJs.includes('const cleanBonus = defenseState.threatsDefeated === defenseState.threatsTotal ? 500 : 250;'), 'Computes 500 for flawless vs 250 for damage survived');
+    assert(docsCatJs.includes('bVal.textContent = `+${cleanBonus} PTS`;'), 'Dynamically updates victory-bonus element text');
+    assert(docsIndexPath && fs.readFileSync(docsIndexPath, 'utf8').includes('id="victory-bonus"'), 'index.html contains victory-bonus element');
+});
+
+test('resizeDefenseCanvas adjusts threat coordinates, pulses, sparks, and trajectories on orientation change', () => {
     assert(docsCatJs.includes('const oldCx = defenseState.centerX;'), 'resizeDefenseCanvas must track oldCx');
     assert(docsCatJs.includes('const oldCy = defenseState.centerY;'), 'resizeDefenseCanvas must track oldCy');
     assert(docsCatJs.includes('t.x += dx;') && docsCatJs.includes('t.y += dy;'), 'resizeDefenseCanvas must translate threat coordinates on center shift');
+    assert(docsCatJs.includes('p.x += dx;') && docsCatJs.includes('p.y += dy;'), 'resizeDefenseCanvas must translate in-flight pulses on center shift');
+    assert(docsCatJs.includes('s.x += dx;') && docsCatJs.includes('s.y += dy;'), 'resizeDefenseCanvas must translate in-flight sparks on center shift');
+    assert(docsCatJs.includes('fs.x += dx;') && docsCatJs.includes('fs.y += dy;'), 'resizeDefenseCanvas must translate in-flight floating scores on center shift');
     assert(docsCatJs.includes('const newAngle = Math.atan2(defenseState.centerY - t.y, defenseState.centerX - t.x);'), 'resizeDefenseCanvas must re-aim velocity vectors');
 });
 

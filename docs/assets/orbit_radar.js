@@ -1038,7 +1038,7 @@
         if (!pathname.endsWith('/')) {
             pathname = pathname.substring(0, pathname.lastIndexOf('/') + 1);
         }
-        const inviteUrl = `${origin}${pathname}portals/orbit-core.html?agency=${encodeURIComponent(agency)}&ref=invite`;
+        const inviteUrl = `${origin}${pathname}portals/orbit-core.html?agency=${encodeURIComponent(agency)}&color=${encodeURIComponent(currentBrandColorHex)}&ref=invite`;
 
         const fallbackCopy = (text) => {
             try {
@@ -1264,9 +1264,9 @@
     }
 
     async function generateInstantPdfForDomain(targetDomain, score = 90, grade = 'A', agencyName = null, customFindings = null) {
-        const cleanDomain = targetDomain.replace(/[^a-zA-Z0-9.-]/g, '');
-        let finalAgencyName = (agencyName || document.getElementById('portalAgencyNameInput')?.value || document.getElementById('radarAgencyName')?.value || document.getElementById('customAgencyName')?.value || localStorage.getItem('orbit_agency_name') || 'Orbit Security Certified Client').trim();
-        if (!finalAgencyName || finalAgencyName === cleanDomain) {
+        const cleanDomain = (targetDomain || '').toLowerCase().replace(/[^a-zA-Z0-9.-]/g, '');
+        let finalAgencyName = (agencyName || document.getElementById('portalAgencyNameInput')?.value || document.getElementById('radarAgencyName')?.value || document.getElementById('customAgencyName')?.value || localStorage.getItem('orbit_agency_name') || 'Orbit Security Certified Client').trim().replace(/[\r\n]+/g, ' ');
+        if (!finalAgencyName || finalAgencyName.toLowerCase() === cleanDomain) {
             finalAgencyName = 'Orbit Security';
         }
         const brandColor = currentBrandColorHex || localStorage.getItem('orbit_brand_color') || '#10B981';
@@ -1417,9 +1417,10 @@
                 }
             ];
 
+            const lastAuditDomain = (window._lastAuditResult && window._lastAuditResult.domain) ? window._lastAuditResult.domain.toLowerCase().trim() : '';
             const findings = (Array.isArray(customFindings) && customFindings.length >= 4 && customFindings.length <= 8)
                 ? customFindings 
-                : ((window._lastAuditResult && window._lastAuditResult.domain === cleanDomain && Array.isArray(window._lastAuditResult.findings) && window._lastAuditResult.findings.length >= 4 && window._lastAuditResult.findings.length <= 8)
+                : ((window._lastAuditResult && lastAuditDomain === cleanDomain && Array.isArray(window._lastAuditResult.findings) && window._lastAuditResult.findings.length >= 4 && window._lastAuditResult.findings.length <= 8)
                     ? window._lastAuditResult.findings
                     : defaultFindings);
 
@@ -3432,36 +3433,50 @@ ${payload.url}`;
             const { subName, cname } = cnameCandidates[i];
             const targetARes = targetResolutions[i];
 
-            const matchedNx = TAKEOVER_TARGET_REGISTRY.nxdomain.find(n => cname.includes(n.pattern));
-            const matchedMt = TAKEOVER_TARGET_REGISTRY.multitenant.find(m => cname.includes(m.pattern));
+            // Inspect full CNAME resolution chain (handles intermediate aliases pointing to cloud SaaS/Azure)
+            const cnameChain = [cname];
+            if (targetARes && Array.isArray(targetARes.answer)) {
+                for (const ans of targetARes.answer) {
+                    if (ans.type === 5 && ans.data) {
+                        const chained = ans.data.trim().replace(/^["']|["']$/g, '').trim().replace(/\.+$/, '').toLowerCase();
+                        if (chained && !cnameChain.includes(chained)) {
+                            cnameChain.push(chained);
+                        }
+                    }
+                }
+            }
+            const canonicalTarget = cnameChain[cnameChain.length - 1];
+            const matchedNx = TAKEOVER_TARGET_REGISTRY.nxdomain.find(n => cnameChain.some(c => c.includes(n.pattern)));
+            const matchedMt = TAKEOVER_TARGET_REGISTRY.multitenant.find(m => cnameChain.some(c => c.includes(m.pattern)));
+            const displayRoute = cnameChain.length > 1 ? `${subName} → ${cname} → ${canonicalTarget}` : `${subName} → ${cname}`;
 
             // Prong A: NXDOMAIN targets (RCODE 3 on target A query = confirmed dangling)
             if (targetARes && targetARes.status === 3) {
-                cnameTarget = `${subName} → ${cname}`;
+                cnameTarget = displayRoute;
                 cnameStatus = 'critical';
                 const saasLabel = matchedNx ? matchedNx.saas : (matchedMt ? matchedMt.saas : 'Decommissioned Target');
-                takeoverWarning = `Dangling pointer detected on ${subName} (${saasLabel} → ${cname}) [NXDOMAIN]! Potential Subdomain Takeover.`;
+                takeoverWarning = `Dangling pointer detected on ${subName} (${saasLabel} → ${canonicalTarget}) [NXDOMAIN]! Potential Subdomain Takeover.`;
                 cnameScore = 0;
-                detectedSaaS.push({ sub: subName, saas: saasLabel, target: cname, status: 'dangling', preset: matchedMt?.preset || 'cname' });
+                detectedSaaS.push({ sub: subName, saas: saasLabel, target: canonicalTarget, status: 'dangling', preset: matchedMt?.preset || 'cname' });
                 break; // Critical halts loop
             }
 
             // Prong B: Multi-Tenant Cloud SaaS (Wildcard cloud edge)
             if (matchedMt) {
                 if (cnameStatus !== 'critical') {
-                    cnameTarget = `${subName} → ${cname}`;
+                    cnameTarget = displayRoute;
                     cnameStatus = 'warn';
                     cnameScore = Math.min(cnameScore, 15);
-                    takeoverWarning = `Unverified Cloud Route on ${subName} (${matchedMt.saas} → ${cname}). Multi-tenant edge requires verification.`;
+                    takeoverWarning = `Unverified Cloud Route on ${subName} (${matchedMt.saas} → ${canonicalTarget}). Multi-tenant edge requires verification.`;
                 }
-                detectedSaaS.push({ sub: subName, saas: matchedMt.saas, target: cname, status: 'unverified', preset: matchedMt.preset });
+                detectedSaaS.push({ sub: subName, saas: matchedMt.saas, target: canonicalTarget, status: 'unverified', preset: matchedMt.preset });
             } else if (matchedNx) {
                 if (cnameStatus === 'pass') {
-                    cnameTarget = `${subName} → ${cname}`;
+                    cnameTarget = displayRoute;
                 }
-                detectedSaaS.push({ sub: subName, saas: matchedNx.saas, target: cname, status: 'active' });
+                detectedSaaS.push({ sub: subName, saas: matchedNx.saas, target: canonicalTarget, status: 'active' });
             } else if (cnameStatus === 'pass') {
-                cnameTarget = `${subName} → ${cname}`;
+                cnameTarget = displayRoute;
             }
         }
 
@@ -3625,7 +3640,9 @@ ${payload.url}`;
         dispatchRadarTelemetry(domain, 'hud_pdf', { score: clientScore, grade: clientGrade });
         
         try {
-            let audit = (window._lastAuditResult && window._lastAuditResult.domain === domain)
+            const reqDomain = (domain || '').toLowerCase().trim();
+            const lastAuditDom = (window._lastAuditResult && window._lastAuditResult.domain) ? window._lastAuditResult.domain.toLowerCase().trim() : '';
+            let audit = (window._lastAuditResult && lastAuditDom === reqDomain)
                 ? window._lastAuditResult
                 : await performClientDohAudit(domain);
                 
