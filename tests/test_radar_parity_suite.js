@@ -31,7 +31,8 @@ function createMockElement(id, tagName = 'div') {
         addEventListener: () => {},
         removeEventListener: () => {},
         querySelector: () => null,
-        querySelectorAll: () => []
+        querySelectorAll: () => [],
+        scrollIntoView: () => {}
     };
 }
 
@@ -487,6 +488,121 @@ async function runTests() {
     const ghostDnsHtml = fs.readFileSync(path.join(__dirname, '..', 'landing', 'ghostdns', 'index.html'), 'utf8');
     assert(ghostDnsHtml.includes("shareGhostDnsTool('x')"), 'landing/ghostdns/index.html includes X share button');
     assert(ghostDnsHtml.includes("shareGhostDnsTool('native')"), 'landing/ghostdns/index.html includes Native share button');
+
+    // =========================================================================
+    // Scenario 9: Interactive Visual Attack Tree & Takeover Simulator
+    // =========================================================================
+    console.log('\nTesting Scenario 9: Interactive Visual Attack Tree & Takeover Simulator');
+    assert(typeof sandbox.window.OrbitAttackTree === 'object', 'window.OrbitAttackTree is exposed');
+    assert(typeof sandbox.window.OrbitAttackTree.init === 'function', 'OrbitAttackTree.init is exposed');
+    assert(typeof sandbox.window.OrbitAttackTree.setStep === 'function', 'OrbitAttackTree.setStep is exposed');
+    assert(typeof sandbox.window.OrbitAttackTree.togglePlay === 'function', 'OrbitAttackTree.togglePlay is exposed');
+    assert(typeof sandbox.window.OrbitAttackTree.reset === 'function', 'OrbitAttackTree.reset is exposed');
+    assert(typeof sandbox.window.OrbitAttackTree.loadScenario === 'function', 'OrbitAttackTree.loadScenario is exposed');
+
+    // Verify Provider Presets (AWS S3, GitHub Pages, Azure App Service NXDOMAIN, Vercel, Shopify)
+    const scenarios = sandbox.window.OrbitAttackTree.scenarios;
+    assert(scenarios.aws_s3 && scenarios.aws_s3.provider === 'AWS S3', 'Provider preset AWS S3 is present');
+    assert(scenarios.github_pages && scenarios.github_pages.provider === 'GitHub Pages', 'Provider preset GitHub Pages is present');
+    assert(scenarios.azure_nxdomain && scenarios.azure_nxdomain.provider === 'Microsoft Azure', 'Provider preset Azure App Service NXDOMAIN is present');
+    assert(scenarios.vercel && scenarios.vercel.provider === 'Vercel', 'Provider preset Vercel is present');
+    assert(scenarios.shopify && scenarios.shopify.provider === 'Shopify', 'Provider preset Shopify is present');
+
+    // Verify Backwards-Compatible Presets & Aliases
+    assert(scenarios.cname && scenarios.cname.id === 'aws_s3', 'Preset alias cname maps to aws_s3');
+    assert(scenarios.dmarc && scenarios.dmarc.id === 'azure_nxdomain', 'Preset alias dmarc maps to azure_nxdomain');
+    assert(scenarios.dotenv && scenarios.dotenv.id === 'github_pages', 'Preset alias dotenv maps to github_pages');
+    assert(scenarios.php418 && scenarios.php418.id === 'vercel', 'Preset alias php418 maps to vercel');
+
+    // Test 5-Step Progression
+    sandbox.window.OrbitAttackTree.init('visualAttackTreeContainer', { scenarioKey: 'aws_s3' });
+    const inst = sandbox.window.OrbitAttackTree.getInstance('visualAttackTreeContainer');
+    assert(inst.activeStep === 1, 'Initial attack tree step is Step 1 (Victim Browser)');
+
+    sandbox.window.OrbitAttackTree.setStep(2, 'visualAttackTreeContainer');
+    assert(inst.activeStep === 2, 'Stepper advances to Step 2 (Authoritative DNS CNAME)');
+
+    sandbox.window.OrbitAttackTree.setStep(3, 'visualAttackTreeContainer');
+    assert(inst.activeStep === 3, 'Stepper advances to Step 3 (Abandoned Cloud Endpoint)');
+
+    sandbox.window.OrbitAttackTree.setStep(4, 'visualAttackTreeContainer');
+    assert(inst.activeStep === 4, 'Stepper advances to Step 4 (Threat Actor Re-Registration)');
+
+    sandbox.window.OrbitAttackTree.setStep(5, 'visualAttackTreeContainer');
+    assert(inst.activeStep === 5, 'Stepper advances to Step 5 (Weaponized Execution)');
+
+    // Test prevStep and nextStep Controls & Boundary Clamping
+    sandbox.window.OrbitAttackTree.prevStep('visualAttackTreeContainer');
+    assert(inst.activeStep === 4, 'prevStep moves from Step 5 to Step 4');
+    sandbox.window.OrbitAttackTree.nextStep('visualAttackTreeContainer');
+    assert(inst.activeStep === 5, 'nextStep moves from Step 4 to Step 5');
+    sandbox.window.OrbitAttackTree.nextStep('visualAttackTreeContainer');
+    assert(inst.activeStep === 5, 'nextStep clamps at Step 5 when not auto-playing');
+
+    // Test Auto-Play and Pause Controls
+    sandbox.window.OrbitAttackTree.togglePlay('visualAttackTreeContainer');
+    assert(inst.isPlaying === true, 'togglePlay starts auto-play');
+    sandbox.window.OrbitAttackTree.togglePlay('visualAttackTreeContainer');
+    assert(inst.isPlaying === false, 'togglePlay pauses auto-play');
+
+    // Test Reset Control
+    sandbox.window.OrbitAttackTree.reset('visualAttackTreeContainer');
+    assert(inst.activeStep === 1, 'Reset returns attack tree to Step 1');
+    assert(inst.isPlaying === false, 'Reset stops auto-play');
+    sandbox.window.OrbitAttackTree.prevStep('visualAttackTreeContainer');
+    assert(inst.activeStep === 1, 'prevStep clamps at Step 1');
+
+    // Test Provider Preset Toggling
+    sandbox.window.OrbitAttackTree.loadScenario('azure_nxdomain', 'visualAttackTreeContainer');
+    assert(inst.scenarioKey === 'azure_nxdomain', 'loadScenario switches active preset to azure_nxdomain');
+    assert(inst.provider === 'Microsoft Azure', 'loadScenario updates active cloud provider');
+    assert(inst.cnameTarget === 'retired-app-prod.azurewebsites.net', 'loadScenario updates CNAME target to Azure host');
+    assert(inst.activeStep === 1, 'loadScenario resets step to 1');
+
+    // Test Init with ScenarioKey Synchronizes Default Subdomain and CNAME
+    sandbox.window.OrbitAttackTree.init('freshAttackContainer', { scenarioKey: 'github_pages' });
+    const freshInst = sandbox.window.OrbitAttackTree.getInstance('freshAttackContainer');
+    assert(freshInst.provider === 'GitHub Pages', 'Fresh init sets provider to GitHub Pages');
+    assert(freshInst.subdomain === 'docs.agency-client.io', 'Fresh init sets subdomain to GitHub Pages default');
+    assert(freshInst.cnameTarget === 'legacy-org.github.io', 'Fresh init sets CNAME target to GitHub Pages default');
+
+    // Test Deep Integration: simulateTakeoverAttack preloads domain & renders into container
+    assert(typeof sandbox.window.simulateTakeoverAttack === 'function', 'simulateTakeoverAttack is exposed on window');
+    sandbox.window.simulateTakeoverAttack('aws_s3', 'media.client-store.com', 'orphaned-client-media.s3.amazonaws.com');
+    const hudSimHtml = mockDoc.getElementById('auditHUD').innerHTML;
+    assert(hudSimHtml.includes('svg') && hudSimHtml.includes('attack-tree-node'), 'simulateTakeoverAttack renders visual SVG attack tree into #auditHUD');
+    assert(hudSimHtml.includes('1. VICTIM CLIENT') || hudSimHtml.includes('visitor.browser'), 'Rendered attack tree includes Node 1: Victim / Visitor');
+    assert(hudSimHtml.includes('2. AUTHORITATIVE DNS'), 'Rendered attack tree includes Node 2: Authoritative DNS / CNAME');
+    assert(hudSimHtml.includes('3. ABANDONED TENANT'), 'Rendered attack tree includes Node 3: Decommissioned Cloud Endpoint');
+    assert(hudSimHtml.includes('4. THREAT ACTOR'), 'Rendered attack tree includes Node 4: Threat Actor');
+    assert(hudSimHtml.includes('5. WEAPONIZED EXEC'), 'Rendered attack tree includes Node 5: Weaponized Execution');
+    assert(hudSimHtml.includes('animateMotion'), 'SVG includes animated packet/pulse flow paths');
+
+    // Test Smart Provider-Specific CNAME Target Fallback in simulateTakeoverAttack
+    sandbox.window.simulateTakeoverAttack('azure_nxdomain', 'portal.corp-client.com');
+    const hudAzureInst = sandbox.window.OrbitAttackTree.getInstance('auditHUD');
+    assert(hudAzureInst.cnameTarget.includes('azurewebsites.net'), 'simulateTakeoverAttack generates azurewebsites.net target for Azure scenario');
+    assert(!hudAzureInst.cnameTarget.includes('s3.amazonaws.com'), 'simulateTakeoverAttack does not force S3 target on Azure');
+
+    // Test Calling simulateTakeoverAttack with No Arguments
+    sandbox.window.simulateTakeoverAttack();
+    const hudDefInst = sandbox.window.OrbitAttackTree.getInstance('auditHUD');
+    assert(hudDefInst.subdomain.length > 0, 'simulateTakeoverAttack with 0 args sets valid default subdomain');
+
+    // Test preloadCustom with Azure Signature Synchronizes scenarioKey
+    sandbox.window.OrbitAttackTree.preloadCustom('sso.test.net', 'old-api.azurewebsites.net', 'Microsoft Azure', 'NXDOMAIN', 'visualAttackTreeContainer');
+    assert(inst.scenarioKey === 'azure_nxdomain', 'preloadCustom with Azure CNAME updates scenarioKey to azure_nxdomain');
+
+    // Test Extreme String Input Does Not Crash or Overflow
+    const longDomain = 'very-long-subdomain-name-exceeding-sixty-characters-for-stress-testing.agency-client.com';
+    sandbox.window.OrbitAttackTree.preloadCustom(longDomain, 'cname.target.com', 'Custom Cloud', '404 Not Found', 'visualAttackTreeContainer');
+    const longHtml = mockDoc.getElementById('visualAttackTreeContainer').innerHTML;
+    assert(longHtml.includes('..'), 'Long subdomain is safely truncated with ellipsis');
+
+    // Verify Takeover Playground HTML in landing/index.html includes the visual attack tree elements & noscript
+    assert(indexHtml.includes('visualAttackTreeContainer'), 'landing/index.html includes visual attack tree container');
+    assert(indexHtml.includes('OrbitAttackTree'), 'landing/index.html integrates OrbitAttackTree engine');
+    assert(indexHtml.includes('<noscript>') && indexHtml.includes('Visual Attack Tree // Subdomain Takeover Sequence'), 'landing/index.html includes accessible noscript attack tree fallback');
 
     console.log(`\n========================================`);
     console.log(`ALL ${passed}/${total} AUDIT ENGINE & PDF PARITY TESTS PASSED!`);

