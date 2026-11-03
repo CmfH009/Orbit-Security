@@ -1610,7 +1610,7 @@
             if (window.ORBIT_LIVE_CLOUD_ENDPOINT) addEp(window.ORBIT_LIVE_CLOUD_ENDPOINT);
             addEp('https://orbit-security-api-911438991206.us-central1.run.app/api/orbit/radar/telemetry');
             if (window.ORBIT_LIVE_TUNNEL_ENDPOINT) addEp(window.ORBIT_LIVE_TUNNEL_ENDPOINT);
-            addEp('https://fc1acb6485846d.lhr.life/api/orbit/radar/telemetry');
+            addEp('https://4d545638bced13.lhr.life/api/orbit/radar/telemetry');
 
             // 4. Localhost collector fallbacks (Cockpit on 9090, Standalone CLI Receiver on 9095)
             addEp('http://127.0.0.1:9090/api/orbit/radar/telemetry');
