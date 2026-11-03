@@ -166,7 +166,9 @@
             <button type="button" onclick="this.parentElement.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none')" class="text-slate-400 hover:text-white text-sm font-mono px-1 cursor-pointer" aria-label="Dismiss">&times;</button>
         `;
 
-        if (window.SimpleCat && SimpleCat.playBoing) {
+        if (isError && window.SimpleCat && typeof SimpleCat.playAlarm === 'function') {
+            SimpleCat.playAlarm();
+        } else if (window.SimpleCat && SimpleCat.playBoing) {
             SimpleCat.playBoing();
         }
 
@@ -2131,6 +2133,9 @@ ${agency}`;
         scanBtnText.textContent = 'Auditing...';
         hud.classList.remove('hidden');
         dispatchRadarTelemetry(domain, 'radar_submit', null);
+        if (window.SimpleCat && typeof SimpleCat.playChirp === 'function') {
+            SimpleCat.playChirp();
+        }
         hud.innerHTML = `
             <div class="p-4 rounded-xl bg-slate-950/80 border border-emerald-500/30 font-mono text-xs text-slate-300 space-y-2">
                 <div class="flex items-center gap-2 text-emerald-400 font-bold">
@@ -2150,7 +2155,11 @@ ${agency}`;
 
             if (audit.isNxDomain) {
                 showArcadeToast(`NXDOMAIN FAULT: [${safeDomain}] does not exist in DNS root.`, 'error');
-                if (window.SimpleCat && SimpleCat.playBoing) SimpleCat.playBoing();
+                if (window.SimpleCat && typeof SimpleCat.playAlarm === 'function') {
+                    SimpleCat.playAlarm();
+                } else if (window.SimpleCat && SimpleCat.playBoing) {
+                    SimpleCat.playBoing();
+                }
                 hud.innerHTML = `
                     <div class="p-4 sm:p-5 rounded-xl bg-slate-950/95 border border-red-500/40 shadow-2xl text-xs space-y-3 font-mono">
                         <div class="flex items-center gap-3 text-red-400 font-bold border-b border-red-500/20 pb-3">
@@ -2487,7 +2496,15 @@ ${agency}`;
             renderSpfTreeHud(audit.spfTree);
 
             if (window.SimpleCat) {
-                SimpleCat.playPowerUp();
+                if (audit.grade === 'F' || audit.takeoverWarning || (audit.findings && audit.findings.some(f => f.status === 'FAIL'))) {
+                    if (typeof SimpleCat.playAlarm === 'function') {
+                        SimpleCat.playAlarm();
+                    } else {
+                        SimpleCat.playPowerUp();
+                    }
+                } else {
+                    SimpleCat.playPowerUp();
+                }
                 SimpleCat.bindHelperChips();
                 if (SimpleCat.initScrollIndicators) SimpleCat.initScrollIndicators();
             }

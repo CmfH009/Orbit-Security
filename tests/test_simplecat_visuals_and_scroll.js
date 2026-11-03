@@ -269,6 +269,100 @@ test('Space Station Dock & SimpleCat persistence across about.html and signup.ht
     assert(signupHtml.includes('assets/simple_cat.js'), 'docs/signup.html must include assets/simple_cat.js');
 });
 
+// 7n. ABOVE-THE-FOLD ASTRO-CAT SENTINEL SHOWCASE & 4 ROLES
+test('Above-the-fold Sentinel Patrol Bar showcases 4 Sentinel Roles with telemetry & audio triggers', () => {
+    assert(docsIndexHtml.includes('id="sentinel-patrol-bar"'), 'Missing #sentinel-patrol-bar above the fold');
+    assert(docsIndexHtml.includes('Radar Scout'), 'Missing Radar Scout role in patrol bar');
+    assert(docsIndexHtml.includes('Takeover Interceptor'), 'Missing Takeover Interceptor role in patrol bar');
+    assert(docsIndexHtml.includes('Spoof Shield'), 'Missing Spoof Shield role in patrol bar');
+    assert(docsIndexHtml.includes('MX Sentinel'), 'Missing MX Sentinel role in patrol bar');
+    assert(docsIndexHtml.includes('16/16 Active'), 'Missing Radar Scout telemetry in patrol bar');
+    assert(docsIndexHtml.includes('0 Dangling'), 'Missing Takeover Interceptor telemetry in patrol bar');
+    assert(docsIndexHtml.includes('p=reject'), 'Missing Spoof Shield telemetry in patrol bar');
+    assert(docsIndexHtml.includes('Null-MX'), 'Missing MX Sentinel telemetry in patrol bar');
+    assert(docsIndexHtml.includes('SimpleCat.playHoverTick'), 'Patrol bar must include hover sound cues');
+});
+
+test('Creative Sentinels section showcases 4 dedicated Sentinel Roles with 16-bit badges and actions', () => {
+    assert(docsIndexHtml.includes('SYS.ID: SENTINEL-01'), 'Missing SENTINEL-01');
+    assert(docsIndexHtml.includes('SYS.ID: SENTINEL-02'), 'Missing SENTINEL-02');
+    assert(docsIndexHtml.includes('SYS.ID: SENTINEL-03'), 'Missing SENTINEL-03');
+    assert(docsIndexHtml.includes('SYS.ID: SENTINEL-04'), 'Missing SENTINEL-04');
+    assert(docsIndexHtml.includes('data-cat-term="dns"'), 'Radar Scout must link to dns term');
+    assert(docsIndexHtml.includes('data-cat-term="cname"'), 'Takeover Interceptor must link to cname term');
+    assert(docsIndexHtml.includes('data-cat-term="dmarc"'), 'Spoof Shield must link to dmarc term');
+    assert(docsIndexHtml.includes('data-cat-term="mx"'), 'MX Sentinel must link to mx term');
+});
+
+// 7o. ARCADE PERIMETER DEFENSE MODE MINI-GAME
+test('Arcade Perimeter Defense Mode mini-game engine, threats, controls & scoring in simple_cat.js', () => {
+    assert(docsCatJs.includes('DEFENSE_THREAT_SPECS'), 'Missing DEFENSE_THREAT_SPECS in simple_cat.js');
+    assert(docsCatJs.includes('Dangling CNAME'), 'Missing Dangling CNAME threat spec');
+    assert(docsCatJs.includes('Spoofed MX'), 'Missing Spoofed MX threat spec');
+    assert(docsCatJs.includes('SPF PermError'), 'Missing SPF PermError threat spec');
+    assert(docsCatJs.includes('Abandoned S3 Bucket'), 'Missing Abandoned S3 Bucket threat spec');
+    assert(docsCatJs.includes('ensureArcadeDefenseDOM'), 'Missing ensureArcadeDefenseDOM helper');
+    assert(docsCatJs.includes('startArcadeDefenseMode'), 'Missing startArcadeDefenseMode');
+    assert(docsCatJs.includes('stopArcadeDefenseMode'), 'Missing stopArcadeDefenseMode');
+    assert(docsCatJs.includes('toggleArcadeDefenseMode'), 'Missing toggleArcadeDefenseMode');
+    assert(docsCatJs.includes('fireDefensePulse'), 'Missing fireDefensePulse');
+    assert(docsCatJs.includes('triggerDefenseGameOver'), 'Missing triggerDefenseGameOver');
+    assert(docsCatJs.includes('triggerDefenseVictory'), 'Missing triggerDefenseVictory');
+    assert(docsCatJs.includes('combo'), 'Missing combo scoring tracking');
+    assert(docsCatJs.includes('maxCombo'), 'Missing maxCombo tracking');
+    assert(docsCatJs.includes('scanlines'), 'Missing CRT scanline styling in arcade overlay');
+});
+
+test('Arcade Perimeter Defense Mode overlay in index.html with >=44px touch targets', () => {
+    assert(docsIndexHtml.includes('id="arcadeDefenseMode"'), 'Missing #arcadeDefenseMode container in index.html');
+    assert(docsIndexHtml.includes('id="defenseCanvas"'), 'Missing #defenseCanvas in index.html');
+    assert(docsIndexHtml.includes('id="defense-touch-left"'), 'Missing #defense-touch-left touch control');
+    assert(docsIndexHtml.includes('id="defense-touch-right"'), 'Missing #defense-touch-right touch control');
+    assert(docsIndexHtml.includes('id="defense-touch-fire"'), 'Missing #defense-touch-fire touch control');
+    assert(docsIndexHtml.includes('min-h-[48px]'), 'Arcade defense touch targets must be >=44px (min-h-[48px])');
+    assert(docsIndexHtml.includes('id="defense-gameover-overlay"'), 'Missing game over overlay');
+    assert(docsIndexHtml.includes('id="defense-victory-overlay"'), 'Missing victory debrief overlay');
+});
+
+test('Arcade Defense Mode public API exports and hash deep-linking', () => {
+    assert(docsCatJs.includes('startDefense: startArcadeDefenseMode'), 'Missing startDefense export');
+    assert(docsCatJs.includes('stopDefense: stopArcadeDefenseMode'), 'Missing stopDefense export');
+    assert(docsCatJs.includes('toggleDefense: toggleArcadeDefenseMode'), 'Missing toggleDefense export');
+    assert(docsCatJs.includes('window.location.hash === \'#arcadeDefenseMode\''), 'Missing hashchange deep link support in simple_cat.js');
+    assert(docsIndexHtml.includes('#arcadeDefenseMode'), 'index.html must handle #arcadeDefenseMode');
+});
+
+// 7p. GLOBAL AUDIO SYNTHESIZER POLISH & SOUND TOGGLE
+test('Web Audio API 8-bit sound effects (deflect, alarm, victory, game over) implemented', () => {
+    assert(docsCatJs.includes('function playDeflect()'), 'Missing playDeflect synth method');
+    assert(docsCatJs.includes('function playAlarm()'), 'Missing playAlarm synth method');
+    assert(docsCatJs.includes('function playVictory()'), 'Missing playVictory synth method');
+    assert(docsCatJs.includes('function playGameOver()'), 'Missing playGameOver synth method');
+    assert(docsCatJs.includes('playDeflect: playDeflect'), 'Missing playDeflect export');
+    assert(docsCatJs.includes('playAlarm: playAlarm'), 'Missing playAlarm export');
+    assert(docsCatJs.includes('playVictory: playVictory'), 'Missing playVictory export');
+    assert(docsCatJs.includes('playGameOver: playGameOver'), 'Missing playGameOver export');
+    assert(docsCatJs.includes('isSoundEnabled: function'), 'Missing isSoundEnabled export');
+});
+
+test('Global audio persistence in localStorage.orbit_audio_enabled and toggle buttons', () => {
+    assert(docsCatJs.includes('orbit_audio_enabled'), 'simple_cat.js must read and persist orbit_audio_enabled');
+    assert(docsCatJs.includes('updateSoundToggleButtons'), 'Missing updateSoundToggleButtons in simple_cat.js');
+    assert(docsIndexHtml.includes('id="audio-toggle-btn"'), 'Missing #audio-toggle-btn in index.html desktop nav');
+    assert(docsIndexHtml.includes('id="sound-toggle-btn"'), 'Missing #sound-toggle-btn in index.html mobile nav');
+    assert(docsCatJs.includes('id="dock-audio-btn"'), 'Missing #dock-audio-btn in space station dock');
+    assert(docsCatJs.includes('id="touch-audio-btn"'), 'Missing #touch-audio-btn in mobile touch drawer');
+    assert(docsCatJs.includes('e.key === \'m\' || e.key === \'M\''), 'Missing hotkey M toggle in simple_cat.js');
+});
+
+// 7q. CORE SCANNER MILESTONE AUDIO HOOKS
+test('Scanner milestone audio hooks wired to DoH query start, critical alert, and color switch', () => {
+    assert(docsRadarJs.includes('SimpleCat.playChirp()'), 'DoH query start must trigger SimpleCat.playChirp');
+    assert(docsRadarJs.includes('SimpleCat.playAlarm()'), 'Critical alerts must trigger SimpleCat.playAlarm');
+    assert(docsRadarJs.includes('applyPortalBrandColor') && docsRadarJs.includes('SimpleCat.playBlip()'), 'Portal brand color switch must trigger SimpleCat.playBlip');
+    assert(docsRadarJs.includes('OrbitAttackTree.setStep') && docsRadarJs.includes('SimpleCat.playBlip()'), 'Exploit simulator step must trigger SimpleCat.playBlip');
+});
+
 // 8. STRICT 100% BYTE-FOR-BYTE SHA-256 PARITY BETWEEN DOCS/ AND LANDING/
 test('docs/index.html and landing/index.html have 100% SHA-256 parity', () => {
     const hDocs = sha256(docsIndexPath);
