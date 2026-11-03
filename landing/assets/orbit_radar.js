@@ -820,7 +820,7 @@
             const g = parseInt(hex.slice(3, 5), 16) || 0;
             const b = parseInt(hex.slice(5, 7), 16) || 0;
             const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-            textColor = lum > 0.55 ? '#020617' : '#ffffff';
+            textColor = lum >= 0.5 ? '#020617' : '#ffffff';
         }
 
         const launchBtn = document.getElementById('portalMockupLaunchBtn');
@@ -828,6 +828,8 @@
             launchBtn.style.backgroundColor = hex;
             launchBtn.style.color = textColor;
             launchBtn.style.boxShadow = `0 4px 14px ${hex}44`;
+            const currentAgency = (document.getElementById('portalAgencyNameInput')?.value || 'Apex Digital Studio').trim();
+            launchBtn.href = `portals/orbit-core.html?agency=${encodeURIComponent(currentAgency)}&color=${encodeURIComponent(hex)}`;
         }
 
         const pdfBtn = document.getElementById('portalMockupPdfBtn');
@@ -888,6 +890,11 @@
             mockupUrl.textContent = `security.${slug || 'apex'}.example.com`;
         }
 
+        const launchBtn = document.getElementById('portalMockupLaunchBtn');
+        if (launchBtn) {
+            launchBtn.href = `portals/orbit-core.html?agency=${encodeURIComponent(displayName)}&color=${encodeURIComponent(currentBrandColorHex)}`;
+        }
+
         // 2. Synchronize Input Fields
         if (syncOtherInputs) {
             const portalInput = document.getElementById('portalAgencyNameInput');
@@ -931,6 +938,11 @@
 
         if (!mimeOk && !extOk) {
             showArcadeToast('SYNTAX FAULT: Invalid logo format. Please upload PNG, SVG, JPG, or WebP.', 'error');
+            return false;
+        }
+
+        if (typeof file.size === 'number' && file.size <= 0) {
+            showArcadeToast('PAYLOAD FAULT: Logo file is empty (0 bytes).', 'error');
             return false;
         }
 
@@ -1264,7 +1276,8 @@
     }
 
     async function generateInstantPdfForDomain(targetDomain, score = 90, grade = 'A', agencyName = null, customFindings = null) {
-        const cleanDomain = (targetDomain || '').toLowerCase().replace(/[^a-zA-Z0-9.-]/g, '');
+        const rawDom = targetDomain || document.getElementById('targetDomain')?.value || document.getElementById('realScanDomain')?.value || 'clientbrand.com';
+        const cleanDomain = String(rawDom).toLowerCase().replace(/[^a-zA-Z0-9.-]/g, '');
         let finalAgencyName = (agencyName || document.getElementById('portalAgencyNameInput')?.value || document.getElementById('radarAgencyName')?.value || document.getElementById('customAgencyName')?.value || localStorage.getItem('orbit_agency_name') || 'Orbit Security Certified Client').trim().replace(/[\r\n]+/g, ' ');
         if (!finalAgencyName || finalAgencyName.toLowerCase() === cleanDomain) {
             finalAgencyName = 'Orbit Security';
@@ -3447,7 +3460,7 @@ ${payload.url}`;
             }
             const canonicalTarget = cnameChain[cnameChain.length - 1];
             const matchedNx = TAKEOVER_TARGET_REGISTRY.nxdomain.find(n => cnameChain.some(c => c.includes(n.pattern)));
-            const matchedMt = TAKEOVER_TARGET_REGISTRY.multitenant.find(m => cnameChain.some(c => c.includes(m.pattern)));
+            const matchedMt = TAKEOVER_TARGET_REGISTRY.multitenant.find(m => cnameChain.some(c => c.includes(m.pattern) || (m.pattern === '.s3.amazonaws.com' && (c.includes('.s3.') || c.includes('.s3-')) && c.includes('amazonaws.com'))));
             const displayRoute = cnameChain.length > 1 ? `${subName} → ${cname} → ${canonicalTarget}` : `${subName} → ${cname}`;
 
             // Prong A: NXDOMAIN targets (RCODE 3 on target A query = confirmed dangling)
@@ -4956,6 +4969,12 @@ ${payload.url}`;
 
         preloadCustom: function(subdomain, cnameTarget, provider, fingerprint, containerId) {
             const inst = _getAttackTreeInstance(containerId);
+            if (inst.timer) {
+                clearInterval(inst.timer);
+                inst.timer = null;
+            }
+            inst.isPlaying = false;
+            inst.activeStep = 1;
             if (subdomain) inst.subdomain = subdomain;
             if (cnameTarget) inst.cnameTarget = cnameTarget;
             if (provider) inst.provider = provider;

@@ -282,6 +282,7 @@
 
         updateSoundToggleButtons();
         if (soundEnabled) {
+            unlockAudio();
             playBlip();
             resumeAudio();
         } else {
@@ -5917,7 +5918,7 @@
     });
 
     // User interaction unlock for Web Audio policy compliance
-    const unlockAudio = () => {
+    function unlockAudio() {
         if (!soundEnabled) return;
         const ctx = getAudioContext();
         const removeListeners = () => {

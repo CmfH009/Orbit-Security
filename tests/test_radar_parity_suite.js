@@ -1099,6 +1099,57 @@ async function runTests() {
     const textColorEmerald = lumEmerald >= 0.5 ? '#090b12' : '#ffffff';
     assert(textColorEmerald === '#090b12', 'Orbit Emerald (#10b981) resolves to dark accessible text (#090b12)');
 
+    // 22. Zero-Byte Logo File Rejection
+    const zeroByteFile = { name: 'zero.png', type: 'image/png', size: 0 };
+    assert(sandbox.window.handlePortalLogoFile(zeroByteFile) === false, 'handlePortalLogoFile rejects zero-byte image file');
+
+    // 23. Attack Tree preloadCustom Clears Timer and Resets Playback
+    sandbox.window.OrbitAttackTree.togglePlay('boundaryAttackTree');
+    assert(bInst.isPlaying === true, 'Attack tree is playing before preloadCustom');
+    assert(bInst.timer !== null, 'Attack tree timer active before preloadCustom');
+    sandbox.window.OrbitAttackTree.preloadCustom('preloaded.client.com', 'orphaned.s3.amazonaws.com', 'AWS S3', 'NoSuchBucket', 'boundaryAttackTree');
+    assert(bInst.isPlaying === false, 'preloadCustom halts playback and resets isPlaying to false');
+    assert(bInst.timer === null, 'preloadCustom clears active timer interval');
+    assert(bInst.activeStep === 1, 'preloadCustom resets activeStep to 1');
+
+    // 24. portalMockupLaunchBtn Dynamic Query Param Synchronization
+    sandbox.window.applyPortalAgencyName('Cyber Vanguard Inc', true);
+    sandbox.window.applyPortalBrandColor('#06b6d4', 'cyan');
+    const dynamicLaunchBtn = mockDoc.getElementById('portalMockupLaunchBtn');
+    assert(dynamicLaunchBtn.href.includes('agency=Cyber%20Vanguard%20Inc'), 'portalMockupLaunchBtn href contains active agency name');
+    assert(dynamicLaunchBtn.href.includes('color=%2306b6d4'), 'portalMockupLaunchBtn href contains active brand color hex');
+
+    // 25. applyPortalBrandColor Luminance Contrast on Custom #10b981
+    sandbox.window.applyPortalBrandColor('#10b981', 'custom');
+    assert(dynamicLaunchBtn.style.color === '#020617', 'applyPortalBrandColor sets dark text #020617 for custom emerald #10b981');
+
+    // 26. Regional AWS S3 Bucket Endpoint Recognized as Multi-Tenant SaaS (Prong B)
+    DoHService.query = async (name, type) => {
+        if (name.startsWith('_dmarc.')) return { success: true, status: 0, answer: [{ type: 16, data: '"v=DMARC1; p=reject;"' }] };
+        if (type === 16) return { success: true, status: 0, answer: [{ type: 16, data: '"v=spf1 -all"' }] };
+        if (type === 15) return { success: true, status: 0, answer: [{ type: 15, data: '10 mx.regional-s3.com' }] };
+        if (name === 'media.regional-s3.com' && type === 5) {
+            return { success: true, status: 0, answer: [{ type: 5, data: 'company-assets.s3.us-west-2.amazonaws.com.' }] };
+        }
+        if (name === 'company-assets.s3.us-west-2.amazonaws.com' && type === 1) {
+            return { success: true, status: 0, answer: [{ type: 1, data: '52.218.1.1' }] };
+        }
+        if (type === 1) return { success: true, status: 0, answer: [{ type: 1, data: '198.51.100.20' }] };
+        return { success: true, status: 0, answer: [] };
+    };
+    const auditRegionalS3 = await performClientDohAudit('regional-s3.com');
+    assert(auditRegionalS3.cnameStatus === 'warn', 'Regional AWS S3 CNAME flags WARN status');
+    assert(auditRegionalS3.cnameScore === 15, 'Regional AWS S3 CNAME awards 15 pts');
+    assert(auditRegionalS3.takeoverWarning.includes('Amazon S3 Bucket'), 'takeoverWarning identifies regional S3 target as Amazon S3 Bucket');
+
+    // 27. generateInstantPdfForDomain Fallback with Empty Target Domain
+    lastPdfArgs = {};
+    await generateInstantPdfForDomain(null, 92, 'A');
+    assert(lastPdfArgs.renderedScore === '92 / 100', 'generateInstantPdfForDomain falls back gracefully when targetDomain is null');
+
+    // 28. orbit-core.html Safe Image Protocol Check
+    assert(orbitCoreHtml.includes('/^(data:image\\/|https?:\\/\\/|\\.\\.?\\/)/i.test(logo)'), 'orbit-core.html enforces safe image protocol before inserting logo');
+
     console.log(`\n========================================`);
     console.log(`ALL ${passed}/${total} AUDIT ENGINE & PDF PARITY TESTS PASSED!`);
     console.log(`========================================`);

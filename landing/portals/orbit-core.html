@@ -440,7 +440,7 @@
                     });
                 }
 
-                if (logo) {
+                if (logo && (/^(data:image\/|https?:\/\/|\.\.?\/)/i.test(logo))) {
                     const brandMark = document.querySelector('.brand-mark');
                     if (brandMark) {
                         const img = document.createElement('img');

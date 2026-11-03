@@ -434,6 +434,11 @@ test('Web Audio gesture unlock cleanly removes window event listeners once runni
     assert(docsCatJs.includes('window.removeEventListener("keydown", unlockAudio);'), 'Must remove keydown unlock listener');
 });
 
+test('toggleSound immediately triggers unlockAudio on audio enablement', () => {
+    assert(docsCatJs.includes('function unlockAudio()'), 'unlockAudio must be declared as a hoisted function');
+    assert(docsCatJs.includes('if (soundEnabled) {\n            unlockAudio();') || docsCatJs.includes('if (soundEnabled) {\r\n            unlockAudio();'), 'toggleSound must invoke unlockAudio when soundEnabled is true');
+});
+
 // 8. STRICT 100% BYTE-FOR-BYTE SHA-256 PARITY BETWEEN DOCS/ AND LANDING/
 test('docs/index.html and landing/index.html have 100% SHA-256 parity', () => {
     const hDocs = sha256(docsIndexPath);
