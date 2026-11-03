@@ -206,6 +206,14 @@
     let audioCtx = null;
     let soundEnabled = true;
 
+    // Load saved audio preference (supports both orbit_audio_enabled and legacy orbit_sound_enabled)
+    try {
+        const saved = localStorage.getItem("orbit_audio_enabled") ?? localStorage.getItem("orbit_sound_enabled");
+        if (saved !== null) {
+            soundEnabled = (saved === "true");
+        }
+    } catch (e) {}
+
     function getAudioContext() {
         if (!audioCtx) {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -214,7 +222,7 @@
             }
         }
         if (audioCtx && audioCtx.state === 'suspended') {
-            audioCtx.resume();
+            audioCtx.resume().catch(() => {});
         }
         return audioCtx;
     }
@@ -231,16 +239,29 @@
         }
     }
 
+    function updateSoundToggleButtons() {
+        const fullLabels = soundEnabled ? `<span>🔊</span> <span>AUDIO: ON</span>` : `<span>🔇</span> <span>AUDIO: OFF</span>`;
+        const miniLabels = soundEnabled ? `<span>🔊</span> <span>SFX</span>` : `<span>🔇</span> <span>SFX</span>`;
+        const touchLabels = soundEnabled ? `<span>🔊 Audio: ON</span>` : `<span>🔇 Audio: OFF</span>`;
+
+        ['audio-toggle-btn', 'sound-toggle-btn'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = fullLabels;
+        });
+        const dockAudio = document.getElementById('dock-audio-btn');
+        if (dockAudio) dockAudio.innerHTML = miniLabels;
+        const touchAudio = document.getElementById('touch-audio-btn');
+        if (touchAudio) touchAudio.innerHTML = touchLabels;
+    }
+
     function toggleSound() {
         soundEnabled = !soundEnabled;
         try {
+            localStorage.setItem("orbit_audio_enabled", soundEnabled.toString());
             localStorage.setItem("orbit_sound_enabled", soundEnabled.toString());
         } catch (e) {}
 
-        const btn = document.getElementById("audio-toggle-btn") || document.getElementById("sound-toggle-btn");
-        if (btn) {
-            btn.innerHTML = soundEnabled ? `<span>🔊</span> <span>AUDIO: ON</span>` : `<span>🔇</span> <span>AUDIO: OFF</span>`;
-        }
+        updateSoundToggleButtons();
         if (soundEnabled) {
             playBlip();
             resumeAudio();
@@ -364,6 +385,88 @@
             gain.connect(ctx.destination);
             osc.start(now);
             osc.stop(now + 0.13);
+        } catch (e) {}
+    }
+
+    function playDeflect() {
+        if (!soundEnabled) return;
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(880, now);
+            osc.frequency.exponentialRampToValueAtTime(1760, now + 0.04);
+            osc.frequency.exponentialRampToValueAtTime(440, now + 0.09);
+
+            gain.gain.setValueAtTime(0.09, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.10);
+        } catch (e) {}
+    }
+
+    function playAlarm() {
+        if (!soundEnabled) return;
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+            // 2-tone critical alarm pulse
+            for (let i = 0; i < 3; i++) {
+                const t = now + (i * 0.09);
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(i % 2 === 0 ? 880 : 440, t);
+                gain.gain.setValueAtTime(0.06, t);
+                gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.085);
+            }
+        } catch (e) {}
+    }
+
+    function playVictory() {
+        if (!soundEnabled) return;
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            // Fanfare chords: C5 (523.25), E5 (659.25), G5 (783.99), C6 (1046.50)
+            const notes = [
+                { f: 523.25, d: 0.10, t: 0.00 },
+                { f: 659.25, d: 0.10, t: 0.11 },
+                { f: 783.99, d: 0.12, t: 0.22 },
+                { f: 1046.50, d: 0.35, t: 0.35 }
+            ];
+            notes.forEach(n => {
+                playTone(n.f, 'triangle', n.d, n.t);
+            });
+        } catch (e) {}
+    }
+
+    function playGameOver() {
+        if (!soundEnabled) return;
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+            // Descending defeat notes: F4 (349.23), D4 (293.66), B3 (246.94), G#3 (207.65)
+            const notes = [
+                { f: 349.23, d: 0.14, t: 0.00 },
+                { f: 293.66, d: 0.14, t: 0.15 },
+                { f: 246.94, d: 0.16, t: 0.30 },
+                { f: 207.65, d: 0.35, t: 0.47 }
+            ];
+            notes.forEach(n => {
+                playTone(n.f, 'sawtooth', n.d, n.t);
+            });
         } catch (e) {}
     }
 
@@ -1490,6 +1593,14 @@
                     <button type="button" id="dock-rec-btn" class="text-[10px] font-mono font-bold text-cyan-400 hover:text-cyan-300 hover:underline cursor-pointer flex items-center gap-1" title="Record 60fps gameplay clip directly for X (Twitter)">
                         <span>📹 Clip</span>
                     </button>
+                    <span class="text-slate-600 text-[10px]">•</span>
+                    <button type="button" id="dock-arcade-btn" class="text-[10px] font-mono font-bold text-red-400 hover:text-red-300 hover:underline flex items-center gap-0.5 cursor-pointer" title="Launch Arcade Perimeter Defense Mode">
+                        <span>🛡️ Defense</span>
+                    </button>
+                    <span class="text-slate-600 text-[10px]">•</span>
+                    <button type="button" id="dock-audio-btn" class="text-[10px] font-mono font-bold text-slate-400 hover:text-emerald-300 hover:underline flex items-center gap-0.5 cursor-pointer" title="Toggle 8-Bit Audio SFX">
+                        <span>🔊 SFX</span>
+                    </button>
                     <button type="button" id="dock-laser-stop-btn" class="hidden text-[10px] font-mono font-bold text-rose-400 hover:text-rose-300 hover:underline cursor-pointer animate-pulse ml-0.5">
                         <span>🛑 Stop Laser</span>
                     </button>
@@ -1533,6 +1644,12 @@
                 </button>
                 <button type="button" id="touch-decode-btn" class="min-h-[46px] px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95">
                     <span>📖 Jargon</span>
+                </button>
+                <button type="button" id="touch-arcade-btn" class="min-h-[46px] px-3 py-2.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-red-300 font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95">
+                    <span>🛡️ Defense</span>
+                </button>
+                <button type="button" id="touch-audio-btn" class="min-h-[46px] px-3 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95">
+                    <span>🔊 Audio: ON</span>
                 </button>
                 <button type="button" id="touch-rec-btn" class="col-span-2 min-h-[46px] px-3 py-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/50 text-rose-300 font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95">
                     <span>📹 Record Clip for X</span>
@@ -1645,6 +1762,19 @@
                 showSimpleCatDialog("dmarc");
             });
         }
+        const touchArcade = document.getElementById("touch-arcade-btn");
+        if (touchArcade) {
+            touchArcade.addEventListener("click", () => {
+                closeTouchDrawer();
+                startArcadeDefenseMode();
+            });
+        }
+        const touchAudio = document.getElementById("touch-audio-btn");
+        if (touchAudio) {
+            touchAudio.addEventListener("click", () => {
+                toggleSound();
+            });
+        }
         const touchRec = document.getElementById("touch-rec-btn");
         if (touchRec) {
             touchRec.addEventListener("click", () => {
@@ -1677,6 +1807,18 @@
         if (dockTreats) {
             dockTreats.addEventListener("click", () => {
                 toggleTreatsGame();
+            });
+        }
+        const dockArcade = document.getElementById("dock-arcade-btn");
+        if (dockArcade) {
+            dockArcade.addEventListener("click", () => {
+                startArcadeDefenseMode();
+            });
+        }
+        const dockAudio = document.getElementById("dock-audio-btn");
+        if (dockAudio) {
+            dockAudio.addEventListener("click", () => {
+                toggleSound();
             });
         }
         const dockDecode = document.getElementById("dock-decode-btn");
@@ -2140,6 +2282,13 @@
             if (tourHudBtn) tourHudBtn.classList.remove("astro-hud-btn-active");
             const tourControls = document.getElementById("astro-tour-controls");
             if (tourControls) tourControls.classList.add("hidden");
+        }
+
+        // 5. Arcade Defense Mode cleanup
+        if (keepMode !== 'defense') {
+            if (typeof stopArcadeDefenseMode === 'function') {
+                stopArcadeDefenseMode();
+            }
         }
     }
 
@@ -3607,6 +3756,819 @@
         if (patrolBtn) patrolBtn.classList.remove("astro-hud-btn-active");
     }
 
+    // =========================================================================
+    // 6c. ARCADE PERIMETER DEFENSE MODE MINI-GAME
+    // =========================================================================
+    const DEFENSE_THREAT_SPECS = [
+        {
+            type: 'cname',
+            name: 'Dangling CNAME',
+            payload: 'orphaned-promo.s3.aws',
+            color: '#ef4444',
+            symbol: '💀',
+            speed: 1.15,
+            hp: 1,
+            pts: 100,
+            radius: 18
+        },
+        {
+            type: 'mx',
+            name: 'Spoofed MX',
+            payload: 'mail.fake-spoof.io',
+            color: '#a855f7',
+            symbol: '👾',
+            speed: 1.25,
+            hp: 1,
+            pts: 120,
+            radius: 18
+        },
+        {
+            type: 'spf',
+            name: 'SPF PermError',
+            payload: 'spf.permerror.fail',
+            color: '#f59e0b',
+            symbol: '⚠️',
+            speed: 1.05,
+            hp: 1,
+            pts: 90,
+            radius: 18
+        },
+        {
+            type: 's3',
+            name: 'Abandoned S3 Bucket',
+            payload: 's3.orphaned-leak.aws',
+            color: '#06b6d4',
+            symbol: '📡',
+            speed: 1.20,
+            hp: 1,
+            pts: 110,
+            radius: 18
+        }
+    ];
+
+    const defenseState = {
+        active: false,
+        canvas: null,
+        ctx: null,
+        animId: null,
+        width: 720,
+        height: 480,
+        centerX: 360,
+        centerY: 240,
+        turretAngle: -Math.PI / 2,
+        aimRotationSpeed: 0.065,
+        perimeterRadius: 44,
+        shieldHp: 100,
+        score: 0,
+        combo: 1,
+        maxCombo: 1,
+        threatsTotal: 16,
+        threatsSpawned: 0,
+        threatsDefeated: 0,
+        lastSpawn: 0,
+        spawnInterval: 1350,
+        state: 'playing',
+        threats: [],
+        pulses: [],
+        sparks: [],
+        floatingScores: [],
+        keys: {},
+        handlersBound: false,
+        lastPulseTime: 0,
+        screenShake: 0
+    };
+
+    function ensureArcadeDefenseDOM() {
+        let overlay = document.getElementById("arcadeDefenseMode");
+        if (!overlay) {
+            overlay = document.createElement("div");
+            overlay.id = "arcadeDefenseMode";
+            overlay.className = "hidden fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-hidden select-none";
+            overlay.innerHTML = `
+                <div class="relative w-full max-w-4xl bg-slate-950 border-2 border-red-500/70 rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.35)] overflow-hidden flex flex-col max-h-[96dvh]">
+                    <div class="absolute inset-0 scanlines pointer-events-none z-20 opacity-40"></div>
+                    <div class="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-red-400 z-30 pointer-events-none"></div>
+                    <div class="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-red-400 z-30 pointer-events-none"></div>
+                    <div class="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-red-400 z-30 pointer-events-none"></div>
+                    <div class="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-red-400 z-30 pointer-events-none"></div>
+
+                    <div class="px-4 py-2.5 bg-slate-900 border-b border-red-500/40 flex items-center justify-between relative z-30 flex-shrink-0">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-3 h-3 rounded-full bg-red-500 animate-ping"></span>
+                            <span class="font-arcade text-xs text-white uppercase tracking-wider">ASTRO-CAT // PERIMETER DEFENSE ARCADE</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="hidden sm:flex items-center gap-2 text-[10px] font-mono text-slate-300">
+                                <span class="text-slate-500">CONTROLS:</span>
+                                <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-emerald-400">←/A</kbd>
+                                <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-emerald-400">→/D</kbd>
+                                <span class="text-slate-500">AIM</span>
+                                <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-amber-400">SPACE</kbd>
+                                <span class="text-slate-500">FIRE</span>
+                            </div>
+                            <button type="button" id="defense-close-btn" class="min-w-[38px] min-h-[38px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-red-500 hover:text-slate-950 text-slate-300 border border-slate-700 font-arcade text-xs transition-all cursor-pointer flex items-center justify-center" title="Exit Defense Mode (ESC)">✕</button>
+                        </div>
+                    </div>
+
+                    <div class="px-4 py-2 bg-slate-950/90 border-b border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono relative z-30 flex-shrink-0">
+                        <div class="flex items-center gap-2">
+                            <span class="text-slate-400 text-[11px]">SHIELD:</span>
+                            <div class="flex-1 bg-slate-900 rounded-full h-3 border border-slate-700 overflow-hidden relative">
+                                <div id="defense-shield-bar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-200" style="width: 100%;"></div>
+                            </div>
+                            <span id="defense-shield-val" class="text-emerald-400 font-bold text-xs">100%</span>
+                        </div>
+                        <div class="flex items-center justify-between sm:justify-center gap-2">
+                            <span class="text-slate-400 text-[11px]">SCORE:</span>
+                            <span id="defense-score-val" class="text-amber-400 font-arcade text-xs">00000</span>
+                        </div>
+                        <div class="flex items-center justify-between sm:justify-center gap-2">
+                            <span class="text-slate-400 text-[11px]">COMBO:</span>
+                            <span id="defense-combo-val" class="text-cyan-400 font-bold text-xs">x1</span>
+                        </div>
+                        <div class="flex items-center justify-between sm:justify-end gap-2">
+                            <span class="text-slate-400 text-[11px]">REMAINING:</span>
+                            <span id="defense-threats-val" class="text-red-400 font-bold text-xs">16 THREATS</span>
+                        </div>
+                    </div>
+
+                    <div class="relative flex-1 bg-slate-950 flex items-center justify-center overflow-hidden min-h-[300px] sm:min-h-[420px]">
+                        <canvas id="defenseCanvas" class="w-full h-full cursor-crosshair block"></canvas>
+
+                        <div id="defense-gameover-overlay" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-40">
+                            <div class="p-6 rounded-2xl bg-slate-900 border-2 border-red-500/80 shadow-[0_0_40px_rgba(239,68,68,0.5)] max-w-md w-full space-y-4">
+                                <div class="text-4xl animate-bounce">💥</div>
+                                <div class="font-arcade text-xl text-red-400 tracking-wider">PERIMETER BREACHED</div>
+                                <div class="text-xs text-slate-300 font-mono">CRITICAL THREAT ENTERED CLIENT DOMAIN ROOT</div>
+                                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono space-y-1.5 text-left">
+                                    <div class="flex justify-between"><span class="text-slate-400">Final Score:</span><span id="gameover-score" class="text-amber-400 font-bold">0</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-400">Threats Neutralized:</span><span id="gameover-threats" class="text-emerald-400 font-bold">0</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-400">Max Combo:</span><span id="gameover-combo" class="text-cyan-400 font-bold">x1</span></div>
+                                </div>
+                                <div class="flex gap-2.5 pt-2">
+                                    <button type="button" id="gameover-retry-btn" class="flex-1 min-h-[46px] py-2.5 rounded-xl bg-red-500 hover:bg-red-400 text-slate-950 font-bold text-xs uppercase transition-all pixel-btn cursor-pointer">Retry Defense</button>
+                                    <button type="button" id="gameover-exit-btn" class="flex-1 min-h-[46px] py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs uppercase transition-all pixel-btn cursor-pointer">Exit</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="defense-victory-overlay" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-40">
+                            <div class="p-6 rounded-2xl bg-slate-900 border-2 border-emerald-500/80 shadow-[0_0_40px_rgba(16,185,129,0.5)] max-w-md w-full space-y-4">
+                                <div class="text-4xl animate-bounce">🏆</div>
+                                <div class="font-arcade text-xl text-emerald-400 tracking-wider">PERIMETER SECURED // GRADE: A+</div>
+                                <div class="text-xs text-slate-300 font-mono">ALL INCOMING THREATS DEFLECTED & INTERCEPTED</div>
+                                <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono space-y-1.5 text-left">
+                                    <div class="flex justify-between"><span class="text-slate-400">Final Score:</span><span id="victory-score" class="text-amber-400 font-bold">0</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-400">Threats Neutralized:</span><span id="victory-threats" class="text-emerald-400 font-bold">16 / 16</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-400">Max Combo:</span><span id="victory-combo" class="text-cyan-400 font-bold">x5</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-400">Clean Perimeter Bonus:</span><span class="text-emerald-300 font-bold">+500 PTS</span></div>
+                                </div>
+                                <div class="flex gap-2.5 pt-2">
+                                    <button type="button" id="victory-retry-btn" class="flex-1 min-h-[46px] py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase transition-all pixel-btn cursor-pointer">Play Again</button>
+                                    <button type="button" id="victory-exit-btn" class="flex-1 min-h-[46px] py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs uppercase transition-all pixel-btn cursor-pointer">Close Radar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-slate-900/95 border-t border-slate-800 flex items-center justify-between gap-3 relative z-30 flex-shrink-0">
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="defense-touch-left" class="min-w-[48px] min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-800 active:bg-emerald-500/30 text-white font-arcade text-xs border border-slate-700 transition-all select-none cursor-pointer flex items-center justify-center">◀ AIM L</button>
+                            <button type="button" id="defense-touch-right" class="min-w-[48px] min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-800 active:bg-emerald-500/30 text-white font-arcade text-xs border border-slate-700 transition-all select-none cursor-pointer flex items-center justify-center">AIM R ▶</button>
+                        </div>
+                        <div class="flex-1 max-w-xs">
+                            <button type="button" id="defense-touch-fire" class="w-full min-h-[48px] px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 active:scale-95 text-slate-950 font-arcade text-xs transition-all shadow-md shadow-emerald-500/20 select-none cursor-pointer flex items-center justify-center gap-2">
+                                <span>⚡</span>
+                                <span>FIRE PULSE</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+        return overlay;
+    }
+
+    function fireDefensePulse() {
+        if (!defenseState.active || defenseState.state !== 'playing') return;
+        const now = performance.now();
+        if (now - defenseState.lastPulseTime < 160) return;
+        defenseState.lastPulseTime = now;
+
+        playLaser();
+        const tipX = defenseState.centerX + Math.cos(defenseState.turretAngle) * (defenseState.perimeterRadius + 6);
+        const tipY = defenseState.centerY + Math.sin(defenseState.turretAngle) * (defenseState.perimeterRadius + 6);
+        const speed = 9.5;
+
+        defenseState.pulses.push({
+            x: tipX,
+            y: tipY,
+            vx: Math.cos(defenseState.turretAngle) * speed,
+            vy: Math.sin(defenseState.turretAngle) * speed,
+            radius: 5,
+            life: 0
+        });
+
+        for (let i = 0; i < 3; i++) {
+            const spread = (Math.random() - 0.5) * 0.5;
+            defenseState.sparks.push({
+                x: tipX,
+                y: tipY,
+                vx: Math.cos(defenseState.turretAngle + spread) * (Math.random() * 2 + 1),
+                vy: Math.sin(defenseState.turretAngle + spread) * (Math.random() * 2 + 1),
+                color: '#34d399',
+                alpha: 1.0,
+                decay: 0.1
+            });
+        }
+    }
+
+    function updateDefenseGame(now) {
+        if (!defenseState.active) return;
+
+        if (defenseState.keys['ArrowLeft'] || defenseState.keys['KeyA'] || defenseState.keys['a']) {
+            defenseState.turretAngle -= defenseState.aimRotationSpeed;
+        }
+        if (defenseState.keys['ArrowRight'] || defenseState.keys['KeyD'] || defenseState.keys['d']) {
+            defenseState.turretAngle += defenseState.aimRotationSpeed;
+        }
+
+        if (defenseState.keys['Space'] || defenseState.keys[' '] || defenseState.keys['ArrowUp'] || defenseState.keys['KeyW'] || defenseState.keys['w']) {
+            fireDefensePulse();
+        }
+
+        if (defenseState.state === 'playing' && defenseState.threatsSpawned < defenseState.threatsTotal) {
+            if (now - defenseState.lastSpawn > defenseState.spawnInterval) {
+                defenseState.lastSpawn = now;
+                const spec = DEFENSE_THREAT_SPECS[defenseState.threatsSpawned % DEFENSE_THREAT_SPECS.length];
+                const theta = Math.random() * Math.PI * 2;
+                const spawnDist = Math.max(defenseState.centerX, defenseState.centerY) + 60;
+                const sx = defenseState.centerX + Math.cos(theta) * spawnDist;
+                const sy = defenseState.centerY + Math.sin(theta) * spawnDist;
+
+                const angleToCenter = Math.atan2(defenseState.centerY - sy, defenseState.centerX - sx);
+                defenseState.threats.push({
+                    type: spec.type,
+                    name: spec.name,
+                    symbol: spec.symbol,
+                    color: spec.color,
+                    pts: spec.pts,
+                    radius: spec.radius,
+                    x: sx,
+                    y: sy,
+                    vx: Math.cos(angleToCenter) * spec.speed,
+                    vy: Math.sin(angleToCenter) * spec.speed,
+                    hp: spec.hp
+                });
+                defenseState.threatsSpawned++;
+                const remainingEl = document.getElementById("defense-threats-val");
+                if (remainingEl) remainingEl.textContent = `${defenseState.threatsTotal - defenseState.threatsDefeated} THREATS`;
+            }
+        }
+
+        for (let i = defenseState.pulses.length - 1; i >= 0; i--) {
+            const p = defenseState.pulses[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life++;
+
+            if (p.x < -20 || p.x > defenseState.width + 20 || p.y < -20 || p.y > defenseState.height + 20) {
+                defenseState.pulses.splice(i, 1);
+                continue;
+            }
+
+            let hit = false;
+            for (let j = defenseState.threats.length - 1; j >= 0; j--) {
+                const t = defenseState.threats[j];
+                const dist = Math.hypot(p.x - t.x, p.y - t.y);
+                if (dist < t.radius + p.radius) {
+                    hit = true;
+                    playDeflect();
+
+                    for (let s = 0; s < 12; s++) {
+                        const sAngle = Math.random() * Math.PI * 2;
+                        const sSpeed = Math.random() * 3 + 1;
+                        defenseState.sparks.push({
+                            x: t.x,
+                            y: t.y,
+                            vx: Math.cos(sAngle) * sSpeed,
+                            vy: Math.sin(sAngle) * sSpeed,
+                            color: t.color,
+                            alpha: 1.0,
+                            decay: 0.04
+                        });
+                    }
+
+                    defenseState.threatsDefeated++;
+                    defenseState.combo++;
+                    if (defenseState.combo > defenseState.maxCombo) {
+                        defenseState.maxCombo = defenseState.combo;
+                    }
+                    const earned = t.pts * defenseState.combo;
+                    defenseState.score += earned;
+
+                    defenseState.floatingScores.push({
+                        text: `+${earned} (COMBO x${defenseState.combo})`,
+                        color: t.color,
+                        x: t.x,
+                        y: t.y,
+                        alpha: 1.0
+                    });
+
+                    defenseState.threats.splice(j, 1);
+                    break;
+                }
+            }
+
+            if (hit) {
+                defenseState.pulses.splice(i, 1);
+            }
+        }
+
+        for (let i = defenseState.threats.length - 1; i >= 0; i--) {
+            const t = defenseState.threats[i];
+            t.x += t.vx;
+            t.y += t.vy;
+
+            const distToCenter = Math.hypot(t.x - defenseState.centerX, t.y - defenseState.centerY);
+            if (distToCenter <= defenseState.perimeterRadius + t.radius - 8) {
+                playAlarm();
+                defenseState.shieldHp = Math.max(0, defenseState.shieldHp - 25);
+                defenseState.screenShake = 7;
+                defenseState.combo = 1;
+
+                for (let s = 0; s < 14; s++) {
+                    const sAngle = Math.random() * Math.PI * 2;
+                    defenseState.sparks.push({
+                        x: t.x,
+                        y: t.y,
+                        vx: Math.cos(sAngle) * 3,
+                        vy: Math.sin(sAngle) * 3,
+                        color: '#ef4444',
+                        alpha: 1.0,
+                        decay: 0.05
+                    });
+                }
+
+                defenseState.threats.splice(i, 1);
+
+                if (defenseState.shieldHp <= 0) {
+                    defenseState.shieldHp = 0;
+                    triggerDefenseGameOver();
+                    return;
+                }
+            }
+        }
+
+        for (let i = defenseState.sparks.length - 1; i >= 0; i--) {
+            const s = defenseState.sparks[i];
+            s.x += s.vx;
+            s.y += s.vy;
+            s.alpha -= s.decay;
+            if (s.alpha <= 0) {
+                defenseState.sparks.splice(i, 1);
+            }
+        }
+
+        for (let i = defenseState.floatingScores.length - 1; i >= 0; i--) {
+            const fs = defenseState.floatingScores[i];
+            fs.y -= 0.8;
+            fs.alpha -= 0.02;
+            if (fs.alpha <= 0) {
+                defenseState.floatingScores.splice(i, 1);
+            }
+        }
+
+        if (defenseState.state === 'playing' && defenseState.threatsDefeated >= defenseState.threatsTotal) {
+            triggerDefenseVictory();
+            return;
+        }
+
+        const shieldBar = document.getElementById("defense-shield-bar");
+        const shieldVal = document.getElementById("defense-shield-val");
+        const scoreVal = document.getElementById("defense-score-val");
+        const comboVal = document.getElementById("defense-combo-val");
+        const remainingVal = document.getElementById("defense-threats-val");
+
+        if (shieldBar) shieldBar.style.width = `${defenseState.shieldHp}%`;
+        if (shieldVal) {
+            shieldVal.textContent = `${defenseState.shieldHp}%`;
+            shieldVal.className = defenseState.shieldHp > 50 ? 'text-emerald-400 font-bold text-xs' : (defenseState.shieldHp > 25 ? 'text-amber-400 font-bold text-xs' : 'text-red-400 font-bold text-xs');
+        }
+        if (scoreVal) scoreVal.textContent = String(defenseState.score).padStart(5, '0');
+        if (comboVal) comboVal.textContent = `x${defenseState.combo}`;
+        if (remainingVal) remainingVal.textContent = `${defenseState.threatsTotal - defenseState.threatsDefeated} THREATS`;
+    }
+
+    function renderDefenseGame() {
+        const ctx = defenseState.ctx;
+        if (!ctx) return;
+
+        const w = defenseState.width;
+        const h = defenseState.height;
+        const cx = defenseState.centerX;
+        const cy = defenseState.centerY;
+
+        ctx.save();
+
+        if (defenseState.screenShake > 0) {
+            const dx = (Math.random() - 0.5) * defenseState.screenShake * 2.5;
+            const dy = (Math.random() - 0.5) * defenseState.screenShake * 2.5;
+            ctx.translate(dx, dy);
+            defenseState.screenShake--;
+        }
+
+        // Cyber Grid Background
+        ctx.fillStyle = '#020617';
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.strokeStyle = 'rgba(16, 185, 129, 0.08)';
+        ctx.lineWidth = 1;
+        const gridSize = 36;
+        for (let x = 0; x < w; x += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, h);
+            ctx.stroke();
+        }
+        for (let y = 0; y < h; y += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(w, y);
+            ctx.stroke();
+        }
+
+        // Radar Range Rings
+        [80, 150, 220, 290].forEach(r => {
+            ctx.strokeStyle = 'rgba(6, 182, 212, 0.12)';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.stroke();
+        });
+
+        // Central Agency Domain Perimeter Shield
+        const shieldColor = defenseState.shieldHp > 50 ? '#10b981' : (defenseState.shieldHp > 25 ? '#f59e0b' : '#ef4444');
+        const shieldPulse = Math.sin(performance.now() * 0.005) * 2;
+
+        ctx.save();
+        ctx.strokeStyle = shieldColor;
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = shieldColor;
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(cx, cy, defenseState.perimeterRadius + shieldPulse, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, defenseState.perimeterRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Perimeter Label
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 9px ui-monospace, SFMono-Regular, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText("AGENCY PERIMETER", cx, cy + defenseState.perimeterRadius + 14);
+
+        // Central Turret & Astro-Cat Pilot
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(defenseState.turretAngle);
+
+        ctx.fillStyle = '#10b981';
+        ctx.fillRect(8, -4, 28, 8);
+        ctx.fillStyle = '#34d399';
+        ctx.fillRect(28, -5, 10, 10);
+
+        ctx.fillStyle = '#1e293b';
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, 16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(0, 0, 11, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#10b981';
+        ctx.beginPath();
+        ctx.moveTo(-7, -4);
+        ctx.lineTo(-4, -10);
+        ctx.lineTo(-1, -5);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(1, -5);
+        ctx.lineTo(4, -10);
+        ctx.lineTo(7, -4);
+        ctx.fill();
+
+        ctx.fillStyle = '#020617';
+        ctx.fillRect(-4, -2, 2, 2);
+        ctx.fillRect(2, -2, 2, 2);
+        ctx.restore();
+
+        // Pulses
+        defenseState.pulses.forEach(p => {
+            ctx.save();
+            ctx.fillStyle = '#38bdf8';
+            ctx.shadowColor = '#34d399';
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.x - p.vx * 2, p.y - p.vy * 2);
+            ctx.stroke();
+            ctx.restore();
+        });
+
+        // Threats
+        defenseState.threats.forEach(t => {
+            ctx.save();
+            ctx.translate(t.x, t.y);
+
+            ctx.strokeStyle = t.color;
+            ctx.lineWidth = 1.5;
+            ctx.shadowColor = t.color;
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(0, 0, t.radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+            ctx.beginPath();
+            ctx.arc(0, 0, t.radius - 1, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.font = '14px system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(t.symbol, 0, 1);
+
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = 'bold 9px ui-monospace, SFMono-Regular, monospace';
+            ctx.fillText(t.name, 0, -t.radius - 4);
+            ctx.restore();
+        });
+
+        // Sparks
+        defenseState.sparks.forEach(s => {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, s.alpha);
+            ctx.fillStyle = s.color;
+            ctx.shadowColor = s.color;
+            ctx.shadowBlur = 6;
+            ctx.fillRect(s.x - 1.5, s.y - 1.5, 3, 3);
+            ctx.restore();
+        });
+
+        // Floating Scores
+        defenseState.floatingScores.forEach(fs => {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, fs.alpha);
+            ctx.fillStyle = fs.color;
+            ctx.font = 'bold 11px ui-monospace, SFMono-Regular, monospace';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = fs.color;
+            ctx.shadowBlur = 8;
+            ctx.fillText(fs.text, fs.x, fs.y);
+            ctx.restore();
+        });
+
+        ctx.restore();
+    }
+
+    function defenseLoop(now) {
+        if (!defenseState.active) return;
+        updateDefenseGame(now);
+        renderDefenseGame();
+        if (defenseState.active && defenseState.state === 'playing') {
+            defenseState.animId = requestAnimationFrame(defenseLoop);
+        }
+    }
+
+    function triggerDefenseGameOver() {
+        defenseState.state = 'gameover';
+        playGameOver();
+        const goOverlay = document.getElementById("defense-gameover-overlay");
+        const sVal = document.getElementById("gameover-score");
+        const tVal = document.getElementById("gameover-threats");
+        const cVal = document.getElementById("gameover-combo");
+
+        if (sVal) sVal.textContent = String(defenseState.score);
+        if (tVal) tVal.textContent = `${defenseState.threatsDefeated} / ${defenseState.threatsTotal}`;
+        if (cVal) cVal.textContent = `x${defenseState.maxCombo}`;
+        if (goOverlay) goOverlay.classList.remove("hidden");
+    }
+
+    function triggerDefenseVictory() {
+        defenseState.state = 'victory';
+        playVictory();
+        const bonus = 500;
+        defenseState.score += bonus;
+
+        const vicOverlay = document.getElementById("defense-victory-overlay");
+        const sVal = document.getElementById("victory-score");
+        const tVal = document.getElementById("victory-threats");
+        const cVal = document.getElementById("victory-combo");
+
+        if (sVal) sVal.textContent = String(defenseState.score);
+        if (tVal) tVal.textContent = `${defenseState.threatsDefeated} / ${defenseState.threatsTotal}`;
+        if (cVal) cVal.textContent = `x${defenseState.maxCombo}`;
+        if (vicOverlay) vicOverlay.classList.remove("hidden");
+    }
+
+    function bindDefenseDOMControls() {
+        if (defenseState.handlersBound) return;
+        defenseState.handlersBound = true;
+
+        const overlay = document.getElementById("arcadeDefenseMode");
+        if (!overlay) return;
+
+        const closeBtn = document.getElementById("defense-close-btn");
+        if (closeBtn) closeBtn.addEventListener("click", stopArcadeDefenseMode);
+
+        const goRetry = document.getElementById("gameover-retry-btn");
+        if (goRetry) goRetry.addEventListener("click", startArcadeDefenseMode);
+        const goExit = document.getElementById("gameover-exit-btn");
+        if (goExit) goExit.addEventListener("click", stopArcadeDefenseMode);
+
+        const vicRetry = document.getElementById("victory-retry-btn");
+        if (vicRetry) vicRetry.addEventListener("click", startArcadeDefenseMode);
+        const vicExit = document.getElementById("victory-exit-btn");
+        if (vicExit) vicExit.addEventListener("click", stopArcadeDefenseMode);
+
+        // Mobile Touch Buttons (>=44px touch targets)
+        const touchLeft = document.getElementById("defense-touch-left");
+        const touchRight = document.getElementById("defense-touch-right");
+        const touchFire = document.getElementById("defense-touch-fire");
+
+        if (touchLeft) {
+            let leftInt = null;
+            const startLeft = (e) => {
+                e.preventDefault();
+                defenseState.turretAngle -= defenseState.aimRotationSpeed * 1.5;
+                clearInterval(leftInt);
+                leftInt = setInterval(() => { defenseState.turretAngle -= defenseState.aimRotationSpeed * 1.5; }, 50);
+            };
+            const stopLeft = () => clearInterval(leftInt);
+            touchLeft.addEventListener("pointerdown", startLeft);
+            touchLeft.addEventListener("pointerup", stopLeft);
+            touchLeft.addEventListener("pointerleave", stopLeft);
+        }
+
+        if (touchRight) {
+            let rightInt = null;
+            const startRight = (e) => {
+                e.preventDefault();
+                defenseState.turretAngle += defenseState.aimRotationSpeed * 1.5;
+                clearInterval(rightInt);
+                rightInt = setInterval(() => { defenseState.turretAngle += defenseState.aimRotationSpeed * 1.5; }, 50);
+            };
+            const stopRight = () => clearInterval(rightInt);
+            touchRight.addEventListener("pointerdown", startRight);
+            touchRight.addEventListener("pointerup", stopRight);
+            touchRight.addEventListener("pointerleave", stopRight);
+        }
+
+        if (touchFire) {
+            touchFire.addEventListener("pointerdown", (e) => {
+                e.preventDefault();
+                fireDefensePulse();
+            });
+        }
+
+        const canvas = document.getElementById("defenseCanvas");
+        if (canvas) {
+            canvas.addEventListener("pointerdown", (e) => {
+                if (!defenseState.active || defenseState.state !== 'playing') return;
+                const rect = canvas.getBoundingClientRect();
+                const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+                const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+                defenseState.turretAngle = Math.atan2(clickY - defenseState.centerY, clickX - defenseState.centerX);
+                fireDefensePulse();
+            });
+        }
+    }
+
+    const defenseKeyHandler = (e) => {
+        if (!defenseState.active) return;
+        if (e.key === 'Escape') {
+            stopArcadeDefenseMode();
+            return;
+        }
+        if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', ' ', 'KeyA', 'KeyD', 'KeyW', 'a', 'd', 'w'].includes(e.code) || ['ArrowLeft', 'ArrowRight', 'ArrowUp', ' ', 'a', 'd', 'w'].includes(e.key)) {
+            e.preventDefault();
+            defenseState.keys[e.code || e.key] = true;
+            defenseState.keys[e.key] = true;
+        }
+    };
+
+    const defenseKeyUpHandler = (e) => {
+        if (!defenseState.active) return;
+        defenseState.keys[e.code || e.key] = false;
+        defenseState.keys[e.key] = false;
+    };
+
+    function startArcadeDefenseMode() {
+        ensureArcadeDefenseDOM();
+        clearActiveGameModes('defense');
+
+        defenseState.active = true;
+        defenseState.state = 'playing';
+        defenseState.shieldHp = 100;
+        defenseState.score = 0;
+        defenseState.combo = 1;
+        defenseState.maxCombo = 1;
+        defenseState.threatsSpawned = 0;
+        defenseState.threatsDefeated = 0;
+        defenseState.threats = [];
+        defenseState.pulses = [];
+        defenseState.sparks = [];
+        defenseState.floatingScores = [];
+        defenseState.turretAngle = -Math.PI / 2;
+        defenseState.lastSpawn = performance.now();
+        defenseState.keys = {};
+        defenseState.screenShake = 0;
+
+        const overlay = document.getElementById("arcadeDefenseMode");
+        if (overlay) overlay.classList.remove("hidden");
+        document.body.classList.add("modal-open");
+
+        const goOverlay = document.getElementById("defense-gameover-overlay");
+        if (goOverlay) goOverlay.classList.add("hidden");
+        const vicOverlay = document.getElementById("defense-victory-overlay");
+        if (vicOverlay) vicOverlay.classList.add("hidden");
+
+        const canvas = document.getElementById("defenseCanvas");
+        if (canvas) {
+            defenseState.canvas = canvas;
+            defenseState.ctx = canvas.getContext("2d");
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = Math.max(320, Math.floor(rect.width || 720));
+            canvas.height = Math.max(260, Math.floor(rect.height || 460));
+            defenseState.width = canvas.width;
+            defenseState.height = canvas.height;
+            defenseState.centerX = canvas.width / 2;
+            defenseState.centerY = canvas.height / 2;
+        }
+
+        bindDefenseDOMControls();
+        window.addEventListener("keydown", defenseKeyHandler);
+        window.addEventListener("keyup", defenseKeyUpHandler);
+
+        playPowerUp();
+        if (defenseState.animId) cancelAnimationFrame(defenseState.animId);
+        defenseState.animId = requestAnimationFrame(defenseLoop);
+
+        showSpeechBubble("🛡️ Perimeter Defense Active! Use Arrow Keys or Tap to deploy shields & intercept threats! 🐾", 8000, false, "ASTRO-CAT // PERIMETER DEFENSE");
+    }
+
+    function stopArcadeDefenseMode() {
+        if (defenseState.animId) {
+            cancelAnimationFrame(defenseState.animId);
+            defenseState.animId = null;
+        }
+        defenseState.active = false;
+        defenseState.state = 'stopped';
+        defenseState.threats = [];
+        defenseState.pulses = [];
+        defenseState.sparks = [];
+
+        window.removeEventListener("keydown", defenseKeyHandler);
+        window.removeEventListener("keyup", defenseKeyUpHandler);
+
+        const overlay = document.getElementById("arcadeDefenseMode");
+        if (overlay) overlay.classList.add("hidden");
+        document.body.classList.remove("modal-open");
+
+        if (window.location.hash === '#arcadeDefenseMode' || window.location.hash === '#arcadeDefense') {
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
+        }
+
+        playPurr();
+    }
+
+    function toggleArcadeDefenseMode() {
+        if (defenseState.active) {
+            stopArcadeDefenseMode();
+        } else {
+            startArcadeDefenseMode();
+        }
+    }
+
     function showSpeechBubble(text, duration = 7500, isTour = false, customTitle = null) {
         const bubble = document.getElementById("astro-speech-bubble");
         const bubbleText = document.getElementById("astro-bubble-text");
@@ -4694,6 +5656,10 @@
         playMeow: playMeow,
         playPurr: playPurr,
         playLaser: playLaser,
+        playDeflect: playDeflect,
+        playAlarm: playAlarm,
+        playVictory: playVictory,
+        playGameOver: playGameOver,
         playBoing: playBoing,
         playCoin: playCoin,
         playHoverTick: playHoverTick,
@@ -4701,6 +5667,7 @@
         suspendAudio: suspendAudio,
         resumeAudio: resumeAudio,
         toggleSound: toggleSound,
+        isSoundEnabled: function() { return soundEnabled; },
         startAnimations: function() {
             startBgAnimation();
             startCopilotAnimation();
@@ -4728,6 +5695,10 @@
         createMobileCanvasStream: createMobileCanvasStream,
         isMobileOrTouchDevice: isMobileOrTouchDevice,
         patrol: startSpacePatrol,
+        startDefense: startArcadeDefenseMode,
+        stopDefense: stopArcadeDefenseMode,
+        toggleDefense: toggleArcadeDefenseMode,
+        ensureDefenseDOM: ensureArcadeDefenseDOM,
         pet: petAstroCat,
         petStation: petStationCat,
         say: showSpeechBubble,
@@ -4806,9 +5777,27 @@
         initArcadeBackground();
         createAstroCatCopilot();
         createSoundToggle();
+        ensureArcadeDefenseDOM();
+        updateSoundToggleButtons();
         bindTactileInteractions();
         initAllScrollIndicators();
+
+        if (window.location.hash === '#arcadeDefenseMode' || window.location.hash === '#arcadeDefense') {
+            startArcadeDefenseMode();
+        }
     }
+
+    window.addEventListener("hashchange", () => {
+        if (window.location.hash === '#arcadeDefenseMode' || window.location.hash === '#arcadeDefense') {
+            startArcadeDefenseMode();
+        }
+    });
+
+    window.addEventListener("keydown", (e) => {
+        if ((e.key === 'm' || e.key === 'M') && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
+            toggleSound();
+        }
+    });
 
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", initAll);

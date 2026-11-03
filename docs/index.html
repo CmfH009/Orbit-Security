@@ -524,11 +524,11 @@
                     <span class="group-hover:scale-110 transition-transform">🐱</span>
                     <span>Simple Cat</span>
                 </button>
-                <!-- Retro Arcade Token Counter -->
-                <div onclick="if(window.SimpleCat) SimpleCat.playBlip()" class="hidden items-center gap-2 px-3 py-1.5 rounded bg-slate-900 border border-emerald-500/40 font-arcade text-[9px] text-emerald-400 cursor-pointer pixel-btn" style="display:none;" title="Click for retro sound">
-                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span>1P READY // CR: 99</span>
-                </div>
+                <!-- Global Audio SFX Mute/Unmute Toggle Button -->
+                <button type="button" id="audio-toggle-btn" onclick="if(window.SimpleCat){SimpleCat.toggleSound();}" class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-900 border border-slate-700/80 hover:border-emerald-500/50 hover:bg-slate-800 text-slate-300 hover:text-emerald-300 font-mono text-xs transition-all cursor-pointer shadow-sm pixel-btn" title="Toggle 8-Bit Audio SFX (Hotkey: M)">
+                    <span>🔊</span>
+                    <span>AUDIO: ON</span>
+                </button>
                 <a href="https://github.com/CmfH009/Orbit-Security" target="_blank" rel="noopener noreferrer" class="p-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white transition-colors" title="View Source on GitHub">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
                 </a>
@@ -605,6 +605,13 @@
                 <span>Agency FAQ</span>
                 <span class="text-xs text-slate-500 font-mono">06</span>
             </a>
+            <button type="button" id="sound-toggle-btn" onclick="if(window.SimpleCat){SimpleCat.toggleSound();}" class="w-full flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-900/80 text-sm font-semibold transition-all cursor-pointer">
+                <span class="flex items-center gap-2">
+                    <span>🔊</span>
+                    <span>Audio SFX (Mute/Unmute)</span>
+                </span>
+                <span class="text-[9px] font-arcade bg-slate-800 text-emerald-400 px-2 py-0.5 rounded border border-slate-700">TOGGLE (M)</span>
+            </button>
             <div class="pt-3 mt-1 border-t border-slate-800 flex items-center gap-2.5">
                 <a href="https://github.com/CmfH009/Orbit-Security" target="_blank" rel="noopener noreferrer" class="min-w-[48px] min-h-[48px] p-3 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-300 flex items-center justify-center hover:text-white transition-colors" aria-label="GitHub Repository">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
@@ -747,6 +754,100 @@
                     <p class="text-xs text-slate-200 font-sans leading-relaxed">
                         <strong class="text-emerald-300">"Your clients don't know what DMARC or dangling CNAMEs mean!</strong> Our monthly PDF audits translate scary jargon into plain English business value they happily pay $250/mo to protect."
                     </p>
+                </div>
+            </div>
+
+            <!-- Above-The-Fold Astro-Cat Sentinel Patrol Showcase & Role Cluster -->
+            <div id="sentinel-patrol-bar" class="max-w-4xl mx-auto mb-6 p-3.5 sm:p-4 rounded-2xl bg-slate-950/90 border-2 border-emerald-500/50 shadow-2xl backdrop-blur-xl card-glass">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 pb-2.5 mb-3 border-b border-slate-800/80">
+                    <div class="flex items-center gap-2.5">
+                        <span class="flex h-3 w-3 relative">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                        </span>
+                        <div class="text-left">
+                            <div class="font-arcade text-[10px] sm:text-xs text-white tracking-wider flex items-center gap-2">
+                                <span>ASTRO-CAT SENTINEL PATROL</span>
+                                <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">4 ACTIVE ROLES</span>
+                            </div>
+                            <div class="text-[11px] font-mono text-slate-400">Autonomous 24/7 client perimeter defense cluster</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                        <button type="button" onclick="if(window.SimpleCat){SimpleCat.playPowerUp(); SimpleCat.startDefense();}" class="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 text-slate-950 font-arcade text-[10px] font-bold flex items-center gap-1.5 cursor-pointer shadow-lg shadow-red-500/25 active:scale-95 transition-all pixel-btn" title="Launch Perimeter Defense Arcade Mini-Game">
+                            <span>🛡️ DEFENSE ARCADE</span>
+                        </button>
+                        <a href="#sentinels" class="text-[11px] font-mono text-emerald-400 hover:text-emerald-300 underline decoration-dotted">
+                            Lore &rarr;
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 4 Sentinel Roles Compact Interactive Badges / Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-left">
+                    <!-- Role 1: Radar Scout -->
+                    <div class="sentinel-patrol-card p-2.5 rounded-xl bg-slate-900/80 border border-emerald-500/30 hover:border-emerald-400 transition-all cursor-pointer group card-glass-emerald" 
+                         onmouseenter="if(window.SimpleCat&&SimpleCat.playHoverTick)SimpleCat.playHoverTick();" 
+                         onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('dns');}">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-base group-hover:scale-110 transition-transform">🛰️</span>
+                            <span class="text-[8px] font-arcade text-emerald-400 bg-emerald-500/10 px-1 py-0.2 rounded border border-emerald-500/20">DNS PROBE</span>
+                        </div>
+                        <div class="font-arcade text-[10px] font-bold text-white group-hover:text-emerald-300 transition-colors truncate">Radar Scout</div>
+                        <div class="text-[10px] font-mono text-slate-400 truncate">16-subdomain grid probe</div>
+                        <div class="mt-1.5 pt-1 border-t border-slate-800/80 flex items-center justify-between text-[9px] font-mono">
+                            <span class="text-slate-500">Telemetry</span>
+                            <span class="text-emerald-400 font-bold">16/16 Active</span>
+                        </div>
+                    </div>
+
+                    <!-- Role 2: Takeover Interceptor -->
+                    <div class="sentinel-patrol-card p-2.5 rounded-xl bg-slate-900/80 border border-amber-500/30 hover:border-amber-400 transition-all cursor-pointer group card-glass-amber" 
+                         onmouseenter="if(window.SimpleCat&&SimpleCat.playHoverTick)SimpleCat.playHoverTick();" 
+                         onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('cname');}">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-base group-hover:scale-110 transition-transform">🎯</span>
+                            <span class="text-[8px] font-arcade text-amber-400 bg-amber-500/10 px-1 py-0.2 rounded border border-amber-500/20">CNAME HUNT</span>
+                        </div>
+                        <div class="font-arcade text-[10px] font-bold text-white group-hover:text-amber-300 transition-colors truncate">Takeover Interceptor</div>
+                        <div class="text-[10px] font-mono text-slate-400 truncate">Orphan bucket & CNAME hunter</div>
+                        <div class="mt-1.5 pt-1 border-t border-slate-800/80 flex items-center justify-between text-[9px] font-mono">
+                            <span class="text-slate-500">Risk Audit</span>
+                            <span class="text-amber-400 font-bold">0 Dangling</span>
+                        </div>
+                    </div>
+
+                    <!-- Role 3: Spoof Shield -->
+                    <div class="sentinel-patrol-card p-2.5 rounded-xl bg-slate-900/80 border border-cyan-500/30 hover:border-cyan-400 transition-all cursor-pointer group card-glass-cyan" 
+                         onmouseenter="if(window.SimpleCat&&SimpleCat.playHoverTick)SimpleCat.playHoverTick();" 
+                         onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('dmarc');}">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-base group-hover:scale-110 transition-transform">🛡️</span>
+                            <span class="text-[8px] font-arcade text-cyan-400 bg-cyan-500/10 px-1 py-0.2 rounded border border-cyan-500/20">DMARC/SPF</span>
+                        </div>
+                        <div class="font-arcade text-[10px] font-bold text-white group-hover:text-cyan-300 transition-colors truncate">Spoof Shield</div>
+                        <div class="text-[10px] font-mono text-slate-400 truncate">DMARC & SPF enforcement</div>
+                        <div class="mt-1.5 pt-1 border-t border-slate-800/80 flex items-center justify-between text-[9px] font-mono">
+                            <span class="text-slate-500">Policy</span>
+                            <span class="text-cyan-400 font-bold">p=reject</span>
+                        </div>
+                    </div>
+
+                    <!-- Role 4: MX Sentinel -->
+                    <div class="sentinel-patrol-card p-2.5 rounded-xl bg-slate-900/80 border border-purple-500/30 hover:border-purple-400 transition-all cursor-pointer group card-glass-purple" 
+                         onmouseenter="if(window.SimpleCat&&SimpleCat.playHoverTick)SimpleCat.playHoverTick();" 
+                         onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('mx');}">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-base group-hover:scale-110 transition-transform">⚔️</span>
+                            <span class="text-[8px] font-arcade text-purple-400 bg-purple-500/10 px-1 py-0.2 rounded border border-purple-500/20">RFC 7505</span>
+                        </div>
+                        <div class="font-arcade text-[10px] font-bold text-white group-hover:text-purple-300 transition-colors truncate">MX Sentinel</div>
+                        <div class="text-[10px] font-mono text-slate-400 truncate">Null-MX & gateway guard</div>
+                        <div class="mt-1.5 pt-1 border-t border-slate-800/80 flex items-center justify-between text-[9px] font-mono">
+                            <span class="text-slate-500">Gateway</span>
+                            <span class="text-purple-400 font-bold">Null-MX</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1273,8 +1374,9 @@ Apex Digital Studio</pre>
 
             <!-- 4-Card Responsive Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <!-- Sentinel 1: Threat Interceptor & CNAME Takeover Defense -->
-                <div class="sentinel-card relative bg-slate-900 border-2 border-emerald-500/50 rounded-2xl overflow-hidden group hover:border-emerald-400 hover:shadow-[0_0_30px_rgba(16,185,129,0.25)] transition-all duration-300 hover:-translate-y-1 card-glass-emerald flex flex-col justify-between">
+                <!-- Sentinel 1: Radar Scout (DNS probe & subdomains) -->
+                <div class="sentinel-card relative bg-slate-900 border-2 border-emerald-500/50 rounded-2xl overflow-hidden group hover:border-emerald-400 hover:shadow-[0_0_30px_rgba(16,185,129,0.25)] transition-all duration-300 hover:-translate-y-1 card-glass-emerald flex flex-col justify-between"
+                     onmouseenter="if(window.SimpleCat&&SimpleCat.playHoverTick)SimpleCat.playHoverTick();">
                     <div>
                         <div class="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-emerald-400 z-20"></div>
                         <div class="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-emerald-400 z-20"></div>
@@ -1282,7 +1384,7 @@ Apex Digital Studio</pre>
                         <div class="h-48 sm:h-52 overflow-hidden relative">
                             <div class="radar-sweep-beam absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent pointer-events-none z-10"></div>
                             <div class="absolute inset-0 scanlines pointer-events-none z-10 opacity-50"></div>
-                            <img src="assets/orbit_astrocat_laser_sentinel.jpg" alt="Astro-Cat Threat Interceptor &amp; CNAME Takeover Sentinel" width="1376" height="768" loading="lazy" decoding="async" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
+                            <img src="assets/orbit_doh_encrypted_shield.jpg" alt="Astro-Cat Radar Scout &amp; DNS Probe Sentinel" width="1376" height="768" loading="lazy" decoding="async" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
                             <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent"></div>
                             
                             <div class="absolute top-3 left-3 px-2 py-0.5 rounded bg-slate-950/90 backdrop-blur-md border border-emerald-500/50 text-[9px] font-arcade text-emerald-400 flex items-center gap-1.5 z-20">
@@ -1291,34 +1393,39 @@ Apex Digital Studio</pre>
                             </div>
 
                             <div class="absolute bottom-3 left-3 px-2.5 py-0.5 rounded bg-slate-950/90 border border-emerald-500/50 text-[10px] font-arcade font-bold text-emerald-400 backdrop-blur-sm z-20">
-                                Threat Interceptor
+                                Radar Scout
                             </div>
                         </div>
                         <div class="p-5">
-                            <h3 class="text-base sm:text-lg font-bold text-white mb-2 flex items-center justify-between" data-cat-term="cname">
-                                <span>Takeover Defense</span>
-                                <span class="text-[10px] font-mono text-emerald-400/90 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">PORT 53/DNS</span>
+                            <h3 class="text-base sm:text-lg font-bold text-white mb-2 flex items-center justify-between" data-cat-term="dns">
+                                <span>Radar Scout</span>
+                                <span class="text-[10px] font-mono text-emerald-400/90 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">PORT 53/DOH</span>
                             </h3>
                             <p class="text-slate-400 text-xs leading-relaxed">
-                                Actively intercepts dangling CNAMEs, DNS pointer drift, and high-risk hijack signatures (Shopify, Unbounce, AWS S3) before threat actors can claim them.
+                                Probes 16-subdomain perimeter grids, RFC 8484 DNS-over-HTTPS lookups, and root zone delegations to uncover shadow IT and unmapped web assets.
                             </p>
+                            <div class="mt-2.5 flex items-center justify-between text-[11px] font-mono p-2 rounded bg-slate-950/70 border border-slate-800">
+                                <span class="text-slate-400">DNS Resolution:</span>
+                                <span class="text-emerald-400 font-bold">16/16 Probed</span>
+                            </div>
                         </div>
                     </div>
                     <div class="p-5 pt-0">
                         <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
-                            <button type="button" class="min-h-[48px] text-[11px] font-mono text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors cursor-pointer group text-left min-w-0" onclick="SimpleCat.explain('cname')">
+                            <button type="button" class="min-h-[48px] text-[11px] font-mono text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors cursor-pointer group text-left min-w-0" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('dns');}">
                                 <span>🐱</span>
-                                <span class="text-slate-300 group-hover:text-white underline decoration-dotted truncate">"Guards abandoned lockers"</span>
+                                <span class="text-slate-300 group-hover:text-white underline decoration-dotted truncate">"Maps hidden subdomains"</span>
                             </button>
-                            <button type="button" class="pixel-btn min-h-[48px] min-w-[48px] px-3 py-2 text-[9px] font-arcade rounded bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400 border border-emerald-500/40 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm flex-shrink-0" onclick="SimpleCat.explain('cname')" title="Open layman explanation">
+                            <button type="button" class="pixel-btn min-h-[48px] min-w-[48px] px-3 py-2 text-[9px] font-arcade rounded bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400 border border-emerald-500/40 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm flex-shrink-0" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('dns');}" title="Open layman explanation">
                                 <span>[?]</span>
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Sentinel 2: Dangling Subdomain Blackhole Neutralizer -->
-                <div class="sentinel-card relative bg-slate-900 border-2 border-amber-500/50 rounded-2xl overflow-hidden group hover:border-amber-400 hover:shadow-[0_0_30px_rgba(245,158,11,0.25)] transition-all duration-300 hover:-translate-y-1 card-glass-amber flex flex-col justify-between">
+                <!-- Sentinel 2: Takeover Interceptor (CNAME & orphan bucket hunter) -->
+                <div class="sentinel-card relative bg-slate-900 border-2 border-amber-500/50 rounded-2xl overflow-hidden group hover:border-amber-400 hover:shadow-[0_0_30px_rgba(245,158,11,0.25)] transition-all duration-300 hover:-translate-y-1 card-glass-amber flex flex-col justify-between"
+                     onmouseenter="if(window.SimpleCat&&SimpleCat.playHoverTick)SimpleCat.playHoverTick();">
                     <div>
                         <div class="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-amber-400 z-20"></div>
                         <div class="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-amber-400 z-20"></div>
@@ -1326,7 +1433,7 @@ Apex Digital Studio</pre>
                         <div class="h-48 sm:h-52 overflow-hidden relative">
                             <div class="radar-sweep-beam absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-amber-400 to-transparent pointer-events-none z-10"></div>
                             <div class="absolute inset-0 scanlines pointer-events-none z-10 opacity-50"></div>
-                            <img src="assets/orbit_cname_blackhole.jpg" alt="Dangling Subdomain Blackhole Neutralizer Sentinel" width="1376" height="768" loading="lazy" decoding="async" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
+                            <img src="assets/orbit_astrocat_laser_sentinel.jpg" alt="Takeover Interceptor &amp; CNAME Takeover Sentinel" width="1376" height="768" loading="lazy" decoding="async" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
                             <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent"></div>
                             
                             <div class="absolute top-3 left-3 px-2 py-0.5 rounded bg-slate-950/90 backdrop-blur-md border border-amber-500/50 text-[9px] font-arcade text-amber-400 flex items-center gap-1.5 z-20">
@@ -1335,40 +1442,39 @@ Apex Digital Studio</pre>
                             </div>
 
                             <div class="absolute bottom-3 left-3 px-2.5 py-0.5 rounded bg-slate-950/90 border border-amber-500/50 text-[10px] font-arcade font-bold text-amber-400 backdrop-blur-sm z-20">
-                                Blackhole Void
+                                Takeover Interceptor
                             </div>
                         </div>
                         <div class="p-5">
                             <h3 class="text-base sm:text-lg font-bold text-white mb-2 flex items-center justify-between" data-cat-term="cname">
-                                <span>Blackhole Neutralizer</span>
-                                <span class="text-[10px] font-mono text-amber-400/90 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">DNS/DRIFT</span>
+                                <span>Takeover Interceptor</span>
+                                <span class="text-[10px] font-mono text-amber-400/90 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">CNAME/S3</span>
                             </h3>
                             <p class="text-slate-400 text-xs leading-relaxed">
-                                Collapses orphaned DNS records and decommissioned SaaS pointers into a gravitational void. Quarantines dangling drift across HubSpot, Webflow, and Zendesk.
+                                Intercepts dangling CNAMEs, orphaned AWS S3 buckets, stale GitHub Pages, and unclaimed SaaS pointers before threat actors claim them.
                             </p>
-                            <div class="mt-2.5">
-                                <a href="ghostdns/index.html" class="inline-flex items-center gap-1 text-[11px] font-mono text-amber-400 hover:text-amber-300 font-semibold group">
-                                    <span>👻 Launch GhostDNS Simulator</span>
-                                    <span class="group-hover:translate-x-0.5 transition-transform">&rarr;</span>
-                                </a>
+                            <div class="mt-2.5 flex items-center justify-between text-[11px] font-mono p-2 rounded bg-slate-950/70 border border-slate-800">
+                                <span class="text-slate-400">Orphan Pointers:</span>
+                                <span class="text-amber-400 font-bold">0 Dangling Risk</span>
                             </div>
                         </div>
                     </div>
                     <div class="p-5 pt-0">
                         <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
-                            <button type="button" class="min-h-[48px] text-[11px] font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1 transition-colors cursor-pointer group text-left min-w-0" onclick="SimpleCat.explain('drift')">
+                            <button type="button" class="min-h-[48px] text-[11px] font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1 transition-colors cursor-pointer group text-left min-w-0" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('cname');}">
                                 <span>🐱</span>
-                                <span class="text-slate-300 group-hover:text-white underline decoration-dotted truncate">"Swallows dead campaign links"</span>
+                                <span class="text-slate-300 group-hover:text-white underline decoration-dotted truncate">"Guards abandoned lockers"</span>
                             </button>
-                            <button type="button" class="pixel-btn min-h-[48px] min-w-[48px] px-3 py-2 text-[9px] font-arcade rounded bg-slate-950 hover:bg-amber-500 hover:text-slate-950 text-amber-400 border border-amber-500/40 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm flex-shrink-0" onclick="SimpleCat.explain('drift')" title="Open layman explanation">
+                            <button type="button" class="pixel-btn min-h-[48px] min-w-[48px] px-3 py-2 text-[9px] font-arcade rounded bg-slate-950 hover:bg-amber-500 hover:text-slate-950 text-amber-400 border border-amber-500/40 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm flex-shrink-0" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('cname');}" title="Open layman explanation">
                                 <span>[?]</span>
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Sentinel 3: RFC-8484 Encrypted Shield & DNSSEC -->
-                <div class="sentinel-card relative bg-slate-900 border-2 border-cyan-500/50 rounded-2xl overflow-hidden group hover:border-cyan-400 hover:shadow-[0_0_30px_rgba(6,182,212,0.25)] transition-all duration-300 hover:-translate-y-1 card-glass-cyan flex flex-col justify-between">
+                <!-- Sentinel 3: Spoof Shield (DMARC & SPF enforcement) -->
+                <div class="sentinel-card relative bg-slate-900 border-2 border-cyan-500/50 rounded-2xl overflow-hidden group hover:border-cyan-400 hover:shadow-[0_0_30px_rgba(6,182,212,0.25)] transition-all duration-300 hover:-translate-y-1 card-glass-cyan flex flex-col justify-between"
+                     onmouseenter="if(window.SimpleCat&&SimpleCat.playHoverTick)SimpleCat.playHoverTick();">
                     <div>
                         <div class="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-cyan-400 z-20"></div>
                         <div class="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-cyan-400 z-20"></div>
@@ -1376,7 +1482,7 @@ Apex Digital Studio</pre>
                         <div class="h-48 sm:h-52 overflow-hidden relative">
                             <div class="radar-sweep-beam absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent pointer-events-none z-10"></div>
                             <div class="absolute inset-0 scanlines pointer-events-none z-10 opacity-50"></div>
-                            <img src="assets/orbit_doh_encrypted_shield.jpg" alt="RFC-8484 Encrypted Shield &amp; DNSSEC Sentinel" width="1376" height="768" loading="lazy" decoding="async" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
+                            <img src="assets/orbit_cats_gatekeeper.jpg" alt="Astro-Cat Spoof Shield Sentinel" width="1376" height="768" loading="lazy" decoding="async" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
                             <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent"></div>
                             
                             <div class="absolute top-3 left-3 px-2 py-0.5 rounded bg-slate-950/90 backdrop-blur-md border border-cyan-500/50 text-[9px] font-arcade text-cyan-400 flex items-center gap-1.5 z-20">
@@ -1385,34 +1491,39 @@ Apex Digital Studio</pre>
                             </div>
 
                             <div class="absolute bottom-3 left-3 px-2.5 py-0.5 rounded bg-slate-950/90 border border-cyan-500/50 text-[10px] font-arcade font-bold text-cyan-400 backdrop-blur-sm z-20">
-                                Encrypted Shield
+                                Spoof Shield
                             </div>
                         </div>
                         <div class="p-5">
-                            <h3 class="text-base sm:text-lg font-bold text-white mb-2 flex items-center justify-between" data-cat-term="doh">
-                                <span>RFC-8484 Shield</span>
-                                <span class="text-[10px] font-mono text-cyan-400/90 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20">PORT 853/DOH</span>
+                            <h3 class="text-base sm:text-lg font-bold text-white mb-2 flex items-center justify-between" data-cat-term="dmarc">
+                                <span>Spoof Shield</span>
+                                <span class="text-[10px] font-mono text-cyan-400/90 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20">DMARC/SPF</span>
                             </h3>
                             <p class="text-slate-400 text-xs leading-relaxed">
-                                Wraps perimeter lookups in encrypted DNS-over-HTTPS (RFC 8484) with cryptographic DNSSEC signature validation, eliminating ISP tampering and cache spoofing.
+                                Enforces strict DMARC p=reject quarantine shields and validates RFC 7208 lookup budgets (≤10 queries) to prevent spoofed executive phishing.
                             </p>
+                            <div class="mt-2.5 flex items-center justify-between text-[11px] font-mono p-2 rounded bg-slate-950/70 border border-slate-800">
+                                <span class="text-slate-400">Enforcement:</span>
+                                <span class="text-cyan-400 font-bold">p=reject Strict</span>
+                            </div>
                         </div>
                     </div>
                     <div class="p-5 pt-0">
                         <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
-                            <button type="button" class="min-h-[48px] text-[11px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors cursor-pointer group text-left min-w-0" onclick="SimpleCat.explain('doh')">
+                            <button type="button" class="min-h-[48px] text-[11px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors cursor-pointer group text-left min-w-0" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('dmarc');}">
                                 <span>🐱</span>
-                                <span class="text-slate-300 group-hover:text-white underline decoration-dotted truncate">"The Encrypted Whisper"</span>
+                                <span class="text-slate-300 group-hover:text-white underline decoration-dotted truncate">"Stops fake CEO emails"</span>
                             </button>
-                            <button type="button" class="pixel-btn min-h-[48px] min-w-[48px] px-3 py-2 text-[9px] font-arcade rounded bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 text-cyan-400 border border-cyan-500/40 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm flex-shrink-0" onclick="SimpleCat.explain('doh')" title="Open layman explanation">
+                            <button type="button" class="pixel-btn min-h-[48px] min-w-[48px] px-3 py-2 text-[9px] font-arcade rounded bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 text-cyan-400 border border-cyan-500/40 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm flex-shrink-0" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('dmarc');}" title="Open layman explanation">
                                 <span>[?]</span>
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Sentinel 4: Cosmic Gateway & Staging Firewall -->
-                <div class="sentinel-card relative bg-slate-900 border-2 border-purple-500/50 rounded-2xl overflow-hidden group hover:border-purple-400 hover:shadow-[0_0_30px_rgba(168,85,247,0.25)] transition-all duration-300 hover:-translate-y-1 card-glass-purple flex flex-col justify-between">
+                <!-- Sentinel 4: MX Sentinel (RFC 7505 Null-MX & inbound gateway defender) -->
+                <div class="sentinel-card relative bg-slate-900 border-2 border-purple-500/50 rounded-2xl overflow-hidden group hover:border-purple-400 hover:shadow-[0_0_30px_rgba(168,85,247,0.25)] transition-all duration-300 hover:-translate-y-1 card-glass-purple flex flex-col justify-between"
+                     onmouseenter="if(window.SimpleCat&&SimpleCat.playHoverTick)SimpleCat.playHoverTick();">
                     <div>
                         <div class="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-purple-400 z-20"></div>
                         <div class="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-purple-400 z-20"></div>
@@ -1420,7 +1531,7 @@ Apex Digital Studio</pre>
                         <div class="h-48 sm:h-52 overflow-hidden relative">
                             <div class="radar-sweep-beam absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-purple-400 to-transparent pointer-events-none z-10"></div>
                             <div class="absolute inset-0 scanlines pointer-events-none z-10 opacity-50"></div>
-                            <img src="assets/orbit_cats_gatekeeper.jpg" alt="Cosmic Gateway &amp; Staging Firewall Sentinel" width="1376" height="768" loading="lazy" decoding="async" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
+                            <img src="assets/orbit_cname_blackhole.jpg" alt="Astro-Cat MX Sentinel" width="1376" height="768" loading="lazy" decoding="async" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
                             <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent"></div>
                             
                             <div class="absolute top-3 left-3 px-2 py-0.5 rounded bg-slate-950/90 backdrop-blur-md border border-purple-500/50 text-[9px] font-arcade text-purple-400 flex items-center gap-1.5 z-20">
@@ -1429,36 +1540,58 @@ Apex Digital Studio</pre>
                             </div>
 
                             <div class="absolute bottom-3 left-3 px-2.5 py-0.5 rounded bg-slate-950/90 border border-purple-500/50 text-[10px] font-arcade font-bold text-purple-400 backdrop-blur-sm z-20">
-                                Cosmic Gateway
+                                MX Sentinel
                             </div>
                         </div>
                         <div class="p-5">
-                            <h3 class="text-base sm:text-lg font-bold text-white mb-2 flex items-center justify-between" data-cat-term="hsts">
-                                <span>Staging Firewall</span>
-                                <span class="text-[10px] font-mono text-purple-400/90 bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20">PORT 443/TLS</span>
+                            <h3 class="text-base sm:text-lg font-bold text-white mb-2 flex items-center justify-between" data-cat-term="mx">
+                                <span>MX Sentinel</span>
+                                <span class="text-[10px] font-mono text-purple-400/90 bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20">RFC 7505</span>
                             </h3>
                             <p class="text-slate-400 text-xs leading-relaxed">
-                                Surveys staging subdomains, preview URLs, and headless API gateways to prevent pre-launch leaks, exposed environment variables, and build files.
+                                Deploys RFC 7505 Null-MX ("0 .") defense for non-sending domains, sealing silent inbound mail gateways from rogue relays and spoofing vectors.
                             </p>
-                            <div class="mt-2.5">
-                                <a href="portals/index.html" class="inline-flex items-center gap-1 text-[11px] font-mono text-purple-400 hover:text-purple-300 font-semibold group">
-                                    <span>🛡️ Browse 8 Agency Portals</span>
-                                    <span class="group-hover:translate-x-0.5 transition-transform">&rarr;</span>
-                                </a>
+                            <div class="mt-2.5 flex items-center justify-between text-[11px] font-mono p-2 rounded bg-slate-950/70 border border-slate-800">
+                                <span class="text-slate-400">Gateway Shield:</span>
+                                <span class="text-purple-400 font-bold">Null-MX Active</span>
                             </div>
                         </div>
                     </div>
                     <div class="p-5 pt-0">
                         <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
-                            <button type="button" class="min-h-[48px] text-[11px] font-mono text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors cursor-pointer group text-left min-w-0" onclick="SimpleCat.explain('hsts')">
+                            <button type="button" class="min-h-[48px] text-[11px] font-mono text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors cursor-pointer group text-left min-w-0" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('mx');}">
                                 <span>🐱</span>
-                                <span class="text-slate-300 group-hover:text-white underline decoration-dotted truncate">"The Armored Truck for web data"</span>
+                                <span class="text-slate-300 group-hover:text-white underline decoration-dotted truncate">"Shields inbound gateways"</span>
                             </button>
-                            <button type="button" class="pixel-btn min-h-[48px] min-w-[48px] px-3 py-2 text-[9px] font-arcade rounded bg-slate-950 hover:bg-purple-500 hover:text-slate-950 text-purple-400 border border-purple-500/40 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm flex-shrink-0" onclick="SimpleCat.explain('hsts')" title="Open layman explanation">
+                            <button type="button" class="pixel-btn min-h-[48px] min-w-[48px] px-3 py-2 text-[9px] font-arcade rounded bg-slate-950 hover:bg-purple-500 hover:text-slate-950 text-purple-400 border border-purple-500/40 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm flex-shrink-0" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('mx');}" title="Open layman explanation">
                                 <span>[?]</span>
                             </button>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Arcade Perimeter Defense Mode Interactive Banner -->
+            <div class="mt-8 p-6 rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-2 border-red-500/60 shadow-[0_0_35px_rgba(239,68,68,0.25)] relative overflow-hidden text-left flex flex-col md:flex-row items-center justify-between gap-6 card-glass">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 rounded-2xl bg-red-500/20 border-2 border-red-500/40 flex items-center justify-center text-3xl flex-shrink-0 animate-pulse">
+                        🛡️
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap mb-1">
+                            <span class="px-2 py-0.5 rounded bg-red-500/20 text-red-300 font-arcade text-[9px] uppercase tracking-wide border border-red-500/40">ARCADE MINIGAME</span>
+                            <span class="text-xs font-mono text-white font-bold">PERIMETER DEFENSE MODE</span>
+                            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">KEYBOARD &amp; TOUCH READY</span>
+                        </div>
+                        <p class="text-xs sm:text-sm text-slate-300 font-sans leading-relaxed max-w-2xl m-0">
+                            Malicious dangling CNAMEs, spoofed MX records, SPF PermErrors, and abandoned S3 buckets are streaming toward your agency perimeter! Aim your pulse cannon with Arrow Keys/A-D or touch controls and fire pulses to defend the domain.
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 w-full md:w-auto justify-end flex-shrink-0">
+                    <button type="button" onclick="if(window.SimpleCat){SimpleCat.startDefense();}" class="w-full md:w-auto min-h-[48px] px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 text-slate-950 font-arcade text-xs font-bold transition-all shadow-lg shadow-red-500/30 active:scale-95 cursor-pointer pixel-btn flex items-center justify-center gap-2">
+                        <span>🎮 PLAY DEFENSE MODE</span>
+                    </button>
                 </div>
             </div>
 
@@ -4333,6 +4466,11 @@ ${body}`;
                 simulateTakeoverAttack('php418');
             } else if (h === '#flipbook') {
                 openPdfFlipbookModal();
+            } else if (h === '#arcadeDefenseMode' || h === '#arcadeDefense') {
+                closePdfFlipbookModal();
+                if (window.SimpleCat && typeof SimpleCat.startDefense === 'function') {
+                    SimpleCat.startDefense();
+                }
             } else if (h === '#roi-calculator' || h === '#pricing') {
                 closePdfFlipbookModal();
                 const el = document.getElementById(h.substring(1));
@@ -4355,5 +4493,108 @@ ${body}`;
             }
         });
     </script>
+
+    <!-- Arcade Perimeter Defense Mode Modal Overlay -->
+    <div id="arcadeDefenseMode" class="hidden fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-hidden select-none" role="dialog" aria-modal="true" aria-label="Astro-Cat Perimeter Defense Arcade">
+        <div class="relative w-full max-w-4xl bg-slate-950 border-2 border-red-500/70 rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.35)] overflow-hidden flex flex-col max-h-[96dvh]">
+            <div class="absolute inset-0 scanlines pointer-events-none z-20 opacity-40"></div>
+            <div class="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-red-400 z-30 pointer-events-none"></div>
+            <div class="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-red-400 z-30 pointer-events-none"></div>
+            <div class="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-red-400 z-30 pointer-events-none"></div>
+            <div class="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-red-400 z-30 pointer-events-none"></div>
+
+            <div class="px-4 py-2.5 bg-slate-900 border-b border-red-500/40 flex items-center justify-between relative z-30 flex-shrink-0">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-3 h-3 rounded-full bg-red-500 animate-ping"></span>
+                    <span class="font-arcade text-xs text-white uppercase tracking-wider">ASTRO-CAT // PERIMETER DEFENSE ARCADE</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="hidden sm:flex items-center gap-2 text-[10px] font-mono text-slate-300">
+                        <span class="text-slate-500">CONTROLS:</span>
+                        <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-emerald-400">←/A</kbd>
+                        <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-emerald-400">→/D</kbd>
+                        <span class="text-slate-500">AIM</span>
+                        <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-amber-400">SPACE</kbd>
+                        <span class="text-slate-500">FIRE</span>
+                    </div>
+                    <button type="button" id="defense-close-btn" class="min-w-[38px] min-h-[38px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-red-500 hover:text-slate-950 text-slate-300 border border-slate-700 font-arcade text-xs transition-all cursor-pointer flex items-center justify-center" title="Exit Defense Mode (ESC)">✕</button>
+                </div>
+            </div>
+
+            <div class="px-4 py-2 bg-slate-950/90 border-b border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono relative z-30 flex-shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-400 text-[11px]">SHIELD:</span>
+                    <div class="flex-1 bg-slate-900 rounded-full h-3 border border-slate-700 overflow-hidden relative">
+                        <div id="defense-shield-bar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-200" style="width: 100%;"></div>
+                    </div>
+                    <span id="defense-shield-val" class="text-emerald-400 font-bold text-xs">100%</span>
+                </div>
+                <div class="flex items-center justify-between sm:justify-center gap-2">
+                    <span class="text-slate-400 text-[11px]">SCORE:</span>
+                    <span id="defense-score-val" class="text-amber-400 font-arcade text-xs">00000</span>
+                </div>
+                <div class="flex items-center justify-between sm:justify-center gap-2">
+                    <span class="text-slate-400 text-[11px]">COMBO:</span>
+                    <span id="defense-combo-val" class="text-cyan-400 font-bold text-xs">x1</span>
+                </div>
+                <div class="flex items-center justify-between sm:justify-end gap-2">
+                    <span class="text-slate-400 text-[11px]">REMAINING:</span>
+                    <span id="defense-threats-val" class="text-red-400 font-bold text-xs">16 THREATS</span>
+                </div>
+            </div>
+
+            <div class="relative flex-1 bg-slate-950 flex items-center justify-center overflow-hidden min-h-[300px] sm:min-h-[420px]">
+                <canvas id="defenseCanvas" class="w-full h-full cursor-crosshair block"></canvas>
+
+                <div id="defense-gameover-overlay" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-40">
+                    <div class="p-6 rounded-2xl bg-slate-900 border-2 border-red-500/80 shadow-[0_0_40px_rgba(239,68,68,0.5)] max-w-md w-full space-y-4">
+                        <div class="text-4xl animate-bounce">💥</div>
+                        <div class="font-arcade text-xl text-red-400 tracking-wider">PERIMETER BREACHED</div>
+                        <div class="text-xs text-slate-300 font-mono">CRITICAL THREAT ENTERED CLIENT DOMAIN ROOT</div>
+                        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono space-y-1.5 text-left">
+                            <div class="flex justify-between"><span class="text-slate-400">Final Score:</span><span id="gameover-score" class="text-amber-400 font-bold">0</span></div>
+                            <div class="flex justify-between"><span class="text-slate-400">Threats Neutralized:</span><span id="gameover-threats" class="text-emerald-400 font-bold">0</span></div>
+                            <div class="flex justify-between"><span class="text-slate-400">Max Combo:</span><span id="gameover-combo" class="text-cyan-400 font-bold">x1</span></div>
+                        </div>
+                        <div class="flex gap-2.5 pt-2">
+                            <button type="button" id="gameover-retry-btn" class="flex-1 min-h-[46px] py-2.5 rounded-xl bg-red-500 hover:bg-red-400 text-slate-950 font-bold text-xs uppercase transition-all pixel-btn cursor-pointer">Retry Defense</button>
+                            <button type="button" id="gameover-exit-btn" class="flex-1 min-h-[46px] py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs uppercase transition-all pixel-btn cursor-pointer">Exit</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="defense-victory-overlay" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-40">
+                    <div class="p-6 rounded-2xl bg-slate-900 border-2 border-emerald-500/80 shadow-[0_0_40px_rgba(16,185,129,0.5)] max-w-md w-full space-y-4">
+                        <div class="text-4xl animate-bounce">🏆</div>
+                        <div class="font-arcade text-xl text-emerald-400 tracking-wider">PERIMETER SECURED // GRADE: A+</div>
+                        <div class="text-xs text-slate-300 font-mono">ALL INCOMING THREATS DEFLECTED & INTERCEPTED</div>
+                        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono space-y-1.5 text-left">
+                            <div class="flex justify-between"><span class="text-slate-400">Final Score:</span><span id="victory-score" class="text-amber-400 font-bold">0</span></div>
+                            <div class="flex justify-between"><span class="text-slate-400">Threats Neutralized:</span><span id="victory-threats" class="text-emerald-400 font-bold">16 / 16</span></div>
+                            <div class="flex justify-between"><span class="text-slate-400">Max Combo:</span><span id="victory-combo" class="text-cyan-400 font-bold">x5</span></div>
+                            <div class="flex justify-between"><span class="text-slate-400">Clean Perimeter Bonus:</span><span class="text-emerald-300 font-bold">+500 PTS</span></div>
+                        </div>
+                        <div class="flex gap-2.5 pt-2">
+                            <button type="button" id="victory-retry-btn" class="flex-1 min-h-[46px] py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase transition-all pixel-btn cursor-pointer">Play Again</button>
+                            <button type="button" id="victory-exit-btn" class="flex-1 min-h-[46px] py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs uppercase transition-all pixel-btn cursor-pointer">Close Radar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3 bg-slate-900/95 border-t border-slate-800 flex items-center justify-between gap-3 relative z-30 flex-shrink-0">
+                <div class="flex items-center gap-2">
+                    <button type="button" id="defense-touch-left" class="min-w-[48px] min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-800 active:bg-emerald-500/30 text-white font-arcade text-xs border border-slate-700 transition-all select-none cursor-pointer flex items-center justify-center">◀ AIM L</button>
+                    <button type="button" id="defense-touch-right" class="min-w-[48px] min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-800 active:bg-emerald-500/30 text-white font-arcade text-xs border border-slate-700 transition-all select-none cursor-pointer flex items-center justify-center">AIM R ▶</button>
+                </div>
+                <div class="flex-1 max-w-xs">
+                    <button type="button" id="defense-touch-fire" class="w-full min-h-[48px] px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 active:scale-95 text-slate-950 font-arcade text-xs transition-all shadow-md shadow-emerald-500/20 select-none cursor-pointer flex items-center justify-center gap-2">
+                        <span>⚡</span>
+                        <span>FIRE PULSE</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
