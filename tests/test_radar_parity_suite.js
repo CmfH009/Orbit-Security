@@ -74,15 +74,22 @@ const mockPdfLib = {
             addPage: () => ({
                 getSize: () => ({ width: 595.28, height: 841.89 }),
                 drawRectangle: (options) => {
+                    if (!lastPdfArgs.rectangles) lastPdfArgs.rectangles = [];
+                    lastPdfArgs.rectangles.push(options);
                     if (options && options.y && options.height === 8) {
                         lastPdfArgs.renderedColor = options.color;
                     }
                 },
                 drawText: (text, options) => {
-                    if (text.includes('/ 100')) {
+                    if (!lastPdfArgs.texts) lastPdfArgs.texts = [];
+                    lastPdfArgs.texts.push({ text, options });
+                    if (text && text.includes('\n') && (!options || !options.lineHeight)) {
+                        throw new Error('The drawText method requires a lineHeight option when drawing text with newlines.');
+                    }
+                    if (text && text.includes('/ 100')) {
                         lastPdfArgs.renderedScore = text;
                     }
-                    if (text.startsWith('GRADE:')) {
+                    if (text && text.startsWith('GRADE:')) {
                         lastPdfArgs.renderedGrade = text;
                     }
                     if (options && options.size >= 12 && options.color && !text.includes('/ 100')) {
@@ -802,6 +809,206 @@ async function runTests() {
     sandbox.window.applyPortalAgencyName('Global Threat Sentinels', true);
     await sandbox.window.generateInstantPdf();
     assert(lastPdfArgs.renderedAgency === 'GLOBAL THREAT SENTINELS', 'generateInstantPdf() uses agency name from portal customizer');
+
+    // =========================================================================
+    // Scenario 11: Adversarial Bughunt Stress & Edge Case Verification Suite
+    // =========================================================================
+    console.log('\nTesting Scenario 11: Adversarial Bughunt Stress & Edge Case Suite');
+
+    // 1. Apex Wildcard DNS Evasion (Wildcard A Record)
+    DoHService.query = async (name, type) => {
+        if (name.startsWith('orbit-wc-check-')) {
+            if (type === 1) return { success: true, status: 0, answer: [{ type: 1, data: '198.51.100.1' }] };
+            return { success: true, status: 0, answer: [] };
+        }
+        if (name.startsWith('_dmarc.')) return { success: true, status: 0, answer: [{ type: 16, data: '"v=DMARC1; p=reject;"' }] };
+        if (type === 16) return { success: true, status: 0, answer: [{ type: 16, data: '"v=spf1 -all"' }] };
+        if (type === 15) return { success: true, status: 0, answer: [{ type: 15, data: '10 mx.wildcard-a.com' }] };
+        if (type === 1) return { success: true, status: 0, answer: [{ type: 1, data: '198.51.100.1' }] };
+        return { success: true, status: 0, answer: [] };
+    };
+    const auditWcA = await performClientDohAudit('wildcard-a.com');
+    assert(auditWcA.hasWildcardDns === true, 'Wildcard A probe detects wildcard DNS presence');
+    assert(auditWcA.cnameStatus === 'pass', 'Wildcard A does not trigger false CNAME takeover');
+    assert(auditWcA.findings[0].status === 'PASS', 'Subdomain takeover finding is PASS on Wildcard A');
+
+    // 2. Apex Wildcard DNS Evasion (Wildcard CNAME Record)
+    DoHService.query = async (name, type) => {
+        if (name.startsWith('orbit-wc-check-')) {
+            if (type === 5) return { success: true, status: 0, answer: [{ type: 5, data: 'wildcard.cdn.net.' }] };
+            if (type === 1) return { success: true, status: 0, answer: [{ type: 5, data: 'wildcard.cdn.net.' }, { type: 1, data: '198.51.100.2' }] };
+            return { success: true, status: 0, answer: [] };
+        }
+        if (name.startsWith('_dmarc.')) return { success: true, status: 0, answer: [{ type: 16, data: '"v=DMARC1; p=reject;"' }] };
+        if (type === 16) return { success: true, status: 0, answer: [{ type: 16, data: '"v=spf1 -all"' }] };
+        if (type === 15) return { success: true, status: 0, answer: [{ type: 15, data: '10 mx.wildcard-cname.com' }] };
+        if (type === 1) return { success: true, status: 0, answer: [{ type: 1, data: '198.51.100.2' }] };
+        // 16 subdomains all return the apex wildcard CNAME
+        if (type === 5) return { success: true, status: 0, answer: [{ type: 5, data: '"wildcard.cdn.net."' }] };
+        return { success: true, status: 0, answer: [] };
+    };
+    const auditWcCname = await performClientDohAudit('wildcard-cname.com');
+    assert(auditWcCname.hasWildcardDns === true, 'Wildcard CNAME probe detects wildcard DNS');
+    assert(auditWcCname.cnameStatus === 'pass', 'Wildcard CNAME suppresses false-positive takeover across all 16 subdomains');
+    assert(auditWcCname.findings[0].status === 'PASS', 'Subdomain takeover finding is PASS despite wildcard CNAME');
+
+    // 3. Two-Prong Takeover: Active Azure App Service (Status 0 -> PASS)
+    DoHService.query = async (name, type) => {
+        if (name.startsWith('_dmarc.')) return { success: true, status: 0, answer: [{ type: 16, data: '"v=DMARC1; p=reject;"' }] };
+        if (type === 16) return { success: true, status: 0, answer: [{ type: 16, data: '"v=spf1 -all"' }] };
+        if (type === 15) return { success: true, status: 0, answer: [{ type: 15, data: '10 mx.azure-active.com' }] };
+        if (type === 1) return { success: true, status: 0, answer: [{ type: 1, data: '20.119.8.1' }] }; // Active IP
+        if (name === 'app.azure-active.com' && type === 5) {
+            return { success: true, status: 0, answer: [{ type: 5, data: 'active-app.azurewebsites.net' }] };
+        }
+        return { success: true, status: 0, answer: [] };
+    };
+    const auditAzureActive = await performClientDohAudit('azure-active.com');
+    assert(auditAzureActive.cnameStatus === 'pass', 'Active Azure app service target does not trigger takeover');
+    assert(auditAzureActive.cnameScore === 25, 'Active Azure app awards 25/25 pts');
+    assert(auditAzureActive.grade === 'A+', 'Active Azure app preserves Grade A+');
+
+    // 4. Two-Prong Takeover: AWS Elastic Beanstalk NXDOMAIN (Status 3 -> Prong A Grade F)
+    DoHService.query = async (name, type) => {
+        if (name.startsWith('_dmarc.')) return { success: true, status: 0, answer: [{ type: 16, data: '"v=DMARC1; p=reject;"' }] };
+        if (type === 16) return { success: true, status: 0, answer: [{ type: 16, data: '"v=spf1 -all"' }] };
+        if (type === 15) return { success: true, status: 0, answer: [{ type: 15, data: '10 mx.beanstalk-risk.com' }] };
+        if (type === 1) {
+            if (name === 'dangling-env.elasticbeanstalk.com') return { success: true, status: 3, answer: [] };
+            return { success: true, status: 0, answer: [{ type: 1, data: '203.0.113.1' }] };
+        }
+        if (name === 'api.beanstalk-risk.com' && type === 5) {
+            return { success: true, status: 0, answer: [{ type: 5, data: 'dangling-env.elasticbeanstalk.com' }] };
+        }
+        return { success: true, status: 0, answer: [] };
+    };
+    const auditBeanstalk = await performClientDohAudit('beanstalk-risk.com');
+    assert(auditBeanstalk.cnameStatus === 'critical', 'Dangling Elastic Beanstalk triggers critical CNAME status');
+    assert(auditBeanstalk.cnameScore === 0, 'Dangling Beanstalk sets cnameScore to 0');
+    assert(auditBeanstalk.grade === 'F', 'Dangling Beanstalk forces overall Grade F');
+
+    // 5. Quoted RFC 7505 Null-MX ("0 .")
+    DoHService.query = async (name, type) => {
+        if (name.startsWith('_dmarc.')) return { success: true, status: 0, answer: [{ type: 16, data: '"v=DMARC1; p=reject;"' }] };
+        if (type === 16) return { success: true, status: 0, answer: [{ type: 16, data: '"v=spf1 -all"' }] };
+        if (type === 15) return { success: true, status: 0, answer: [{ type: 15, data: '"0 ."' }] };
+        if (type === 1) return { success: true, status: 0, answer: [{ type: 1, data: '203.0.113.1' }] };
+        return { success: true, status: 0, answer: [] };
+    };
+    const auditQuotedNullMx = await performClientDohAudit('quoted-nullmx.com');
+    assert(auditQuotedNullMx.isNullMx === true, 'Quoted "0 ." correctly recognized as Null-MX');
+    assert(auditQuotedNullMx.mxScore === 15, 'Quoted Null-MX awards 15 pts');
+    assert(auditQuotedNullMx.mxStatus === 'pass', 'Quoted Null-MX status is pass');
+
+    // 6. Missing MX with Unresolvable Apex A (Status 0 pts, fail)
+    DoHService.query = async (name, type) => {
+        if (name.startsWith('_dmarc.')) return { success: true, status: 0, answer: [{ type: 16, data: '"v=DMARC1; p=reject;"' }] };
+        if (type === 16) return { success: true, status: 0, answer: [{ type: 16, data: '"v=spf1 -all"' }] };
+        if (type === 15) return { success: true, status: 0, answer: [] };
+        if (type === 1) return { success: true, status: 0, answer: [] }; // No apex A
+        return { success: true, status: 0, answer: [] };
+    };
+    const auditNoMxNoA = await performClientDohAudit('nomx-noa.com');
+    assert(auditNoMxNoA.mxScore === 0, 'Missing MX with unresolvable apex A awards 0 pts');
+    assert(auditNoMxNoA.mxStatus === 'fail', 'Missing MX with unresolvable apex A status is fail');
+
+    // 7. Client-side PDF Generation with 5 Categories and Vertical Spacing
+    lastPdfArgs = {};
+    const fiveCategories = [
+        { category: 'SUBDOMAIN TAKEOVER SENTINEL', desc: 'Zero dangling pointers.', status: 'PASS' },
+        { category: 'EMAIL SPOOFING PROTECTION (DMARC)', desc: 'Strict reject policy verified.', status: 'PASS' },
+        { category: 'SENDER POLICY FRAMEWORK (SPF)', desc: 'Strict SPF policy enforced.', status: 'PASS' },
+        { category: 'MAIL INBOUND ROUTING (MX)', desc: 'Valid MX route active.', status: 'PASS' },
+        { category: 'TLS / SSL CERTIFICATE EXPIRY', desc: 'Valid cert active.', status: 'PASS' }
+    ];
+    await generateInstantPdfForDomain('five-cat.com', 95, 'A+', null, fiveCategories);
+    assert(lastPdfArgs.renderedScore === '95 / 100', 'PDF generated with 5 categories renders score');
+    const findingRects5 = (lastPdfArgs.rectangles || []).filter(r => r.width === 595.28 - 80 && r.height === 36);
+    assert(findingRects5.length === 5, 'PDF generated with 5 categories renders exactly 5 finding cards');
+    const lowestBoxY5 = Math.min(...findingRects5.map(r => r.y));
+    assert(lowestBoxY5 > 140, `Lowest finding box y (${lowestBoxY5}) is well above Care Plan box (y=85, top=140)`);
+
+    // 8. Client-side PDF Generation with 6 Categories and Vertical Spacing
+    lastPdfArgs = {};
+    const sixCategories = [
+        ...fiveCategories,
+        { category: 'SENSITIVE EXPOSURE SENTINEL', desc: 'Passive DoH audit complete.', status: 'N/A' }
+    ];
+    await generateInstantPdfForDomain('six-cat.com', 95, 'A+', null, sixCategories);
+    const findingRects6 = (lastPdfArgs.rectangles || []).filter(r => r.width === 595.28 - 80 && r.height === 36);
+    assert(findingRects6.length === 6, 'PDF generated with 6 categories renders exactly 6 finding cards');
+    const lowestBoxY6 = Math.min(...findingRects6.map(r => r.y));
+    assert(lowestBoxY6 > 140, `Lowest finding box y for 6 items (${lowestBoxY6}) leaves breathing room above Care Plan box (y=85)`);
+
+    // 9. Client-side PDF Generation with Newlines in Description (No pdf-lib Crash)
+    lastPdfArgs = {};
+    const multilineDesc = [
+        { category: 'EMAIL SPOOFING PROTECTION (DMARC)', desc: 'Line 1 of DMARC policy\nLine 2 with extra info\r\nLine 3', status: 'PASS' },
+        { category: 'SENDER POLICY FRAMEWORK (SPF)', desc: 'v=spf1\ninclude:_spf.google.com\n-all', status: 'PASS' },
+        { category: 'SUBDOMAIN TAKEOVER SENTINEL', desc: 'No\ndangling\nCNAME', status: 'PASS' },
+        { category: 'MAIL INBOUND ROUTING (MX)', desc: 'RFC 7505\nNull-MX', status: 'PASS' }
+    ];
+    await generateInstantPdfForDomain('multiline.com', 90, 'A', null, multilineDesc);
+    assert(lastPdfArgs.renderedScore === '90 / 100', 'PDF generator strips newlines and succeeds without throw');
+
+    // 10. Attack Tree Stepper Boundary Clamping
+    sandbox.window.OrbitAttackTree.init('boundaryAttackTree', { activeStep: 1 });
+    const bInst = sandbox.window.OrbitAttackTree.getInstance('boundaryAttackTree');
+    assert(bInst.activeStep === 1, 'Initial step is 1');
+    sandbox.window.OrbitAttackTree.prevStep('boundaryAttackTree');
+    assert(bInst.activeStep === 1, 'prevStep clamps at 1');
+    sandbox.window.OrbitAttackTree.setStep(5, 'boundaryAttackTree');
+    assert(bInst.activeStep === 5, 'setStep reaches 5');
+    sandbox.window.OrbitAttackTree.nextStep('boundaryAttackTree');
+    assert(bInst.activeStep === 5, 'nextStep clamps at 5');
+
+    // 11. Attack Tree Timer Hygiene
+    sandbox.window.OrbitAttackTree.togglePlay('boundaryAttackTree');
+    const firstTimer = bInst.timer;
+    assert(bInst.isPlaying === true, 'Attack tree isPlaying is true');
+    assert(firstTimer !== null, 'Timer is active');
+    sandbox.window.OrbitAttackTree.togglePlay('boundaryAttackTree');
+    assert(bInst.isPlaying === false, 'Attack tree paused');
+    assert(bInst.timer === null, 'Timer is cleared on pause');
+    sandbox.window.OrbitAttackTree.togglePlay('boundaryAttackTree');
+    assert(bInst.isPlaying === true, 'Attack tree resumed');
+    sandbox.window.OrbitAttackTree.reset('boundaryAttackTree');
+    assert(bInst.isPlaying === false, 'Reset halts playback');
+    assert(bInst.timer === null, 'Reset clears timer');
+
+    // 12. Attack Tree SVG Path Geometry & Malicious Special Characters
+    const xssDomain = 'adversary-subdomain-overflowing-sixty-characters-with-symbols<script>"\'&.client.com';
+    sandbox.window.OrbitAttackTree.preloadCustom(xssDomain, 'cname.target.com', 'Custom Cloud', 'Fingerprint', 'boundaryAttackTree');
+    const xssHtml = mockDoc.getElementById('boundaryAttackTree').innerHTML;
+    assert(!xssHtml.includes('<script>'), 'Unescaped script tags blocked in SVG');
+    assert(xssHtml.includes('&lt;script&gt;') || xssHtml.includes('..'), 'Special characters are safely escaped or truncated with ellipsis');
+    assert(xssHtml.includes('p34') || xssHtml.includes('C 515 180, 540 215, 590 215'), 'SVG contains valid p34 path geometry');
+    assert(xssHtml.includes('p51') || xssHtml.includes('M 885 95 L 885 24 Q 885 10, 870 10 L 130 10 Q 115 10, 115 24 L 115 95'), 'SVG contains elevated return arch p51 clearing Node 2/3 headers');
+
+    // 13. Portal Customizer 3-Char Shorthand & Contrast
+    sandbox.window.applyPortalBrandColor('#ffffff', 'custom');
+    assert(mockStorage['orbit_brand_color'] === '#ffffff', 'Custom hex #ffffff saved');
+    const launchWhiteBtn = mockDoc.getElementById('portalMockupLaunchBtn');
+    assert(launchWhiteBtn.style.color === '#020617', 'White brand color sets dark text #020617 for contrast');
+
+    sandbox.window.applyPortalBrandColor('#020617', 'custom');
+    assert(mockStorage['orbit_brand_color'] === '#020617', 'Custom hex #020617 saved');
+    const launchDarkBtn = mockDoc.getElementById('portalMockupLaunchBtn');
+    assert(launchDarkBtn.style.color === '#ffffff', 'Dark brand color sets white text #ffffff for contrast');
+
+    // 14. Portal Customizer Logo Rejections
+    const exeFile = { name: 'exploit.exe', type: 'application/octet-stream', size: 1024 };
+    assert(sandbox.window.handlePortalLogoFile(exeFile) === false, 'Rejects non-image executable file');
+    const hugeFile = { name: 'banner.png', type: 'image/png', size: 3 * 1024 * 1024 };
+    assert(sandbox.window.handlePortalLogoFile(hugeFile) === false, 'Rejects oversized >2MB image file');
+
+    // 15. orbit-core.html Client Hydration Verification
+    const orbitCoreHtml = fs.readFileSync(path.join(__dirname, '..', 'docs', 'portals', 'orbit-core.html'), 'utf8');
+    assert(orbitCoreHtml.includes("params.get('agency')"), 'orbit-core.html parses agency query parameter');
+    assert(orbitCoreHtml.includes("params.get('color')"), 'orbit-core.html parses color query parameter');
+    assert(orbitCoreHtml.includes('/^#[0-9a-f]{3}$/i'), 'orbit-core.html normalizes 3-character hex shorthand');
+    assert(orbitCoreHtml.includes('0.299 * r + 0.587 * g + 0.114 * b'), 'orbit-core.html calculates luminance for button text');
+    assert(orbitCoreHtml.includes("document.createElement('img')"), 'orbit-core.html creates logo img via DOM node to prevent XSS');
 
     console.log(`\n========================================`);
     console.log(`ALL ${passed}/${total} AUDIT ENGINE & PDF PARITY TESTS PASSED!`);

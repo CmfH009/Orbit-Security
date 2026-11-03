@@ -1417,17 +1417,19 @@
                 }
             ];
 
-            const findings = (Array.isArray(customFindings) && (customFindings.length === 5 || customFindings.length === 6))
+            const findings = (Array.isArray(customFindings) && customFindings.length >= 4 && customFindings.length <= 8)
                 ? customFindings 
-                : ((window._lastAuditResult && window._lastAuditResult.domain === cleanDomain && Array.isArray(window._lastAuditResult.findings) && (window._lastAuditResult.findings.length === 5 || window._lastAuditResult.findings.length === 6))
+                : ((window._lastAuditResult && window._lastAuditResult.domain === cleanDomain && Array.isArray(window._lastAuditResult.findings) && window._lastAuditResult.findings.length >= 4 && window._lastAuditResult.findings.length <= 8)
                     ? window._lastAuditResult.findings
                     : defaultFindings);
 
             let startY = height - 175;
             for (const item of findings) {
                 page.drawRectangle({ x: 40, y: startY - 40, width: width - 80, height: 36, color: lightSlate });
-                page.drawText(item.category, { x: 55, y: startY - 17, size: 8, font: helveticaBold, color: darkSlate });
-                const descStr = (item.desc || '').length > 95 ? (item.desc.substring(0, 92) + '...') : (item.desc || '');
+                const catStr = (item.category || '').replace(/[\r\n]+/g, ' ').trim();
+                page.drawText(catStr, { x: 55, y: startY - 17, size: 8, font: helveticaBold, color: darkSlate });
+                const cleanDesc = (item.desc || '').replace(/[\r\n]+/g, ' ').trim();
+                const descStr = cleanDesc.length > 95 ? (cleanDesc.substring(0, 92) + '...') : cleanDesc;
                 page.drawText(descStr, { x: 55, y: startY - 30, size: 7.5, font: helvetica, color: midSlate });
                 
                 const rawStatus = (item.status || '').toUpperCase();
@@ -3138,7 +3140,8 @@ ${payload.url}`;
             (wildcardA && wildcardA.status === 0 && Array.isArray(wildcardA.answer) && wildcardA.answer.length > 0) ||
             (wildcardCname && wildcardCname.status === 0 && Array.isArray(wildcardCname.answer) && wildcardCname.answer.length > 0)
         );
-        const wildcardCnameTarget = wildcardCname?.answer?.find(a => a.type === 5)?.data?.replace(/\.+$/, '').toLowerCase() || null;
+        const rawWildcardCname = (wildcardCname?.answer?.find(a => a.type === 5)?.data || wildcardA?.answer?.find(a => a.type === 5)?.data || '');
+        const wildcardCnameTarget = rawWildcardCname ? rawWildcardCname.trim().replace(/^["']|["']$/g, '').trim().replace(/\.+$/, '').toLowerCase() : null;
 
         // A. NXDOMAIN & DoH Network Failure Detection
         const isNxDomain = (apexA && apexA.status === 3) ||
@@ -3270,12 +3273,12 @@ ${payload.url}`;
         if (mxRes && mxRes.success && Array.isArray(mxRes.answer) && mxRes.answer.length > 0) {
             for (const ans of mxRes.answer) {
                 if (ans.type === 15) {
-                    const dataStr = (ans.data || '').trim();
+                    const dataStr = (ans.data || '').trim().replace(/^["']|["']$/g, '').trim();
                     const parts = dataStr.split(/\s+/);
                     const pref = parseInt(parts[0], 10);
-                    const rawExchange = (parts[1] || '').trim();
+                    const rawExchange = (parts[1] || '').trim().replace(/^["']|["']$/g, '').trim();
                     const exchange = rawExchange.replace(/\.+$/, '');
-                    if (pref === 0 && parts.length >= 2 && (rawExchange === '.' || exchange === '')) {
+                    if (pref === 0 && (rawExchange === '.' || exchange === '')) {
                         isNullMx = true;
                         break;
                     }
@@ -3409,7 +3412,7 @@ ${payload.url}`;
             if (probeRes && probeRes.answer && probeRes.answer.length > 0) {
                 for (const ans of probeRes.answer) {
                     if (ans.type === 5) {
-                        const cname = (ans.data || '').replace(/\.+$/, '').toLowerCase();
+                        const cname = (ans.data || '').trim().replace(/^["']|["']$/g, '').trim().replace(/\.+$/, '').toLowerCase();
                         // Ignore if it's just an apex wildcard evasion artifact
                         if (hasWildcardDns && wildcardCnameTarget && cname === wildcardCnameTarget) {
                             continue;
@@ -4862,6 +4865,10 @@ ${payload.url}`;
                 }
                 OrbitAttackTree.render(inst.containerId);
             } else {
+                if (inst.timer) {
+                    clearInterval(inst.timer);
+                    inst.timer = null;
+                }
                 inst.isPlaying = true;
                 if (inst.activeStep >= 5) {
                     inst.activeStep = 1;

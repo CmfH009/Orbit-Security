@@ -4386,6 +4386,15 @@
 
     function triggerDefenseGameOver() {
         defenseState.state = 'gameover';
+        if (defenseState.touchLeftInterval) {
+            clearInterval(defenseState.touchLeftInterval);
+            defenseState.touchLeftInterval = null;
+        }
+        if (defenseState.touchRightInterval) {
+            clearInterval(defenseState.touchRightInterval);
+            defenseState.touchRightInterval = null;
+        }
+        defenseState.keys = {};
         playGameOver();
         const goOverlay = document.getElementById("defense-gameover-overlay");
         const sVal = document.getElementById("gameover-score");
@@ -4400,6 +4409,15 @@
 
     function triggerDefenseVictory() {
         defenseState.state = 'victory';
+        if (defenseState.touchLeftInterval) {
+            clearInterval(defenseState.touchLeftInterval);
+            defenseState.touchLeftInterval = null;
+        }
+        if (defenseState.touchRightInterval) {
+            clearInterval(defenseState.touchRightInterval);
+            defenseState.touchRightInterval = null;
+        }
+        defenseState.keys = {};
         playVictory();
         const cleanBonus = defenseState.threatsDefeated === defenseState.threatsTotal ? 500 : 250;
         defenseState.score += cleanBonus;
@@ -4421,12 +4439,29 @@
         if (!canvas) return;
         const rect = canvas.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0) {
+            const oldCx = defenseState.centerX;
+            const oldCy = defenseState.centerY;
             canvas.width = Math.max(320, Math.floor(rect.width));
             canvas.height = Math.max(240, Math.floor(rect.height));
             defenseState.width = canvas.width;
             defenseState.height = canvas.height;
             defenseState.centerX = canvas.width / 2;
             defenseState.centerY = canvas.height / 2;
+
+            if (oldCx && oldCy && (oldCx !== defenseState.centerX || oldCy !== defenseState.centerY)) {
+                const dx = defenseState.centerX - oldCx;
+                const dy = defenseState.centerY - oldCy;
+                if (Array.isArray(defenseState.threats)) {
+                    defenseState.threats.forEach(t => {
+                        t.x += dx;
+                        t.y += dy;
+                        const currentSpeed = Math.hypot(t.vx, t.vy) || 1.5;
+                        const newAngle = Math.atan2(defenseState.centerY - t.y, defenseState.centerX - t.x);
+                        t.vx = Math.cos(newAngle) * currentSpeed;
+                        t.vy = Math.sin(newAngle) * currentSpeed;
+                    });
+                }
+            }
         }
     }
 
@@ -5849,8 +5884,17 @@
     const unlockAudio = () => {
         if (!soundEnabled) return;
         const ctx = getAudioContext();
+        const removeListeners = () => {
+            window.removeEventListener("pointerdown", unlockAudio);
+            window.removeEventListener("touchstart", unlockAudio);
+            window.removeEventListener("keydown", unlockAudio);
+        };
         if (ctx && ctx.state === 'suspended') {
-            ctx.resume().catch(() => {});
+            ctx.resume().then(() => {
+                if (ctx.state === 'running') removeListeners();
+            }).catch(() => {});
+        } else if (ctx && ctx.state === 'running') {
+            removeListeners();
         }
     };
     window.addEventListener("pointerdown", unlockAudio, { passive: true, once: false });

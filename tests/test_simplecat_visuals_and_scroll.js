@@ -398,6 +398,25 @@ test('Hashchange handler exits defense mode when navigating away from #arcadeDef
     assert(docsCatJs.includes('stopArcadeDefenseMode') && docsCatJs.includes('defenseState.active'), 'Hashchange must stop defense mode when hash clears');
 });
 
+test('triggerDefenseGameOver and triggerDefenseVictory cleanly clear touch intervals and reset keys', () => {
+    assert(docsCatJs.includes('clearInterval(defenseState.touchLeftInterval);') && docsCatJs.includes('defenseState.touchLeftInterval = null;'), 'GameOver/Victory must clear touchLeftInterval');
+    assert(docsCatJs.includes('clearInterval(defenseState.touchRightInterval);') && docsCatJs.includes('defenseState.touchRightInterval = null;'), 'GameOver/Victory must clear touchRightInterval');
+    assert(docsCatJs.includes('defenseState.keys = {};'), 'GameOver/Victory must reset active keys');
+});
+
+test('resizeDefenseCanvas adjusts threat coordinates and trajectories on orientation change', () => {
+    assert(docsCatJs.includes('const oldCx = defenseState.centerX;'), 'resizeDefenseCanvas must track oldCx');
+    assert(docsCatJs.includes('const oldCy = defenseState.centerY;'), 'resizeDefenseCanvas must track oldCy');
+    assert(docsCatJs.includes('t.x += dx;') && docsCatJs.includes('t.y += dy;'), 'resizeDefenseCanvas must translate threat coordinates on center shift');
+    assert(docsCatJs.includes('const newAngle = Math.atan2(defenseState.centerY - t.y, defenseState.centerX - t.x);'), 'resizeDefenseCanvas must re-aim velocity vectors');
+});
+
+test('Web Audio gesture unlock cleanly removes window event listeners once running', () => {
+    assert(docsCatJs.includes('window.removeEventListener("pointerdown", unlockAudio);'), 'Must remove pointerdown unlock listener');
+    assert(docsCatJs.includes('window.removeEventListener("touchstart", unlockAudio);'), 'Must remove touchstart unlock listener');
+    assert(docsCatJs.includes('window.removeEventListener("keydown", unlockAudio);'), 'Must remove keydown unlock listener');
+});
+
 // 8. STRICT 100% BYTE-FOR-BYTE SHA-256 PARITY BETWEEN DOCS/ AND LANDING/
 test('docs/index.html and landing/index.html have 100% SHA-256 parity', () => {
     const hDocs = sha256(docsIndexPath);
@@ -415,6 +434,12 @@ test('docs/signup.html and landing/signup.html have 100% SHA-256 parity', () => 
     const hDocs = sha256(path.join(__dirname, '..', 'docs', 'signup.html'));
     const hLanding = sha256(path.join(__dirname, '..', 'landing', 'signup.html'));
     assert.strictEqual(hDocs, hLanding, `signup.html drift: docs=${hDocs} landing=${hLanding}`);
+});
+
+test('docs/portals/orbit-core.html and landing/portals/orbit-core.html have 100% SHA-256 parity', () => {
+    const hDocs = sha256(path.join(__dirname, '..', 'docs', 'portals', 'orbit-core.html'));
+    const hLanding = sha256(path.join(__dirname, '..', 'landing', 'portals', 'orbit-core.html'));
+    assert.strictEqual(hDocs, hLanding, `portals/orbit-core.html drift: docs=${hDocs} landing=${hLanding}`);
 });
 
 test('docs/assets/simple_cat.js and landing/assets/simple_cat.js have 100% SHA-256 parity', () => {
