@@ -218,10 +218,14 @@
         if (!audioCtx) {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             if (AudioContext) {
-                audioCtx = new AudioContext();
+                try {
+                    audioCtx = new AudioContext();
+                } catch (e) {
+                    audioCtx = null;
+                }
             }
         }
-        if (audioCtx && audioCtx.state === 'suspended') {
+        if (audioCtx && audioCtx.state === 'suspended' && soundEnabled) {
             audioCtx.resume().catch(() => {});
         }
         return audioCtx;
@@ -244,10 +248,25 @@
         const miniLabels = soundEnabled ? `<span>🔊</span> <span>SFX</span>` : `<span>🔇</span> <span>SFX</span>`;
         const touchLabels = soundEnabled ? `<span>🔊 Audio: ON</span>` : `<span>🔇 Audio: OFF</span>`;
 
-        ['audio-toggle-btn', 'sound-toggle-btn'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.innerHTML = fullLabels;
-        });
+        const audioToggleBtn = document.getElementById('audio-toggle-btn');
+        if (audioToggleBtn) {
+            audioToggleBtn.innerHTML = fullLabels;
+            audioToggleBtn.setAttribute('aria-pressed', soundEnabled ? 'true' : 'false');
+            audioToggleBtn.title = soundEnabled ? "Mute 8-Bit Audio SFX (Hotkey: M)" : "Enable 8-Bit Audio SFX (Hotkey: M)";
+        }
+
+        const soundToggleBtn = document.getElementById('sound-toggle-btn');
+        if (soundToggleBtn) {
+            soundToggleBtn.innerHTML = `
+                <span class="flex items-center gap-2">
+                    <span>${soundEnabled ? '🔊' : '🔇'}</span>
+                    <span>Audio SFX (${soundEnabled ? 'Mute' : 'Unmute'})</span>
+                </span>
+                <span class="text-[9px] font-arcade ${soundEnabled ? 'bg-slate-800 text-emerald-400' : 'bg-slate-800 text-slate-400'} px-2 py-0.5 rounded border border-slate-700">${soundEnabled ? 'ON (M)' : 'OFF (M)'}</span>
+            `;
+            soundToggleBtn.setAttribute('aria-pressed', soundEnabled ? 'true' : 'false');
+        }
+
         const dockAudio = document.getElementById('dock-audio-btn');
         if (dockAudio) dockAudio.innerHTML = miniLabels;
         const touchAudio = document.getElementById('touch-audio-btn');
@@ -3835,7 +3854,9 @@
         keys: {},
         handlersBound: false,
         lastPulseTime: 0,
-        screenShake: 0
+        screenShake: 0,
+        touchLeftInterval: null,
+        touchRightInterval: null
     };
 
     function ensureArcadeDefenseDOM() {
@@ -4023,7 +4044,8 @@
                 });
                 defenseState.threatsSpawned++;
                 const remainingEl = document.getElementById("defense-threats-val");
-                if (remainingEl) remainingEl.textContent = `${defenseState.threatsTotal - defenseState.threatsDefeated} THREATS`;
+                const remCount = Math.max(0, (defenseState.threatsTotal - defenseState.threatsSpawned) + defenseState.threats.length);
+                if (remainingEl) remainingEl.textContent = `${remCount} THREATS`;
             }
         }
 
@@ -4140,7 +4162,9 @@
             }
         }
 
-        if (defenseState.state === 'playing' && defenseState.threatsDefeated >= defenseState.threatsTotal) {
+        const allSpawned = defenseState.threatsSpawned >= defenseState.threatsTotal;
+        const noneRemaining = defenseState.threats.length === 0;
+        if (defenseState.state === 'playing' && allSpawned && noneRemaining && defenseState.shieldHp > 0) {
             triggerDefenseVictory();
             return;
         }
@@ -4158,7 +4182,10 @@
         }
         if (scoreVal) scoreVal.textContent = String(defenseState.score).padStart(5, '0');
         if (comboVal) comboVal.textContent = `x${defenseState.combo}`;
-        if (remainingVal) remainingVal.textContent = `${defenseState.threatsTotal - defenseState.threatsDefeated} THREATS`;
+        if (remainingVal) {
+            const remCount = Math.max(0, (defenseState.threatsTotal - defenseState.threatsSpawned) + defenseState.threats.length);
+            remainingVal.textContent = `${remCount} THREATS`;
+        }
     }
 
     function renderDefenseGame() {
@@ -4374,8 +4401,8 @@
     function triggerDefenseVictory() {
         defenseState.state = 'victory';
         playVictory();
-        const bonus = 500;
-        defenseState.score += bonus;
+        const cleanBonus = defenseState.threatsDefeated === defenseState.threatsTotal ? 500 : 250;
+        defenseState.score += cleanBonus;
 
         const vicOverlay = document.getElementById("defense-victory-overlay");
         const sVal = document.getElementById("victory-score");
@@ -4386,6 +4413,21 @@
         if (tVal) tVal.textContent = `${defenseState.threatsDefeated} / ${defenseState.threatsTotal}`;
         if (cVal) cVal.textContent = `x${defenseState.maxCombo}`;
         if (vicOverlay) vicOverlay.classList.remove("hidden");
+    }
+
+    function resizeDefenseCanvas() {
+        if (!defenseState.active) return;
+        const canvas = defenseState.canvas || document.getElementById("defenseCanvas");
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+            canvas.width = Math.max(320, Math.floor(rect.width));
+            canvas.height = Math.max(240, Math.floor(rect.height));
+            defenseState.width = canvas.width;
+            defenseState.height = canvas.height;
+            defenseState.centerX = canvas.width / 2;
+            defenseState.centerY = canvas.height / 2;
+        }
     }
 
     function bindDefenseDOMControls() {
@@ -4414,31 +4456,41 @@
         const touchFire = document.getElementById("defense-touch-fire");
 
         if (touchLeft) {
-            let leftInt = null;
             const startLeft = (e) => {
                 e.preventDefault();
                 defenseState.turretAngle -= defenseState.aimRotationSpeed * 1.5;
-                clearInterval(leftInt);
-                leftInt = setInterval(() => { defenseState.turretAngle -= defenseState.aimRotationSpeed * 1.5; }, 50);
+                if (defenseState.touchLeftInterval) clearInterval(defenseState.touchLeftInterval);
+                defenseState.touchLeftInterval = setInterval(() => { defenseState.turretAngle -= defenseState.aimRotationSpeed * 1.5; }, 50);
             };
-            const stopLeft = () => clearInterval(leftInt);
+            const stopLeft = () => {
+                if (defenseState.touchLeftInterval) {
+                    clearInterval(defenseState.touchLeftInterval);
+                    defenseState.touchLeftInterval = null;
+                }
+            };
             touchLeft.addEventListener("pointerdown", startLeft);
             touchLeft.addEventListener("pointerup", stopLeft);
             touchLeft.addEventListener("pointerleave", stopLeft);
+            touchLeft.addEventListener("pointercancel", stopLeft);
         }
 
         if (touchRight) {
-            let rightInt = null;
             const startRight = (e) => {
                 e.preventDefault();
                 defenseState.turretAngle += defenseState.aimRotationSpeed * 1.5;
-                clearInterval(rightInt);
-                rightInt = setInterval(() => { defenseState.turretAngle += defenseState.aimRotationSpeed * 1.5; }, 50);
+                if (defenseState.touchRightInterval) clearInterval(defenseState.touchRightInterval);
+                defenseState.touchRightInterval = setInterval(() => { defenseState.turretAngle += defenseState.aimRotationSpeed * 1.5; }, 50);
             };
-            const stopRight = () => clearInterval(rightInt);
+            const stopRight = () => {
+                if (defenseState.touchRightInterval) {
+                    clearInterval(defenseState.touchRightInterval);
+                    defenseState.touchRightInterval = null;
+                }
+            };
             touchRight.addEventListener("pointerdown", startRight);
             touchRight.addEventListener("pointerup", stopRight);
             touchRight.addEventListener("pointerleave", stopRight);
+            touchRight.addEventListener("pointercancel", stopRight);
         }
 
         if (touchFire) {
@@ -4467,10 +4519,14 @@
             stopArcadeDefenseMode();
             return;
         }
-        if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', ' ', 'KeyA', 'KeyD', 'KeyW', 'a', 'd', 'w'].includes(e.code) || ['ArrowLeft', 'ArrowRight', 'ArrowUp', ' ', 'a', 'd', 'w'].includes(e.key)) {
+        if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', ' ', 'KeyA', 'KeyD', 'KeyW', 'a', 'd', 'w', 'A', 'D', 'W'].includes(e.code) || ['ArrowLeft', 'ArrowRight', 'ArrowUp', ' ', 'a', 'd', 'w', 'A', 'D', 'W'].includes(e.key)) {
             e.preventDefault();
             defenseState.keys[e.code || e.key] = true;
             defenseState.keys[e.key] = true;
+            if (e.key) {
+                defenseState.keys[e.key.toLowerCase()] = true;
+                defenseState.keys[e.key.toUpperCase()] = true;
+            }
         }
     };
 
@@ -4478,6 +4534,10 @@
         if (!defenseState.active) return;
         defenseState.keys[e.code || e.key] = false;
         defenseState.keys[e.key] = false;
+        if (e.key) {
+            defenseState.keys[e.key.toLowerCase()] = false;
+            defenseState.keys[e.key.toUpperCase()] = false;
+        }
     };
 
     function startArcadeDefenseMode() {
@@ -4524,8 +4584,15 @@
         }
 
         bindDefenseDOMControls();
+
+        // Prevent duplicate listener accumulation on retries & enable responsive resizing
+        window.removeEventListener("keydown", defenseKeyHandler);
+        window.removeEventListener("keyup", defenseKeyUpHandler);
+        window.removeEventListener("resize", resizeDefenseCanvas);
+
         window.addEventListener("keydown", defenseKeyHandler);
         window.addEventListener("keyup", defenseKeyUpHandler);
+        window.addEventListener("resize", resizeDefenseCanvas);
 
         playPowerUp();
         if (defenseState.animId) cancelAnimationFrame(defenseState.animId);
@@ -4535,6 +4602,7 @@
     }
 
     function stopArcadeDefenseMode() {
+        const wasActive = defenseState.active;
         if (defenseState.animId) {
             cancelAnimationFrame(defenseState.animId);
             defenseState.animId = null;
@@ -4545,12 +4613,24 @@
         defenseState.pulses = [];
         defenseState.sparks = [];
 
+        if (defenseState.touchLeftInterval) {
+            clearInterval(defenseState.touchLeftInterval);
+            defenseState.touchLeftInterval = null;
+        }
+        if (defenseState.touchRightInterval) {
+            clearInterval(defenseState.touchRightInterval);
+            defenseState.touchRightInterval = null;
+        }
+
         window.removeEventListener("keydown", defenseKeyHandler);
         window.removeEventListener("keyup", defenseKeyUpHandler);
+        window.removeEventListener("resize", resizeDefenseCanvas);
 
         const overlay = document.getElementById("arcadeDefenseMode");
         if (overlay) overlay.classList.add("hidden");
-        document.body.classList.remove("modal-open");
+        if (wasActive) {
+            document.body.classList.remove("modal-open");
+        }
 
         if (window.location.hash === '#arcadeDefenseMode' || window.location.hash === '#arcadeDefense') {
             if (window.history && window.history.replaceState) {
@@ -4558,7 +4638,9 @@
             }
         }
 
-        playPurr();
+        if (wasActive) {
+            playPurr();
+        }
     }
 
     function toggleArcadeDefenseMode() {
@@ -5026,7 +5108,7 @@
         
         // Load saved sound preference
         try {
-            const saved = localStorage.getItem("orbit_sound_enabled");
+            const saved = localStorage.getItem("orbit_audio_enabled") ?? localStorage.getItem("orbit_sound_enabled");
             if (saved !== null) {
                 soundEnabled = (saved === "true");
             }
@@ -5765,11 +5847,14 @@
 
     // User interaction unlock for Web Audio policy compliance
     const unlockAudio = () => {
-        if (audioCtx && audioCtx.state === 'suspended' && soundEnabled) {
-            audioCtx.resume().catch(() => {});
+        if (!soundEnabled) return;
+        const ctx = getAudioContext();
+        if (ctx && ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
         }
     };
     window.addEventListener("pointerdown", unlockAudio, { passive: true, once: false });
+    window.addEventListener("touchstart", unlockAudio, { passive: true, once: false });
     window.addEventListener("keydown", unlockAudio, { passive: true, once: false });
 
     function initAll() {
@@ -5790,6 +5875,8 @@
     window.addEventListener("hashchange", () => {
         if (window.location.hash === '#arcadeDefenseMode' || window.location.hash === '#arcadeDefense') {
             startArcadeDefenseMode();
+        } else if (defenseState.active) {
+            stopArcadeDefenseMode();
         }
     });
 

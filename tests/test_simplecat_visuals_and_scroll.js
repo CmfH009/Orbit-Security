@@ -363,6 +363,41 @@ test('Scanner milestone audio hooks wired to DoH query start, critical alert, an
     assert(docsRadarJs.includes('OrbitAttackTree.setStep') && docsRadarJs.includes('SimpleCat.playBlip()'), 'Exploit simulator step must trigger SimpleCat.playBlip');
 });
 
+// 7r. ARCADE DEFENSE & WEB AUDIO ROBUSTNESS GUARDS
+test('stopArcadeDefenseMode guards against spurious purr & modal-open stripping when inactive', () => {
+    assert(docsCatJs.includes('const wasActive = defenseState.active;'), 'stopArcadeDefenseMode must track wasActive');
+    assert(docsCatJs.includes('document.body.classList.remove("modal-open");') && docsCatJs.includes('wasActive'), 'modal-open should only be removed if defense was active');
+    assert(docsCatJs.includes('playPurr();') && docsCatJs.includes('wasActive'), 'playPurr should only fire if defense was active');
+});
+
+test('Arcade Defense Mode includes responsive resizeDefenseCanvas for mobile orientation changes', () => {
+    assert(docsCatJs.includes('function resizeDefenseCanvas()'), 'Missing resizeDefenseCanvas');
+    assert(docsCatJs.includes('window.addEventListener("resize", resizeDefenseCanvas)'), 'Missing resize listener in defense mode');
+    assert(docsCatJs.includes('window.removeEventListener("resize", resizeDefenseCanvas)'), 'Missing resize listener removal in stopArcadeDefenseMode');
+});
+
+test('Defense victory triggers when all threats spawned and zero active threats remain with shield > 0', () => {
+    assert(docsCatJs.includes('const allSpawned = defenseState.threatsSpawned >= defenseState.threatsTotal;'), 'Missing allSpawned check');
+    assert(docsCatJs.includes('const noneRemaining = defenseState.threats.length === 0;'), 'Missing noneRemaining check');
+    assert(docsCatJs.includes('allSpawned && noneRemaining && defenseState.shieldHp > 0'), 'Victory must trigger when shield survives partial damage');
+});
+
+test('Arcade Defense Mode prevents listener accumulation on retry and cleans up touch intervals', () => {
+    assert(docsCatJs.includes('window.removeEventListener("keydown", defenseKeyHandler);') && docsCatJs.includes('window.removeEventListener("keyup", defenseKeyUpHandler);'), 'Must remove listeners before adding to prevent duplicates');
+    assert(docsCatJs.includes('pointercancel'), 'Touch controls must listen for pointercancel');
+    assert(docsCatJs.includes('touchLeftInterval') && docsCatJs.includes('touchRightInterval'), 'Touch intervals must be tracked on defenseState');
+});
+
+test('createSoundToggle checks orbit_audio_enabled and updateSoundToggleButtons preserves mobile drawer structure', () => {
+    assert(docsCatJs.includes('localStorage.getItem("orbit_audio_enabled") ?? localStorage.getItem("orbit_sound_enabled")'), 'createSoundToggle must check orbit_audio_enabled');
+    assert(docsCatJs.includes('soundToggleBtn.setAttribute(\'aria-pressed\''), 'Toggle buttons must update aria-pressed');
+    assert(docsCatJs.includes('Audio SFX (${soundEnabled ? \'Mute\' : \'Unmute\'})'), 'Mobile drawer button must preserve descriptive label');
+});
+
+test('Hashchange handler exits defense mode when navigating away from #arcadeDefenseMode', () => {
+    assert(docsCatJs.includes('stopArcadeDefenseMode') && docsCatJs.includes('defenseState.active'), 'Hashchange must stop defense mode when hash clears');
+});
+
 // 8. STRICT 100% BYTE-FOR-BYTE SHA-256 PARITY BETWEEN DOCS/ AND LANDING/
 test('docs/index.html and landing/index.html have 100% SHA-256 parity', () => {
     const hDocs = sha256(docsIndexPath);
