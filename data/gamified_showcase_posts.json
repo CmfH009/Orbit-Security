@@ -1,0 +1,145 @@
+{
+  "id": "gamified-showcase-2026-11",
+  "name": "Gamified Tools & Arcade Defense Showcase",
+  "created_at_utc": "2026-11-03T12:19:05.937225+00:00",
+  "limit": 280,
+  "url_weight": 23,
+  "publish_policy": {
+    "never": [
+      "Never publish third-party client domains."
+    ]
+  },
+  "posts": [
+    {
+      "id": "gamified-thread-1",
+      "type": "thread",
+      "position": 1,
+      "text": "Most cybersecurity sites are corporate snoozefests: stock photos of padlocks and sales forms.\n\nWe turned perimeter recon into an interactive cyber arcade.\n\nZero backend servers. Pure browser-native weaponization.\n\nWhat we shipped: \ud83e\uddf5\ud83d\udc47\nhttps://cmfh009.github.io/Orbit-Security/",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\docs\\assets\\orbit_montage_master.mp4",
+      "media_type": "video",
+      "pillar": "break_and_fix",
+      "notes": "Why traditional infosec landing pages fail vs browser-native weaponization."
+    },
+    {
+      "id": "gamified-thread-2",
+      "type": "thread",
+      "position": 2,
+      "text": "1/ Live 16-Subdomain DoH Scanner\n\nClient-side Google & Cloudflare DoH (RFC 8484):\n\u2022 16 subdomains probed concurrently in <800ms\n\u2022 2-prong takeover triage (NXDOMAIN vs SaaS edge)\n\u2022 RFC 7505 Null-MX & strict DMARC audits\n\u2022 Instant co-branded client PDF export",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\docs\\assets\\orbit_doh_encrypted_shield.jpg",
+      "media_type": "image",
+      "pillar": "radar_telemetry",
+      "notes": "Client-side Google & Cloudflare DoH, RFC 7505 Null-MX, two-prong takeover checks."
+    },
+    {
+      "id": "gamified-thread-3",
+      "type": "thread",
+      "position": 3,
+      "text": "2/ Visual Attack Tree & Takeover Simulator\n\nExplaining dangling DNS to clients used to take hours.\n\nNow: an interactive 5-step SVG exploit animation showing how an abandoned SaaS trial leads to domain takeover.\n\nWatch the exploit step-by-step:\nhttps://cmfh009.github.io/Orbit-Security/#simulate",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\docs\\assets\\orbit_cname_blackhole.jpg",
+      "media_type": "image",
+      "pillar": "dangling_dns",
+      "notes": "5-step interactive SVG exploit animation illustrating dangling CNAME hijacking."
+    },
+    {
+      "id": "gamified-thread-4",
+      "type": "thread",
+      "position": 4,
+      "text": "3/ White-Label Agency Portal Customizer\n\nAgencies use Orbit to run $250/mo retainers.\n\nTest-drive your branded portal live:\n\u2022 Palette picker with WCAG contrast detection\n\u2022 Instant logo drag-and-drop\n\u2022 Launch into the live demo portal:\nhttps://cmfh009.github.io/Orbit-Security/portals/orbit-core.html",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\docs\\assets\\orbit_agency_retainer_vault.jpg",
+      "media_type": "image",
+      "pillar": "agency_retainers",
+      "notes": "Real-time brand color swatch picker with WCAG contrast detection & demo launcher."
+    },
+    {
+      "id": "gamified-thread-5",
+      "type": "thread",
+      "position": 5,
+      "text": "4/ Astro-Cat Chief Perimeter Sentinel\n\nMeet our zero-G sentinel:\n\u2022 Guided tour across your perimeter scan\n\u2022 Procedural 8-bit Web Audio synth (square/sawtooth waves, zero MP3s)\n\u2022 Cosmic treats mini-game with physics bounce\n\nInfosec doesn't have to be sterile. \ud83d\udc31",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\docs\\assets\\orbit_astrocat_laser_sentinel.jpg",
+      "media_type": "image",
+      "pillar": "gamification",
+      "notes": "Zero-G mascot with 8-bit procedural synth, conversion tour, and treats mini-game."
+    },
+    {
+      "id": "gamified-thread-6",
+      "type": "thread",
+      "position": 6,
+      "text": "5/ Arcade Defense Mode\n\nHit #arcadeDefense and the site transforms into an 8-bit arcade canvas shooter.\n\nYour orbital turret defends against all 16 perimeter threats (dangling CNAMEs, SPF overflows, spoofed MX).\n\nPilot the turret live:\nhttps://cmfh009.github.io/Orbit-Security/#arcadeDefense",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\docs\\assets\\orbit_astro_cat_gameplay_x.mp4",
+      "media_type": "video",
+      "pillar": "gamification",
+      "notes": "Full canvas shooter turning scan threats into incoming orbital invaders."
+    },
+    {
+      "id": "gamified-thread-7",
+      "type": "thread",
+      "position": 7,
+      "text": "Why build all this client-side?\n\n1. Zero Trust: we never see or store your DNS queries.\n2. Speed: 800ms parallel DoH beats backend queues.\n3. Retainers: instant co-branded executive audit PDFs let agencies sell recurring protection without writing code.",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\docs\\assets\\fleet_command_center_live.png",
+      "media_type": "image",
+      "pillar": "architecture",
+      "notes": "Zero-trust privacy, 800ms speed, and high-margin agency monetization."
+    },
+    {
+      "id": "gamified-thread-8",
+      "type": "thread",
+      "position": 8,
+      "text": "Audit your perimeter, customize your agency portal, or blast threats in Arcade Defense mode right now:\n\nLive Showcase:\nhttps://cmfh009.github.io/Orbit-Security/\n\nOpen-source repo & CLI on GitHub:\nhttps://github.com/CmfH009/Orbit-Security\n\nDrop your domain below for a free telemetry readout. \ud83d\udee1\ufe0f\ud83d\ude80",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\docs\\assets\\orbit_cyber_command_deck.jpg",
+      "media_type": "image",
+      "pillar": "cta",
+      "notes": "Direct link to live GitHub Pages showcase and open-source codebase."
+    },
+    {
+      "id": "standalone-scanner",
+      "type": "standalone",
+      "position": null,
+      "text": "We replaced slow backend scanners with client-side DoH.\n\nParallel Google & Cloudflare queries (RFC 8484) audit 16 subdomains in <800ms:\n\u2022 Two-prong takeover heuristics\n\u2022 RFC 7505 Null-MX validation\n\u2022 Instant co-branded PDF audits\n\nAudit live:\nhttps://cmfh009.github.io/Orbit-Security/",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\docs\\assets\\orbit_doh_encrypted_shield.jpg",
+      "media_type": "image",
+      "pillar": "radar_telemetry",
+      "notes": "Dedicated single post focusing on RFC 8484 DoH speed and client-side audits."
+    },
+    {
+      "id": "standalone-attack-tree",
+      "type": "standalone",
+      "position": null,
+      "text": "How does an abandoned $15/mo SaaS page compromise an enterprise domain?\n\nOur 5-step SVG Attack Tree animates every stage:\n1. Visitor request\n2. CNAME traversal\n3. Abandoned 404\n4. Attacker asset claim\n5. Cookie & session hijacking\n\nSimulate:\nhttps://cmfh009.github.io/Orbit-Security/#simulate",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\docs\\assets\\orbit_cname_blackhole.jpg",
+      "media_type": "image",
+      "pillar": "dangling_dns",
+      "notes": "Interactive SVG animation demonstrating dangling CNAME exploit flow."
+    },
+    {
+      "id": "standalone-customizer",
+      "type": "standalone",
+      "position": null,
+      "text": "Agencies turn DNS hygiene into $250/mo care plans.\n\nPreview client deliverables in our interactive portal sandbox:\n\u2022 Brand palette with WCAG contrast detection\n\u2022 Drag-and-drop agency logo\n\u2022 Instant client demo launcher\n\nLaunch demo:\nhttps://cmfh009.github.io/Orbit-Security/portals/orbit-core.html",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\docs\\assets\\orbit_agency_retainer_vault.jpg",
+      "media_type": "image",
+      "pillar": "agency_retainers",
+      "notes": "Real-time branding preview and live multi-client demo portal."
+    },
+    {
+      "id": "standalone-arcade",
+      "type": "standalone",
+      "position": null,
+      "text": "Security tools take themselves too seriously.\n\nSo we added Astro-Cat:\n\u2022 Custom 8-bit retro Web Audio synthesizer\n\u2022 Guided walkthrough of scan vulnerabilities\n\u2022 16-threat Arcade Defense canvas shooter (blast dangling CNAMEs)\n\nPlay live:\nhttps://cmfh009.github.io/Orbit-Security/#arcadeDefense",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\docs\\assets\\orbit_astrocat_laser_sentinel.jpg",
+      "media_type": "image",
+      "pillar": "gamification",
+      "notes": "8-bit Web Audio synth and interactive canvas shooter."
+    }
+  ],
+  "held_variants": [
+    {
+      "id": "held-unverified-named-targets",
+      "type": "standalone",
+      "status": "HELD",
+      "publish": false,
+      "hold": true,
+      "notes": "do not publish without explicit operator approval. Holds draft containing raw prospect names.",
+      "text": "do not publish. Internal draft comparing prospective agency portfolios."
+    }
+  ]
+}

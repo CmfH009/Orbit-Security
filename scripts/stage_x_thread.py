@@ -111,12 +111,11 @@ Suddenly, they gain:
         "attachment": None,
         "text": """You don't need a $20k enterprise audit to stop this.
 
-Orbit packages detection heuristics into an open-source CLI:
+Orbit packages heuristics into an open-source CLI:
 
-`pip install "orbit-security @ git+https://github.com/CmfH009/Orbit-Security.git"`
-`orbit-recon clientbrand.com --remediate`
+`orbit-recon brand.com --remediate`
 
-Resolves DNS pointers, audits RFC 7489 DMARC, and checks 30+ SaaS takeover signatures."""
+Resolves DNS pointers, audits RFC 7489 DMARC, and checks 30+ SaaS takeover signatures in seconds."""
     },
     {
         "num": 6,
