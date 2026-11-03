@@ -3652,6 +3652,8 @@ ${payload.url}`;
     let _crtShaderEnabled = typeof localStorage !== 'undefined' ? localStorage.getItem('orbit_crt_lines_enabled') !== 'false' : true;
     let _crtAnimFrameId = null;
     let _crtPhase = 0;
+    let _crtIsVisible = true;
+    let _crtObserver = null;
 
     function renderCrtArcadeCanvas() {
         const canvas = document.getElementById('crt-arcade-shader-canvas');
@@ -3659,39 +3661,86 @@ ${payload.url}`;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        const w = canvas.width;
-        const h = canvas.height;
+        const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+        const cssWidth = 160;
+        const cssHeight = 44;
+        const targetWidth = Math.round(cssWidth * dpr);
+        const targetHeight = Math.round(cssHeight * dpr);
+
+        if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            canvas.style.width = `${cssWidth}px`;
+            canvas.style.height = `${cssHeight}px`;
+        }
+
+        ctx.save();
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
         ctx.fillStyle = '#020617';
-        ctx.fillRect(0, 0, w, h);
+        ctx.fillRect(0, 0, cssWidth, cssHeight);
 
         if (_crtShaderEnabled) {
             // Phosphor scanlines
             ctx.fillStyle = 'rgba(16, 185, 129, 0.16)';
-            for (let y = 0; y < h; y += 3) {
-                ctx.fillRect(0, y, w, 1);
+            for (let y = 0; y < cssHeight; y += 3) {
+                ctx.fillRect(0, y, cssWidth, 1);
             }
             // Phosphor waveform trace
             ctx.strokeStyle = '#10b981';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
             _crtPhase += 0.08;
-            for (let x = 0; x < w; x += 4) {
-                const y = (h / 2) + Math.sin(x * 0.15 + _crtPhase) * 10;
+            for (let x = 0; x < cssWidth; x += 4) {
+                const y = (cssHeight / 2) + Math.sin(x * 0.15 + _crtPhase) * 10;
                 if (x === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             }
             ctx.stroke();
 
-            if (!document.hidden) {
+            if (!document.hidden && _crtIsVisible) {
                 _crtAnimFrameId = requestAnimationFrame(renderCrtArcadeCanvas);
             }
         }
+        ctx.restore();
     }
 
     function initCrtArcadeShaderCanvas() {
         if (_crtAnimFrameId) {
             cancelAnimationFrame(_crtAnimFrameId);
             _crtAnimFrameId = null;
+        }
+
+        const canvas = document.getElementById('crt-arcade-shader-canvas');
+        if (canvas) {
+            const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+            const cssWidth = 160;
+            const cssHeight = 44;
+            const targetWidth = Math.round(cssWidth * dpr);
+            const targetHeight = Math.round(cssHeight * dpr);
+            if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                canvas.style.width = `${cssWidth}px`;
+                canvas.style.height = `${cssHeight}px`;
+            }
+
+            if (!_crtObserver && typeof IntersectionObserver !== 'undefined') {
+                _crtObserver = new IntersectionObserver((entries) => {
+                    entries.forEach((entry) => {
+                        _crtIsVisible = entry.isIntersecting;
+                        if (_crtIsVisible && _crtShaderEnabled && !document.hidden) {
+                            if (!_crtAnimFrameId) {
+                                renderCrtArcadeCanvas();
+                            }
+                        } else if (!_crtIsVisible && _crtAnimFrameId) {
+                            cancelAnimationFrame(_crtAnimFrameId);
+                            _crtAnimFrameId = null;
+                        }
+                    });
+                }, { threshold: 0.05 });
+                _crtObserver.observe(canvas);
+            }
         }
 
         // Synchronize body class for CSS scanlines
@@ -3736,11 +3785,11 @@ ${payload.url}`;
 
     if (typeof document !== 'undefined') {
         document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && _crtShaderEnabled) {
+            if (!document.hidden && _crtShaderEnabled && _crtIsVisible) {
                 if (!_crtAnimFrameId) {
                     renderCrtArcadeCanvas();
                 }
-            } else if (document.hidden && _crtAnimFrameId) {
+            } else if ((document.hidden || !_crtIsVisible) && _crtAnimFrameId) {
                 cancelAnimationFrame(_crtAnimFrameId);
                 _crtAnimFrameId = null;
             }
