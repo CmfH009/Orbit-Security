@@ -3825,6 +3825,7 @@ if ($query_string ~* "(?:invokefunction|call_user_func_array|pearcmd|\\+config-c
             `;
             (document.getElementById('audit-terminal') || hud).scrollIntoView({ behavior: 'instant', block: 'start' });
         }
+        window.simulateTakeoverAttack = simulateTakeoverAttack;
 
         // 2. "Steal Our Client Pitch" Copy-Paste Email Drawer
         let currentPitchKey = 'cve';
@@ -3873,8 +3874,28 @@ Best regards,
         };
 
         function getActiveAgencyName() {
-            const input = document.getElementById('customAgencyName');
-            return (input && input.value.trim()) ? input.value.trim() : 'Apex Digital Studio';
+            const radar = document.getElementById('radarAgencyName');
+            const custom = document.getElementById('customAgencyName');
+            return (radar && radar.value.trim()) || (custom && custom.value.trim()) || localStorage.getItem('orbit_agency_name') || 'Apex Digital Studio';
+        }
+
+        function syncAgencyName(sourceValue) {
+            const name = (sourceValue || '').trim();
+            const radar = document.getElementById('radarAgencyName');
+            const custom = document.getElementById('customAgencyName');
+            const display = document.getElementById('brandNameDisplay');
+            if (radar && radar.value !== sourceValue) radar.value = sourceValue;
+            if (custom && custom.value !== sourceValue) custom.value = sourceValue;
+            if (display) display.textContent = name || 'Your Agency';
+            if (name) {
+                try {
+                    localStorage.setItem('orbit_agency_name', name);
+                } catch (e) {}
+            }
+            switchPitchTemplate(currentPitchKey);
+            document.querySelectorAll('.flipbook-agency-name').forEach(el => {
+                el.textContent = name || 'Apex Digital Studio';
+            });
         }
 
         function switchPitchTemplate(key) {
@@ -3917,15 +3938,22 @@ ${body}`;
             }
         }
 
-        // Sync Agency Name changes across Pitch Drawer & PDF Flipbook
+        // Bi-directional Agency Name Sync across Hero, Audit Studio, Pitch Drawer & PDF Flipbook
         document.addEventListener('DOMContentLoaded', () => {
+            const savedAgency = localStorage.getItem('orbit_agency_name');
+            if (savedAgency) {
+                syncAgencyName(savedAgency);
+            }
             const agencyInput = document.getElementById('customAgencyName');
+            const radarAgencyInput = document.getElementById('radarAgencyName');
             if (agencyInput) {
-                agencyInput.addEventListener('input', () => {
-                    switchPitchTemplate(currentPitchKey);
-                    document.querySelectorAll('.flipbook-agency-name').forEach(el => {
-                        el.textContent = getActiveAgencyName();
-                    });
+                agencyInput.addEventListener('input', (e) => {
+                    syncAgencyName(e.target.value);
+                });
+            }
+            if (radarAgencyInput) {
+                radarAgencyInput.addEventListener('input', (e) => {
+                    syncAgencyName(e.target.value);
                 });
             }
         });

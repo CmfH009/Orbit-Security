@@ -151,7 +151,7 @@ async function runTests() {
     }
 
     // =========================================================================
-    // Scenario 1: monstersamonguspodcast.com (Missing DMARC & SPF, Grade F / 30)
+    // Scenario 1: monstersamonguspodcast.com (Missing DMARC & SPF, Grade F / 40)
     // =========================================================================
     console.log('\nTesting Scenario 1: monstersamonguspodcast.com');
     DoHService.query = async (name, type) => {
@@ -163,23 +163,24 @@ async function runTests() {
     };
 
     const audit1 = await performClientDohAudit('monstersamonguspodcast.com');
-    assert(audit1.score === 30, `monstersamonguspodcast.com score is 30 (got ${audit1.score})`);
+    assert(audit1.score === 40, `monstersamonguspodcast.com score is 40 (got ${audit1.score})`);
     assert(audit1.grade === 'F', `monstersamonguspodcast.com grade is F (got ${audit1.grade})`);
     assert(audit1.dmarcStatus === 'missing', `DMARC status is missing`);
     assert(audit1.spfStatus === 'missing', `SPF status is missing`);
     assert(audit1.findings[0].category === 'SUBDOMAIN TAKEOVER SENTINEL' && audit1.findings[0].status === 'PASS', 'Finding 1 is Subdomain Takeover PASS');
     assert(audit1.findings[1].category === 'EMAIL SPOOFING PROTECTION (DMARC)' && audit1.findings[1].status === 'FAIL', 'Finding 2 is DMARC FAIL');
     assert(audit1.findings[2].category === 'SENDER POLICY FRAMEWORK (SPF)' && audit1.findings[2].status === 'FAIL', 'Finding 3 is SPF FAIL');
+    assert(audit1.findings[3].category === 'MAIL INBOUND ROUTING (MX)' && audit1.findings[3].status === 'PASS', 'Finding 4 is Mail Routing PASS');
 
     // Test PDF generation for Scenario 1
     lastPdfArgs = {};
     await generateInstantPdfForDomain('monstersamonguspodcast.com', audit1.score, audit1.grade, null, audit1.findings);
-    assert(lastPdfArgs.renderedScore === '30 / 100', `PDF rendered score is 30 / 100 (got ${lastPdfArgs.renderedScore})`);
+    assert(lastPdfArgs.renderedScore === '40 / 100', `PDF rendered score is 40 / 100 (got ${lastPdfArgs.renderedScore})`);
     assert(lastPdfArgs.renderedGrade === 'GRADE: F', `PDF rendered grade is GRADE: F (got ${lastPdfArgs.renderedGrade})`);
 
     // Test Shareable Badge for Scenario 1
     copyShareableBadge('monstersamonguspodcast.com', audit1.score, audit1.grade, audit1.dmarcStatus, audit1.spfStatus);
-    assert(clipboardText.includes('Security Score: 30/100 (Grade F)'), 'Clipboard badge contains correct score 30/100 Grade F');
+    assert(clipboardText.includes('Security Score: 40/100 (Grade F)'), 'Clipboard badge contains correct score 40/100 Grade F');
     assert(clipboardText.includes('DMARC Spoofing Guard: MISSING'), 'Clipboard badge has DMARC MISSING');
     assert(clipboardText.includes('SPF Deliverability Guard: MISSING'), 'Clipboard badge has SPF MISSING');
 
@@ -213,7 +214,7 @@ async function runTests() {
     assert(lastPdfArgs.renderedGrade === 'GRADE: A+', `PDF rendered grade is GRADE: A+`);
 
     // =========================================================================
-    // Scenario 3: Monitoring-Only Domain (p=none with -all, Grade B / 75)
+    // Scenario 3: Monitoring-Only Domain (p=none with -all, Grade B / 80)
     // =========================================================================
     console.log('\nTesting Scenario 3: Monitoring-Only Domain (p=none with -all)');
     DoHService.query = async (name, type) => {
@@ -229,14 +230,14 @@ async function runTests() {
     };
 
     const audit3 = await performClientDohAudit('client-monitored.com');
-    assert(audit3.score === 75, `client-monitored.com score is 75 (got ${audit3.score})`);
+    assert(audit3.score === 80, `client-monitored.com score is 80 (got ${audit3.score})`);
     assert(audit3.grade === 'B', `client-monitored.com grade is B (got ${audit3.grade})`);
     assert(audit3.dmarcStatus === 'warn', 'DMARC status is warn');
     assert(audit3.findings[1].status === 'WARN', 'Finding DMARC is WARN');
 
     lastPdfArgs = {};
     await generateInstantPdfForDomain('client-monitored.com', audit3.score, audit3.grade, null, audit3.findings);
-    assert(lastPdfArgs.renderedScore === '75 / 100', `PDF rendered score is 75 / 100`);
+    assert(lastPdfArgs.renderedScore === '80 / 100', `PDF rendered score is 80 / 100`);
     assert(lastPdfArgs.renderedGrade === 'GRADE: B', `PDF rendered grade is GRADE: B`);
 
     // =========================================================================
@@ -262,25 +263,31 @@ async function runTests() {
     const audit4 = await performClientDohAudit('store.brand.com');
     assert(audit4.isSubdomain === true, 'Identified as subdomain');
     assert(audit4.dmarcInherited === true, 'DMARC inherited from brand.com');
-    assert(audit4.dmarcScore === 28, `DMARC score inherited sp=quarantine (28 pts) (got ${audit4.dmarcScore})`);
-    assert(audit4.spfInherited === true, 'SPF inherited from brand.com (35 pts)');
-    assert(audit4.score === 93, `Total score is 93 (got ${audit4.score})`);
+    assert(audit4.dmarcScore === 25, `DMARC score inherited sp=quarantine (25 pts) (got ${audit4.dmarcScore})`);
+    assert(audit4.spfInherited === true, 'SPF inherited from brand.com (30 pts)');
+    assert(audit4.score === 95, `Total score is 95 (got ${audit4.score})`);
     assert(audit4.grade === 'A+', `Grade is A+ (got ${audit4.grade})`);
 
     // =========================================================================
-    // Scenario 5: Dangling CNAME Subdomain Takeover Detection
+    // Scenario 5: Dangling CNAME Subdomain Takeover Detection (Prong A NXDOMAIN)
     // =========================================================================
-    console.log('\nTesting Scenario 5: Dangling CNAME Takeover');
+    console.log('\nTesting Scenario 5: Dangling CNAME Takeover (Prong A NXDOMAIN)');
     DoHService.query = async (name, type) => {
         if (name.startsWith('_dmarc.')) {
             return { success: true, status: 0, answer: [{ type: 16, data: '"v=DMARC1; p=reject;"' }] };
         }
         if (type === 16) return { success: true, status: 0, answer: [{ type: 16, data: '"v=spf1 -all"' }] };
         if (type === 15) return { success: true, status: 0, answer: [{ type: 15, data: '10 mx.brand.com' }] };
-        if (type === 1) return { success: true, status: 0, answer: [{ type: 1, data: '203.0.113.1' }] };
-        // Dangling CNAME on promo sub
-        if (name === 'promo.takeover-risk.com') {
-            return { success: true, status: 3, answer: [{ type: 5, data: 'orphaned.unbouncepages.com' }] };
+        if (type === 1) {
+            // Target CNAME resolution for dangling Azure target returns NXDOMAIN (status 3)
+            if (name === 'orphaned.azurewebsites.net') {
+                return { success: true, status: 3, answer: [] };
+            }
+            return { success: true, status: 0, answer: [{ type: 1, data: '203.0.113.1' }] };
+        }
+        // Dangling CNAME on dev subdomain (in 16-subdomain grid)
+        if (name === 'dev.takeover-risk.com' && type === 5) {
+            return { success: true, status: 0, answer: [{ type: 5, data: 'orphaned.azurewebsites.net' }] };
         }
         return { success: true, status: 0, answer: [] };
     };
@@ -289,13 +296,84 @@ async function runTests() {
     assert(audit5.cnameStatus === 'critical', 'CNAME status is critical');
     assert(audit5.cnameScore === 0, 'CNAME score is 0 due to dangling pointer');
     assert(audit5.findings[0].category === 'SUBDOMAIN TAKEOVER SENTINEL' && audit5.findings[0].status === 'FAIL', 'Subdomain takeover finding is FAIL');
-    assert(audit5.score === 70, `Total score penalized to 70 (got ${audit5.score})`);
-    assert(audit5.grade === 'C', `Grade is C (got ${audit5.grade})`);
+    assert(audit5.score === 75, `Total score is 75 (got ${audit5.score})`);
+    assert(audit5.grade === 'F', `Grade is forced to F due to confirmed dangling CNAME (got ${audit5.grade})`);
 
     // =========================================================================
-    // Scenario 6: UI Header & Button Bar Layout Hardening (Unclipped Copy Summary)
+    // Scenario 5B: Multi-Tenant Cloud SaaS Unverified Route (Prong B)
     // =========================================================================
-    console.log('\nTesting Scenario 6: UI Header & Button Bar Layout Hardening');
+    console.log('\nTesting Scenario 5B: Multi-Tenant Cloud SaaS (Prong B)');
+    DoHService.query = async (name, type) => {
+        if (name.startsWith('_dmarc.')) {
+            return { success: true, status: 0, answer: [{ type: 16, data: '"v=DMARC1; p=reject;"' }] };
+        }
+        if (type === 16) return { success: true, status: 0, answer: [{ type: 16, data: '"v=spf1 -all"' }] };
+        if (type === 15) return { success: true, status: 0, answer: [{ type: 15, data: '10 mx.brand.com' }] };
+        if (type === 1) {
+            // Target CNAME resolves to active multi-tenant edge
+            return { success: true, status: 0, answer: [{ type: 1, data: '23.227.38.65' }] };
+        }
+        // Subdomain shop points to Shopify multi-tenant edge
+        if (name === 'shop.saas-brand.com' && type === 5) {
+            return { success: true, status: 0, answer: [{ type: 5, data: 'custom.myshopify.com' }] };
+        }
+        return { success: true, status: 0, answer: [] };
+    };
+
+    const audit5B = await performClientDohAudit('saas-brand.com');
+    assert(audit5B.cnameStatus === 'warn', 'CNAME status is warn for multi-tenant route');
+    assert(audit5B.cnameScore === 15, `CNAME score is 15 for unverified multi-tenant route (got ${audit5B.cnameScore})`);
+    assert(audit5B.findings[0].status === 'WARN', 'Finding 1 is WARN for unverified route');
+    assert(audit5B.score === 90, `Total score is 90 (got ${audit5B.score})`);
+    assert(audit5B.grade === 'A+', `Grade is A+ (got ${audit5B.grade})`);
+
+    // =========================================================================
+    // Scenario 5C: RFC 7505 Null-MX Non-Sending Perimeter
+    // =========================================================================
+    console.log('\nTesting Scenario 5C: RFC 7505 Null-MX');
+    DoHService.query = async (name, type) => {
+        if (name.startsWith('_dmarc.')) {
+            return { success: true, status: 0, answer: [{ type: 16, data: '"v=DMARC1; p=reject;"' }] };
+        }
+        if (type === 16) return { success: true, status: 0, answer: [{ type: 16, data: '"v=spf1 -all"' }] };
+        // RFC 7505 Null-MX: 0 .
+        if (type === 15) return { success: true, status: 0, answer: [{ type: 15, data: '0 .' }] };
+        if (type === 1) return { success: true, status: 0, answer: [{ type: 1, data: '203.0.113.1' }] };
+        return { success: true, status: 0, answer: [] };
+    };
+
+    const audit5C = await performClientDohAudit('non-sending-brand.com');
+    assert(audit5C.isNullMx === true, 'Null-MX detected');
+    assert(audit5C.hasValidMx === false, 'hasValidMx is false for Null-MX');
+    assert(audit5C.mxScore === 15, `Null-MX awards 15 pts (got ${audit5C.mxScore})`);
+    assert(audit5C.mxStatus === 'pass', 'Null-MX status is pass');
+    assert(audit5C.score === 100, `Total score is 100 (got ${audit5C.score})`);
+    assert(audit5C.grade === 'A+', `Grade is A+ (got ${audit5C.grade})`);
+
+    // =========================================================================
+    // Scenario 5D: RFC 5321 §5.1 Missing MX Fallback
+    // =========================================================================
+    console.log('\nTesting Scenario 5D: RFC 5321 §5.1 Missing MX Fallback');
+    DoHService.query = async (name, type) => {
+        if (name.startsWith('_dmarc.')) {
+            return { success: true, status: 0, answer: [{ type: 16, data: '"v=DMARC1; p=reject;"' }] };
+        }
+        if (type === 16) return { success: true, status: 0, answer: [{ type: 16, data: '"v=spf1 -all"' }] };
+        if (type === 15) return { success: true, status: 0, answer: [] }; // Missing MX
+        if (type === 1) return { success: true, status: 0, answer: [{ type: 1, data: '203.0.113.1' }] }; // Active A host
+        return { success: true, status: 0, answer: [] };
+    };
+
+    const audit5D = await performClientDohAudit('active-nomx.com');
+    assert(audit5D.isNullMx === false, 'Not Null-MX');
+    assert(audit5D.hasValidMx === false, 'Not valid MX');
+    assert(audit5D.mxScore === 5, `Missing MX on A host awards 5 pts fallback (got ${audit5D.mxScore})`);
+    assert(audit5D.mxStatus === 'warn', 'Status is warn');
+
+    // =========================================================================
+    // Scenario 6: UI Header & Action Bar Briefing Presentation
+    // =========================================================================
+    console.log('\nTesting Scenario 6: UI Header & Action Bar Briefing Presentation');
     // Set target input and trigger handleAuditRequest
     mockDoc.getElementById('targetDomain').value = 'monstersamonguspodcast.com';
     const fakeEvent = { preventDefault: () => {} };
@@ -303,10 +381,21 @@ async function runTests() {
 
     const hudHtml = mockDoc.getElementById('auditHUD').innerHTML;
     assert(hudHtml.includes('flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4'), 'HUD header wrapper has flex-col xl:flex-row responsive breakpoint');
-    assert(hudHtml.includes('w-full xl:w-auto flex flex-wrap items-center gap-2.5 min-w-0'), 'Button group has flex-wrap gap-2.5 min-w-0 to prevent clipping');
-    assert(hudHtml.includes('📋 Copy Client Summary'), 'Button 3 (Copy Client Summary) is present');
+    assert(hudHtml.includes('w-full xl:w-auto flex flex-wrap items-center') && hudHtml.includes('min-w-0'), 'Button group has flex-wrap to prevent clipping');
+    assert(hudHtml.includes('📋 Copy Pitch Email'), 'Action Bar includes Copy Pitch Email button');
+    assert(hudHtml.includes('Co-Branded PDF'), 'Action Bar includes Co-Branded PDF button');
+    assert(hudHtml.includes('⚡ Simulate Exploit'), 'Action Bar includes Simulate Exploit button');
+    assert(hudHtml.includes('⚡ Fix Pack'), 'Action Bar includes Fix Pack button');
     assert(hudHtml.includes('whitespace-nowrap'), 'Buttons enforce whitespace-nowrap');
     assert(!hudHtml.includes('overflow-hidden') || hudHtml.includes('min-w-0'), 'Card prevents button clipping');
+
+    // Test copyClientBriefingEmail
+    const copyClientBriefingEmail = sandbox.window.copyClientBriefingEmail;
+    assert(typeof copyClientBriefingEmail === 'function', 'copyClientBriefingEmail is exposed on window');
+    copyClientBriefingEmail('monstersamonguspodcast.com', 40, 'F');
+    assert(clipboardText.includes('[Perimeter Security Audit] monstersamonguspodcast.com'), 'Pitch email subject has clean domain');
+    assert(clipboardText.includes('Current Perimeter Hygiene Score: 40/100 (Grade: F)'), 'Pitch email body has score and grade');
+    assert(clipboardText.includes('Key Findings Identified:'), 'Pitch email body has Key Findings');
 
     // =========================================================================
     // Scenario 7: Real-Time Radar Telemetry & Inbound Probe Observer
