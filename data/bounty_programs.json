@@ -901,6 +901,364 @@
       "state": "active",
       "last_scanned": "2026-10-29T11:08:33.015578+00:00",
       "created_at": "2026-10-03T11:56:14.046600+00:00"
+    },
+    {
+      "program_id": "valve",
+      "name": "Valve Software",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/valvesoftware",
+      "in_scope": [
+        "*.steampowered.com",
+        "*.steamcommunity.com",
+        "*.valvesoftware.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 20000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "coinbase",
+      "name": "Coinbase",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/coinbase",
+      "in_scope": [
+        "*.coinbase.com",
+        "*.cbws.io"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 50000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "uber",
+      "name": "Uber",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/uber",
+      "in_scope": [
+        "*.uber.com",
+        "*.ubereats.com",
+        "*.uberinternal.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 50000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "automattic",
+      "name": "Automattic",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/automattic",
+      "in_scope": [
+        "*.wordpress.com",
+        "*.wp.com",
+        "*.woocommerce.com",
+        "*.tumblr.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 25000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "epicgames",
+      "name": "Epic Games",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/epicgames",
+      "in_scope": [
+        "*.epicgames.com",
+        "*.unrealengine.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 30000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "hyatt",
+      "name": "Hyatt Hotels",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/hyatt",
+      "in_scope": [
+        "*.hyatt.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 15000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "paypal",
+      "name": "PayPal",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/paypal",
+      "in_scope": [
+        "*.paypal.com",
+        "*.braintreegateway.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 30000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "slack",
+      "name": "Slack",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/slack",
+      "in_scope": [
+        "*.slack.com",
+        "*.slack-msgs.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 15000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "atlassian",
+      "name": "Atlassian",
+      "platform": "bugcrowd",
+      "policy_url": "https://bugcrowd.com/atlassian",
+      "in_scope": [
+        "*.atlassian.com",
+        "*.jira.com",
+        "*.trello.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 25000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "dropbox",
+      "name": "Dropbox",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/dropbox",
+      "in_scope": [
+        "*.dropbox.com",
+        "*.dropboxapi.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 32768,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "yahoo",
+      "name": "Yahoo",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/yahoo",
+      "in_scope": [
+        "*.yahoo.com",
+        "*.aol.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 25000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "twitter",
+      "name": "X / Twitter",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/x",
+      "in_scope": [
+        "*.x.com",
+        "*.twitter.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 20000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "github",
+      "name": "GitHub",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/github",
+      "in_scope": [
+        "*.github.com",
+        "*.githubassets.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 30000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "airbnb",
+      "name": "Airbnb",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/airbnb",
+      "in_scope": [
+        "*.airbnb.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 15000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "tiktok",
+      "name": "TikTok",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/tiktok",
+      "in_scope": [
+        "*.tiktok.com",
+        "*.bytedance.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 25000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "roblox",
+      "name": "Roblox",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/roblox",
+      "in_scope": [
+        "*.roblox.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 25000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "nintendo",
+      "name": "Nintendo",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/nintendo",
+      "in_scope": [
+        "*.nintendo.com",
+        "*.nintendo.net"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 20000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "sony",
+      "name": "Sony PlayStation",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/playstation",
+      "in_scope": [
+        "*.playstation.com",
+        "*.sony.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 50000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "yelp",
+      "name": "Yelp",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/yelp",
+      "in_scope": [
+        "*.yelp.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 15000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "reddit",
+      "name": "Reddit",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/reddit",
+      "in_scope": [
+        "*.reddit.com",
+        "*.redditmedia.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 20000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "square",
+      "name": "Block / Square",
+      "platform": "bugcrowd",
+      "policy_url": "https://bugcrowd.com/square",
+      "in_scope": [
+        "*.squareup.com",
+        "*.cash.app"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 30000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-03T18:00:00.000000+00:00"
     }
   ]
 }
