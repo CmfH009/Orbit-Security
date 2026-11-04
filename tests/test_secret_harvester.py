@@ -58,3 +58,23 @@ def test_empty_and_benign_text():
     harvester = SecretHarvester()
     assert harvester.scan_text("") == []
     assert harvester.scan_text("function add(a, b) { return a + b; }") == []
+
+def test_resolve_targets_from_programs():
+    from scripts.mine_js_secrets import resolve_targets_from_programs
+    from orbit_security.bounty_radar import BountyProgram
+
+    prog = BountyProgram(
+        program_id="test_prog",
+        name="Test",
+        platform="hackerone",
+        policy_url="https://hackerone.com/test",
+        in_scope=["*.testcorp.com", "api.specific.com"],
+        out_of_scope=["bad.testcorp.com"],
+        excluded_vulnerabilities=[],
+        bounty_tier="cash",
+    )
+    targets = resolve_targets_from_programs([prog])
+    assert "https://testcorp.com" in targets
+    assert "https://www.testcorp.com" in targets
+    assert "https://api.specific.com" in targets
+    assert "https://bad.testcorp.com" not in targets
