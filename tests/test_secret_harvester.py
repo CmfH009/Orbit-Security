@@ -13,7 +13,9 @@ def test_detect_aws_access_key():
     assert aws_matches[0].redacted_value.endswith("MPLE")
 
 def test_detect_stripe_live_key():
-    text = 'var stripe = Stripe("sk_live_51AbcDefGhIjKlMnOpQrStUvWxYz1234");'
+    # Construct mock key to prevent static git secret scanning false positives
+    mock_key = "".join(["sk", "_live_", "51AbcDefGhIjKlMnOpQrStUvWxYz1234"])
+    text = f'var stripe = Stripe("{mock_key}");'
     harvester = SecretHarvester()
     matches = harvester.scan_text(text)
     stripe_matches = [m for m in matches if m.pattern_name == "Stripe Live Secret Key"]
@@ -21,8 +23,9 @@ def test_detect_stripe_live_key():
     assert "sk_live_" in stripe_matches[0].matched_value
 
 def test_detect_google_cloud_api_key():
-    # Google API Key: AIza (4 chars) + 35 chars = 39 chars
-    text = 'const gmapKey = "AIzaSyD-1234567890abcdefghijklmnopqrstu";'
+    # Construct mock key to prevent static git secret scanning false positives
+    mock_gcp = "".join(["AIza", "SyD-1234567890abcdefghijklmnopqrstu"])
+    text = f'const gmapKey = "{mock_gcp}";'
     harvester = SecretHarvester()
     matches = harvester.scan_text(text)
     gcp_matches = [m for m in matches if m.pattern_name == "Google Cloud API Key"]
@@ -30,7 +33,9 @@ def test_detect_google_cloud_api_key():
     assert gcp_matches[0].matched_value.startswith("AIzaSy")
 
 def test_detect_slack_webhook():
-    text = 'fetch("https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX")'
+    # Construct mock webhook to prevent static git secret scanning false positives
+    mock_webhook = "".join(["https://hooks.", "slack.com/services/", "T00000000/B00000000/", "X" * 24])
+    text = f'fetch("{mock_webhook}")'
     harvester = SecretHarvester()
     matches = harvester.scan_text(text)
     slack_matches = [m for m in matches if m.pattern_name == "Slack Webhook URL"]
