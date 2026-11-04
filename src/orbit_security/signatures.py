@@ -88,15 +88,15 @@ SAAS_TAKEOVER_SIGNATURES: List[SaasSignature] = [
     ),
     SaasSignature(
         name="Webflow",
-        cname_patterns=["proxy.webflow.com", "webflow.io"],
-        fingerprints=["The page you are looking for doesn't exist", "The site you are looking for could not be found"],
-        remediation="Unlink the DNS mapping or assign the custom domain to a published Webflow project.",
+        cname_patterns=["proxy.webflow.com", "proxy-ssl.webflow.com"],
+        fingerprints=["The page you are looking for doesn't exist or has been moved"],
+        remediation="Remove the CNAME or register the custom domain in Webflow site hosting settings.",
     ),
     SaasSignature(
         name="Zendesk",
         cname_patterns=["zendesk.com"],
-        fingerprints=["Help Center Closed", "No help center found"],
-        remediation="Remove the CNAME or re-associate it with your active Zendesk Help Center instance.",
+        fingerprints=["Help Center Closed"],
+        remediation="Remove the host mapping in DNS or update the Zendesk Guide custom domain setting.",
     ),
     SaasSignature(
         name="Pantheon",
@@ -110,8 +110,8 @@ SAAS_TAKEOVER_SIGNATURES: List[SaasSignature] = [
     SaasSignature(
         name="Netlify",
         cname_patterns=["netlify.app", "netlify.com"],
-        fingerprints=["Not Found - Request ID", "Page Not Found - Netlify"],
-        remediation="Claim this domain in your Netlify team account or delete the CNAME record immediately.",
+        fingerprints=["Not Found - Request ID", "Netlify site not found"],
+        remediation="Remove the dangling CNAME or configure the custom domain on an active Netlify site.",
     ),
     SaasSignature(
         name="Surge.sh",
@@ -121,9 +121,9 @@ SAAS_TAKEOVER_SIGNATURES: List[SaasSignature] = [
     ),
     SaasSignature(
         name="Fly.io",
-        cname_patterns=["fly.dev", "shw.io"],
-        fingerprints=["Could not find that app", "404 Not Found"],
-        remediation="Remove the DNS CNAME record or configure a matching Fly.io certificate and application.",
+        cname_patterns=["fly.dev", "edge.fly.io"],
+        fingerprints=["404 Not Found"],
+        remediation="Remove the CNAME record or attach the custom domain to a registered Fly.io application.",
     ),
     SaasSignature(
         name="HubSpot",
@@ -144,12 +144,8 @@ SAAS_TAKEOVER_SIGNATURES: List[SaasSignature] = [
     SaasSignature(
         name="Readme.io",
         cname_patterns=["readme.io"],
-        fingerprints=[
-            "Project doesnt exist... yet!",
-            "Project doesn't exist",
-            "The creators of this project are still working on making everything perfect!",
-        ],
-        remediation="Remove CNAME mapping to Readme.io or claim the project name.",
+        fingerprints=["Project doesn't exist", "Project not found"],
+        remediation="Remove the CNAME or claim the project subdomain in Readme.io.",
     ),
     SaasSignature(
         name="UserVoice",
@@ -337,9 +333,9 @@ SAAS_TAKEOVER_SIGNATURES: List[SaasSignature] = [
     ),
     SaasSignature(
         name="Vercel",
-        cname_patterns=["cname.vercel-dns.com", "vercel-dns.com"],
-        fingerprints=["The deployment could not be found", "DEPLOYMENT_NOT_FOUND", "404: NOT_FOUND"],
-        remediation="Remove the orphaned Vercel CNAME or claim the custom domain in your Vercel project settings.",
+        cname_patterns=["cname.vercel-dns.com", "vercel.app", "vercel-dns.com"],
+        fingerprints=["404: NOT_FOUND", "The deployment could not be found"],
+        remediation="Remove the dangling CNAME record or configure the domain in a verified Vercel project.",
     ),
     SaasSignature(
         name="Supabase",
@@ -349,9 +345,9 @@ SAAS_TAKEOVER_SIGNATURES: List[SaasSignature] = [
     ),
     SaasSignature(
         name="Render",
-        cname_patterns=["onrender.com"],
-        fingerprints=["Not Found", "Render | Not Found"],
-        remediation="Remove the dangling CNAME record or configure the custom domain in your Render web service dashboard.",
+        cname_patterns=["onrender.com", "render.com"],
+        fingerprints=["Not Found", "Render 404"],
+        remediation="Remove the CNAME record or bind the domain to an active Render web service.",
     ),
     SaasSignature(
         name="Cloudflare Pages",
