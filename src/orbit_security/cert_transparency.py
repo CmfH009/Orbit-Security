@@ -410,3 +410,18 @@ class CtStreamDaemon:
             results.append(self.poll_domain(clean, force_refresh=force_refresh))
         return results
 
+
+def fetch_certificates(
+    domain: str,
+    force_refresh: bool = False,
+    cache_file: Optional[Path] = None,
+    offline_fixtures: Optional[Dict[str, List[Dict[str, Any]]]] = None,
+) -> List[CertificateEntry]:
+    """Fetches certificates for domain using a CertificateTransparencyMonitor instance."""
+    monitor = CertificateTransparencyMonitor(
+        cache_file=cache_file,
+        offline_fixtures=offline_fixtures,
+    )
+    return monitor.fetch_certificates(domain, force_refresh=force_refresh)
+
+

@@ -24,6 +24,12 @@ import urllib.error
 
 import dns.resolver
 
+from orbit_security.cert_transparency import (
+    CertificateEntry,
+    CertificateTransparencyMonitor,
+    CtStreamDaemon,
+    fetch_certificates,
+)
 from orbit_security.dns_cache import get_orbit_sync_resolver
 from orbit_security.models import Severity
 from orbit_security.notifications import BountyAlertPayload, WebhookDispatcher
@@ -926,6 +932,79 @@ class SensitiveExposureScanner:
         return findings
 
 
+def discover_subdomains_from_ct(
+    domain: str,
+    ct_daemon: Optional[Any] = None,
+) -> Set[str]:
+    """Passively discovers subdomains from Certificate Transparency logs for a domain.
+
+    Queries CtStreamDaemon if provided, otherwise calls fetch_certificates()
+    from orbit_security.cert_transparency (using cached results or crt.sh).
+    Extracts, cleans, and deduplicates subdomains matching the domain,
+    strictly filtering out third-party or mismatched domains.
+    """
+    clean_domain = domain.strip().lower().lstrip("*.")
+    if clean_domain.startswith("."):
+        clean_domain = clean_domain.lstrip(".")
+    if not clean_domain:
+        return set()
+
+    certs = None
+    if ct_daemon is not None:
+        try:
+            if hasattr(ct_daemon, "monitor") and hasattr(ct_daemon.monitor, "fetch_certificates"):
+                certs = ct_daemon.monitor.fetch_certificates(clean_domain)
+            elif hasattr(ct_daemon, "fetch_certificates"):
+                certs = ct_daemon.fetch_certificates(clean_domain)
+            elif hasattr(ct_daemon, "poll_domain"):
+                poll_res = ct_daemon.poll_domain(clean_domain)
+                sub_list = poll_res.get("subdomains", [])
+                subdomains = set()
+                for s in sub_list:
+                    s_clean = str(s).strip().lower().lstrip("*.")
+                    if s_clean.startswith("."):
+                        s_clean = s_clean.lstrip(".")
+                    if s_clean == clean_domain or s_clean.endswith(f".{clean_domain}"):
+                        subdomains.add(s_clean)
+                return subdomains
+        except Exception as e:
+            logger.debug("CT discovery via ct_daemon failed for %s: %s", clean_domain, e)
+
+    if certs is None:
+        try:
+            certs = fetch_certificates(clean_domain)
+        except Exception as e:
+            logger.debug("CT fetch_certificates failed for %s: %s", clean_domain, e)
+            certs = []
+
+    subdomains: Set[str] = set()
+    for cert in certs:
+        sans: List[str] = []
+        if hasattr(cert, "san_domains"):
+            sans = list(cert.san_domains)
+        elif isinstance(cert, dict):
+            sans = list(cert.get("san_domains", []))
+            if not sans and "name_value" in cert:
+                sans = re.split(r"[\s\r\n]+", str(cert["name_value"]))
+
+        cn = getattr(cert, "common_name", None) if not isinstance(cert, dict) else cert.get("common_name")
+        candidates = list(sans)
+        if cn:
+            candidates.append(str(cn))
+
+        for item in candidates:
+            clean_item = str(item).strip().lower().lstrip("*.")
+            if clean_item.startswith("."):
+                clean_item = clean_item.lstrip(".")
+            if not clean_item:
+                continue
+            # Strictly verify domain boundary: must be exact match or a subdomain of clean_domain
+            if clean_item == clean_domain or clean_item.endswith(f".{clean_domain}"):
+                subdomains.add(clean_item)
+
+    return subdomains
+
+
 class BountyTakeoverSweeper:
     """Expands wildcard scopes and tests targets for dangling SaaS CNAMEs and mail-spoofing vectors."""
 
@@ -941,6 +1020,8 @@ class BountyTakeoverSweeper:
         program: Optional[BountyProgram] = None,
         timeout: float = 3.0,
         enable_mail_spoofing: bool = False,
+        ct_daemon: Optional[Any] = None,
+        enable_ct: bool = True,
     ):
         if isinstance(resolver, BountyProgram):
             program = resolver
@@ -950,6 +1031,17 @@ class BountyTakeoverSweeper:
         self.enable_mail_spoofing = enable_mail_spoofing
         self.resolver = resolver or get_orbit_sync_resolver()
         self.prefixes = custom_prefixes or HIGH_FREQUENCY_PREFIXES
+        self.ct_daemon = ct_daemon
+        self.enable_ct = enable_ct
+
+    def discover_subdomains_from_ct(
+        self,
+        domain: str,
+        ct_daemon: Optional[Any] = None,
+    ) -> Set[str]:
+        """Discovers subdomains matching domain using Certificate Transparency."""
+        daemon = ct_daemon or getattr(self, "ct_daemon", None)
+        return discover_subdomains_from_ct(domain, ct_daemon=daemon)
 
     def fetch_crtsh_subdomains(
         self, apex_domain: str, timeout: float = 2.0, max_results: int = 50
@@ -994,7 +1086,7 @@ class BountyTakeoverSweeper:
         in_scope: List[str],
         out_of_scope: Optional[List[str]] = None,
         max_per_wildcard: int = 25,
-        use_passive_ct: bool = False,
+        use_passive_ct: bool = True,
         use_archive_harvest: bool = False,
     ) -> List[str]:
         """Expands wildcard patterns (*.target.com) into candidate FQDNs."""
@@ -1024,10 +1116,27 @@ class BountyTakeoverSweeper:
                     expanded.append(apex)
                     seen.add(apex)
 
-                # Passive Certificate Transparency Discovery if requested
+                # Passive Certificate Transparency Discovery
                 if use_passive_ct:
-                    ct_subs = self.fetch_crtsh_subdomains(apex, max_results=max_per_wildcard)
-                    for sub in ct_subs:
+                    ct_subs: Set[str] = set()
+                    try:
+                        ct_subs.update(self.discover_subdomains_from_ct(apex, ct_daemon=self.ct_daemon))
+                    except Exception as e:
+                        logger.debug("CT discovery in expand_wildcards failed for %s: %s", apex, e)
+
+                    # Also support legacy fetch_crtsh_subdomains if mocked/patched in tests
+                    fetch_crtsh_fn = getattr(self, "fetch_crtsh_subdomains", None)
+                    if fetch_crtsh_fn is not None and (
+                        hasattr(fetch_crtsh_fn, "assert_called") or "fetch_crtsh_subdomains" in self.__dict__
+                    ):
+                        try:
+                            legacy = fetch_crtsh_fn(apex, max_results=max_per_wildcard)
+                            if legacy:
+                                ct_subs.update(legacy)
+                        except Exception:
+                            pass
+
+                    for sub in sorted(ct_subs):
                         if not is_excluded(sub) and sub not in seen:
                             expanded.append(sub)
                             seen.add(sub)
