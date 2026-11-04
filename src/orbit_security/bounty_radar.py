@@ -730,6 +730,202 @@ class BountyScopeIngester:
         }
 
 
+class BucketListingEvaluator:
+    """Evaluates cloud bucket XML directory listings for sensitive file exposures."""
+
+    SENSITIVE_EXTENSIONS: Set[str] = {
+        ".pdf", ".sql", ".sql.gz", ".bak", ".backup", ".xlsx", ".csv",
+        ".env", ".key", ".pem", ".zip", ".tar.gz", ".dump", ".sqlite", ".db"
+    }
+    HIGH_VALUE_KEYWORDS: List[str] = [
+        "seed", "pitch", "confidential", "internal", "investor", "credential",
+        "secret", "finance", "audit", "salary", "payroll", "backup", "dump"
+    ]
+
+    def inspect_xml_keys(self, xml_content: str) -> Dict[str, Any]:
+        keys = re.findall(r"<Key>(.*?)</Key>", xml_content, re.IGNORECASE)
+        matched_files: List[str] = []
+        for key in keys:
+            key_lower = key.lower()
+            has_ext = any(key_lower.endswith(ext) for ext in self.SENSITIVE_EXTENSIONS)
+            has_kw = any(kw in key_lower for kw in self.HIGH_VALUE_KEYWORDS)
+            if has_ext or has_kw:
+                matched_files.append(key)
+
+        is_sensitive = len(matched_files) > 0
+        severity = "High" if len(matched_files) >= 2 or any("secret" in k.lower() or "backup" in k.lower() for k in matched_files) else ("Medium" if is_sensitive else "Low")
+
+        return {
+            "total_keys": len(keys),
+            "matched_files": matched_files,
+            "is_sensitive": is_sensitive,
+            "severity": severity,
+        }
+
+
+class SensitiveExposureScanner:
+    """Probes subdomains for exposed environment variables, git repos, and management endpoints."""
+
+    PROBE_PATHS: List[Tuple[str, str]] = [
+        ("/.git/HEAD", "git_head"),
+        ("/.env", "dotenv"),
+        ("/actuator/env", "actuator_env"),
+        ("/actuator/metrics", "actuator_metrics"),
+        ("/actuator/heapdump", "actuator_heapdump"),
+    ]
+
+    def verify_git_head(self, body: str) -> bool:
+        if not body:
+            return False
+        stripped = body.strip()
+        if stripped.startswith("ref: refs/") or (
+            len(stripped) == 40 and all(c in "0123456789abcdef" for c in stripped.lower())
+        ):
+            return True
+        return False
+
+    def verify_actuator_env(self, body: str) -> bool:
+        if not body or "<html" in body.lower():
+            return False
+        try:
+            data = json.loads(body)
+            if isinstance(data, dict) and (
+                "activeProfiles" in data or "propertySources" in data or "profiles" in data
+            ):
+                return True
+        except Exception:
+            return False
+        return False
+
+    def verify_actuator_metrics(self, body: str) -> bool:
+        if not body or "<html" in body.lower():
+            return False
+        try:
+            data = json.loads(body)
+            if isinstance(data, dict) and "names" in data:
+                return True
+        except Exception:
+            return False
+        return False
+
+    def verify_dotenv(self, body: str) -> bool:
+        if not body or "<html" in body.lower():
+            return False
+        lines = [line.strip() for line in body.splitlines() if line.strip() and not line.startswith("#")]
+        valid_pairs = 0
+        for line in lines:
+            if "=" in line and not line.startswith("<"):
+                k, v = line.split("=", 1)
+                if len(k.strip()) >= 2:
+                    valid_pairs += 1
+        return valid_pairs >= 2
+
+    def probe_url(self, url: str, timeout: float = 5.0) -> Tuple[int, str]:
+        """Probes a URL and returns status code and response body."""
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) OrbitSecurity/1.0",
+            "Accept": "*/*",
+        }
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                status = getattr(resp, "status", getattr(resp, "code", 200))
+                body = resp.read().decode("utf-8", errors="ignore")
+                return status, body
+        except urllib.error.HTTPError as e:
+            try:
+                body = e.read().decode("utf-8", errors="ignore")
+                return e.code, body
+            except Exception:
+                return e.code, ""
+        except Exception:
+            return 0, ""
+
+    def scan_subdomain(
+        self,
+        subdomain: str,
+        timeout: float = 5.0,
+        program: Optional[BountyProgram] = None,
+        mock_responses: Optional[Dict[str, Tuple[int, str]]] = None,
+    ) -> List[BountyVulnerability]:
+        """Probes subdomain for sensitive paths, applying strict content validation heuristics."""
+        clean_sub = subdomain.strip().lower().lstrip("https://").lstrip("http://").rstrip("/")
+        findings: List[BountyVulnerability] = []
+
+        for path, probe_type in self.PROBE_PATHS:
+            url = f"https://{clean_sub}{path}"
+            status = 0
+            body = ""
+
+            if mock_responses and path in mock_responses:
+                status, body = mock_responses[path]
+            elif mock_responses and url in mock_responses:
+                status, body = mock_responses[url]
+            else:
+                status, body = self.probe_url(url, timeout=timeout)
+                if status == 0 or status >= 400:
+                    url_http = f"http://{clean_sub}{path}"
+                    status, body = self.probe_url(url_http, timeout=timeout)
+                    if status in (200, 201):
+                        url = url_http
+
+            if status not in (200, 201):
+                continue
+
+            is_valid = False
+            severity = Severity.HIGH
+            cvss = 7.5
+            cvss_vec = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+            cwe = "CWE-200: Exposure of Sensitive Information to an Unauthorized Actor"
+
+            if probe_type == "git_head":
+                is_valid = self.verify_git_head(body)
+                severity = Severity.HIGH
+                cvss = 7.5
+                cwe = "CWE-538: Insertion of Sensitive Information into Externally-Accessible File or Directory"
+            elif probe_type == "actuator_env":
+                is_valid = self.verify_actuator_env(body)
+                severity = Severity.CRITICAL
+                cvss = 9.1
+                cvss_vec = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N"
+            elif probe_type == "actuator_metrics":
+                is_valid = self.verify_actuator_metrics(body)
+                severity = Severity.MEDIUM
+                cvss = 5.3
+                cvss_vec = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+            elif probe_type == "dotenv":
+                is_valid = self.verify_dotenv(body)
+                severity = Severity.CRITICAL
+                cvss = 9.1
+                cvss_vec = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+                cwe = "CWE-538: Insertion of Sensitive Information into Externally-Accessible File or Directory"
+            elif probe_type == "actuator_heapdump":
+                is_valid = len(body) > 1000 and "<html" not in body.lower()
+                severity = Severity.HIGH
+                cvss = 7.5
+
+            if is_valid:
+                findings.append(
+                    BountyVulnerability(
+                        program_id=program.program_id if program else "radar_scan",
+                        program_name=program.name if program else "Perimeter Sweep",
+                        platform=program.platform if program else "hackerone",
+                        target_domain=clean_sub,
+                        flaw_type=f"sensitive_exposure_{probe_type}",
+                        provider="Web Application",
+                        severity=severity,
+                        cvss_score=cvss,
+                        cvss_vector=cvss_vec,
+                        evidence=f"Discovered exposed endpoint at {url} (HTTP {status}). Body preview: {body[:200]}",
+                        cwe_id=cwe,
+                        remediation=f"Restrict public access to {path} using WAF or web server configuration.",
+                        bounty_viability="HIGH_CONFIDENCE",
+                    )
+                )
+
+        return findings
+
+
 class BountyTakeoverSweeper:
     """Expands wildcard scopes and tests targets for dangling SaaS CNAMEs and mail-spoofing vectors."""
 
@@ -740,9 +936,18 @@ class BountyTakeoverSweeper:
 
     def __init__(
         self,
-        resolver: Optional[dns.resolver.Resolver] = None,
+        resolver: Optional[Any] = None,
         custom_prefixes: Optional[List[str]] = None,
+        program: Optional[BountyProgram] = None,
+        timeout: float = 3.0,
+        enable_mail_spoofing: bool = False,
     ):
+        if isinstance(resolver, BountyProgram):
+            program = resolver
+            resolver = None
+        self.program = program
+        self.timeout = timeout
+        self.enable_mail_spoofing = enable_mail_spoofing
         self.resolver = resolver or get_orbit_sync_resolver()
         self.prefixes = custom_prefixes or HIGH_FREQUENCY_PREFIXES
 
@@ -1171,6 +1376,8 @@ class BountyTakeoverSweeper:
         audit_smuggling: bool = False,
         audit_oauth: bool = False,
         audit_dependency: bool = False,
+        audit_sensitive_exposure: bool = False,
+        enable_mail_spoofing: Optional[bool] = None,
         mock_cnames: Optional[Dict[str, str]] = None,
         mock_bodies: Optional[Dict[str, str]] = None,
         mock_spfs: Optional[Dict[str, str]] = None,
@@ -1196,6 +1403,7 @@ class BountyTakeoverSweeper:
         mock_spfs = mock_spfs or {}
         mock_dmarcs = mock_dmarcs or {}
         mock_nxdomain_domains = mock_nxdomain_domains or set()
+        run_mail_spoofing = self.enable_mail_spoofing if enable_mail_spoofing is None else enable_mail_spoofing
 
         for target in candidates:
             mock_cn = mock_cnames.get(target)
@@ -1211,6 +1419,15 @@ class BountyTakeoverSweeper:
                     flaw = bucket_res.get("flaw_type", "cloud_storage_takeover")
                     viab = bucket_res.get("bounty_viability", "HIGH_CONFIDENCE")
                     if self.is_vulnerability_in_scope(program, flaw, viab):
+                        evidence = bucket_res.get("evidence", "")
+                        sev = bucket_res.get("severity", Severity.HIGH)
+                        if mock_bd and ("<ListBucketResult" in mock_bd or "<ListAllMyBucketsResult" in mock_bd):
+                            evaluator = BucketListingEvaluator()
+                            eval_res = evaluator.inspect_xml_keys(mock_bd)
+                            if eval_res["is_sensitive"]:
+                                evidence += f" Sensitive keys discovered: {', '.join(eval_res['matched_files'][:5])}."
+                                if eval_res["severity"] == "High":
+                                    sev = Severity.HIGH
                         vuln = BountyVulnerability(
                             program_id=program.program_id,
                             program_name=program.name,
@@ -1219,10 +1436,10 @@ class BountyTakeoverSweeper:
                             cname_target=mock_cn,
                             flaw_type=flaw,
                             provider=bucket_res.get("provider", "Cloud Storage"),
-                            severity=bucket_res.get("severity", Severity.HIGH),
+                            severity=sev,
                             cvss_score=bucket_res.get("cvss_score", 8.6),
                             cvss_vector=bucket_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:N/I:H/A:N"),
-                            evidence=bucket_res.get("evidence", ""),
+                            evidence=evidence,
                             cwe_id=bucket_res.get("cwe_id", "CWE-284: Improper Access Control"),
                             remediation=bucket_res.get("remediation", ""),
                             bounty_viability=viab,
@@ -1398,8 +1615,8 @@ class BountyTakeoverSweeper:
                         )
                         vulns.append(vuln)
 
-            # 8. Email Spoofing Check (primarily on apex or mail hosts)
-            if "." in target:
+            # 8. Email Spoofing Check (primarily on apex or mail hosts) - disabled by default
+            if run_mail_spoofing and "." in target:
                 org_domain = self.get_organizational_domain(target)
                 is_apex = target == org_domain
                 if (is_apex or "mail" in target or mock_spfs.get(target) or mock_dmarcs.get(target)) and self.is_vulnerability_in_scope(program, "mail_spoofing"):
@@ -1437,6 +1654,12 @@ class BountyTakeoverSweeper:
                                 bounty_viability=viability,
                             )
                             vulns.append(vuln)
+
+            # 9. Sensitive Exposure Check (Actuator, Git, Dotenv)
+            if audit_sensitive_exposure:
+                scanner = SensitiveExposureScanner()
+                sens_vulns = scanner.scan_subdomain(target, program=program)
+                vulns.extend(sens_vulns)
 
         program.last_scanned = datetime.datetime.now(datetime.timezone.utc).isoformat()
         return vulns
@@ -2935,9 +3158,11 @@ class BountyRadarSupervisor:
         sweeper: Optional[BountyTakeoverSweeper] = None,
         state_file: Optional[Path] = None,
         dispatcher: Optional[WebhookDispatcher] = None,
+        enable_mail_spoofing: bool = False,
     ):
         self.ingester = ingester or BountyScopeIngester()
-        self.sweeper = sweeper or BountyTakeoverSweeper()
+        self.enable_mail_spoofing = enable_mail_spoofing
+        self.sweeper = sweeper or BountyTakeoverSweeper(enable_mail_spoofing=enable_mail_spoofing)
         self.state_file = Path(state_file or DEFAULT_RADAR_STATE_PATH)
         self.dispatcher = dispatcher or WebhookDispatcher()
         self.state: Dict[str, Any] = self._load_state()
@@ -3058,6 +3283,7 @@ class BountyRadarSupervisor:
         audit_smuggling: bool = False,
         audit_oauth: bool = False,
         audit_dependency: bool = False,
+        audit_sensitive_exposure: bool = False,
         save_disclosures: bool = True,
         sync_attack_graph: bool = True,
         output_dir: Optional[Path] = None,
@@ -3098,6 +3324,7 @@ class BountyRadarSupervisor:
                 audit_smuggling=audit_smuggling,
                 audit_oauth=audit_oauth,
                 audit_dependency=audit_dependency,
+                audit_sensitive_exposure=audit_sensitive_exposure,
             )
             total_findings.extend(vulns)
 
