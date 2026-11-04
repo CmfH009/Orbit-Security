@@ -1,8 +1,6 @@
-# Fix Record for X Chrome Tab Picker
+# Bug Bounty Sprint Task Tracker
 
-- [x] Identify root cause of missing Chrome tabs in `getDisplayMedia` (Chrome default excludes current tab and requires `selfBrowserSurface: "include"` & `preferCurrentTab: true`) <!-- id: 0 -->
-- [x] Patch `startScreenRecording()` in `docs/assets/simple_cat.js` with `preferCurrentTab`, `selfBrowserSurface: "include"`, `surfaceSwitching: "include"`, and resilient fallback <!-- id: 1 -->
-- [x] Sync changes to `landing/assets/simple_cat.js` maintaining 100% SHA-256 parity <!-- id: 2 -->
-- [x] Add verification test to `tests/test_simplecat_visuals_and_scroll.js` <!-- id: 3 -->
-- [x] Run test suites and verify all assertions pass <!-- id: 4 -->
-- [x] Git commit and push to `origin/main` <!-- id: 5 -->
+- [x] Task 1: JavaScript Bundle Crawler & CORS Endpoint Miner
+- [x] Task 2: Radar Upgrades — Silence DMARC & Add High-Conviction Probes
+- [/] Task 3: Expand Scope to 20+ High-Yield Wildcard Programs
+- [ ] Task 4: Empirical Live Verification & Staged Submission Packaging
