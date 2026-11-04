@@ -58,19 +58,27 @@ class BountyRollingDaemon:
         ct_watermark_file: Optional[Path] = None,
         offline: bool = False,
         blackboard: Any = None,
+        enable_ct: bool = True,
+        ct_daemon: Optional[CtStreamDaemon] = None,
     ):
         self.interval_sec = interval_sec
         self.programs_path = Path(programs_path or DEFAULT_BOUNTY_DATA_PATH)
         self.state_file = Path(state_file or DEFAULT_RADAR_STATE_PATH)
         self.offline = offline
         self.blackboard = blackboard
+        self.enable_ct = enable_ct
         self.prober = BountyActiveProber(state_file=self.state_file, blackboard=self.blackboard)
+        self.ct_daemon = ct_daemon or CtStreamDaemon(
+            watermark_file=ct_watermark_file,
+            blackboard=self.blackboard,
+        )
         self.worker = BountyRollingWorker(
             prober=self.prober,
             programs_path=self.programs_path,
             sweep_interval_sec=self.interval_sec,
+            enable_ct=self.enable_ct,
+            ct_daemon=self.ct_daemon,
         )
-        self.ct_daemon = CtStreamDaemon(watermark_file=ct_watermark_file)
         self.running = False
 
     def _get_blackboard(self) -> Any:
@@ -200,7 +208,7 @@ class BountyRollingDaemon:
 
         logger.info(f"Executing focused sweep for program: {target.name} ({target.program_id})")
         self.prober.blackboard = self._get_blackboard()
-        ct_summary = self.sweep_ct_logs_for_program(program_id)
+        ct_summary = self.sweep_ct_logs_for_program(program_id) if self.enable_ct else None
         cloud_summary = self.sweep_cloud_sentinels_for_program(program_id)
         confirmed = self.worker.execute_single_program_sweep(target, offline=self.offline)
         return {
@@ -217,6 +225,10 @@ class BountyRollingDaemon:
         self.prober.blackboard = self._get_blackboard()
         cycle_res = self.worker.run_one_cycle(offline=self.offline)
         if cycle_res and "program_id" in cycle_res:
+            if self.enable_ct and "ct_discovery" not in cycle_res:
+                cycle_res["ct_discovery"] = self.sweep_ct_logs_for_program(cycle_res["program_id"])
+            elif not self.enable_ct and "ct_discovery" in cycle_res:
+                del cycle_res["ct_discovery"]
             cycle_res["cloud_sentinel_sweep"] = self.sweep_cloud_sentinels_for_program(cycle_res["program_id"])
         return cycle_res
 
@@ -262,11 +274,13 @@ def main():
     parser.add_argument("--sweep-once", action="store_true", help="Run a single round-robin cycle and exit")
     parser.add_argument("--program", type=str, help="Sweep a specific program by ID and exit")
     parser.add_argument("--offline", action="store_true", help="Run in offline mock mode without live network probes")
+    parser.add_argument("--no-ct", dest="enable_ct", action="store_false", help="Disable Certificate Transparency stream queries")
+    parser.set_defaults(enable_ct=True)
     parser.add_argument("--verbose", action="store_true", help="Enable verbose debug logging")
     parser.add_argument("--status", action="store_true", help="Show current radar state and exit")
 
     args = parser.parse_args()
-    daemon = BountyRollingDaemon(interval_sec=args.interval, offline=args.offline)
+    daemon = BountyRollingDaemon(interval_sec=args.interval, offline=args.offline, enable_ct=args.enable_ct)
     daemon.setup_logging(verbose=args.verbose)
 
     if args.status:

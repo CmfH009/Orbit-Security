@@ -502,12 +502,16 @@ class BountyRollingWorker:
         prober: Optional[BountyActiveProber] = None,
         programs_path: Optional[Path] = None,
         sweep_interval_sec: float = 1800.0,  # 30 minutes between program rotations
+        enable_ct: bool = True,
+        ct_daemon: Optional[Any] = None,
     ):
         self.prober = prober or BountyActiveProber()
         self.programs_path = Path(programs_path or DEFAULT_BOUNTY_DATA_PATH)
         self.sweep_interval_sec = sweep_interval_sec
         self.stop_requested = False
         self.current_index = 0
+        self.enable_ct = enable_ct
+        self.ct_daemon = ct_daemon
 
     def load_programs(self) -> List[BountyProgram]:
         """Loads all active programs from JSON catalog."""
@@ -547,9 +551,36 @@ class BountyRollingWorker:
         self.current_index = (self.current_index + 1) % len(programs)
 
         confirmed = self.execute_single_program_sweep(target_program, offline=offline)
-        return {
+        ct_summary = None
+        if self.enable_ct and self.ct_daemon is not None:
+            try:
+                poll_results = self.ct_daemon.poll_domains(target_program.in_scope)
+                new_subdomains = []
+                takeover_findings = []
+                new_certificates = 0
+                for res in (poll_results or []):
+                    new_certificates += int(res.get("new_certificates", 0))
+                    for sub in res.get("new_subdomains", []):
+                        if sub not in new_subdomains:
+                            new_subdomains.append(sub)
+                    takeover_findings.extend(res.get("takeover_findings", []))
+                ct_summary = {
+                    "program_id": target_program.program_id,
+                    "program_name": target_program.name,
+                    "domains_polled": len(poll_results) if poll_results else 0,
+                    "new_certificates": new_certificates,
+                    "new_subdomains": new_subdomains,
+                    "takeover_findings": takeover_findings,
+                }
+            except Exception as e:
+                logger.debug(f"CT query in rolling worker failed: {e}")
+
+        result: Dict[str, Any] = {
             "program_id": target_program.program_id,
             "program_name": target_program.name,
             "confirmed_count": len(confirmed),
-            "findings": confirmed
+            "findings": confirmed,
         }
+        if ct_summary is not None:
+            result["ct_discovery"] = ct_summary
+        return result
