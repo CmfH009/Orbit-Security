@@ -50,6 +50,10 @@ from orbit_security.tools.duckdb_analytics import (
     default_duckdb,
     run_analytics_query,
 )
+from orbit_security.tools.secret_harvester import (
+    SecretHarvester,
+    SecretMatch,
+)
 from orbit_security.tools.attack_tree import (
     AttackAttributes,
     AttackNode,
