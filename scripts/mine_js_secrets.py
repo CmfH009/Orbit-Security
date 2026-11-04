@@ -112,11 +112,26 @@ def harvest_target_secrets(
                 logger.debug(f"Failed to fetch script {script_url}: {e}")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(all_findings, f, indent=2)
+    existing_findings = []
+    if output_path.exists():
+        try:
+            with open(output_path, "r", encoding="utf-8") as f:
+                existing_findings = json.load(f)
+        except Exception:
+            existing_findings = []
 
-    logger.info(f"[✔] Secret harvesting complete. Staged {len(all_findings)} matches to {output_path}")
-    return all_findings
+    # Deduplicate merged findings by unique (target, script_url, matched_value)
+    merged_map = {}
+    for item in existing_findings + all_findings:
+        key = (item.get("target"), item.get("script_url"), item.get("matched_value"))
+        merged_map[key] = item
+
+    merged_list = list(merged_map.values())
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(merged_list, f, indent=2)
+
+    logger.info(f"[✔] Secret harvesting complete. Staged {len(all_findings)} new ({len(merged_list)} cumulative) matches to {output_path}")
+    return merged_list
 
 
 if __name__ == "__main__":
