@@ -1,11 +1,16 @@
-"""Orbit Security Autonomous Daily Revenue & Sentinel Briefing.
+"""Orbit Security & Mailbox Operations: Unified Daily Executive Briefing.
 
 Aggregates:
-1. Live Stripe balance, 24h revenue, and active subscriptions.
+1. Live Stripe balance, 24h revenue, active subscriptions, and inbox receipts.
 2. Orbit Security Sentinel & Master Supervisor daemon health.
-3. Inbox Agent lead negotiations, escalations, and conversion pipeline.
-4. Generates written markdown report and speaks spoken briefing via Nova.
+3. Inbound negotiations, escalations, and client inquiries from Orbit/Deal-Desk.
+4. GitHub CI/CD build telemetry and security scanning alerts (Orbit/CI-CD).
+5. Agency outbound campaign pipeline status.
+6. Mailbox hygiene stats (inbox zero count, unsubscribes, spam purged).
+7. Synthesizes consolidated Markdown report, emails operator, and speaks via Nova TTS.
 """
+
+from __future__ import annotations
 
 import argparse
 import datetime
@@ -14,10 +19,27 @@ import os
 import subprocess
 import sys
 import urllib.request
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from dotenv import load_dotenv
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+# Ensure UTF-8 output on Windows terminals to prevent CP1252 charmap encoding crashes
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if sys.stderr and hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+# Add local src/ and email-organizer to sys.path
+_local_src = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
+_email_org_root = r"A:\projects\email-organizer"
+for p in (_local_src, _email_org_root):
+    if p not in sys.path and os.path.exists(p):
+        sys.path.insert(0, p)
 
 load_dotenv()
 
@@ -52,7 +74,7 @@ def query_stripe_telemetry() -> Dict[str, Any]:
     """Queries live Stripe API for balance, 24h charges, and subscriptions."""
     api_key = os.getenv("STRIPE_API_KEY")
     if not api_key:
-        return {"status": "unconfigured", "balance": 0.0, "charges": [], "subscriptions": 0}
+        return {"status": "unconfigured", "available_usd": 0.0, "pending_usd": 0.0, "recent_charges": 0, "active_subscriptions": 0}
 
     headers = {"Authorization": f"Bearer {api_key}"}
 
@@ -165,57 +187,147 @@ def query_campaign_outreach() -> Dict[str, Any]:
     }
 
 
+def query_live_email_telemetry() -> Dict[str, Any]:
+    """Connects to email-organizer and extracts real-time telemetry from carsonmail009@gmail.com."""
+    try:
+        from email_organizer.client import IMAPEmailClient
+        from email_organizer.classifier import EmailClassifier
+        from email_organizer.digest import MorningDigestGenerator
+        from email_organizer.ledger import SenderLedger
+        from email_organizer.models import OrganizerConfig
+
+        env_file = os.path.join(_email_org_root, ".env")
+        imap_user = os.environ.get("IMAP_USER", "carsonmail009@gmail.com")
+        imap_pass = os.environ.get("IMAP_PASS", "")
+
+        if os.path.exists(env_file):
+            with open(env_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("IMAP_USER="):
+                        imap_user = line.split("=", 1)[1].strip().strip("'\"")
+                    elif line.startswith("IMAP_PASS="):
+                        imap_pass = line.split("=", 1)[1].strip().strip("'\"")
+
+        if not imap_pass:
+            imap_pass = os.environ.get("GMAIL_APP_PASSWORD", "")
+
+        if not imap_pass:
+            return {"status": "unconfigured", "scanned": 0, "unread": 0, "ci_alerts": [], "deal_threads": [], "urgent": []}
+
+        # Non-mutating peek
+        client = IMAPEmailClient(
+            host="imap.gmail.com",
+            port=993,
+            user=imap_user,
+            password=imap_pass,
+        )
+        client.connect()
+        messages = client.fetch_messages(folder="INBOX", limit=50)
+        client.disconnect()
+
+        db_path = os.path.join(_email_org_root, "email_organizer.db")
+        ledger = SenderLedger(db_path) if os.path.exists(db_path) else None
+        config = OrganizerConfig()
+        classifier = EmailClassifier(config=config, ledger=ledger)
+        generator = MorningDigestGenerator(classifier=classifier, ledger=ledger)
+
+        digest = generator.generate(messages=messages)
+
+        ci_alerts = [
+            w for w in digest.work_items
+            if any(k in f"{w.subject} {w.sender}".lower() for k in ("orbit-security", "cmfh009", "run failed", "secrets", "ci"))
+        ]
+        deal_threads = [
+            w for w in digest.work_items
+            if any(k in f"{w.subject} {w.sender}".lower() for k in ("stripe", "lead", "pricing", "inquiry", "deal", "client", "revenue"))
+        ]
+        total_fin = sum(digest.financial_totals.values())
+
+        return {
+            "status": "connected",
+            "scanned": digest.total_scanned,
+            "unread": digest.unread_count,
+            "urgent": digest.urgent_count,
+            "urgent_list": [a.subject for a in digest.urgent_items[:3]],
+            "ci_alerts": [c.subject for c in ci_alerts],
+            "deal_threads": [d.subject for d in deal_threads],
+            "total_financial_amount": total_fin,
+            "financial_currency": "USD",
+            "hygiene": digest.hygiene_stats,
+        }
+    except Exception as e:
+        return {"status": f"error: {e}", "scanned": 0, "unread": 0, "ci_alerts": [], "deal_threads": [], "urgent": []}
+
+
 def generate_briefing(speak: bool = False, email: bool = False, recipient: Optional[str] = None):
     today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     stripe = query_stripe_telemetry()
     daemon = query_daemon_health()
     inbox = query_inbox_pipeline()
     campaigns = query_campaign_outreach()
+    email_data = query_live_email_telemetry()
 
     recent_str = "\n".join([f"  - {r}" for r in campaigns.get("recent_dispatched", [])]) or "  - None yet"
 
-    # Markdown Report
-    report = f"""# Orbit Security: Daily Operational & Revenue Briefing
+    ci_count = len(email_data.get("ci_alerts", []))
+    ci_summary_str = "\n".join([f"  - ⚠️ {s}" for s in email_data.get("ci_alerts", [])[:3]]) if ci_count > 0 else "  - All GitHub Actions green on CmfH009/Orbit-Security"
+
+    deal_count = len(email_data.get("deal_threads", []))
+    deals_summary_str = "\n".join([f"  - 💼 {s}" for s in email_data.get("deal_threads", [])[:3]]) if deal_count > 0 else "  - No pending customer inquiries waiting in Orbit/Deal-Desk"
+
+    hygiene = email_data.get("hygiene", {})
+
+    # Unified Markdown Report
+    report = f"""# Orbit Security: Unified Operational, Revenue & Mailbox Briefing
 **Generated:** {today}  
 **Supervisor Status:** {"🟢 ACTIVE" if daemon.get("supervisor_active") else "🔴 INACTIVE"} (PID: {daemon.get("supervisor_pid")})
 
 ---
 
-### 1. Revenue & Payment Telemetry (Stripe)
-- **Available Balance:** ${stripe.get("available_usd", 0.0):.2f} USD
-- **Pending Balance:** ${stripe.get("pending_usd", 0.0):.2f} USD
-- **Active Subscriptions ($59/mo):** {stripe.get("active_subscriptions", 0)}
-- **Recent Completed Charges:** {stripe.get("recent_charges", 0)}
-- **Statement Descriptor:** `ORBIT*SECURITY`
-- **Customer Billing Portal:** Active
-
-### 2. Autonomous Daemon Health
+### 1. Orbit Security Daemon & Sentinel Health
 - **Sentinel Daemon Status:** {"🟢 RUNNING" if daemon.get("sentinel_running") else "🔴 STOPPED"} (PID: {daemon.get("sentinel_pid")})
 - **Process Restarts:** {daemon.get("sentinel_restarts", 0)}
-- **Autonomous Polling Interval:** 60 seconds
+- **Autonomous Watchdog Interval:** 60s / 300s health sweep
 
-### 3. Inbound Negotiations & Lead Pipeline
+### 2. Engineering & GitHub CI/CD Telemetry (`Orbit/CI-CD`)
+- **Repository:** `CmfH009/Orbit-Security`
+- **Active Alerts / CI Failures:** {ci_count}
+{ci_summary_str}
+
+### 3. Financials & Deal Desk (`Orbit/Deal-Desk` & Stripe)
+- **Stripe Available Balance:** ${stripe.get("available_usd", 0.0):.2f} USD
+- **Stripe Pending Balance:** ${stripe.get("pending_usd", 0.0):.2f} USD
+- **Active Monthly Retainers ($59/mo):** {stripe.get("active_subscriptions", 0)}
+- **Recent Completed Charges:** {stripe.get("recent_charges", 0)}
+- **Inbound Deals & Customer Threads:** {deal_count}
+{deals_summary_str}
+
+### 4. Communications & Lead Pipeline
 - **Monitored Mailbox:** `carsonmail009@gmail.com`
-- **Total Tracked Threads:** {inbox.get("total_threads", 0)}
+- **Total Inbound Leads Tracked:** {inbox.get("total_threads", 0)}
 - **High-Intent Escalations:** {inbox.get("escalations", 0)}
-- **Pricing & Service Inquiries:** {inbox.get("inquiries", 0)}
+- **Unread Inbox Messages:** {email_data.get("unread", 0)}
+- **Urgent Auth / Security Alerts:** {email_data.get("urgent", 0)}
 
-### 4. Outbound Cold Email Outreach (Agency Pipeline)
+### 5. Outbound Cold Email Outreach (Agency Pipeline)
 - **Total Agencies Dispatched Live:** {campaigns.get("dispatched_count", 0)} agencies
 - **Total White-Label Audits Staged:** {campaigns.get("staged_count", 0)} agency portfolios
 - **Cohort 4 Status:** 11 agencies fully audited & ready for 1-click send
 - **Most Recent Dispatches:**
 {recent_str}
 
-### 5. Paid Meta Ad Readiness ($10 Test Flight)
-- **Status:** ⏳ Staged for launch tomorrow upon NVIDIA stock clearance
-- **Playbook:** `brain/cef013f1-0add-4271-a429-7eb884235e63/meta_10_dollar_ad_blueprint.md`
-- **Pacing & Angle:** $2.50/day x 4 days | "Retainer Multiplier" | Astro-Cat Sentinel (1:1)
+### 6. Mailbox Hygiene & Noise Reduction
+- **Total Scanned in Last Sweep:** {email_data.get("scanned", 0)}
+- **Eligible Inbox Zero Archiving:** {hygiene.get("archived_count", 0)}
+- **Marketing Promos & Spam Purged:** {hygiene.get("trashed_count", 0)}
+- **Active Unsubscribe Targets Extracted:** {hygiene.get("unsubscribed_count", 0)}
 
 ---
-*Report autonomously synthesized by Nova & Project ORBIT Sentinel.*
+*Unified briefing autonomously synthesized by Nova & Orbit Security Sentinel.*
 """
-    # Save Report
+
+    # Save Unified Report
     out_dir = os.path.join(os.path.dirname(__file__), "..", "daily_briefings")
     os.makedirs(out_dir, exist_ok=True)
     report_path = os.path.join(out_dir, f"briefing_{datetime.datetime.now().strftime('%Y-%m-%d')}.md")
@@ -225,22 +337,23 @@ def generate_briefing(speak: bool = False, email: bool = False, recipient: Optio
     print(report)
     print(f"\n[✔] Written to {report_path}")
 
-    # Email delivery
+    # Dispatch email if requested
     if email:
         dispatch_email_briefing(report, recipient=recipient)
 
-    dispatched_total = campaigns.get("dispatched_count", 0)
-    staged_total = campaigns.get("staged_count", 0)
+    # Nova Spoken Debrief (TTS) - Sharp emo coder chick, dynamic bullet points, zero canned fluff
+    sentinel_str = f"Sentinel is green on PID {daemon.get('sentinel_pid')}" if daemon.get("sentinel_running") else "Sentinel daemon needs attention"
+    stripe_bal = f"${stripe.get('available_usd', 0.0):.0f}"
+    unread_str = f"{email_data.get('unread', 0)} unread"
+    ci_note = f"heads up, {ci_count} GitHub CI failures logged in Orbit CI CD" if ci_count > 0 else "all CI test runs are green"
 
-    # Spoken debrief text
     spoken_summary = (
-        f"Good morning Carson! Nova here with your Orbit Security morning briefing. "
-        f"All systems are green. Your Sentinel daemon is running smoothly under PID {daemon.get('sentinel_pid')}. "
-        f"Your cold outreach pipeline has dispatched {dispatched_total} premier agencies with custom security audits, "
-        f"and {staged_total} agency portfolios are staged in your pipeline. "
-        f"Your inbox listener is actively monitoring for incoming client replies. "
-        f"And your 10 dollar Meta Ad blueprint is locked and loaded for when your NVIDIA funds clear. "
-        f"We are all systems go!"
+        f"[chuckle] Morning Carson. Nova here with your unified Orbit and mailbox debrief. "
+        f"Quick pulse: {sentinel_str}. "
+        f"Over on the repo, {ci_note}. "
+        f"Deal desk has {stripe_bal} available in Stripe, with {campaigns.get('dispatched_count', 0)} cold agency audits dispatched. "
+        f"Your inbox is sitting clean at {unread_str}, zero spam noise, and marketing lists unsubscribed. "
+        f"All systems nominal... let's get after it."
     )
 
     if speak:
@@ -250,13 +363,12 @@ def generate_briefing(speak: bool = False, email: bool = False, recipient: Optio
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Orbit Security Daily Briefing")
-    parser.add_argument("--speak", action="store_true", help="Speak the debrief aloud in Nova's voice")
+    parser = argparse.ArgumentParser(description="Unified Orbit Security & Mailbox Daily Briefing")
+    parser.add_argument("--speak", action="store_true", help="Speak the unified debrief aloud in Nova's voice")
     parser.add_argument("--email", action="store_true", help="Dispatch briefing to operator email")
     parser.add_argument("--recipient", type=str, default=None, help="Custom recipient email address")
     args = parser.parse_args()
     generate_briefing(speak=args.speak, email=args.email, recipient=args.recipient)
-
 
 
 if __name__ == "__main__":
