@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Orbit Security — outbound contact verification.
+"""Orbit Security — outbound contact verification & anti-bounce deliverability gate.
 
 We bounce because we guess addresses. 43 of 178 dispatched campaigns came
 back hard-bounced, yet 43 of 46 of those domains have valid MX records, and
@@ -10,16 +10,16 @@ domains - it is that the specific mailbox we guessed does not exist.
 This tool verifies the specific address instead of the domain:
 
   1. MX check - a domain with no mail exchanger can never receive the message.
-  2. Published-address mining - fetch the agency's own pages and extract the
-     addresses they publish. If our guess appears, it exists.
+  2. Published-address mining - fetch the agency's own pages (including
+     de-obfuscation of HTML entities and `[at]`/`[dot]` patterns) and extract
+     the addresses they publish. If our guess appears, it exists.
   3. Classification per agency:
         CONFIRMED  - the guessed address is published by the agency
         REFUTED    - the agency publishes mail, but not the address we guessed
         UNKNOWN    - no address could be found (inconclusive, not a failure)
         NO_MX      - the domain cannot receive mail at all
-
-The REFUTED list is what the outreach pipeline should suppress, and the
-published addresses it discovers are the replacements worth re-targeting.
+  4. Deliverability Pre-Flight Gate - blocks cohort dispatch if any target has
+     NO_MX or if REFUTED addresses exceed the safety threshold.
 
 Reads:  data/dispatched_campaigns.json, data/bounced_agencies.json
 Writes: data/contact_verification/verification.json
@@ -34,17 +34,20 @@ Usage:
     .venv\\Scripts\\python.exe scripts\\verify_contacts.py
     .venv\\Scripts\\python.exe scripts\\verify_contacts.py --only-bounced
     .venv\\Scripts\\python.exe scripts\\verify_contacts.py --limit 20
+    .venv\\Scripts\\python.exe scripts\\verify_contacts.py --preflight
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+import html as html_lib
 import json
 import re
 import sys
 import time
 from pathlib import Path
+from typing import Any
 from urllib.parse import urljoin, urlparse
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
@@ -53,10 +56,37 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA = REPO_ROOT / "data"
 OUT_DIR = DATA / "contact_verification"
 
-CONTACT_PATHS = ("", "/contact", "/contact-us", "/about", "/about-us", "/hello")
+CONTACT_PATHS = (
+    "",
+    "/contact",
+    "/contact-us",
+    "/about",
+    "/about-us",
+    "/hello",
+    "/team",
+    "/.well-known/security.txt",
+)
 
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
 MAILTO_RE = re.compile(r"mailto:([A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,})", re.I)
+
+OBFUSCATED_AT_RE = re.compile(r"\s*(?:\[at\]|\(at\))\s*", re.I)
+OBFUSCATED_DOT_RE = re.compile(r"\s*(?:\[dot\]|\(dot\))\s*", re.I)
+
+ASSET_EXTENSIONS = (
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".svg",
+    ".css",
+    ".js",
+    ".woff",
+    ".woff2",
+    ".ico",
+    ".mp4",
+)
 
 # Addresses that are never a real prospect mailbox.
 JUNK = re.compile(
@@ -90,7 +120,7 @@ def has_mx(domain: str) -> tuple[bool, list[str]]:
 
 
 def fetch(url: str) -> tuple[int, str]:
-    req = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html"})
+    req = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,text/plain"})
     try:
         with urlopen(req, timeout=TIMEOUT) as resp:
             raw = resp.read(400_000)
@@ -102,10 +132,51 @@ def fetch(url: str) -> tuple[int, str]:
         return 0, ""
 
 
+def _deobfuscate_text(raw_html: str) -> str:
+    """Unescapes HTML entities and normalizes common [at]/[dot] obfuscations."""
+    unescaped = html_lib.unescape(raw_html)
+    normalized = OBFUSCATED_AT_RE.sub("@", unescaped)
+    normalized = OBFUSCATED_DOT_RE.sub(".", normalized)
+    return normalized
+
+
 def extract_emails(html: str) -> set[str]:
-    found = {m.group(0).lower() for m in EMAIL_RE.finditer(html)}
-    found |= {m.group(1).lower() for m in MAILTO_RE.finditer(html)}
-    return {e for e in found if not JUNK.match(e)}
+    cleaned = _deobfuscate_text(html)
+    found = {m.group(0).lower() for m in EMAIL_RE.finditer(cleaned)}
+    found |= {m.group(1).lower() for m in MAILTO_RE.finditer(cleaned)}
+    filtered: set[str] = set()
+    for addr in found:
+        if JUNK.match(addr):
+            continue
+        if addr.endswith(ASSET_EXTENSIONS):
+            continue
+        filtered.add(addr)
+    return filtered
+
+
+def rank_replacement_addresses(addresses: set[str], domain: str) -> list[str]:
+    """Filters to same-domain addresses and ranks by business/security relevance."""
+    suffix = "@" + domain.lower().lstrip("@")
+    same_domain = [
+        a.lower()
+        for a in addresses
+        if a.lower().endswith(suffix)
+        and not a.lower().startswith(("no-reply", "noreply", "donotreply", "abuse", "postmaster"))
+    ]
+
+    high_priority_prefixes = ("security@", "hello@", "contact@", "info@", "partners@", "agency@")
+    low_priority_prefixes = ("careers@", "jobs@", "hr@", "press@", "media@", "billing@", "invoices@")
+
+    def _score_addr(addr: str) -> tuple[int, str]:
+        for idx, pref in enumerate(high_priority_prefixes):
+            if addr.startswith(pref):
+                return (idx, addr)
+        if addr.startswith(low_priority_prefixes):
+            return (100, addr)
+        # Named or general mailbox gets middle priority (after security/hello/contact, before careers/press)
+        return (50, addr)
+
+    return [a for a in sorted(set(same_domain), key=_score_addr)]
 
 
 def mine_addresses(domain: str) -> tuple[set[str], list[str]]:
@@ -163,12 +234,7 @@ def classify(target: dict) -> dict:
     else:
         classification = "REFUTED"
 
-    # A published address on the same domain is a usable replacement.
-    replacements = sorted(
-        a for a in published
-        if a.endswith("@" + domain.lower())
-        and not a.startswith(("no-reply", "noreply", "donotreply", "abuse", "postmaster"))
-    )
+    replacements = rank_replacement_addresses(published, domain)
     return {
         **target,
         "classification": classification,
@@ -179,10 +245,44 @@ def classify(target: dict) -> dict:
     }
 
 
+def evaluate_deliverability_gate(
+    results: list[dict[str, Any]],
+    max_refuted_ratio: float = 0.05,
+) -> dict[str, Any]:
+    """Evaluates whether a cohort passes the anti-bounce pre-flight gate."""
+    total = len(results)
+    confirmed = sum(1 for r in results if r.get("classification") == "CONFIRMED")
+    refuted = sum(1 for r in results if r.get("classification") == "REFUTED")
+    no_mx = sum(1 for r in results if r.get("classification") == "NO_MX")
+    unknown = sum(1 for r in results if r.get("classification") == "UNKNOWN")
+
+    refuted_ratio = (refuted / total) if total > 0 else 0.0
+    blocking_reasons: list[str] = []
+
+    if no_mx > 0:
+        blocking_reasons.append(f"{no_mx} domain(s) have NO_MX and cannot receive mail.")
+    if refuted_ratio > max_refuted_ratio:
+        blocking_reasons.append(
+            f"Refuted address ratio ({refuted_ratio:.1%}) exceeds threshold ({max_refuted_ratio:.1%})."
+        )
+
+    return {
+        "gate_passed": len(blocking_reasons) == 0,
+        "total_checked": total,
+        "confirmed_count": confirmed,
+        "refuted_count": refuted,
+        "no_mx_count": no_mx,
+        "unknown_count": unknown,
+        "refuted_ratio": round(refuted_ratio, 4),
+        "blocking_reasons": blocking_reasons,
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Verify outbound agency contacts")
     ap.add_argument("--only-bounced", action="store_true", help="only check campaigns marked BOUNCED")
     ap.add_argument("--limit", type=int, default=0, help="cap the number of domains checked")
+    ap.add_argument("--preflight", action="store_true", help="enforce strict anti-bounce pre-flight gate exit code")
     ap.add_argument("--out", default=str(OUT_DIR), help="output directory")
     args = ap.parse_args()
 
@@ -205,13 +305,16 @@ def main() -> int:
     for row in results:
         counts[row["classification"]] = counts.get(row["classification"], 0) + 1
 
+    gate = evaluate_deliverability_gate(results)
+
     payload = {
         "generated_utc": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
         "checked": len(results),
         "classification_counts": counts,
+        "deliverability_gate": gate,
         "method": {
             "mx_check": "DNS MX lookup; a domain with no exchanger cannot receive mail",
-            "address_mining": "public pages of the agency's own site; emails extracted from text and mailto links",
+            "address_mining": "public pages of the agency's own site; emails extracted from text, mailto links, and de-obfuscated patterns",
             "request_rate": f"{REQUEST_DELAY}/s per domain, max {MAX_PAGES} pages per domain",
             "pages": list(CONTACT_PATHS[:MAX_PAGES]),
         },
@@ -234,9 +337,15 @@ def main() -> int:
     print(" CLASSIFICATION")
     for k, v in sorted(counts.items(), key=lambda kv: -kv[1]):
         print(f"   {k:<12} {v:>4}")
+    print(f" DELIVERABILITY GATE: {'PASS' if gate['gate_passed'] else 'HOLD'}")
+    for reason in gate["blocking_reasons"]:
+        print(f"   [!] {reason}")
     print(f"\n Wrote {out_dir / 'verification.json'}")
     print(f" Wrote {out_dir / 'verified_contacts.csv'}")
     print("=" * 62)
+
+    if args.preflight and not gate["gate_passed"]:
+        return 1
     return 0
 
 

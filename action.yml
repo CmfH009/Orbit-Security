@@ -1,71 +1,43 @@
-name: 'Orbit Security Perimeter Sentinel'
-description: 'Autonomous attack surface, DNS hygiene, dangling CNAME takeover, and perimeter exposure scanner for CI/CD gates.'
-author: 'Orbit Security (Carson Haynes @_arsoncode)'
+name: "Orbit Security — CI/CD PR & Perimeter Gate"
+description: "Autonomous AST Code Sentinel, CISA KEV Dependency & PR Auditor, and Static Secret Gate for CI/CD pipelines."
+author: "Carson Haynes (Orbit Security)"
 branding:
-  icon: 'shield'
-  color: 'cyan'
+  icon: "shield"
+  color: "green"
 
 inputs:
-  target:
-    description: 'Target domain to audit (e.g. agency.com or client.agency.com)'
+  target-path:
+    description: "Directory or file path to inspect with the AST Code Sentinel & Static Vulnerability Graph."
     required: false
-    default: ''
-  targets-file:
-    description: 'Path to text file containing domains to scan (one per line)'
+    default: "."
+  scan-types:
+    description: "Comma-separated list of security engines to execute (ast,secrets,cisa-kev)."
     required: false
-    default: ''
-  fail-on-critical:
-    description: 'Exit code 1 if critical takeover or secret exposure is detected'
+    default: "ast,secrets,cisa-kev"
+  fail-on-findings:
+    description: "Exit with non-zero status code when security or AST hygiene findings are detected."
     required: false
-    default: 'true'
-  markdown-summary:
-    description: 'Append Markdown audit matrix to GitHub Step Summary ($GITHUB_STEP_SUMMARY)'
-    required: false
-    default: 'true'
-  export-markdown:
-    description: 'Optional file path to write Markdown report artifact to'
-    required: false
-    default: ''
+    default: "true"
+
+outputs:
+  verdict:
+    description: "Overall gate verdict (PASS or FAIL)."
+    value: ${{ steps.orbit-gate.outputs.verdict }}
+  files-scanned:
+    description: "Total Python files inspected."
+    value: ${{ steps.orbit-gate.outputs.files_scanned }}
+  findings-count:
+    description: "Total issues detected across enabled engines."
+    value: ${{ steps.orbit-gate.outputs.findings_count }}
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-
-    - name: Install Orbit Security Dependencies
+    - name: Run Orbit Security CI/CD Gate
+      id: orbit-gate
       shell: bash
       run: |
-        python -m pip install --upgrade pip
-        pip install dnspython httpx pydantic
-
-    - name: Execute Orbit Perimeter Sentinel
-      shell: bash
-      run: |
-        FLAGS=""
-        if [ "${{ inputs.fail-on-critical }}" = "true" ]; then
-          FLAGS="$FLAGS --fail-on-critical"
-        fi
-
-        TEMP_MD="${RUNNER_TEMP:-/tmp}/orbit_audit_summary.md"
-        FLAGS="$FLAGS --markdown $TEMP_MD"
-
-        if [ -n "${{ inputs.targets-file }}" ]; then
-          python "${{ github.action_path }}/tools/orbit-recon.py" --targets-file "${{ inputs.targets-file }}" $FLAGS
-        elif [ -n "${{ inputs.target }}" ]; then
-          python "${{ github.action_path }}/tools/orbit-recon.py" "${{ inputs.target }}" $FLAGS
-        else
-          echo "::error::Neither 'target' nor 'targets-file' input was provided to Orbit Security Action."
-          exit 1
-        fi
-
-        if [ "${{ inputs.markdown-summary }}" = "true" ] && [ -f "$TEMP_MD" ] && [ -n "$GITHUB_STEP_SUMMARY" ]; then
-          cat "$TEMP_MD" >> "$GITHUB_STEP_SUMMARY"
-        fi
-
-        if [ -n "${{ inputs.export-markdown }}" ] && [ -f "$TEMP_MD" ] && [ "$(realpath "$TEMP_MD")" != "$(realpath -m "${{ inputs.export-markdown }}")" ]; then
-          mkdir -p "$(dirname "${{ inputs.export-markdown }}")"
-          cp "$TEMP_MD" "${{ inputs.export-markdown }}"
-        fi
+        python "${{ github.action_path }}/scripts/github_action_entrypoint.py" \
+          --target-path "${{ inputs.target-path }}" \
+          --scan-types "${{ inputs.scan-types }}" \
+          --fail-on-findings "${{ inputs.fail-on-findings }}"
