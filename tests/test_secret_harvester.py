@@ -23,14 +23,15 @@ def test_detect_stripe_live_key():
     assert "sk_live_" in stripe_matches[0].matched_value
 
 def test_detect_google_cloud_api_key():
-    # Construct mock key to prevent static git secret scanning false positives
-    mock_gcp = "".join(["AIza", "SyD-1234567890abcdefghijklmnopqrstu"])
+    # Construct zero-entropy mock key to prevent static git secret scanning false positives
+    mock_gcp = "AIza" + ("0" * 35)
     text = f'const gmapKey = "{mock_gcp}";'
     harvester = SecretHarvester()
     matches = harvester.scan_text(text)
     gcp_matches = [m for m in matches if m.pattern_name == "Google Cloud API Key"]
     assert len(gcp_matches) == 1
-    assert gcp_matches[0].matched_value.startswith("AIzaSy")
+    assert gcp_matches[0].matched_value.startswith("AIza")
+    assert gcp_matches[0].matched_value == mock_gcp
 
 def test_detect_slack_webhook():
     # Construct mock webhook to prevent static git secret scanning false positives
