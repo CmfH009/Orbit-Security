@@ -189,12 +189,17 @@ def save_dispatched_state(file_path: str, state: dict):
 async def main():
     parser = argparse.ArgumentParser(description="Run Orbit Security Prospecting Campaign")
     parser.add_argument("--send", action="store_true", help="Send live emails via SMTP")
+    parser.add_argument("--prospects", type=str, default=None, help="Path to custom prospects JSON file (default: data/prospects.json)")
     parser.add_argument("--start", type=int, default=0, help="Starting index in prospects list (default: 0)")
     parser.add_argument("--limit", type=int, default=10, help="Maximum number of prospects to process")
     parser.add_argument("--force", action="store_true", help="Force re-dispatch even if already sent")
     args = parser.parse_args()
 
-    prospects_file = os.path.join(os.path.dirname(__file__), "..", "data", "prospects.json")
+    default_prospects = os.path.join(os.path.dirname(__file__), "..", "data", "prospects.json")
+    if args.prospects:
+        prospects_file = args.prospects if os.path.isabs(args.prospects) else os.path.abspath(args.prospects)
+    else:
+        prospects_file = default_prospects
     dispatched_file = os.path.join(os.path.dirname(__file__), "..", "data", "dispatched_campaigns.json")
     dispatched_state = load_dispatched_state(dispatched_file)
 
