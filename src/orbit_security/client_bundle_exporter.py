@@ -79,6 +79,18 @@ def _sanitize_hex_color(color: Optional[str], default: str) -> str:
     return default
 
 
+def _finding_get(f: Any, key: str, default: Any = None) -> Any:
+    """Polymorphic helper to extract attributes from finding dicts or model objects."""
+    if isinstance(f, dict):
+        return f.get(key, default)
+    val = getattr(f, key, None)
+    if val is not None:
+        if hasattr(val, "value"):
+            return val.value
+        return val
+    return default
+
+
 class ClientBundleExporter:
     """Generates atomic, white-labeled client remediation ZIP bundles for agency retainers."""
 
@@ -113,9 +125,9 @@ class ClientBundleExporter:
         acc = _sanitize_hex_color(accent_color, "#48CAE4")
 
         # Compute summary metrics
-        crit_count = sum(1 for f in findings if str(f.get("severity", "")).upper() == "CRITICAL")
-        high_count = sum(1 for f in findings if str(f.get("severity", "")).upper() == "HIGH")
-        med_count = sum(1 for f in findings if str(f.get("severity", "")).upper() in ("MEDIUM", "MODERATE"))
+        crit_count = sum(1 for f in findings if str(_finding_get(f, "severity", "")).upper() == "CRITICAL")
+        high_count = sum(1 for f in findings if str(_finding_get(f, "severity", "")).upper() == "HIGH")
+        med_count = sum(1 for f in findings if str(_finding_get(f, "severity", "")).upper() in ("MEDIUM", "MODERATE"))
         total_findings = len(findings)
 
         # Grade calculation
@@ -140,13 +152,13 @@ class ClientBundleExporter:
         # Build findings rows HTML
         findings_html = ""
         for i, f in enumerate(findings, 1):
-            sev = str(f.get("severity", "MEDIUM")).upper()
+            sev = str(_finding_get(f, "severity", "MEDIUM")).upper()
             sev_class = "badge-crit" if sev == "CRITICAL" else ("badge-high" if sev == "HIGH" else "badge-med")
-            cat = html.escape(str(f.get("category", "Perimeter")))
-            title = html.escape(str(f.get("title", f"Security Advisory #{i}")))
-            sub = html.escape(str(f.get("subdomain") or f.get("domain") or (domains[0] if domains else "Apex")))
-            desc = html.escape(str(f.get("description", "Vulnerability detected on target asset.")))
-            rem = html.escape(str(f.get("remediation") or "Apply DNS/Cloud remediation configuration included in this bundle."))
+            cat = html.escape(str(_finding_get(f, "category", "Perimeter")))
+            title = html.escape(str(_finding_get(f, "title", f"Security Advisory #{i}")))
+            sub = html.escape(str(_finding_get(f, "subdomain") or _finding_get(f, "domain") or _finding_get(f, "target") or (domains[0] if domains else "Apex")))
+            desc = html.escape(str(_finding_get(f, "description", "Vulnerability detected on target asset.")))
+            rem = html.escape(str(_finding_get(f, "remediation") or "Apply DNS/Cloud remediation configuration included in this bundle."))
 
             findings_html += f"""
             <div class="finding-card">
@@ -458,8 +470,8 @@ class ClientBundleExporter:
         pri = _sanitize_hex_color(primary_color, "#0B132B")
         acc = _sanitize_hex_color(accent_color, "#48CAE4")
 
-        crit_count = sum(1 for f in findings if str(f.get("severity", "")).upper() == "CRITICAL")
-        high_count = sum(1 for f in findings if str(f.get("severity", "")).upper() == "HIGH")
+        crit_count = sum(1 for f in findings if str(_finding_get(f, "severity", "")).upper() == "CRITICAL")
+        high_count = sum(1 for f in findings if str(_finding_get(f, "severity", "")).upper() == "HIGH")
         grade = "C" if crit_count > 0 else ("B" if high_count > 0 else "A")
 
         lines = [
@@ -491,11 +503,11 @@ class ClientBundleExporter:
             lines.append("| 1 | INFO | Baseline | Perimeter | Proactive hardening required | Apply SPF -all, DMARC reject, and S3 bucket protection |")
         else:
             for idx, f in enumerate(findings, 1):
-                sev = str(f.get("severity", "MEDIUM")).upper()
-                cat = str(f.get("category", "DNS"))
-                tgt = str(f.get("subdomain") or f.get("domain") or (domains[0] if domains else "Apex"))
-                title = str(f.get("title", f"Finding {idx}"))
-                rem = str(f.get("remediation") or "Apply Terraform/CloudFormation configuration in this bundle.")
+                sev = str(_finding_get(f, "severity", "MEDIUM")).upper()
+                cat = str(_finding_get(f, "category", "DNS"))
+                tgt = str(_finding_get(f, "subdomain") or _finding_get(f, "domain") or _finding_get(f, "target") or (domains[0] if domains else "Apex"))
+                title = str(_finding_get(f, "title", f"Finding {idx}"))
+                rem = str(_finding_get(f, "remediation") or "Apply Terraform/CloudFormation configuration in this bundle.")
                 lines.append(f"| {idx} | **{sev}** | {cat} | `{tgt}` | {title} | {rem} |")
 
         lines.extend([
@@ -524,12 +536,12 @@ class ClientBundleExporter:
         primary_domain = domains[0] if domains else "example.com"
 
         # Check for specific findings
-        dangling_cnames = [f for f in findings if "CNAME" in str(f.get("title", "")).upper() or f.get("cname_target")]
+        dangling_cnames = [f for f in findings if "CNAME" in str(_finding_get(f, "title", "")).upper() or _finding_get(f, "cname_target")]
 
         cname_blocks = []
         if dangling_cnames:
             for i, c in enumerate(dangling_cnames, 1):
-                sub = c.get("subdomain", f"sub{i}.{primary_domain}")
+                sub = _finding_get(c, "subdomain") or _finding_get(c, "domain") or _finding_get(c, "target") or f"sub{i}.{primary_domain}"
                 name_part = sub.split(".")[0] if "." in sub else sub
                 cname_blocks.append(f"""# Dangling CNAME Remediation: {sub}
 # Option A: Safely route to decommission placeholder or update Cloudflare record:
@@ -788,8 +800,9 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "remediation_bucke
 
         # Add any CNAME decommissioning record sets if findings exist
         for i, f in enumerate(findings, 1):
-            if "CNAME" in str(f.get("title", "")).upper() and f.get("subdomain"):
-                sub = str(f["subdomain"]).rstrip(".")
+            sub_val = _finding_get(f, "subdomain") or _finding_get(f, "domain") or _finding_get(f, "target")
+            if "CNAME" in str(_finding_get(f, "title", "")).upper() and sub_val:
+                sub = str(sub_val).rstrip(".")
                 res_id = f"RemediatedCnameRecord{i}"
                 cfn_dict["Resources"][res_id] = {
                     "Type": "AWS::Route53::RecordSet",

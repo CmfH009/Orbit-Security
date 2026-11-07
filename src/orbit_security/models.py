@@ -63,3 +63,13 @@ class DomainAuditResult(BaseModel):
         self.score = result.score
         self.grade = result.grade
         return self.grade, self.score
+
+    @property
+    def takeover_findings(self) -> List[Finding]:
+        """Returns findings related to dangling CNAMEs or subdomain takeover."""
+        return [
+            f for f in self.findings
+            if "TAKEOVER" in (getattr(f, "title", None) or "").upper()
+            or "CNAME" in (getattr(f, "title", None) or "").upper()
+            or getattr(f, "category", "") == "Subdomain Takeover"
+        ]

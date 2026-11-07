@@ -255,3 +255,56 @@ def test_cli_scan_subcommand_with_fixpack(temp_dir, monkeypatch, capsys):
     assert expected_zip.exists()
     assert zipfile.is_zipfile(expected_zip)
 
+
+def test_cli_scan_subcommand_with_real_domain_audit_result(temp_dir, monkeypatch, capsys):
+    """Subcommand `orbit-security scan` with real DomainAuditResult and Finding objects exports fixpack cleanly."""
+    from unittest.mock import AsyncMock, patch
+    from orbit_security.models import DomainAuditResult, Finding, Severity
+
+    domain = "realmodelscan.io"
+    out_dir = temp_dir / "real_model_out"
+
+    real_result = DomainAuditResult(domain=domain, score=80, grade="B")
+    real_result.findings.append(
+        Finding(
+            title="Dangling CNAME / Subdomain Takeover Risk (Shopify)",
+            severity=Severity.CRITICAL,
+            category="Subdomain Takeover",
+            description=f"Subdomain shop.{domain} points to unclaimed resource on Shopify.",
+            remediation="Delete dangling CNAME record.",
+            target=f"shop.{domain}",
+            evidence="CNAME points to custom.myshopify.com which returned NXDOMAIN",
+        )
+    )
+
+    test_args = [
+        "orbit-security",
+        "scan",
+        domain,
+        "--export-fixpack",
+        "--output-dir",
+        str(out_dir),
+    ]
+    monkeypatch.setattr(sys, "argv", test_args)
+
+    with patch("orbit_security.cli.OrbitSecurityScanner") as mock_scanner_cls:
+        mock_scanner = mock_scanner_cls.return_value
+        mock_scanner.scan_domain = AsyncMock(return_value=real_result)
+
+        exit_code = cli_main()
+        assert exit_code is None or exit_code == 0
+        mock_scanner.scan_domain.assert_awaited_once()
+
+    captured = capsys.readouterr().out
+    assert "1-Click DNS Fix Pack successfully generated" in captured
+    assert "Failed to generate" not in captured
+
+    expected_zip = out_dir / "realmodelscan_io_dns_fixpack.zip"
+    assert expected_zip.exists()
+    assert zipfile.is_zipfile(expected_zip)
+
+    with zipfile.ZipFile(expected_zip, "r") as zf:
+        tf_text = zf.read("dns_fixes.tf").decode("utf-8")
+        assert "shop" in tf_text
+        assert "decommissioned.invalid" in tf_text
+

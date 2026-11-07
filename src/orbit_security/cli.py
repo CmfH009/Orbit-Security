@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import datetime
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any, Dict
@@ -129,16 +130,49 @@ async def run_scan(args):
                 console.print(f"[bold red]✘ Target resolves to loopback/private/internal host (SSRF blocked): '{clean_domain}'[/bold red]")
             else:
                 findings_payload = []
-                for i, f in enumerate(result.takeover_findings or []):
+                raw_findings = []
+                if hasattr(result, "takeover_findings") and result.takeover_findings:
+                    raw_findings = list(result.takeover_findings)
+                elif hasattr(result, "findings") and result.findings:
+                    for f in result.findings:
+                        t = str(getattr(f, "title", f.get("title", "") if isinstance(f, dict) else "")).upper()
+                        cat = str(getattr(f, "category", f.get("category", "") if isinstance(f, dict) else "")).upper()
+                        if "TAKEOVER" in t or "CNAME" in t or "TAKEOVER" in cat:
+                            raw_findings.append(f)
+
+                for i, f in enumerate(raw_findings):
+                    if isinstance(f, dict):
+                        f_id = f.get("id", f"FIND-{i+1}")
+                        f_title = f.get("title", "Subdomain Takeover")
+                        f_sub = f.get("subdomain") or f.get("domain") or f.get("target") or clean_domain
+                        f_prov = f.get("saas_provider") or f.get("provider", "Unknown")
+                        f_tgt = f.get("cname_target") or f.get("target")
+                        f_sev = f.get("severity", "CRITICAL")
+                        f_desc = f.get("description", "Vulnerable dangling CNAME")
+                    else:
+                        f_id = getattr(f, "id", None) or f"FIND-{i+1}"
+                        f_title = getattr(f, "title", "Subdomain Takeover")
+                        f_sub = getattr(f, "subdomain", None) or getattr(f, "target", None) or clean_domain
+                        f_prov = getattr(f, "saas_provider", None) or getattr(f, "provider", "Unknown")
+                        f_tgt = getattr(f, "cname_target", None) or getattr(f, "target", None)
+                        sev_val = getattr(f, "severity", "CRITICAL")
+                        f_sev = sev_val.value if hasattr(sev_val, "value") else str(sev_val)
+                        f_desc = getattr(f, "description", "Vulnerable dangling CNAME")
+                        evidence = getattr(f, "evidence", "") or ""
+                        if (not f_tgt or f_tgt == f_sub) and "CNAME points to " in evidence:
+                            m = re.search(r"CNAME points to ([^\s]+)", evidence)
+                            if m:
+                                f_tgt = m.group(1).rstrip(".")
+
                     findings_payload.append({
-                        "id": f.get("id", f"FIND-{i+1}"),
-                        "title": f.get("title", "Subdomain Takeover"),
-                        "subdomain": f.get("subdomain") or f.get("domain") or clean_domain,
-                        "saas_provider": f.get("saas_provider") or f.get("provider", "Unknown"),
-                        "cname_target": f.get("cname_target") or f.get("target"),
-                        "severity": f.get("severity", "CRITICAL"),
+                        "id": f_id,
+                        "title": f_title,
+                        "subdomain": f_sub,
+                        "saas_provider": f_prov,
+                        "cname_target": f_tgt,
+                        "severity": f_sev,
                         "category": "DNS",
-                        "description": f.get("description", "Vulnerable dangling CNAME"),
+                        "description": f_desc,
                     })
                 out_dir = Path(args.output_dir) if getattr(args, "output_dir", None) else None
                 policy = getattr(args, "policy", "quarantine")
