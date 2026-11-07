@@ -428,7 +428,38 @@ def main():
     parser = argparse.ArgumentParser(
         description="Orbit Security: White-Label Attack Surface & Subdomain Hygiene Sentinel"
     )
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    parser.add_argument(
+        "--domain", "-d", dest="domain", default=None, help="Target apex domain (e.g. acmebrand.com)"
+    )
+    parser.add_argument(
+        "--target", "-t", dest="target", default=None, help="Target apex domain (alias for --domain)"
+    )
+    parser.add_argument(
+        "--export-fixpack",
+        action="store_true",
+        help="Generate 1-click DNS fix pack ZIP archive (.tf, .zone, security.txt)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        dest="output_dir",
+        default=None,
+        help="Destination directory for exported fix pack",
+    )
+    parser.add_argument(
+        "--policy",
+        dest="policy",
+        choices=["quarantine", "reject", "none"],
+        default="quarantine",
+        help="DMARC policy for remediation fixes (default: quarantine)",
+    )
+    parser.add_argument(
+        "--email",
+        dest="email",
+        default=None,
+        help="DMARC / security.txt contact email",
+    )
+
+    subparsers = parser.add_subparsers(dest="command", required=False)
 
     # Scan command
     scan_parser = subparsers.add_parser("scan", help="Scan a domain and generate white-label security audit reports")
@@ -439,6 +470,12 @@ def main():
     scan_parser.add_argument("--agency-website", default="https://apexdigital.io", help="Agency website URL")
     scan_parser.add_argument("--output-pdf", help="Destination path for PDF report (e.g. audit.pdf)")
     scan_parser.add_argument("--output-md", help="Destination path for Markdown report (e.g. audit.md)")
+    scan_parser.add_argument(
+        "--export-fixpack",
+        action="store_true",
+        help="Generate 1-click DNS fix pack ZIP archive (.tf, .zone, security.txt)",
+    )
+    scan_parser.add_argument("--output-dir", help="Destination directory for exported fix pack")
     # Social command
     social_parser = subparsers.add_parser("social", help="Autonomous hourly engagement & outreach daemon on X")
     social_parser.add_argument("--status", action="store_true", help="Display current daemon health, quotas, and database metrics")
@@ -557,6 +594,11 @@ def main():
     rem_parser.add_argument("--output-dir", help="Directory to save generated remediation artifacts")
     rem_parser.add_argument("--policy", choices=["quarantine", "reject"], default="quarantine", help="DMARC policy")
     rem_parser.add_argument("--email", help="DMARC/security.txt reporting email")
+    rem_parser.add_argument(
+        "--export-fixpack",
+        action="store_true",
+        help="Generate 1-click DNS fix pack ZIP archive (.tf, .zone, security.txt)",
+    )
     rem_parser.add_argument("--no-pdf", dest="pdf", action="store_false", help="Disable executive remediation PDF generation")
     rem_parser.set_defaults(pdf=True)
 
@@ -570,6 +612,71 @@ def main():
     poc_parser.add_argument("--json", action="store_true", help="Output raw JSON proof")
 
     args = parser.parse_args()
+
+    # Direct or root-level fix pack export invocation
+    if getattr(args, "export_fixpack", False):
+        target_domain = getattr(args, "domain", None) or getattr(args, "target", None)
+        if not target_domain and getattr(args, "command", None) == "remediate":
+            target_domain = getattr(args, "domain", None)
+
+        if not target_domain:
+            console.print("[bold red]✘ Error: --domain (or --target) is required when using --export-fixpack.[/bold red]")
+            sys.exit(1)
+
+        from orbit_security.client_bundle_exporter import ClientBundleExporter
+        from orbit_security.input_sanitizer import sanitize_domain, SecurityValidationError
+        from orbit_security.scanner import is_safe_host
+
+        try:
+            clean_domain = sanitize_domain(target_domain)
+        except SecurityValidationError as sve:
+            console.print(f"[bold red]✘ Security validation rejected '{target_domain}': {sve}[/bold red]")
+            sys.exit(1)
+
+        if not is_safe_host(clean_domain):
+            console.print(f"[bold red]✘ Target resolves to loopback/private/internal host (SSRF blocked): '{clean_domain}'[/bold red]")
+            sys.exit(1)
+
+        out_dir = Path(args.output_dir) if getattr(args, "output_dir", None) else None
+        policy = getattr(args, "policy", "quarantine")
+        email = getattr(args, "email", None)
+
+        try:
+            res = ClientBundleExporter.export_dns_fixpack(
+                domain=clean_domain,
+                output_dir=out_dir,
+                policy=policy,
+                contact_email=email,
+                as_dict=True,
+            )
+        except Exception as exc:
+            console.print(f"[bold red]✘ Failed to generate 1-Click DNS Fix Pack: {exc}[/bold red]")
+            sys.exit(1)
+
+        zip_path = res["fixpack_path"]
+        console.print(f"[bold green]✔ 1-Click DNS Fix Pack successfully generated:[/bold green] [underline]{zip_path}[/underline]")
+        console.print(f"  • Domain:       {clean_domain}")
+        console.print(f"  • Files:        {', '.join(res.get('files', []))}")
+        console.print(f"  • SHA256:       {res.get('sha256', '')}")
+        return 0
+
+    if not args.command:
+        # Check if root-level --domain / --target was passed without subcommand -> run scan
+        target_domain = getattr(args, "domain", None) or getattr(args, "target", None)
+        if target_domain:
+            args.command = "scan"
+            args.domain = target_domain
+            args.subdomains = getattr(args, "subdomains", None)
+            args.agency_name = getattr(args, "agency_name", "Apex Digital Studio")
+            args.agency_email = getattr(args, "agency_email", "ops@apexdigital.io")
+            args.agency_website = getattr(args, "agency_website", "https://apexdigital.io")
+            args.output_pdf = getattr(args, "output_pdf", None)
+            args.output_md = getattr(args, "output_md", None)
+            asyncio.run(run_scan(args))
+            return 0
+
+        parser.print_help()
+        sys.exit(1)
 
     if args.command == "scan":
         asyncio.run(run_scan(args))

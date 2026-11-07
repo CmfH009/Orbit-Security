@@ -75,6 +75,34 @@ def test_pdf_href_placeholder_when_no_pdf(tmp_path):
     assert gcp.pdf_href(tmp_path / "portals", None) == "#"
 
 
+# ---------------------------------------------------------------- default output dir & SPF indicator
+
+def test_default_output_dir_points_to_landing_portals():
+    assert gcp.DEFAULT_OUTPUT_DIR == gcp.PROJECT_ROOT / "landing" / "portals"
+
+
+def test_format_spf_indicator_thresholds():
+    from orbit_security.agency_retainer import AgencyClientSite
+    site_valid = AgencyClientSite(domain="test.com", client_name="Test", last_grade="A+")
+    site_warning = AgencyClientSite(domain="warn.com", client_name="Warn", last_grade="D", critical_findings=1)
+    site_critical = AgencyClientSite(domain="crit.com", client_name="Crit", last_grade="F", critical_findings=2)
+
+    html_valid = gcp.format_spf_indicator(site_valid)
+    assert "Valid" in html_valid
+    assert "#10B981" in html_valid
+    assert "/10 lookups" in html_valid
+
+    html_warn = gcp.format_spf_indicator(site_warning)
+    assert "Warning" in html_warn
+    assert "#F59E0B" in html_warn
+    assert "9/10 lookups" in html_warn
+
+    html_crit = gcp.format_spf_indicator(site_critical)
+    assert "PermError" in html_crit
+    assert "#EF4444" in html_crit
+    assert "11/10 lookups" in html_crit
+
+
 # ---------------------------------------------------------------- main() dry-run
 
 def test_main_dry_run_prints_plan_without_writing(capsys, tmp_path, monkeypatch):
@@ -126,6 +154,12 @@ def test_main_live_run_writes_portals(capsys, tmp_path, monkeypatch):
     assert "score-badge" in content
     assert "No PDF Audit" in content  # placeholder when no audit PDF exists
     assert "Orbit Security Labs" in content
+    assert "⚡ Fix Pack" in content
+    assert "downloadClientFixPack" in content
+    assert "spf-tree-pill" in content
+    assert "RFC 7208 SPF Tree:" in content
+    assert "/10 lookups" in content
+    assert "RemediationBundleBuilder" in content
 
 
 # ---------------------------------------------------------------- main() agency filter

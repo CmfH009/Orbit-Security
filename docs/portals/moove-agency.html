@@ -160,63 +160,6 @@
     }
     </style>
     <link rel="canonical" href="https://cmfh009.github.io/Orbit-Security/portals/moove-agency.html">
-
-    <!-- Structured Data: Schema.org entity graph (shared Organization @id) -->
-    <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "WebPage",
-      "@id": "https://cmfh009.github.io/Orbit-Security/portals/moove-agency.html#webpage",
-      "url": "https://cmfh009.github.io/Orbit-Security/portals/moove-agency.html",
-      "name": "Moove Agency | Client Security Audit Portal — Orbit Security",
-      "datePublished": "2026-10-02",
-      "dateModified": "2026-10-26",
-      "isPartOf": {
-        "@id": "https://cmfh009.github.io/Orbit-Security/#website"
-      },
-      "about": {
-        "@id": "https://cmfh009.github.io/Orbit-Security/portals/moove-agency.html#agency"
-      },
-      "breadcrumb": {
-        "@id": "https://cmfh009.github.io/Orbit-Security/portals/moove-agency.html#breadcrumb"
-      }
-    },
-    {
-      "@type": "Organization",
-      "@id": "https://cmfh009.github.io/Orbit-Security/portals/moove-agency.html#agency",
-      "name": "Moove Agency",
-      "url": "https://www.mooveagency.com",
-      "description": "Enterprise WordPress web development agency and Orbit Security verified partner."
-    },
-    {
-      "@type": "BreadcrumbList",
-      "@id": "https://cmfh009.github.io/Orbit-Security/portals/moove-agency.html#breadcrumb",
-      "itemListElement": [
-        {
-          "@type": "ListItem",
-          "position": 1,
-          "name": "Home",
-          "item": "https://cmfh009.github.io/Orbit-Security/#website"
-        },
-        {
-          "@type": "ListItem",
-          "position": 2,
-          "name": "Partner Portals",
-          "item": "https://cmfh009.github.io/Orbit-Security/portals/index.html#webpage"
-        },
-        {
-          "@type": "ListItem",
-          "position": 3,
-          "name": "Moove Agency",
-          "item": "https://cmfh009.github.io/Orbit-Security/portals/moove-agency.html#webpage"
-        }
-      ]
-    }
-  ]
-}
-    </script>
 </head>
 <body>
     <header class="portal-header">
@@ -282,7 +225,7 @@
                             <th class="text-center">Status</th>
                             <th class="text-center">Findings (C / H / M)</th>
                             <th class="text-center">Last Scanned</th>
-                            <th class="text-right">Audit PDF</th>
+                            <th class="text-right">Audit PDF &amp; Fixes</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -293,6 +236,7 @@
                     <div class="client-info">
                         <div class="client-name">CharityJob UK</div>
                         <div class="client-domain">charityjob.co.uk</div>
+                        <div class="spf-tree-pill" style="font-size:11px; color:#94a3b8; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; margin-top:4px;"><span style="color:#94a3b8; font-weight:600;">RFC 7208 SPF Tree:</span> <span style="display:inline-block; padding:1px 6px; border-radius:4px; font-weight:700; color:#10B981; background:rgba(16, 185, 129, 0.15); border:1px solid rgba(16, 185, 129, 0.35);">2/10 lookups (Valid)</span></div>
                     </div>
                 </td>
                 <td class="text-center">
@@ -313,7 +257,10 @@
                     Not scanned yet
                 </td>
                 <td class="text-right">
-                    <a href="#" class="btn btn-ghost btn-disabled" title="No generated audit PDF found for this client yet">No PDF Audit</a>
+                    <div style="display:inline-flex; align-items:center; justify-content:flex-end; gap:8px;">
+                        <button type="button" onclick="downloadClientFixPack('charityjob.co.uk')" class="btn btn-ghost font-pixel" style="cursor:pointer;" title="Download 1-Click DNS Fix Pack (Terraform, BIND zone, security.txt)">⚡ Fix Pack</button>
+                        <a href="#" class="btn btn-ghost btn-disabled" title="No generated audit PDF found for this client yet">No PDF Audit</a>
+                    </div>
                 </td>
             </tr>
         
@@ -327,13 +274,96 @@
         <div class="container">
             <p>
                 © 2026 <strong>Orbit Security Labs</strong> &bull;
-                White-label client audit portal for <strong>Moove Agency</strong> &bull;
+                White-label client audit portal for <strong id="portalAgencyFooter">Moove Agency</strong> &bull;
                 <a href="../index.html#audit-preview">Executive Audit Studio</a> &bull;
                 <a href="../signup.html">Upgrade Retainer</a> &bull;
                 <a href="../fleet.html">Fleet Command</a> &bull;
-                Report generated October 20, 2026 at 11:57 UTC
+                Report generated November 07, 2026 at 18:29 UTC
             </p>
         </div>
     </footer>
+    <script src="../assets/orbit_radar.js"></script>
+    <script>
+    function downloadClientFixPack(domain) {
+        if (window.RemediationBundleBuilder && typeof window.RemediationBundleBuilder.downloadBundle === 'function') {
+            window.RemediationBundleBuilder.downloadBundle(domain);
+            if (typeof window.showArcadeToast === 'function') {
+                window.showArcadeToast('DNS Fix Pack exported for ' + domain, 'warn');
+            }
+        } else {
+            const clean = String(domain || '').trim().toLowerCase().replace(/[^a-z0-9.-]/g, '');
+            const slug = clean.replace(/[^a-z0-9_-]/g, '_');
+            const fallbackUrl = '../data/client_bundles/' + slug + '/' + slug + '_dns_fixpack.zip';
+            window.location.href = fallbackUrl;
+        }
+    }
+
+    (function() {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const queryAgency = params.get('agency');
+            const agency = (queryAgency || localStorage.getItem('orbit_agency_name') || '').trim();
+            const queryColor = params.get('color') || params.get('brand_color');
+            let brandColor = (queryColor || localStorage.getItem('orbit_brand_color') || '#10b981').trim();
+            const logo = localStorage.getItem('orbit_agency_logo');
+
+            if (agency) {
+                document.title = `${agency} | Client Security Audit Portal — Orbit Security`;
+                const nameEl = document.querySelector('.brand-name');
+                if (nameEl) nameEl.textContent = agency;
+                const footerAgency = document.getElementById('portalAgencyFooter');
+                if (footerAgency) footerAgency.textContent = agency;
+                const slug = agency.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const mailLink = document.querySelector('a[href^="mailto:"]');
+                if (mailLink) {
+                    mailLink.href = `mailto:ops@${slug || 'orbit-core'}.example.com`;
+                    mailLink.textContent = `✉ ops@${slug || 'orbit-core'}.example.com`;
+                }
+            }
+
+            if (!brandColor.startsWith('#')) brandColor = '#' + brandColor;
+            if (/^#[0-9a-f]{3}$/i.test(brandColor)) {
+                brandColor = '#' + brandColor[1] + brandColor[1] + brandColor[2] + brandColor[2] + brandColor[3] + brandColor[3];
+            }
+
+            if (/^#[0-9a-f]{6}$/i.test(brandColor)) {
+                const brandMark = document.querySelector('.brand-mark');
+                if (brandMark) brandMark.style.background = `linear-gradient(135deg, ${brandColor}, #0f172a)`;
+
+                const r = parseInt(brandColor.slice(1, 3), 16) || 0;
+                const g = parseInt(brandColor.slice(3, 5), 16) || 0;
+                const b = parseInt(brandColor.slice(5, 7), 16) || 0;
+                const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                const textColor = lum >= 0.5 ? '#090b12' : '#ffffff';
+
+                document.querySelectorAll('.btn-primary').forEach(b => {
+                    b.style.backgroundColor = brandColor;
+                    b.style.borderColor = brandColor;
+                    b.style.color = textColor;
+                });
+                document.querySelectorAll('.meta-link, .nav-btn-highlight').forEach(el => {
+                    el.style.color = brandColor;
+                    el.style.borderColor = brandColor + '55';
+                });
+            }
+
+            if (logo && (/^(data:image\/|https?:\/\/|\.\.?\/)/i.test(logo))) {
+                const brandMark = document.querySelector('.brand-mark');
+                if (brandMark) {
+                    const img = document.createElement('img');
+                    img.src = logo;
+                    img.alt = `${agency || 'Agency'} Logo`;
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'contain';
+                    img.style.padding = '2px';
+                    img.style.borderRadius = '8px';
+                    brandMark.textContent = '';
+                    brandMark.appendChild(img);
+                }
+            }
+        } catch (_) {}
+    })();
+    </script>
 </body>
 </html>

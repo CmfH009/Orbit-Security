@@ -12,6 +12,7 @@ Generates atomic, white-labeled client remediation ZIP packages containing:
 from __future__ import annotations
 
 import datetime
+import functools
 import hashlib
 import html
 import json
@@ -38,6 +39,24 @@ DEFAULT_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 _AGENCY_LOCKS_MUTEX = threading.Lock()
 _AGENCY_LOCKS: Dict[str, threading.Lock] = {}
+
+
+class _hybrid_method:
+    """Descriptor enabling a method to be called cleanly on either an instance or a class."""
+
+    def __init__(self, fn):
+        self.fn = fn
+        functools.update_wrapper(self, fn)
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            instance = owner()
+
+        @functools.wraps(self.fn)
+        def wrapper(*args, **kwargs):
+            return self.fn(instance, *args, **kwargs)
+
+        return wrapper
 
 
 def _get_agency_lock(lock_key: str) -> threading.Lock:
@@ -1187,3 +1206,201 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "remediation_bucke
             "agency_name": resolved_name,
             "generated_at": now_iso,
         }
+
+    @_hybrid_method
+    def export_dns_fixpack(
+        self,
+        domain: str,
+        findings: Optional[List[Dict[str, Any]]] = None,
+        output_dir: Optional[Path] = None,
+        contact_email: Optional[str] = None,
+        policy: str = "quarantine",
+        report_email: Optional[str] = None,
+        spf_record: Optional[str] = None,
+        ca_list: Optional[List[str]] = None,
+        as_dict: bool = False,
+    ) -> Path | Dict[str, Any]:
+        """Generates an atomic 1-click DNS fix pack ZIP bundle for the given domain."""
+        from orbit_security.remediation import DnsRemediationGenerator
+        from orbit_security.input_sanitizer import sanitize_domain, SecurityValidationError
+        from orbit_security.scanner import is_safe_host
+
+        try:
+            clean_domain = sanitize_domain(str(domain))
+        except SecurityValidationError as sve:
+            raise SecurityValidationError(f"Invalid domain for fix pack export: '{domain}': {sve}") from sve
+
+        if not is_safe_host(clean_domain):
+            raise SecurityValidationError(f"SSRF blocked: Host '{clean_domain}' is not a safe target")
+
+        domain_slug = re.sub(r"[^a-zA-Z0-9_-]", "_", clean_domain)
+
+        if output_dir:
+            fixpack_dir = Path(output_dir).resolve()
+        else:
+            fixpack_dir = (self.bundles_dir / domain_slug).resolve()
+
+        final_zip_path = (fixpack_dir / f"{domain_slug}_dns_fixpack.zip").resolve()
+        try:
+            final_zip_path.relative_to(fixpack_dir)
+        except ValueError:
+            raise SecurityValidationError(f"Path traversal detected: {final_zip_path} escapes {fixpack_dir}")
+
+        fixpack_dir.mkdir(parents=True, exist_ok=True)
+
+        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+        # Generate fix contents
+        effective_report_email = report_email or contact_email
+        tf_content = DnsRemediationGenerator.generate_dns_fixes_tf(
+            domain=clean_domain,
+            findings=findings,
+            policy=policy,
+            report_email=effective_report_email,
+            spf_record=spf_record,
+            ca_list=ca_list,
+        )
+        zone_content = DnsRemediationGenerator.generate_zone_file(
+            domain=clean_domain,
+            findings=findings,
+            policy=policy,
+            report_email=effective_report_email,
+            spf_record=spf_record,
+            ca_list=ca_list,
+        )
+        sec_txt = DnsRemediationGenerator.generate_security_txt(
+            domain=clean_domain,
+            contact_email=contact_email,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            stage_path = Path(tmpdir).resolve()
+            zone_filename = os.path.basename(f"{clean_domain}.zone")
+            zone_file = (stage_path / zone_filename).resolve()
+            try:
+                zone_file.relative_to(stage_path)
+            except ValueError:
+                raise SecurityValidationError(f"Zone file path escapes staging directory: {zone_file}")
+
+            (stage_path / "dns_fixes.tf").write_text(tf_content, encoding="utf-8")
+            zone_file.write_text(zone_content, encoding="utf-8")
+            (stage_path / "security.txt").write_text(sec_txt, encoding="utf-8")
+
+            # Collect files and checksums
+            file_entries = []
+            for item in sorted(stage_path.iterdir()):
+                if item.is_file():
+                    content = item.read_bytes()
+                    file_entries.append({
+                        "path": item.name,
+                        "sha256": hashlib.sha256(content).hexdigest(),
+                        "size_bytes": len(content),
+                    })
+
+            # Write fixpack_manifest.json
+            manifest_dict = {
+                "domain": clean_domain,
+                "generated_at": now_iso,
+                "bundle_name": f"{domain_slug}_dns_fixpack.zip",
+                "files": file_entries,
+            }
+            manifest_bytes = json.dumps(manifest_dict, indent=2).encode("utf-8")
+            (stage_path / "fixpack_manifest.json").write_bytes(manifest_bytes)
+            file_entries.append({
+                "path": "fixpack_manifest.json",
+                "sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+                "size_bytes": len(manifest_bytes),
+            })
+
+            # Atomic creation:
+            temp_zip_name = f"{domain_slug}_fixpack_{uuid.uuid4().hex[:8]}.tmp.zip"
+            temp_zip_path = fixpack_dir / temp_zip_name
+
+            bundle_sha256 = ""
+            try:
+                with zipfile.ZipFile(temp_zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+                    for root, _, filenames in os.walk(stage_path):
+                        for fn in sorted(filenames):
+                            full_fp = Path(root) / fn
+                            arcname = full_fp.relative_to(stage_path).as_posix()
+                            zf.write(full_fp, arcname=arcname)
+
+                if not zipfile.is_zipfile(temp_zip_path):
+                    raise RuntimeError("Generated fixpack zip failed integrity verification")
+
+                bundle_sha256 = hashlib.sha256(temp_zip_path.read_bytes()).hexdigest()
+
+                # Prepare sidecar manifest in temporary file
+                sidecar_manifest = fixpack_dir / "fixpack_manifest.json"
+                manifest_dict["bundle_sha256"] = bundle_sha256
+                sidecar_bytes = json.dumps(manifest_dict, indent=2).encode("utf-8")
+                temp_manifest_name = f"{domain_slug}_manifest_{uuid.uuid4().hex[:8]}.tmp.json"
+                temp_manifest_path = fixpack_dir / temp_manifest_name
+                temp_manifest_path.write_bytes(sidecar_bytes)
+
+                # Mutex lock per target directory
+                lock_key = str(fixpack_dir.resolve()).lower()
+                with _get_agency_lock(lock_key):
+                    max_replace_attempts = 10
+                    for attempt in range(max_replace_attempts):
+                        try:
+                            os.replace(temp_zip_path, final_zip_path)
+                            break
+                        except (PermissionError, OSError) as e:
+                            if attempt < max_replace_attempts - 1:
+                                backoff = (0.01 * (1.5 ** attempt)) + random.uniform(0.005, 0.02)
+                                time.sleep(backoff)
+                            else:
+                                if final_zip_path.exists() and zipfile.is_zipfile(final_zip_path):
+                                    logger.warning(
+                                        f"Transient lock on {final_zip_path} persisted after {max_replace_attempts} attempts; "
+                                        f"falling back to existing bundle ({e})."
+                                    )
+                                    bundle_sha256 = hashlib.sha256(final_zip_path.read_bytes()).hexdigest()
+                                    manifest_dict["bundle_sha256"] = bundle_sha256
+                                    temp_manifest_path.write_bytes(json.dumps(manifest_dict, indent=2).encode("utf-8"))
+                                    break
+                                raise
+
+                    for attempt in range(max_replace_attempts):
+                        try:
+                            os.replace(temp_manifest_path, sidecar_manifest)
+                            break
+                        except (PermissionError, OSError):
+                            if attempt < max_replace_attempts - 1:
+                                time.sleep(0.005 * (attempt + 1) + random.uniform(0.002, 0.01))
+                            elif sidecar_manifest.exists():
+                                break
+                            else:
+                                raise
+            finally:
+                if temp_zip_path.exists():
+                    try:
+                        temp_zip_path.unlink()
+                    except Exception:
+                        pass
+                if "temp_manifest_path" in locals() and temp_manifest_path.exists():
+                    try:
+                        temp_manifest_path.unlink()
+                    except Exception:
+                        pass
+
+        all_file_names = [e["path"] for e in file_entries]
+
+        logger.info(
+            f"Successfully exported atomic DNS fix pack for {clean_domain}: "
+            f"{final_zip_path} (SHA256: {bundle_sha256[:12]}...)"
+        )
+
+        if as_dict:
+            return {
+                "ok": True,
+                "fixpack_path": str(final_zip_path),
+                "zip_path": final_zip_path,
+                "sha256": bundle_sha256,
+                "files": all_file_names,
+                "domain": clean_domain,
+                "generated_at": now_iso,
+            }
+        return final_zip_path
+

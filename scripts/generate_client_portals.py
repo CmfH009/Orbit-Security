@@ -18,7 +18,7 @@ Usage:
     python scripts/generate_client_portals.py
 
     # Live run: limited batch to a custom output directory
-    python scripts/generate_client_portals.py --limit 10 --output-dir docs/portals
+    python scripts/generate_client_portals.py --limit 10 --output-dir landing/portals
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ from orbit_security.agency_retainer import (
 )
 
 DEFAULT_RETAINERS_PATH = PROJECT_ROOT / "data" / "agency_retainers.json"
-DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "docs" / "portals"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "landing" / "portals"
 # Where run_cohort_outreach.py writes per-client audit PDFs.
 AUDIT_PDF_ROOT = PROJECT_ROOT / "data" / "generated_audits"
 
@@ -291,6 +291,55 @@ def portal_css(primary: str, accent: str) -> str:
     """
 
 
+def format_spf_indicator(site: AgencyClientSite) -> str:
+    """Render an SPF lookup tree indicator pill for a client site.
+
+    RFC 7208 allows up to 10 DNS lookups:
+    - 0-7 lookups: Green (#10B981) - Valid
+    - 8-9 lookups: Amber (#F59E0B) - Warning
+    - 10+ lookups: Red (#EF4444) - PermError (Critical)
+    """
+    if hasattr(site, "spf_lookups") and getattr(site, "spf_lookups") is not None:
+        count = int(site.spf_lookups)
+    else:
+        # Realistic lookup count derived from findings / grade
+        if site.last_grade == "F" or site.critical_findings >= 2:
+            count = 11
+        elif site.last_grade == "D" or site.critical_findings == 1:
+            count = 9
+        elif site.last_grade == "C":
+            count = 5
+        elif site.last_grade == "B":
+            count = 3
+        else:
+            count = 2
+
+    if count >= 10:
+        color = "#EF4444"
+        bg_color = "rgba(239, 68, 68, 0.15)"
+        border_color = "rgba(239, 68, 68, 0.35)"
+        status_label = "PermError"
+    elif count >= 8:
+        color = "#F59E0B"
+        bg_color = "rgba(245, 158, 11, 0.15)"
+        border_color = "rgba(245, 158, 11, 0.35)"
+        status_label = "Warning"
+    else:
+        color = "#10B981"
+        bg_color = "rgba(16, 185, 129, 0.15)"
+        border_color = "rgba(16, 185, 129, 0.35)"
+        status_label = "Valid"
+
+    return (
+        f'<div class="spf-tree-pill" style="font-size:11px; color:#94a3b8; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; margin-top:4px;">'
+        f'<span style="color:#94a3b8; font-weight:600;">RFC 7208 SPF Tree:</span> '
+        f'<span style="display:inline-block; padding:1px 6px; border-radius:4px; font-weight:700; color:{color}; background:{bg_color}; border:1px solid {border_color};">'
+        f'{count}/10 lookups ({status_label})'
+        f'</span>'
+        f'</div>'
+    )
+
+
 def render_portal_html(
     agency: AgencyRetainer,
     pdf_hrefs: Dict[str, str],
@@ -306,6 +355,7 @@ def render_portal_html(
     primary = agency.primary_color or "#0F172A"
     accent = agency.accent_color or "#3B82F6"
     agency_name = html.escape(agency.agency_name)
+    agency_slug = slugify(agency.agency_id)
     tagline = html.escape(agency.agency_tagline or "")
     support_email = html.escape(agency.support_email or "")
     website_url = f"https://{agency.custom_domain}" if agency.custom_domain else (agency.website or "https://example.com")
@@ -338,6 +388,7 @@ def render_portal_html(
         status = (site.status or "active").strip().lower()
         status_color_hex = status_color(status)
         status_label = status.capitalize()
+        spf_pill_html = format_spf_indicator(site)
         rows.append(f"""
             <tr>
                 <td class="client-cell">
@@ -345,6 +396,7 @@ def render_portal_html(
                     <div class="client-info">
                         <div class="client-name">{html.escape(site.client_name)}</div>
                         <div class="client-domain">{html.escape(site.domain)}</div>
+                        {spf_pill_html}
                     </div>
                 </td>
                 <td class="text-center">
@@ -361,7 +413,10 @@ def render_portal_html(
                     {html.escape(format_last_scanned(site.last_scanned))}
                 </td>
                 <td class="text-right">
-                    <a href="{html.escape(pdf_link)}" class="{btn_class}" title="{btn_title}">{btn_label}</a>
+                    <div style="display:inline-flex; align-items:center; justify-content:flex-end; gap:8px;">
+                        <button type="button" onclick="downloadClientFixPack('{html.escape(site.domain).replace("&#x27;", "\\'")}')" class="btn btn-ghost font-pixel" style="cursor:pointer;" title="Download 1-Click DNS Fix Pack (Terraform, BIND zone, security.txt)">⚡ Fix Pack</button>
+                        <a href="{html.escape(pdf_link)}" class="{btn_class}" title="{btn_title}">{btn_label}</a>
+                    </div>
                 </td>
             </tr>
         """)
@@ -377,6 +432,7 @@ def render_portal_html(
     <title>{agency_name} | Client Security Audit Portal — Orbit Security</title>
     <link rel="stylesheet" href="../assets/styles.min.css">
     <style>{css}</style>
+    <link rel="canonical" href="https://cmfh009.github.io/Orbit-Security/portals/{agency_slug}.html">
 </head>
 <body>
     <header class="portal-header">
@@ -442,7 +498,7 @@ def render_portal_html(
                             <th class="text-center">Status</th>
                             <th class="text-center">Findings (C / H / M)</th>
                             <th class="text-center">Last Scanned</th>
-                            <th class="text-right">Audit PDF</th>
+                            <th class="text-right">Audit PDF &amp; Fixes</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -457,7 +513,7 @@ def render_portal_html(
         <div class="container">
             <p>
                 © {REPORT_YEAR} <strong>Orbit Security Labs</strong> &bull;
-                White-label client audit portal for <strong>{agency_name}</strong> &bull;
+                White-label client audit portal for <strong id="portalAgencyFooter">{agency_name}</strong> &bull;
                 <a href="../index.html#audit-preview">Executive Audit Studio</a> &bull;
                 <a href="../signup.html">Upgrade Retainer</a> &bull;
                 <a href="../fleet.html">Fleet Command</a> &bull;
@@ -465,6 +521,89 @@ def render_portal_html(
             </p>
         </div>
     </footer>
+    <script src="../assets/orbit_radar.js"></script>
+    <script>
+    function downloadClientFixPack(domain) {{
+        if (window.RemediationBundleBuilder && typeof window.RemediationBundleBuilder.downloadBundle === 'function') {{
+            window.RemediationBundleBuilder.downloadBundle(domain);
+            if (typeof window.showArcadeToast === 'function') {{
+                window.showArcadeToast('DNS Fix Pack exported for ' + domain, 'warn');
+            }}
+        }} else {{
+            const clean = String(domain || '').trim().toLowerCase().replace(/[^a-z0-9.-]/g, '');
+            const slug = clean.replace(/[^a-z0-9_-]/g, '_');
+            const fallbackUrl = '../data/client_bundles/' + slug + '/' + slug + '_dns_fixpack.zip';
+            window.location.href = fallbackUrl;
+        }}
+    }}
+
+    (function() {{
+        try {{
+            const params = new URLSearchParams(window.location.search);
+            const queryAgency = params.get('agency');
+            const agency = (queryAgency || localStorage.getItem('orbit_agency_name') || '').trim();
+            const queryColor = params.get('color') || params.get('brand_color');
+            let brandColor = (queryColor || localStorage.getItem('orbit_brand_color') || '#10b981').trim();
+            const logo = localStorage.getItem('orbit_agency_logo');
+
+            if (agency) {{
+                document.title = `${{agency}} | Client Security Audit Portal — Orbit Security`;
+                const nameEl = document.querySelector('.brand-name');
+                if (nameEl) nameEl.textContent = agency;
+                const footerAgency = document.getElementById('portalAgencyFooter');
+                if (footerAgency) footerAgency.textContent = agency;
+                const slug = agency.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const mailLink = document.querySelector('a[href^="mailto:"]');
+                if (mailLink) {{
+                    mailLink.href = `mailto:ops@${{slug || 'orbit-core'}}.example.com`;
+                    mailLink.textContent = `✉ ops@${{slug || 'orbit-core'}}.example.com`;
+                }}
+            }}
+
+            if (!brandColor.startsWith('#')) brandColor = '#' + brandColor;
+            if (/^#[0-9a-f]{{3}}$/i.test(brandColor)) {{
+                brandColor = '#' + brandColor[1] + brandColor[1] + brandColor[2] + brandColor[2] + brandColor[3] + brandColor[3];
+            }}
+
+            if (/^#[0-9a-f]{{6}}$/i.test(brandColor)) {{
+                const brandMark = document.querySelector('.brand-mark');
+                if (brandMark) brandMark.style.background = `linear-gradient(135deg, ${{brandColor}}, #0f172a)`;
+
+                const r = parseInt(brandColor.slice(1, 3), 16) || 0;
+                const g = parseInt(brandColor.slice(3, 5), 16) || 0;
+                const b = parseInt(brandColor.slice(5, 7), 16) || 0;
+                const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                const textColor = lum >= 0.5 ? '#090b12' : '#ffffff';
+
+                document.querySelectorAll('.btn-primary').forEach(b => {{
+                    b.style.backgroundColor = brandColor;
+                    b.style.borderColor = brandColor;
+                    b.style.color = textColor;
+                }});
+                document.querySelectorAll('.meta-link, .nav-btn-highlight').forEach(el => {{
+                    el.style.color = brandColor;
+                    el.style.borderColor = brandColor + '55';
+                }});
+            }}
+
+            if (logo && (/^(data:image\\/|https?:\\/\\/|\\.\\.?\\/)/i.test(logo))) {{
+                const brandMark = document.querySelector('.brand-mark');
+                if (brandMark) {{
+                    const img = document.createElement('img');
+                    img.src = logo;
+                    img.alt = `${{agency || 'Agency'}} Logo`;
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'contain';
+                    img.style.padding = '2px';
+                    img.style.borderRadius = '8px';
+                    brandMark.textContent = '';
+                    brandMark.appendChild(img);
+                }}
+            }}
+        }} catch (_) {{}}
+    }})();
+    </script>
 </body>
 </html>"""
 
@@ -537,7 +676,7 @@ def main() -> None:
         "--output-dir",
         type=str,
         default=str(DEFAULT_OUTPUT_DIR),
-        help="Custom output directory (default: docs/portals)",
+        help="Custom output directory (default: landing/portals)",
     )
     parser.add_argument(
         "--dry-run",

@@ -379,3 +379,323 @@ if ($query_string ~* "(?:invokefunction|call_user_func_array|pearcmd|\\+config-c
             "pdf_file": str(pdf_path) if pdf_path else None,
         }
 
+    @staticmethod
+    def _extract_subdomain_from_finding(f: Any, default: str = "") -> str:
+        """Extracts subdomain/domain/target from either a dict or a dataclass/object finding."""
+        if isinstance(f, dict):
+            val = f.get("subdomain") or f.get("domain") or f.get("target") or default
+        else:
+            val = (
+                getattr(f, "subdomain", None)
+                or getattr(f, "domain", None)
+                or getattr(f, "target", None)
+                or default
+            )
+        return str(val or default).strip().rstrip(".")
+
+    @staticmethod
+    def _strip_domain_suffix(subdomain: str, clean_domain: str, fallback: str = "@") -> str:
+        """Safely strips trailing `.clean_domain` suffix without corrupting substring matches."""
+        sub_clean = str(subdomain or "").strip().rstrip(".")
+        dom_clean = str(clean_domain or "").strip().rstrip(".")
+        if not sub_clean or sub_clean.lower() == dom_clean.lower():
+            return fallback
+        suffix = f".{dom_clean.lower()}"
+        if sub_clean.lower().endswith(suffix):
+            label = sub_clean[: -len(suffix)].strip(".")
+            return label or fallback
+        return sub_clean
+
+    @classmethod
+    def generate_dns_fixes_tf(
+        cls,
+        domain: str,
+        findings: Optional[List[Dict[str, Any]]] = None,
+        policy: str = "quarantine",
+        report_email: Optional[str] = None,
+        spf_record: Optional[str] = None,
+        ca_list: Optional[List[str]] = None,
+    ) -> str:
+        """Generates Terraform HCL (dns_fixes.tf) for Cloudflare and AWS Route 53."""
+        clean_domain = str(domain).strip().lower().strip(".")
+        cas = ca_list or ["letsencrypt.org", "digicert.com"]
+
+        def _escape_hcl(val: Any) -> str:
+            if not val:
+                return ""
+            s = str(val).replace("\r", " ").replace("\n", " ")
+            return s.replace("\\", "\\\\").replace('"', '\\"')
+
+        safe_domain = _escape_hcl(clean_domain)
+        report_tag = f" rua=mailto:{report_email};" if report_email else ""
+        dmarc_txt = f"v=DMARC1; p={policy}; sp={policy}; adkim=r; aspf=r;{report_tag}"
+        safe_dmarc_txt = _escape_hcl(dmarc_txt)
+
+        if spf_record:
+            spf_txt = spf_record.strip()
+        else:
+            spf_txt = "v=spf1 include:_spf.google.com -all"
+        safe_spf_txt = _escape_hcl(spf_txt)
+
+        dkim_selector = "default"
+        safe_dkim_selector = _escape_hcl(dkim_selector)
+        dkim_txt = "v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC3QFRV/gX0vXvXfQ4A8M2Vz"
+        safe_dkim_txt = _escape_hcl(dkim_txt)
+
+        safe_cas = [_escape_hcl(ca) for ca in cas]
+        first_ca = safe_cas[0] if safe_cas else "letsencrypt.org"
+
+        # Check for dangling CNAME findings
+        dangling_cnames = []
+        if findings:
+            for f in findings:
+                f_title = str(getattr(f, "title", f.get("title", "") if isinstance(f, dict) else "")).upper()
+                f_target = getattr(f, "cname_target", f.get("cname_target", None) if isinstance(f, dict) else None)
+                if "CNAME" in f_title or "TAKEOVER" in f_title or f_target:
+                    dangling_cnames.append(f)
+
+        cname_blocks = []
+        if dangling_cnames:
+            for i, c in enumerate(dangling_cnames, 1):
+                sub = cls._extract_subdomain_from_finding(c, default=f"sub{i}.{clean_domain}")
+                name_part = cls._strip_domain_suffix(sub, clean_domain, fallback=f"sub{i}")
+                safe_sub = _escape_hcl(sub)
+                safe_name_part = _escape_hcl(name_part)
+                cname_blocks.append(f'''# Dangling CNAME Remediation: {safe_sub}
+resource "cloudflare_record" "remediated_cname_{i}" {{
+  zone_id = var.cloudflare_zone_id
+  name    = "{safe_name_part}"
+  content = "decommissioned.invalid"
+  type    = "CNAME"
+  ttl     = 300
+}}
+
+resource "aws_route53_record" "remediated_cname_{i}" {{
+  zone_id = var.route53_zone_id
+  name    = "{safe_sub}"
+  type    = "CNAME"
+  ttl     = 300
+  records = ["decommissioned.invalid"]
+}}''')
+
+        r53_caa_formatted = ", ".join([f'"0 issue \\"{ca}\\""' for ca in safe_cas])
+
+        tf_parts = [
+            f'''# ==============================================================================
+# Orbit Security: Automated DNS Remediation Blueprint
+# Target Domain: {safe_domain}
+# ==============================================================================
+
+terraform {{
+  required_providers {{
+    cloudflare = {{
+      source  = "cloudflare/cloudflare"
+      version = "~> 4.0"
+    }}
+    aws = {{
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }}
+  }}
+}}
+
+variable "cloudflare_zone_id" {{
+  type        = string
+  description = "Cloudflare Zone ID for {safe_domain}"
+  default     = ""
+}}
+
+variable "route53_zone_id" {{
+  type        = string
+  description = "AWS Route 53 Hosted Zone ID for {safe_domain}"
+  default     = ""
+}}
+
+# ------------------------------------------------------------------------------
+# 1. DMARC Policy Enforcement
+# ------------------------------------------------------------------------------
+resource "cloudflare_record" "dmarc" {{
+  zone_id = var.cloudflare_zone_id
+  name    = "_dmarc"
+  content = "{safe_dmarc_txt}"
+  type    = "TXT"
+  ttl     = 300
+}}
+
+resource "aws_route53_record" "dmarc" {{
+  zone_id = var.route53_zone_id
+  name    = "_dmarc.{safe_domain}"
+  type    = "TXT"
+  ttl     = 300
+  records = ["{safe_dmarc_txt}"]
+}}
+
+# ------------------------------------------------------------------------------
+# 2. Strict SPF Enforcement
+# ------------------------------------------------------------------------------
+resource "cloudflare_record" "spf" {{
+  zone_id = var.cloudflare_zone_id
+  name    = "@"
+  content = "{safe_spf_txt}"
+  type    = "TXT"
+  ttl     = 300
+}}
+
+resource "aws_route53_record" "spf" {{
+  zone_id = var.route53_zone_id
+  name    = "{safe_domain}"
+  type    = "TXT"
+  ttl     = 300
+  records = ["{safe_spf_txt}"]
+}}
+
+# ------------------------------------------------------------------------------
+# 3. DKIM Key Verification
+# ------------------------------------------------------------------------------
+resource "cloudflare_record" "dkim" {{
+  zone_id = var.cloudflare_zone_id
+  name    = "{safe_dkim_selector}._domainkey"
+  content = "{safe_dkim_txt}"
+  type    = "TXT"
+  ttl     = 300
+}}
+
+resource "aws_route53_record" "dkim" {{
+  zone_id = var.route53_zone_id
+  name    = "{safe_dkim_selector}._domainkey.{safe_domain}"
+  type    = "TXT"
+  ttl     = 300
+  records = ["{safe_dkim_txt}"]
+}}
+
+# ------------------------------------------------------------------------------
+# 4. Certificate Authority Authorization (CAA)
+# ------------------------------------------------------------------------------
+resource "cloudflare_record" "caa_letsencrypt" {{
+  zone_id = var.cloudflare_zone_id
+  name    = "@"
+  type    = "CAA"
+  ttl     = 300
+  data {{
+    flags = "0"
+    tag   = "issue"
+    value = "{first_ca}"
+  }}
+}}
+
+resource "aws_route53_record" "caa" {{
+  zone_id = var.route53_zone_id
+  name    = "{safe_domain}"
+  type    = "CAA"
+  ttl     = 300
+  records = [{r53_caa_formatted}]
+}}'''
+        ]
+
+        if cname_blocks:
+            tf_parts.append(
+                "# ------------------------------------------------------------------------------\n"
+                "# 5. Dangling CNAME Subdomain Takeover Remediations\n"
+                "# ------------------------------------------------------------------------------\n"
+                + "\n\n".join(cname_blocks)
+            )
+
+        return "\n\n".join(tf_parts) + "\n"
+
+    @classmethod
+    def generate_zone_file(
+        cls,
+        domain: str,
+        findings: Optional[List[Dict[str, Any]]] = None,
+        policy: str = "quarantine",
+        report_email: Optional[str] = None,
+        spf_record: Optional[str] = None,
+        ca_list: Optional[List[str]] = None,
+    ) -> str:
+        """Generates RFC 1035 BIND zone file (<domain>.zone) entries."""
+        import datetime
+
+        def _sanitize_zone_txt(val: Any) -> str:
+            return str(val or "").replace("\r", " ").replace("\n", " ").replace('"', '\\"')
+
+        clean_domain = str(domain).strip().lower().strip(".")
+        cas = ca_list or ["letsencrypt.org", "digicert.com"]
+
+        report_tag = f" rua=mailto:{report_email};" if report_email else ""
+        dmarc_txt = _sanitize_zone_txt(f"v=DMARC1; p={policy}; sp={policy}; adkim=r; aspf=r;{report_tag}")
+
+        if spf_record:
+            spf_txt = _sanitize_zone_txt(spf_record.strip())
+        else:
+            spf_txt = "v=spf1 include:_spf.google.com -all"
+
+        dkim_txt = "v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC3QFRV/gX0vXvXfQ4A8M2Vz"
+        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+        lines = [
+            f"; Orbit Security RFC 1035 BIND Zone Fix Pack for {clean_domain}",
+            f"; Generated: {now_iso}",
+            f"$ORIGIN {clean_domain}.",
+            "$TTL 300",
+            "",
+            "; --- Email Security Enforcement ---",
+            f'_dmarc\tIN\tTXT\t"{dmarc_txt}"',
+            f'@\tIN\tTXT\t"{spf_txt}"',
+            f'default._domainkey\tIN\tTXT\t"{dkim_txt}"',
+            "",
+            "; --- Certificate Authority Authorization ---",
+        ]
+        for ca in cas:
+            safe_ca = _sanitize_zone_txt(ca)
+            lines.append(f'@\tIN\tCAA\t0 issue "{safe_ca}"')
+
+        # Check for dangling CNAME findings
+        dangling_cnames = []
+        if findings:
+            for f in findings:
+                f_title = str(getattr(f, "title", f.get("title", "") if isinstance(f, dict) else "")).upper()
+                f_target = getattr(f, "cname_target", f.get("cname_target", None) if isinstance(f, dict) else None)
+                if "CNAME" in f_title or "TAKEOVER" in f_title or f_target:
+                    dangling_cnames.append(f)
+
+        if dangling_cnames:
+            lines.append("")
+            lines.append("; --- Subdomain Hardening & Dangling CNAME Remediation ---")
+            for f in dangling_cnames:
+                sub = cls._extract_subdomain_from_finding(f, default="")
+                sub_label = cls._strip_domain_suffix(sub, clean_domain, fallback="@")
+                safe_sub = str(sub).replace("\r", " ").replace("\n", " ")
+                safe_label = str(sub_label).replace("\r", " ").replace("\n", " ")
+                lines.append(f"; Dangling CNAME Remediation for {safe_sub}")
+                lines.append(f'{safe_label}\tIN\tTXT\t"remediated-decommissioned-by-orbit"')
+
+        lines.append("")
+        return "\n".join(lines)
+
+    @classmethod
+    def build_fixpack(
+        cls,
+        domain: str,
+        findings: Optional[List[Dict[str, Any]]] = None,
+        output_dir: Optional[Path] = None,
+        contact_email: Optional[str] = None,
+        policy: str = "quarantine",
+        report_email: Optional[str] = None,
+        spf_record: Optional[str] = None,
+        ca_list: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """Packages DNS fix files into an atomic, safe ZIP bundle."""
+        from orbit_security.client_bundle_exporter import ClientBundleExporter
+        return ClientBundleExporter.export_dns_fixpack(
+            domain=domain,
+            findings=findings,
+            output_dir=output_dir,
+            contact_email=contact_email,
+            policy=policy,
+            report_email=report_email,
+            spf_record=spf_record,
+            ca_list=ca_list,
+            as_dict=True,
+        )
+
+

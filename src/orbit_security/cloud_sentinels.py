@@ -11,15 +11,24 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 import urllib.error
 import urllib.parse
 import urllib.request
+
+try:
+    from orbit_security.dns_cache import get_orbit_sync_resolver
+    _HAS_DNS_CACHE = True
+except Exception:
+    _HAS_DNS_CACHE = False
 
 from orbit_security.models import Severity
 from orbit_security.scanner import is_safe_host
 
 logger = logging.getLogger("orbit_security.cloud_sentinels")
+
 
 
 class CloudBucketTakeoverSentinel:
@@ -348,12 +357,419 @@ class PassiveTlsCipherSentinel:
         return result
 
 
-class EmailAuthPolicyAnalyzer:
-    """Autonomous Email Security SPF / DKIM / DMARC / MTA-STS / BIMI Policy Analyzer (Project #22)."""
+class SPFLookupStatus(str, Enum):
+    """RFC 7208 SPF lookup status categories."""
+    SAFE = "SAFE"
+    WARNING = "WARNING"
+    CRITICAL = "CRITICAL"
+
+
+@dataclass
+class SPFNode:
+    """Represents a node in an expanded RFC 7208 SPF include/redirect tree."""
+    domain: str
+    record: str = ""
+    lookups_consumed: int = 0
+    void_lookups: int = 0
+    mechanisms: List[str] = field(default_factory=list)
+    ips: List[str] = field(default_factory=list)
+    children: List["SPFNode"] = field(default_factory=list)
+    has_loop: bool = False
+    error: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "domain": self.domain,
+            "record": self.record,
+            "lookups_consumed": self.lookups_consumed,
+            "void_lookups": self.void_lookups,
+            "mechanisms": list(self.mechanisms),
+            "ips": list(self.ips),
+            "children": [child.to_dict() for child in self.children],
+            "has_loop": self.has_loop,
+            "error": self.error,
+        }
+
+
+@dataclass
+class SPFTreeResult:
+    """Result of an RFC 7208 SPF tree traversal and audit."""
+    domain: str
+    raw_record: str = ""
+    total_lookups: int = 0
+    void_lookups: int = 0
+    max_lookups: int = 10
+    status: SPFLookupStatus = SPFLookupStatus.SAFE
+    exceeds_limit: bool = False
+    has_loop: bool = False
+    has_void_error: bool = False
+    includes: List[str] = field(default_factory=list)
+    flattened_ips: List[str] = field(default_factory=list)
+    flattened_record: str = ""
+    warnings: List[str] = field(default_factory=list)
+    errors: List[str] = field(default_factory=list)
+    tree_root: Optional[SPFNode] = None
+
+    @property
+    def is_permerror(self) -> bool:
+        return (
+            self.status == SPFLookupStatus.CRITICAL
+            or self.total_lookups >= self.max_lookups
+            or self.has_loop
+            or self.has_void_error
+        )
+
+    @property
+    def tree(self) -> Dict[str, Any]:
+        return self.tree_root.to_dict() if self.tree_root else {}
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "domain": self.domain,
+            "raw_record": self.raw_record,
+            "total_lookups": self.total_lookups,
+            "void_lookups": self.void_lookups,
+            "max_lookups": self.max_lookups,
+            "status": self.status.value if isinstance(self.status, SPFLookupStatus) else str(self.status),
+            "exceeds_limit": self.exceeds_limit,
+            "is_permerror": self.is_permerror,
+            "has_loop": self.has_loop,
+            "has_void_error": self.has_void_error,
+            "includes": list(self.includes),
+            "flattened_ips": list(self.flattened_ips),
+            "flattened_record": self.flattened_record,
+            "warnings": list(self.warnings),
+            "errors": list(self.errors),
+            "tree": self.tree,
+        }
+
+    def __getitem__(self, item: str) -> Any:
+        return self.to_dict()[item]
+
+    def get(self, item: str, default: Any = None) -> Any:
+        return self.to_dict().get(item, default)
+
+    def __contains__(self, item: str) -> bool:
+        return item in self.to_dict()
+
+
+class SPFTreeResolver:
+    """RFC 7208 recursive SPF lookup tree counter, loop detector, and CIDR flattening simulator."""
 
     DNS_LOOKUP_MECHANISMS = ("include:", "a", "mx", "ptr", "exists:", "redirect=")
     SPF_LOOKUP_PREFIXES = ("include:", "exists:", "redirect=", "a:", "a/", "mx:", "mx/", "ptr:")
     SPF_LOOKUP_BARE = ("a", "mx", "ptr")
+
+    def __init__(
+        self,
+        lookup_fn: Optional[Callable[[str], Optional[Union[str, List[str]]]]] = None,
+        max_lookups: int = 10,
+        warning_threshold: int = 8,
+        max_void_lookups: int = 2,
+        enable_live_dns: bool = False,
+    ):
+        self.lookup_fn = lookup_fn
+        self.max_lookups = max_lookups
+        self.warning_threshold = warning_threshold
+        self.max_void_lookups = max_void_lookups
+        self.enable_live_dns = enable_live_dns
+
+    @classmethod
+    def _live_dns_query(cls, target_domain: str) -> Optional[str]:
+        if not _HAS_DNS_CACHE:
+            return None
+        try:
+            resolver = get_orbit_sync_resolver(timeout=4.0)
+            answers = resolver.resolve(target_domain, "TXT")
+            for rdata in answers:
+                txt = b"".join(rdata.strings).decode("utf-8", errors="ignore")
+                if txt.lower().startswith("v=spf1"):
+                    return txt
+        except Exception:
+            return None
+        return None
+
+    @classmethod
+    def resolve_tree(
+        cls,
+        domain: str,
+        spf_record: Optional[str] = None,
+        lookup_fn: Optional[Callable[[str], Optional[Union[str, List[str]]]]] = None,
+        max_lookups: int = 10,
+        warning_threshold: int = 8,
+        max_void_lookups: int = 2,
+        enable_live_dns: bool = False,
+    ) -> SPFTreeResult:
+        resolver = cls(
+            lookup_fn=lookup_fn,
+            max_lookups=max_lookups,
+            warning_threshold=warning_threshold,
+            max_void_lookups=max_void_lookups,
+            enable_live_dns=enable_live_dns,
+        )
+        return resolver.expand_tree(domain=domain, spf_record=spf_record)
+
+    def expand_tree(
+        self_or_cls,
+        domain: str,
+        spf_record: Optional[str] = None,
+        lookup_fn: Optional[Callable[[str], Optional[Union[str, List[str]]]]] = None,
+        max_lookups: Optional[int] = None,
+        **kwargs: Any,
+    ) -> SPFTreeResult:
+        if isinstance(self_or_cls, SPFTreeResolver):
+            self = self_or_cls
+            effective_lookup_fn = lookup_fn if lookup_fn is not None else self.lookup_fn
+            effective_max_lookups = max_lookups if max_lookups is not None else self.max_lookups
+            effective_warning_threshold = kwargs.get("warning_threshold", self.warning_threshold)
+            effective_max_void_lookups = kwargs.get("max_void_lookups", self.max_void_lookups)
+            effective_enable_live_dns = kwargs.get("enable_live_dns", self.enable_live_dns)
+            cls_ref = self.__class__
+        else:
+            effective_lookup_fn = lookup_fn
+            effective_max_lookups = max_lookups if max_lookups is not None else 10
+            effective_warning_threshold = kwargs.get("warning_threshold", 8)
+            effective_max_void_lookups = kwargs.get("max_void_lookups", 2)
+            effective_enable_live_dns = kwargs.get("enable_live_dns", False)
+            cls_ref = self_or_cls
+
+        root_domain = str(domain or "").strip().lower().rstrip(".")
+        resolved_record = spf_record
+
+        if resolved_record is None:
+            if effective_lookup_fn is not None:
+                try:
+                    res = effective_lookup_fn(root_domain)
+                    if isinstance(res, (list, tuple)):
+                        resolved_record = " ".join(str(s) for s in res if s)
+                    elif res:
+                        resolved_record = str(res)
+                except Exception:
+                    resolved_record = None
+            elif effective_enable_live_dns:
+                resolved_record = SPFTreeResolver._live_dns_query(root_domain)
+
+        raw_root_record = str(resolved_record or "").strip()
+        global_seen: Set[str] = {root_domain} if root_domain else set()
+        initial_path: Set[str] = {root_domain} if root_domain else set()
+        total_lookups = 0
+        void_lookups = 0
+        has_loop = False
+        includes: List[str] = []
+        flattened_ips: List[str] = []
+        seen_ips: Set[str] = set()
+        warnings: List[str] = []
+        errors: List[str] = []
+
+        tree_root = SPFNode(domain=root_domain, record=raw_root_record)
+
+        def _collect_ips(node: SPFNode, record_str: str) -> None:
+            for raw_token in record_str.split():
+                token = raw_token.lstrip("+-~?").lower()
+                if not (token.startswith("ip4:") or token.startswith("ip6:")):
+                    continue
+                address = token.split(":", 1)[1].strip()
+                if address and address not in seen_ips:
+                    seen_ips.add(address)
+                    flattened_ips.append(address)
+                if address and address not in node.ips:
+                    node.ips.append(address)
+
+        def _walk(
+            node: SPFNode,
+            record_str: str,
+            depth: int = 0,
+            current_path: Optional[Set[str]] = None,
+        ) -> None:
+            nonlocal total_lookups, void_lookups, has_loop
+            if not record_str or depth > 20:
+                return
+
+            if current_path is None:
+                current_path = {root_domain} if root_domain else set()
+
+            _collect_ips(node, record_str)
+
+            for raw_token in record_str.split():
+                token = raw_token.lstrip("+-~?").lower()
+                if token.startswith("include:"):
+                    target = token.split(":", 1)[1].strip().rstrip(".")
+                    total_lookups += 1
+                    node.lookups_consumed += 1
+                    node.mechanisms.append(raw_token)
+                    if not target:
+                        void_lookups += 1
+                        node.void_lookups += 1
+                        node.children.append(SPFNode(domain="", record="", void_lookups=1, error="Empty include target"))
+                        continue
+                    includes.append(target)
+                    child = SPFNode(domain=target, record="")
+                    node.children.append(child)
+                    if target in current_path:
+                        has_loop = True
+                        child.has_loop = True
+                        errors.append(f"Circular SPF include detected for domain '{target}'")
+                        continue
+                    global_seen.add(target)
+
+                    nested_record = None
+                    if effective_lookup_fn is not None:
+                        try:
+                            nested_record = effective_lookup_fn(target)
+                        except Exception as exc:
+                            nested_record = None
+                            child.error = str(exc)
+                    elif effective_enable_live_dns:
+                        try:
+                            nested_record = SPFTreeResolver._live_dns_query(target)
+                        except Exception as exc:
+                            nested_record = None
+                            child.error = str(exc)
+
+                    if isinstance(nested_record, (list, tuple)):
+                        nested_record = " ".join(str(item) for item in nested_record if item)
+
+                    if nested_record:
+                        child.record = str(nested_record).strip()
+                        _walk(child, str(nested_record), depth + 1, current_path | {target})
+                    elif effective_lookup_fn is not None or effective_enable_live_dns:
+                        void_lookups += 1
+                        node.void_lookups += 1
+                        child.void_lookups += 1
+                        if not child.error:
+                            child.error = "NXDOMAIN or empty TXT answer"
+
+                elif token.startswith("redirect="):
+                    target = token.split("=", 1)[1].strip().rstrip(".")
+                    total_lookups += 1
+                    node.lookups_consumed += 1
+                    node.mechanisms.append(raw_token)
+                    if not target:
+                        void_lookups += 1
+                        node.void_lookups += 1
+                        node.children.append(SPFNode(domain="", record="", void_lookups=1, error="Empty redirect target"))
+                        continue
+                    includes.append(target)
+                    child = SPFNode(domain=target, record="")
+                    node.children.append(child)
+                    if target in current_path:
+                        has_loop = True
+                        child.has_loop = True
+                        errors.append(f"Circular SPF redirect detected for domain '{target}'")
+                        continue
+                    global_seen.add(target)
+
+                    nested_record = None
+                    if effective_lookup_fn is not None:
+                        try:
+                            nested_record = effective_lookup_fn(target)
+                        except Exception as exc:
+                            nested_record = None
+                            child.error = str(exc)
+                    elif effective_enable_live_dns:
+                        try:
+                            nested_record = SPFTreeResolver._live_dns_query(target)
+                        except Exception as exc:
+                            nested_record = None
+                            child.error = str(exc)
+
+                    if isinstance(nested_record, (list, tuple)):
+                        nested_record = " ".join(str(item) for item in nested_record if item)
+
+                    if nested_record:
+                        child.record = str(nested_record).strip()
+                        _walk(child, str(nested_record), depth + 1, current_path | {target})
+                    elif effective_lookup_fn is not None or effective_enable_live_dns:
+                        void_lookups += 1
+                        node.void_lookups += 1
+                        child.void_lookups += 1
+                        if not child.error:
+                            child.error = "NXDOMAIN or empty TXT answer"
+
+                elif (
+                    token in cls_ref.SPF_LOOKUP_BARE
+                    or token.startswith(cls_ref.SPF_LOOKUP_PREFIXES)
+                ):
+                    total_lookups += 1
+                    node.lookups_consumed += 1
+                    node.mechanisms.append(raw_token)
+                    continue
+                else:
+                    continue
+
+        _walk(tree_root, raw_root_record, 0, initial_path)
+
+        unique_ips = sorted(set(flattened_ips))
+        flattened_record = (
+            "v=spf1 "
+            + " ".join(
+                f"ip6:{ip}" if ":" in ip else f"ip4:{ip}" for ip in unique_ips
+            )
+            + " -all"
+        ) if unique_ips else raw_root_record
+
+        has_void_error = void_lookups > effective_max_void_lookups
+        if has_void_error:
+            errors.append(f"Void lookups ({void_lookups}) exceeded RFC 7208 limit of {effective_max_void_lookups}")
+
+        exceeds_limit = total_lookups > effective_max_lookups
+
+        if has_loop or has_void_error or total_lookups >= effective_max_lookups:
+            status = SPFLookupStatus.CRITICAL
+            if total_lookups >= effective_max_lookups:
+                errors.append(f"SPF DNS mechanism lookups ({total_lookups}) reached/exceeded RFC 7208 ceiling ({effective_max_lookups})")
+        elif total_lookups >= effective_warning_threshold:
+            status = SPFLookupStatus.WARNING
+            warnings.append(f"SPF DNS lookups ({total_lookups}) near RFC 7208 limit of {effective_max_lookups} (warning threshold {effective_warning_threshold})")
+        else:
+            status = SPFLookupStatus.SAFE
+
+        if len(flattened_record.encode("utf-8")) > 450:
+            warnings.append(
+                f"Flattened SPF record size ({len(flattened_record.encode('utf-8'))} bytes) "
+                f"exceeds recommended 450-byte UDP limit. Consider CIDR aggregation or subdomain delegation."
+            )
+
+        return SPFTreeResult(
+            domain=root_domain,
+            raw_record=raw_root_record,
+            total_lookups=total_lookups,
+            void_lookups=void_lookups,
+            max_lookups=effective_max_lookups,
+            status=status,
+            exceeds_limit=exceeds_limit,
+            has_loop=has_loop,
+            has_void_error=has_void_error,
+            includes=includes,
+            flattened_ips=unique_ips,
+            flattened_record=flattened_record,
+            warnings=warnings,
+            errors=errors,
+            tree_root=tree_root,
+        )
+
+    def flatten_record(
+        self,
+        domain: str,
+        spf_record: Optional[str] = None,
+        qualifier: str = "-all",
+    ) -> str:
+        """Returns a single consolidated SPF record preview with lookup overhead reduced to 1."""
+        res = self.expand_tree(domain=domain, spf_record=spf_record)
+        if res.flattened_ips:
+            qual = qualifier.strip()
+            if not qual.startswith(("-", "~", "+", "?")):
+                qual = f"-{qual}"
+            return "v=spf1 " + " ".join(f"ip6:{ip}" if ":" in ip else f"ip4:{ip}" for ip in res.flattened_ips) + f" {qual}"
+        return res.flattened_record
+
+
+class EmailAuthPolicyAnalyzer:
+    """Autonomous Email Security SPF / DKIM / DMARC / MTA-STS / BIMI Policy Analyzer (Project #22)."""
+
+    DNS_LOOKUP_MECHANISMS = SPFTreeResolver.DNS_LOOKUP_MECHANISMS
+    SPF_LOOKUP_PREFIXES = SPFTreeResolver.SPF_LOOKUP_PREFIXES
+    SPF_LOOKUP_BARE = SPFTreeResolver.SPF_LOOKUP_BARE
 
     @classmethod
     def _count_spf_lookups(cls, spf_record: str) -> int:
@@ -383,95 +799,14 @@ class EmailAuthPolicyAnalyzer:
         lookup_fn: Optional[Any] = None,
         max_lookups: int = 10,
     ) -> Dict[str, Any]:
-        """Recursively walks an RFC 7208 SPF lookup tree, counting lookups and collecting CIDRs.
-
-        ``lookup_fn`` receives a domain name and returns its SPF TXT record (str,
-        or a list of TXT strings). ``include:`` and ``redirect=`` targets are
-        expanded recursively; ``a``/``mx``/``ptr``/``exists:`` count as lookups
-        but trigger no SPF recursion. Cycles are flagged via ``has_loop``.
-        """
-        root_domain = str(domain or "").strip().lower().rstrip(".")
-        visited = {root_domain} if root_domain else set()
-        total_lookups = 0
-        void_lookups = 0
-        has_loop = False
-        includes: List[str] = []
-        flattened_ips: List[str] = []
-        seen_ips = set()
-
-        def collect_ips(record: str) -> None:
-            for raw_token in record.split():
-                token = raw_token.lstrip("+-~?").lower()
-                if not (token.startswith("ip4:") or token.startswith("ip6:")):
-                    continue
-                address = token.split(":", 1)[1].strip()
-                if address and address not in seen_ips:
-                    seen_ips.add(address)
-                    flattened_ips.append(address)
-
-        def walk(record: str, depth: int = 0) -> None:
-            nonlocal total_lookups, void_lookups, has_loop
-            if not record or depth > 20:
-                return
-            collect_ips(record)
-
-            for raw_token in record.split():
-                token = raw_token.lstrip("+-~?").lower()
-                if token.startswith("include:"):
-                    target = token.split(":", 1)[1].strip().rstrip(".")
-                elif token.startswith("redirect="):
-                    target = token.split("=", 1)[1].strip().rstrip(".")
-                elif token in cls.SPF_LOOKUP_BARE or token.startswith(cls.SPF_LOOKUP_PREFIXES):
-                    total_lookups += 1
-                    continue
-                else:
-                    continue
-
-                total_lookups += 1
-                if not target:
-                    void_lookups += 1
-                    continue
-                includes.append(target)
-                if target in visited:
-                    has_loop = True
-                    continue
-                visited.add(target)
-
-                nested_record = None
-                if lookup_fn is not None:
-                    try:
-                        nested_record = lookup_fn(target)
-                    except Exception:
-                        nested_record = None
-                if isinstance(nested_record, (list, tuple)):
-                    nested_record = " ".join(str(item) for item in nested_record if item)
-                if nested_record:
-                    walk(str(nested_record), depth + 1)
-                elif lookup_fn is not None:
-                    void_lookups += 1
-
-        walk(str(spf_record or ""))
-
-        unique_ips = sorted(set(flattened_ips))
-        flattened_record = (
-            "v=spf1 "
-            + " ".join(
-                f"ip6:{ip}" if ":" in ip else f"ip4:{ip}" for ip in unique_ips
-            )
-            + " -all"
-        ) if unique_ips else str(spf_record or "").strip()
-
-        return {
-            "domain": root_domain,
-            "total_lookups": total_lookups,
-            "void_lookups": void_lookups,
-            "max_lookups": max_lookups,
-            "exceeds_limit": total_lookups > max_lookups,
-            "has_loop": has_loop,
-            "includes": includes,
-            "flattened_ips": unique_ips,
-            "flattened_record": flattened_record,
-        }
+        """Recursively walks an RFC 7208 SPF lookup tree, counting lookups and collecting CIDRs."""
+        res = SPFTreeResolver.resolve_tree(
+            domain=domain,
+            spf_record=spf_record,
+            lookup_fn=lookup_fn,
+            max_lookups=max_lookups,
+        )
+        return res.to_dict()
 
     @classmethod
     def analyze_email_security_posture(
@@ -483,6 +818,7 @@ class EmailAuthPolicyAnalyzer:
         mta_sts_record: Optional[str] = None,
         bimi_record: Optional[str] = None,
         blackboard: Any = None,
+        lookup_fn: Optional[Any] = None,
     ) -> Dict[str, Any]:
         """Evaluates SPF, DMARC, DKIM, MTA-STS, and BIMI records for spoofing and RFC 7208/7489 flaws."""
         clean_domain = str(domain or "").strip().lower()[:253]
@@ -492,7 +828,17 @@ class EmailAuthPolicyAnalyzer:
         dkim_map = dkim_selectors if isinstance(dkim_selectors, dict) else {}
 
         # 1. SPF Analysis (RFC 7208)
-        spf_lookups = cls._count_spf_lookups(spf) if spf else 0
+        tree_res: Optional[SPFTreeResult] = None
+        if spf:
+            tree_res = SPFTreeResolver.resolve_tree(
+                domain=clean_domain,
+                spf_record=spf,
+                lookup_fn=lookup_fn,
+            )
+            spf_lookups = tree_res.total_lookups
+        else:
+            spf_lookups = 0
+
         if not spf or not spf.lower().startswith("v=spf1"):
             findings.append({
                 "code": "SPF_MISSING",
@@ -513,11 +859,30 @@ class EmailAuthPolicyAnalyzer:
                     "severity": "HIGH",
                     "detail": "SPF record ends with neutral '?all', providing zero spoofing enforcement.",
                 })
-            if spf_lookups > 10:
+
+            if tree_res and tree_res.has_loop:
+                findings.append({
+                    "code": "SPF_CIRCULAR_REFERENCE",
+                    "severity": "CRITICAL",
+                    "detail": f"Circular SPF include/redirect detected in {clean_domain}, causing PermError.",
+                })
+            if tree_res and tree_res.has_void_error:
+                findings.append({
+                    "code": "SPF_VOID_LIMIT_EXCEEDED",
+                    "severity": "CRITICAL",
+                    "detail": f"SPF record encountered {tree_res.void_lookups} void DNS lookups (exceeding RFC 7208 limit of 2).",
+                })
+            if spf_lookups >= 10:
                 findings.append({
                     "code": "SPF_LOOKUP_LIMIT_EXCEEDED",
+                    "severity": "CRITICAL",
+                    "detail": f"SPF record requires {spf_lookups} DNS mechanisms (>=10 RFC 7208 ceiling), causing PermError at receivers.",
+                })
+            elif spf_lookups >= 8:
+                findings.append({
+                    "code": "SPF_LOOKUP_LIMIT_WARNING",
                     "severity": "MEDIUM",
-                    "detail": f"SPF record requires {spf_lookups} DNS mechanisms (>10 RFC 7208 limit), causing PermError at receivers.",
+                    "detail": f"SPF record requires {spf_lookups} DNS mechanisms (>=8 warning threshold), near 10 lookup limit.",
                 })
 
         # 2. DMARC Analysis (RFC 7489)
@@ -572,6 +937,7 @@ class EmailAuthPolicyAnalyzer:
             "severity": overall_sev,
             "spf_dns_lookups": spf_lookups,
             "spf_lookup_count": spf_lookups,
+            "spf_tree": tree_res.to_dict() if tree_res else None,
             "valid_dkim_selectors": valid_dkim,
             "has_mta_sts": bool(isinstance(mta_sts_record, str) and "v=stsv1" in mta_sts_record.lower()),
             "has_bimi": bool(isinstance(bimi_record, str) and "v=bimi1" in bimi_record.lower()),
@@ -590,6 +956,7 @@ class EmailAuthPolicyAnalyzer:
                 logger.debug(f"Blackboard publish error in analyze_email_security_posture: {exc}")
 
         return result
+
 
 
 class GraphQLIntrospectionSentinel:

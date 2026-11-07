@@ -311,7 +311,7 @@
 
     async function walkSpfLookupTree(domain, spfRecord, maxLookups = SPF_LOOKUP_LIMIT) {
         const root = String(domain || '').trim().toLowerCase().replace(/\.+$/, '');
-        const visited = new Set(root ? [root] : []);
+        const initialPath = new Set(root ? [root] : []);
         const includes = [];
         const flattenedIps = [];
         const seenIps = new Set();
@@ -333,7 +333,7 @@
             }
         };
 
-        const walk = async (record, depth = 0) => {
+        const walk = async (record, depth = 0, currentPath = initialPath) => {
             if (!record || depth > 20) return;
             collectIps(record);
 
@@ -367,11 +367,10 @@
                     continue;
                 }
                 includes.push(target);
-                if (visited.has(target)) {
+                if (currentPath.has(target)) {
                     hasLoop = true;
                     continue;
                 }
-                visited.add(target);
                 pending.push(target);
             }
 
@@ -380,39 +379,49 @@
             // Resolve one tree level concurrently so a hostile 15-include record
             // cannot serialize into minutes of browser-blocking DoH latency.
             const resolved = await Promise.all(pending.map(async (target) => {
-                if (Date.now() > deadline) return null;
+                if (Date.now() > deadline) return { target, nested: null };
                 try {
                     const res = await DoHService.query(target, 16, 2500);
                     const txts = (res && res.success) ? DnsParser.extractTxt(res.answer) : [];
-                    return txts.find(t => /^v\s*=\s*spf1(?:\s|$)/i.test(t)) || null;
+                    const nested = txts.find(t => /^v\s*=\s*spf1(?:\s|$)/i.test(t)) || null;
+                    return { target, nested };
                 } catch (err) {
-                    return null;
+                    return { target, nested: null };
                 }
             }));
 
-            for (const nested of resolved) {
+            for (const { target, nested } of resolved) {
                 if (nested) {
-                    await walk(nested, depth + 1);
+                    const nextPath = new Set(currentPath);
+                    nextPath.add(target);
+                    await walk(nested, depth + 1, nextPath);
                 } else {
                     voidLookups += 1;
                 }
             }
         };
 
-        await walk(spfRecord);
+        await walk(spfRecord, 0, initialPath);
 
         const uniqueIps = Array.from(new Set(flattenedIps)).sort();
         const flattenedRecord = uniqueIps.length
             ? `v=spf1 ${uniqueIps.map(ip => (ip.includes(':') ? `ip6:${ip}` : `ip4:${ip}`)).join(' ')} -all`
             : String(spfRecord || '').trim();
+        const hasVoidError = voidLookups > 2;
+        const status = (hasLoop || hasVoidError || totalLookups >= maxLookups)
+            ? 'CRITICAL'
+            : (totalLookups >= 8 ? 'WARNING' : 'SAFE');
 
         return {
             domain: root,
             totalLookups,
+            lookupCount: totalLookups,
             voidLookups,
             maxLookups,
+            status,
             exceedsLimit: totalLookups > maxLookups,
             hasLoop,
+            hasVoidError,
             includes,
             flattenedIps: uniqueIps,
             flattenedRecord
@@ -1984,7 +1993,7 @@
         const total = Number(tree.totalLookups) || 0;
         const max = Number(tree.maxLookups) || SPF_LOOKUP_LIMIT;
         const pct = Math.min(100, Math.round((total / max) * 100));
-        const danger = Boolean(tree.exceedsLimit || tree.hasLoop);
+        const danger = Boolean(tree.exceedsLimit || tree.hasLoop || tree.voidLookups > 2 || total >= max);
 
         label.textContent = `${total}/${max} lookups`;
         label.className = `font-bold ${danger ? 'text-red-400' : (total >= 8 ? 'text-amber-400' : 'text-emerald-400')}`;
@@ -1994,7 +2003,7 @@
         if (notice) {
             const notes = [];
             if (tree.hasLoop) notes.push('PermError: circular include/redirect chain detected.');
-            if (tree.exceedsLimit) notes.push(`PermError: ${total} lookups exceed the RFC 7208 limit of ${max}.`);
+            if (tree.exceedsLimit || total >= max) notes.push(`PermError: ${total} lookups reach/exceed the RFC 7208 limit of ${max}.`);
             if (tree.voidLookups > 0) notes.push(`${tree.voidLookups} void lookup(s) — RFC 7208 allows 2.`);
             if (notes.length) {
                 notice.textContent = `⚠ ${notes.join(' ')}`;
@@ -3367,11 +3376,16 @@ ${payload.url}`;
 
         if (spfStatus !== 'missing' || !isStaticHost) {
             const rawSpf = (spfResult.raw || spfPolicy || '').toLowerCase();
-            const hasOverLimitLookups = spfTree && spfTree.lookupCount > 10;
+            const hasOverLimitLookups = spfTree && (spfTree.lookupCount >= 10 || spfTree.hasLoop || spfTree.voidLookups > 2);
             if (hasOverLimitLookups || spfResult.status === 'permerror') {
                 spfStatus = 'warn';
                 spfScore = 0;
-                spfPolicy = (spfPolicy || '') + ` (PermError: ${spfTree?.lookupCount || '>10'} lookups exceeds RFC 7208 limit of 10)`;
+                const reason = spfTree?.hasLoop
+                    ? 'circular include/redirect loop'
+                    : (spfTree?.voidLookups > 2
+                        ? `${spfTree.voidLookups} void lookups exceeds RFC 7208 limit of 2`
+                        : `${spfTree?.lookupCount || '>=10'} lookups reaches/exceeds RFC 7208 limit of 10`);
+                spfPolicy = (spfPolicy || '') + ` (PermError: ${reason})`;
             } else if (rawSpf.includes('-all')) {
                 spfStatus = 'pass';
                 spfScore = 30;
