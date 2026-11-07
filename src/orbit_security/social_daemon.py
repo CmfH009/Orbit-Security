@@ -175,13 +175,14 @@ class SocialDaemon:
             except Exception as e:
                 logger.warning(f"Could not initialize headless OrbitXDriver: {e}")
 
-        # 2. Desktop driver only if explicitly requested via driver_mode='desktop'
-        if self.driver_mode in ("desktop", "auto"):
+        # 2. Desktop driver if explicitly requested or as fallback when headless session is logged out
+        if self.driver_mode in ("desktop", "auto") or (self.driver_mode == "headless" and self._auth_failed):
             try:
                 from orbit_security.desktop_x_bridge import DesktopAutomationDriver
                 desktop_drv = DesktopAutomationDriver()
                 if desktop_drv.is_available():
                     self.driver = desktop_drv
+                    self._auth_failed = False
                     logger.info("Initialized DesktopAutomationDriver hooked to active Chrome window.")
                     if hasattr(self, "harvester") and self.harvester:
                         self.harvester.driver = self.driver
@@ -238,6 +239,7 @@ class SocialDaemon:
         st = {
             "pid": os.getpid(),
             "status": status,
+            "auth_failed": bool(self._auth_failed),
             "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "circuit_state": self.circuit_breaker.state.value,
             "quotas": self.quota_manager.get_status_summary(),

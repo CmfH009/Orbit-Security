@@ -2,12 +2,12 @@
 
 ## Supported Versions
 
-Orbit Security actively maintains and publishes security updates for the latest `main` branch and `0.1.x` release line:
+Orbit Security actively maintains and publishes security updates for the latest `main` branch and `1.1.x` release line:
 
 | Version | Supported |
 |---|---|
-| `0.1.x` (`main`) | :white_check_mark: Yes |
-| `< 0.1.0` | :x: No |
+| `1.1.x` (`main`) | :white_check_mark: Yes |
+| `< 1.1.0` | :x: No |
 
 ---
 

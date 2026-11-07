@@ -1,6 +1,6 @@
 [project]
 name = "orbit-security"
-version = "0.1.0"
+version = "1.1.0"
 description = "Autonomous external perimeter hygiene, subdomain takeover sentinel, and white-label client security auditing for web & Shopify agencies."
 readme = "README.md"
 license = { file = "LICENSE" }

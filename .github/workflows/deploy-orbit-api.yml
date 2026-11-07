@@ -108,7 +108,7 @@ jobs:
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
             ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/orbit-api:${{ github.sha }}
 
-      - name: Deploy to Cloud Run (Gen2 + gVisor + Private Networking)
+      - name: Deploy to Cloud Run (Gen2 + gVisor + Public Telemetry Ingress)
         if: steps.creds.outputs.gcp_configured == 'true'
         run: |
           gcloud run deploy ${{ env.SERVICE }} \
@@ -119,15 +119,15 @@ jobs:
             --sandbox=gvisor \
             --service-account=orbit-api-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
             --vpc-connector=orbit-vpc-connector \
-            --vpc-egress=private-ranges-only \
+            --vpc-egress=all-traffic \
             --port=8080 \
             --cpu=1 --memory=512Mi \
             --min-instances=0 --max-instances=3 \
             --concurrency=10 \
             --timeout=300 \
-            --no-allow-unauthenticated \
+            --allow-unauthenticated \
             --labels=security-level=hardened,app=orbit-security \
-            --set-env-vars="PYTHONUNBUFFERED=1,PYTHONDONTWRITEBYTECODE=1"
+            --set-env-vars="PYTHONUNBUFFERED=1,PYTHONDONTWRITEBYTECODE=1,ORBIT_DATA_DIR=/tmp/orbit-data"
 
       - name: Configure Cloud Armor WAF
         if: steps.creds.outputs.gcp_configured == 'true'

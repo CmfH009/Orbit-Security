@@ -1,0 +1,19 @@
+name: False-Positive Takeover Signature Report
+description: Report a false-positive CNAME takeover fingerprint or DMARC/SPF scoring heuristic.
+title: "[False Positive]: "
+labels: ["false-positive", "signatures"]
+body:
+  - type: input
+    id: provider
+    attributes:
+      label: Cloud / SaaS Provider Name
+      placeholder: "e.g., AWS S3, GitHub Pages, Shopify, Vercel"
+    validations:
+      required: true
+  - type: textarea
+    id: response
+    attributes:
+      label: Observed CNAME Pattern & HTTP Response Snippet
+      description: Redact any third-party customer domains before submitting.
+    validations:
+      required: true

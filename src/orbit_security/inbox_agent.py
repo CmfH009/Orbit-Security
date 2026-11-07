@@ -768,7 +768,7 @@ class InboxAgent:
 
     def check_stripe_payments(self) -> List[Dict]:
         """Checks Stripe API for completed checkout sessions and notifies Carson immediately."""
-        stripe_key = os.getenv("STRIPE_API_KEY")
+        stripe_key = os.getenv("STRIPE_SECRET_KEY") or os.getenv("STRIPE_API_KEY")
         if not stripe_key:
             return []
 

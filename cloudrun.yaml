@@ -8,8 +8,8 @@ metadata:
     run.googleapis.com/sandbox: "gvisor"
     # Security: Gen2 execution environment
     run.googleapis.com/execution-environment: "gen2"
-    # Security: Private networking only (no public internet egress)
-    run.googleapis.com/vpc-access-egress: "private-ranges-only"
+    # Networking: Allow outbound OSINT (DNS/HTTPS/crt.sh) and Discord/Slack webhook egress
+    run.googleapis.com/vpc-access-egress: "all-traffic"
   labels:
     app: orbit-security
     environment: production
@@ -40,6 +40,11 @@ spec:
               value: "1"
             - name: PYTHONDONTWRITEBYTECODE
               value: "1"
+            - name: ORBIT_DATA_DIR
+              value: "/tmp/orbit-data"
+          volumeMounts:
+            - name: tmp-storage
+              mountPath: /tmp
           resources:
             limits:
               cpu: "1000m"
@@ -72,6 +77,11 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
-      # Security: Private networking only
+      volumes:
+        - name: tmp-storage
+          emptyDir:
+            medium: Memory
+            sizeLimit: 128Mi
+      # Networking: Allow outbound OSINT and webhook egress
       vpcAccess:
-        egress: PRIVATE_RANGES_ONLY
+        egress: ALL_TRAFFIC

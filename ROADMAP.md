@@ -1,22 +1,22 @@
 # 🗺️ Orbit Security — Delivery Roadmap
 
-**Version:** 1.1 · **Date:** 2026-11-01 · **Owner:** Carson Haynes (Founder) · **Co-pilot:** Nova
+**Version:** 1.1.0 · **Date:** 2026-11-06 · **Owner:** Carson Haynes (Founder) · **Co-pilot:** Nova
 **Scope:** Product integrity → Revenue loop → AI-search authority → Scale
-**Companion:** [`detailed_handoff_orbit_security.md`](file:///A:/projects/orbit-security/detailed_handoff_orbit_security.md) (current-state audit + task register T1–T43)
+**Companion:** [`SECURITY.md`](SECURITY.md) (Coordinated Vulnerability Disclosure & Safe Harbor policy)
 
 ---
 
 ## 0. Where we actually are
 
-### 0.1 Phase status as of 2026-11-01 (Cycle 2 — CI, Portal & Outreach Hygiene)
+### 0.1 Phase status as of 2026-11-06 (`v1.1.0` Release — CI/CD Gate, SARIF 2.1.0, Vault & Deliverability)
 
 | Phase | State | Evidence |
 |---|---|---|
-| **Phase 0 — Trust Surface** | ✅ **complete** | 7 declared 404s → 0; structured data on 8/8 public pages sharing one `Organization @id`; robots/sitemap/security.txt/llms.txt live; release gate PASS with 14/14 live URLs 200 |
-| **Phase 1 — Product Integrity** | ✅ **complete** | Scoring model rewritten (F now = exploit risk); 52 audits re-scored (18 failing → 5, 13 rescued, 0 newly failing, +28.1 avg); 970+ tests green; CI green (tests + parity + live assets); dead `gemini-api-cli` CI install step removed and guarded; live Shopify sweep isolated in test suite |
-| **Phase 2 — Revenue Loop** | 🟡 **in progress** | Bounce root cause **diagnosed** and false-positive MX check fixed (`verify_domain_mx` no longer falls back to TCP port 80 when `mx_records` is empty); `KNOWN_LEADERSHIP_OSINT` reconciled with all 12 verified addresses in `recovery_plan.md`; `stage_fleet_pilot.py --followup` hardened to filter strictly by `dispatch_status == "SENT"` and attach RFC 5322 `In-Reply-To`/`References` headers; 4 missing `SENT` Fleet Pilot portals (`absolute_web`, `akqa`, `august_ash`, `astound_commerce`) generated and 15 fuzzing test portals purged |
-| **Phase 3 — AI-Search Authority** | 🟡 **in progress** | Benchmark published and **cited from the About page**; `Dataset` + `FAQPage` schema; prompt panel not yet running |
-| **Phase 4 — Scale & Harden** | 🟡 **in progress** | Subst-drive (`A:\` vs `C:\AgyHut`) portal sync bug fixed in `RetainerDealDeskConcierge`; `social_daemon.py` import-time log pollution eliminated; UTF-8 console stream guards added to `ast_sentinel.py`, `run_bounty_radar.py`, and `stage_fleet_pilot.py`; `orbit_daemon.py status` reconciled against live TCP ports and `hut-daemon` ecosystem processes |
+| **Phase 0 — Trust Surface** | ✅ **complete** | 7 declared 404s → 0; structured data on 20/20 public pages sharing one `Organization @id`; robots/sitemap (15 URLs)/security.txt/llms.txt/SECURITY.md live; release gate PASS with 14/14 live URLs 200; internal handoff docs purged from public `docs/` |
+| **Phase 1 — Product Integrity** | ✅ **complete** | Scoring model rewritten (F now = exploit risk); 52 audits re-scored (18 failing → 5, 13 rescued, 0 newly failing, +28.1 avg); 1,250 tests green; composite GitHub Action (`CmfH009/Orbit-Security@v1`) with SARIF 2.1.0 exporter (`--sarif-output`) + Dependabot weekly supply-chain updates live |
+| **Phase 2 — Revenue Loop** | 🟡 **in progress** | Anti-bounce contact deliverability gate (`scripts/verify_contacts.py --preflight`) with HTML entity/`[at]` de-obfuscation & retina image filtering shipped; Pre-KYC Bounty Remediation Vault compiler (`scripts/bounty_vault_generator.py`) consolidating 21 candidates into 5 program dossiers; Cloud Run telemetry ingress (`--allow-unauthenticated`) and `STRIPE_SECRET_KEY` revenue polling unified |
+| **Phase 3 — AI-Search Authority** | 🟡 **in progress** | Benchmark published and **cited from the About page** (`52 provider signatures across 76 CNAME fingerprints`); `Dataset` + `FAQPage` schema aligned across `landing/index.html`, `landing/about.html`, and `landing/portals/index.html` |
+| **Phase 4 — Scale & Harden** | 🟡 **in progress** | `daily_briefing.py` live-queries GitHub Actions `HEAD` workflow runs to auto-reconcile stale historical CI failure emails; `DesktopAutomationDriver` hardened with `8.0s` React compose modal hydration wait and hardware scan code `0x1C` Enter |
 
 **Operator actions this cycle produced, none of which can be done by an agent:** send the 13 correction emails, publish the roast thread, apply the suppression list and launch the 12 re-target cohort, register the Search Console property, publish to PyPI, and decide the public-repo lead-data question (T38).
 
@@ -27,13 +27,13 @@
 | Dimension | Reality on 2026-11-01 | Where it needs to be |
 |---|---|---|
 | Live surface | **0** declared 404s; 14/14 live URLs 200 on the release gate; all 6 `SENT` Fleet Pilot agency portals (`10up`, `alley_interactive`, `absolute_web`, `akqa`, `august_ash`, `astound_commerce`) provisioned in both `landing/portals/` and `docs/portals/` (95/95 shared files byte-identical); 15 adversarial fuzzing test files purged | 0 broken references ✅ |
-| Structured data | **7 of 7** core product pages carry JSON-LD on one shared `Organization @id`; 4 legal + agency portals + 1 stealthbridge page still bare | every indexable page (T39) |
-| AI-search readiness | robots.txt (AI-crawler allowlist), sitemap.xml (8 URLs), security.txt, llms.txt live; **Search Console property still unregistered** | indexed + AI-feature eligible |
+| Structured data | **20 of 20** public pages (core product, legal, agency portals, and StealthBridge) carry JSON-LD on one shared `Organization @id` | every indexable page ✅ |
+| AI-search readiness | robots.txt (AI-crawler allowlist), sitemap.xml (15 URLs), security.txt, llms.txt, SECURITY.md live; **Search Console property still unregistered** | indexed + AI-feature eligible |
 | Audit credibility | F now means exploitable risk; 52 audits re-scored, 18 failing → 5; 13 correction notes staged | Cohort 11 at the new floor (mean ≥ 60) |
-| Revenue | $0 balance, 0 retainers, 178 campaigns dispatched, 43 hard bounces (24.2 %); Stripe live tier links ($59, $250, $1,500) wired in `deal_desk.py` | ≥ 3 active retainers |
-| Delivery | 135 delivered, 43 hard-bounced, 12 verified recovery contacts wired into `KNOWN_LEADERSHIP_OSINT`; `--followup` strictly filters `SENT` leads with RFC 5322 `In-Reply-To`/`References` threading | ≥ 8 % reply rate, ≤ 3 % bounce |
-| Automation | `orbit_daemon.py status` (`cmd_status`) live-probes TCP ports, process command lines, and `hut-daemon` services instead of reporting stale PIDs as `STOPPED` | 16 of 16, no stale states |
-| Engineering | **970+ tests green**, hermetic test suite (no live bounty sweeps or `social_daemon.log` pollution during `pytest`), CI enforcing tests + `landing`/`docs` parity + live-asset health | green at any hour, CI-enforced ✅ |
+| Revenue | $0 balance, 0 retainers, 178 campaigns dispatched, 43 hard bounces (24.2 %); Stripe live tier links ($29, $59, $99) wired across all pages and `STRIPE_SECRET_KEY` unified | ≥ 3 active retainers |
+| Delivery | 135 delivered, 43 hard-bounced, 12 verified recovery contacts wired into `KNOWN_LEADERSHIP_OSINT`; `verify_contacts.py --preflight` blocks unverified outreach; `--followup` strictly filters `SENT` leads with RFC 5322 `In-Reply-To`/`References` threading | ≥ 8 % reply rate, ≤ 3 % bounce |
+| Automation | `orbit_daemon.py status` (`cmd_status`) live-probes TCP ports, process command lines, and `hut-daemon` services; `daily_briefing.py` reconciles CI failures against live GitHub `HEAD` | 16 of 16, no stale states |
+| Engineering | **1,250 tests green**, hermetic test suite, composite GitHub Action (`v1.1.0`) with SARIF 2.1.0 export, CI enforcing tests + `landing`/`docs` parity + live-asset health | green at any hour, CI-enforced ✅ |
 | Install path | `pip install orbit-security` does not resolve on PyPI yet; `[project.optional-dependencies].dev` includes `pytest-asyncio>=0.23.0` so `pip install -e ".[dev]"` works cleanly | published on PyPI (T37) |
 
 **The one-line diagnosis:** the machine is in good shape; the *claims* the machine makes about itself — to prospects, to search engines, and in its own audit output — are not yet true. This roadmap is mostly about making them true.

@@ -5,6 +5,9 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -70,6 +73,7 @@ jobs:
           export-markdown: 'orbit-perimeter-audit.md'
 
       - name: Upload audit report artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: orbit-perimeter-audit

@@ -1,5 +1,7 @@
 {
-  "telemetry_endpoint": "https://4d545638bced13.lhr.life/api/orbit/radar/telemetry",
-  "updated_at": "2026-11-03T11:43:48.782731+00:00",
+  "tunnel_base_url": "https://orbit-security-api-911438991206.us-central1.run.app",
+  "telemetry_endpoint": "https://orbit-security-api-911438991206.us-central1.run.app/api/orbit/radar/telemetry",
+  "rotation_count": 5,
+  "updated_at": "2026-11-07T00:48:00Z",
   "status": "active"
 }

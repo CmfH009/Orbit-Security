@@ -72,7 +72,7 @@ def dispatch_email_briefing(report_markdown: str, recipient: Optional[str] = Non
 
 def query_stripe_telemetry() -> Dict[str, Any]:
     """Queries live Stripe API for balance, 24h charges, and subscriptions."""
-    api_key = os.getenv("STRIPE_API_KEY")
+    api_key = os.getenv("STRIPE_SECRET_KEY") or os.getenv("STRIPE_API_KEY")
     if not api_key:
         return {"status": "unconfigured", "available_usd": 0.0, "pending_usd": 0.0, "recent_charges": 0, "active_subscriptions": 0}
 

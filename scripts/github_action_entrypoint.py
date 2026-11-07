@@ -256,7 +256,7 @@ def build_sarif_report(
                 "tool": {
                     "driver": {
                         "name": "Orbit Security CI/CD Gate",
-                        "version": "0.1.0",
+                        "version": "1.1.0",
                         "informationUri": "https://cmfh009.github.io/Orbit-Security/",
                         "rules": SARIF_RULES,
                     }

@@ -84,10 +84,11 @@ runs:
         TEMP_MD="${RUNNER_TEMP:-/tmp}/orbit_audit_summary.md"
         FLAGS="$FLAGS --markdown $TEMP_MD"
 
+        EXIT_CODE=0
         if [ -n "${{ inputs.targets-file }}" ]; then
-          python "${{ github.action_path }}/tools/orbit-recon.py" --targets-file "${{ inputs.targets-file }}" $FLAGS
+          python "${{ github.action_path }}/tools/orbit-recon.py" --targets-file "${{ inputs.targets-file }}" $FLAGS || EXIT_CODE=$?
         elif [ -n "${{ inputs.target }}" ]; then
-          python "${{ github.action_path }}/tools/orbit-recon.py" "${{ inputs.target }}" $FLAGS
+          python "${{ github.action_path }}/tools/orbit-recon.py" "${{ inputs.target }}" $FLAGS || EXIT_CODE=$?
         fi
 
         if [ "${{ inputs.markdown-summary }}" = "true" ] && [ -f "$TEMP_MD" ] && [ -n "$GITHUB_STEP_SUMMARY" ]; then
@@ -98,6 +99,8 @@ runs:
           mkdir -p "$(dirname "${{ inputs.export-markdown }}")"
           cp "$TEMP_MD" "${{ inputs.export-markdown }}"
         fi
+
+        exit $EXIT_CODE
 
     - name: Run Orbit Security CI/CD Gate
       id: orbit-gate

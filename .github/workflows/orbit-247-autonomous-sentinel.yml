@@ -190,11 +190,14 @@ jobs:
           PY
 
       - name: "Upload Autonomous Audit & Staged Proposals"
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: orbit-247-audit-report-${{ github.run_id }}
           path: |
             orbit-recon-report.md
+            outbound_campaigns/**/*.pdf
+            outbound_campaigns/**/*.md
             data/outbound_campaigns/*.pdf
             data/outbound_campaigns/*.md
             data/radar_queries.jsonl

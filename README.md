@@ -3,7 +3,7 @@
 [![Orbit Security Perimeter Sentinel](https://github.com/CmfH009/Orbit-Security/actions/workflows/orbit-perimeter-sentinel.yml/badge.svg)](https://github.com/CmfH009/Orbit-Security/actions/workflows/orbit-perimeter-sentinel.yml)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/CmfH009/Orbit-Security?color=cyan&label=release)](https://github.com/CmfH009/Orbit-Security/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![Live Demo & Fleet Center](https://img.shields.io/badge/Fleet%20Center-Live%20Demo-10B981)](https://cmfh009.github.io/Orbit-Security/)
 
 **Orbit Security** is an autonomous external perimeter auditor and attack surface sentinel built for web design, development, and digital marketing agencies. It monitors client domains for dangling CNAME takeovers, email spoofing risks (DMARC/SPF), exposed environment secrets (`.env`, `.git`), and expiring SSL certificates—automatically compiling co-branded, white-label monthly audit PDFs that agencies send to their clients to justify and elevate their recurring monthly maintenance retainers.
@@ -15,10 +15,10 @@
 | Artifact | What it is |
 |---|---|
 | [`ROADMAP.md`](ROADMAP.md) | Phase plan (Trust Surface → Product Integrity → Revenue Loop → AI-Search Authority → Scale & Harden) with owners, exit gates, risk register and a 14-day view |
-| [`detailed_handoff_orbit_security.md`](detailed_handoff_orbit_security.md) | Current-state audit: live-surface status, artifact index, GEO research on the About page, quota remediation, task register T1–T31, 90-day scorecard |
+| [`SECURITY.md`](SECURITY.md) | Coordinated Vulnerability Disclosure policy, RFC 9116 `security.txt`, and CFAA Safe Harbor rules of engagement |
 | Live showcase | <https://cmfh009.github.io/Orbit-Security/> · About: <https://cmfh009.github.io/Orbit-Security/about.html> |
 
-**In flight:** trust assets + sitemap/robots/security.txt · structured data on every public page · **scoring model rewrite** (an "F" grade now means *actively exploitable*, not *missing a nice-to-have header*) · CI gates for tests, `landing/`↔`docs/` parity and live-asset health.
+**Shipped in `v1.1.0`:** Turn-key composite GitHub Action (`CmfH009/Orbit-Security@v1`) with SARIF 2.1.0 Code Scanning export (`--sarif-output`), AST Code Sentinel, CISA KEV PR Auditor, Pre-KYC Bounty Remediation Vault Compiler (`scripts/bounty_vault_generator.py`), Anti-Bounce Contact Deliverability Gate (`scripts/verify_contacts.py --preflight`), 20/20 JSON-LD structured-data pages, and 1,250+ deterministic unit tests.
 
 ---
 
@@ -98,7 +98,43 @@ python tools/orbit-recon.py --targets-file domains.txt --markdown fleet_matrix.m
 
 ## 🤖 CI/CD GitHub Action (`action.yml`)
 
-Gate pull requests and deployments by verifying that no staging subdomains, broken CNAMEs, or exposed secrets slip into production:
+Orbit Security `v1.1.0` ships a dual-mode composite GitHub Action (`CmfH009/Orbit-Security@v1`) that supports both **Static PR Code & CISA KEV Gating with SARIF 2.1.0 export** and **External Domain Perimeter Auditing**:
+
+### 1. PR Static AST, Secret & CISA KEV Gate + SARIF 2.1.0 Code Scanning
+```yaml
+name: Orbit Security PR Gate
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  security-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Run Orbit Security CI/CD Gate
+        uses: CmfH009/Orbit-Security@v1
+        with:
+          target-path: 'src'
+          scan-types: 'ast,secrets,cisa-kev'
+          fail-on-findings: 'true'
+          sarif-output: 'orbit-security.sarif'
+
+      - name: Upload SARIF 2.1.0 to GitHub Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: orbit-security.sarif
+```
+
+### 2. External Domain Perimeter Sentinel
+Gate deployments by verifying that no staging subdomains, broken CNAMEs, or exposed secrets slip into production:
 
 ```yaml
 name: Orbit Security Perimeter Sentinel
@@ -111,7 +147,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Audit External Perimeter
-        uses: CmfH009/Orbit-Security@main
+        uses: CmfH009/Orbit-Security@v1
         with:
           target: 'myagency.com'
           # Or specify a list of client domains:
@@ -239,9 +275,25 @@ This is purely passive (local file lookup, no network to the target) and gives a
 
 ---
 
+## 🗃️ Remediation Vault Compiler & Deliverability Preflight Gate
+
+### 1. Pre-KYC Remediation Vault Compiler (`scripts/bounty_vault_generator.py`)
+Consolidates raw passive reconnaissance findings into deduplicated, program-grouped CWE/CVSS v3.1 disclosure dossiers with strict false-positive suppression:
+```powershell
+python scripts/bounty_vault_generator.py
+```
+
+### 2. Anti-Bounce Contact Deliverability Gate (`scripts/verify_contacts.py`)
+Verifies agency contact emails against live MX records and published contact pages, de-obfuscates HTML entities / `[at]` patterns, filters retina image filenames (`logo@2x.png`), and enforces a CI/CD preflight gate before outreach dispatch:
+```powershell
+python scripts/verify_contacts.py --preflight --max-unresolved 0 --min-deliverable-rate 0.80
+```
+
+---
+
 ## 🧪 Testing
 
-Run the automated test suite (444 tests, 100% green):
+Run the automated test suite (1,250 tests, 100% green):
 ```powershell
 uv run pytest
 ```
