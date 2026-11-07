@@ -22,7 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from orbit_security.marketing_strategy import ContentPillar, MarketingStrategyEngine
 from orbit_security.media_generator import MediaGenerator
-from orbit_security.video_generator import VideoGenerator
+from orbit_security.video_generator import DegradedAudioError, VideoGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -427,7 +427,8 @@ class CreativeEngine:
                     if isinstance(vid_result, tuple):
                         vid, vid_metadata = vid_result
                         if vid_metadata.get("degraded_audio"):
-                            logger.warning(f"Video generated with degraded audio: {vid_metadata}")
+                            logger.error(f"Video generated with degraded audio; blocked from publishing (W4.3): {vid_metadata}")
+                            raise DegradedAudioError(f"Degraded audio asset rejected: {vid_metadata}")
                     else:
                         vid = vid_result
                     media_path = str(vid)
@@ -450,7 +451,8 @@ class CreativeEngine:
                         if isinstance(vid_result, tuple):
                             vid, vid_metadata = vid_result
                             if vid_metadata.get("degraded_audio"):
-                                logger.warning(f"Video generated with degraded audio: {vid_metadata}")
+                                logger.error(f"Fallback video generated with degraded audio; blocked from publishing (W4.3): {vid_metadata}")
+                                raise DegradedAudioError(f"Degraded audio fallback asset rejected: {vid_metadata}")
                         else:
                             vid = vid_result
                         media_path = str(vid)

@@ -205,3 +205,53 @@ def test_recon_cli_json_export_fixpack(temp_dir, monkeypatch, capsys):
     assert "fixpack" in data
     assert data["fixpack"]["ok"] is True
     assert Path(data["fixpack"]["fixpack_path"]).exists()
+
+
+def test_cli_scan_subcommand_with_fixpack(temp_dir, monkeypatch, capsys):
+    """Subcommand `orbit-security scan domain --export-fixpack` runs scan and exports fixpack."""
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    domain = "scansub.org"
+    out_dir = temp_dir / "scan_sub_out"
+
+    dummy_result = MagicMock()
+    dummy_result.domain = domain
+    dummy_result.grade = "B"
+    dummy_result.score = 85
+    dummy_result.osint_intel = {}
+    dummy_result.takeover_findings = [
+        {
+            "id": "FIND-SCAN-01",
+            "title": "Dangling CNAME Test",
+            "subdomain": f"shop.{domain}",
+            "cname_target": "custom.myshopify.com",
+            "saas_provider": "Shopify",
+            "severity": "CRITICAL",
+        }
+    ]
+
+    test_args = [
+        "orbit-security",
+        "scan",
+        domain,
+        "--export-fixpack",
+        "--output-dir",
+        str(out_dir),
+    ]
+    monkeypatch.setattr(sys, "argv", test_args)
+
+    with patch("orbit_security.cli.OrbitSecurityScanner") as mock_scanner_cls:
+        mock_scanner = mock_scanner_cls.return_value
+        mock_scanner.scan_domain = AsyncMock(return_value=dummy_result)
+
+        exit_code = cli_main()
+        assert exit_code is None or exit_code == 0
+        mock_scanner.scan_domain.assert_awaited_once()
+
+    captured = capsys.readouterr().out
+    assert "1-Click DNS Fix Pack successfully generated" in captured
+
+    expected_zip = out_dir / "scansub_org_dns_fixpack.zip"
+    assert expected_zip.exists()
+    assert zipfile.is_zipfile(expected_zip)
+

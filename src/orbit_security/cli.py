@@ -117,6 +117,45 @@ async def run_scan(args):
             f.write(md_content)
         console.print(f"[bold green]✔ Markdown audit generated:[/bold green] [underline]{os.path.abspath(args.output_md)}[/underline]")
 
+    # Export 1-Click DNS Fix Pack if requested
+    if getattr(args, "export_fixpack", False):
+        from orbit_security.client_bundle_exporter import ClientBundleExporter
+        from orbit_security.input_sanitizer import sanitize_domain, SecurityValidationError
+        from orbit_security.scanner import is_safe_host
+
+        try:
+            clean_domain = sanitize_domain(args.domain)
+            if not is_safe_host(clean_domain):
+                console.print(f"[bold red]✘ Target resolves to loopback/private/internal host (SSRF blocked): '{clean_domain}'[/bold red]")
+            else:
+                findings_payload = []
+                for i, f in enumerate(result.takeover_findings or []):
+                    findings_payload.append({
+                        "id": f.get("id", f"FIND-{i+1}"),
+                        "title": f.get("title", "Subdomain Takeover"),
+                        "subdomain": f.get("subdomain") or f.get("domain") or clean_domain,
+                        "saas_provider": f.get("saas_provider") or f.get("provider", "Unknown"),
+                        "cname_target": f.get("cname_target") or f.get("target"),
+                        "severity": f.get("severity", "CRITICAL"),
+                        "category": "DNS",
+                        "description": f.get("description", "Vulnerable dangling CNAME"),
+                    })
+                out_dir = Path(args.output_dir) if getattr(args, "output_dir", None) else None
+                policy = getattr(args, "policy", "quarantine")
+                email = getattr(args, "agency_email", None)
+                res = ClientBundleExporter.export_dns_fixpack(
+                    domain=clean_domain,
+                    findings=findings_payload if findings_payload else None,
+                    output_dir=out_dir,
+                    policy=policy,
+                    contact_email=email,
+                    as_dict=True,
+                )
+                zip_path = res["fixpack_path"]
+                console.print(f"[bold green]✔ 1-Click DNS Fix Pack successfully generated:[/bold green] [underline]{zip_path}[/underline]")
+        except Exception as exc:
+            console.print(f"[bold red]✘ Failed to generate 1-Click DNS Fix Pack: {exc}[/bold red]")
+
 
 async def run_disclose(args, now_utc: datetime.datetime | None = None):
     """Automated bounty-radar -> disclosure pipeline.
@@ -613,8 +652,8 @@ def main():
 
     args = parser.parse_args()
 
-    # Direct or root-level fix pack export invocation
-    if getattr(args, "export_fixpack", False):
+    # Direct or root-level fix pack export invocation (when not running scan)
+    if getattr(args, "export_fixpack", False) and getattr(args, "command", None) != "scan":
         target_domain = getattr(args, "domain", None) or getattr(args, "target", None)
         if not target_domain and getattr(args, "command", None) == "remediate":
             target_domain = getattr(args, "domain", None)

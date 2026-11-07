@@ -45,6 +45,11 @@ def _write_silent_wav(output_path: Path, duration_seconds: float = 1.0) -> Path:
     return output_path
 
 
+class DegradedAudioError(RuntimeError):
+    """Raised when voice narration synthesis fails and degraded assets cannot be published (W4.3)."""
+    pass
+
+
 class VideoGenerator:
     """Produces broadcast MP4 video clips combining visual cards and voiceover."""
 
@@ -61,8 +66,18 @@ class VideoGenerator:
         image_path: Optional[Path] = None,
         title: str = "orbit_intel_brief",
         duration_margin: float = 0.5,
+        allow_degraded: bool = False,
     ) -> Tuple[Path, Dict[str, Any]]:
         """Synthesizes an MP4 video clip from script text and an image card.
+        
+        Args:
+            script_text: Text narration to synthesize.
+            image_path: Path to visual background card.
+            title: Slug prefix for output file.
+            duration_margin: Time margin padding.
+            allow_degraded: If False (default, W4.3 hardening), raises DegradedAudioError
+                if TTS synthesis fails, ensuring degraded/silent audio assets can never
+                be published to production. If True, gracefully falls back to silent PCM.
         
         Returns:
             Tuple of (output_path, metadata_dict) where metadata contains:
@@ -86,9 +101,7 @@ class VideoGenerator:
             raw_audio = Path(tmpdir) / "voice_raw.mp3"
             helmet_audio = Path(tmpdir) / "voice_helmet.wav"
 
-            # Voice synthesis (gracefully degrade to silent audio when the TTS
-            # service is unavailable, e.g. blocked upstream endpoint, so video
-            # muxing still succeeds rather than taking down the whole pipeline)
+            # Voice synthesis (hardened against publishing degraded assets under W4.3)
             try:
                 self.voice_engine.synthesize_speech(
                     text=script_text,
@@ -96,8 +109,15 @@ class VideoGenerator:
                 )
                 voice_backend = self.voice_engine.profile.engine_backend
             except Exception as e:
+                if not allow_degraded:
+                    logger.error(
+                        f"Voice narration degraded ({e}); blocked under W4.3 publishing policy (allow_degraded=False)"
+                    )
+                    raise DegradedAudioError(
+                        f"Voice narration failed ({e}); degraded assets can never be published under W4.3."
+                    ) from e
                 logger.warning(
-                    f"Voice synthesis unavailable ({e}); rendering silent audio fallback"
+                    f"Voice synthesis unavailable ({e}); rendering silent audio fallback (allow_degraded=True)"
                 )
                 _write_silent_wav(raw_audio, duration_seconds=1.0)
                 degraded_audio = True
