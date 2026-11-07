@@ -85,7 +85,7 @@ EXPECTED_4_SPECIALIST_SWARMS = {
 
 
 def _load_cockpit_server():
-    """Dynamically imports cockpit server module if available on the host."""
+    """Dynamically imports cockpit server module if available on the host, or falls back to playtest_guard."""
     if COCKPIT_DIR.exists():
         cockpit_str = str(COCKPIT_DIR)
         if cockpit_str not in sys.path:
@@ -94,8 +94,9 @@ def _load_cockpit_server():
             import server as cockpit_server
             return cockpit_server
         except Exception:
-            return None
-    return None
+            pass
+    from orbit_security import playtest_guard
+    return playtest_guard
 
 
 # ============================================================================

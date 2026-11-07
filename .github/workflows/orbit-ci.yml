@@ -31,14 +31,14 @@ jobs:
           python -m pip install -e .
           # PEP 735 dependency group `dev` (pytest / pytest-asyncio / pyyaml).
           # Older pip releases do not understand --group, hence the fallback.
-          python -m pip install --group dev || python -m pip install "pytest>=9.1.1" "pytest-asyncio>=1.4.0" "pyyaml>=6.0.3"
+          python -m pip install --group dev || python -m pip install "pytest>=9.1.1" "pytest-asyncio>=1.4.0" "pyyaml>=6.0.3" "beautifulsoup4>=4.12.0"
           # Runtime imports exercised by the suite that are imported at module
           # level but are Windows/network specific:
           #   edge-tts -> src/orbit_security/voice_model.py
           #   pywin32  -> src/orbit_security/desktop_x_bridge.py (Windows clipboard)
           # Both are now declared in pyproject.toml; installed explicitly here
           # as belt-and-braces so CI never depends on the lock resolving them.
-          python -m pip install edge-tts pywin32 pillow duckdb requests
+          python -m pip install edge-tts pywin32 pillow duckdb requests beautifulsoup4
 
       - name: Install ffmpeg
         shell: bash

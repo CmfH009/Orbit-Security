@@ -30,6 +30,13 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
+@pytest.fixture(scope="module", autouse=True)
+def _ensure_baseline_outreach_state_seeded():
+    from scripts.reconcile_outreach_dispositions import ensure_baseline_outreach_state
+
+    ensure_baseline_outreach_state(REPO_ROOT, create_quarantine_if_missing=True)
+
+
 def test_is_quarantined_normalization_stress():
     """Stress-tests is_quarantined() with uppercase, whitespace, None, empty, and malformed inputs."""
     from scripts.reconcile_outreach_dispositions import (

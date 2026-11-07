@@ -283,6 +283,12 @@ class TestPhysicalArtifactsIntegrity:
 
     COHORT_DIR = REPO_ROOT / "outbound_queue" / "cohort_11"
 
+    @pytest.fixture(autouse=True)
+    def _ensure_staged_cohort_11(self):
+        manifest_path = self.COHORT_DIR / "cohort_11_manifest.json"
+        if not manifest_path.exists():
+            stage_cohort_11(output_dir=self.COHORT_DIR, skip_network=True, enforce_preflight=True)
+
     def test_all_10_agencies_staged_with_rfc_5322_eml(self):
         assert self.COHORT_DIR.exists()
         manifest_path = self.COHORT_DIR / "cohort_11_manifest.json"

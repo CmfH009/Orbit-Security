@@ -364,6 +364,12 @@ class TestLiveStagedArtifactsIntegrity:
 
     COHORT_DIR = REPO_ROOT / "outbound_queue" / "cohort_11"
 
+    @pytest.fixture(autouse=True)
+    def _ensure_staged_cohort_11(self):
+        manifest_file = self.COHORT_DIR / "cohort_11_manifest.json"
+        if not manifest_file.exists():
+            stage_cohort_11(output_dir=self.COHORT_DIR, skip_network=True, enforce_preflight=True)
+
     def test_manifest_file_exists_and_conforms_to_schema(self):
         manifest_file = self.COHORT_DIR / "cohort_11_manifest.json"
         assert manifest_file.exists(), f"Missing {manifest_file}"

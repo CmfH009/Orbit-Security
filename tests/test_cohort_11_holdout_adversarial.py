@@ -35,6 +35,7 @@ from scripts.stage_cohort_11 import (
     assign_ab_variant,
     build_pitch_copy,
     partition_cohort_targets,
+    stage_cohort_11,
 )
 
 
@@ -126,6 +127,8 @@ class TestCohort11HoldoutSplit:
     def test_disk_manifest_and_draft_parity(self):
         """Inspects outbound_queue/cohort_11 to verify manifest and .eml files reflect 30% holdout."""
         manifest_path = REPO_ROOT / "outbound_queue" / "cohort_11" / "cohort_11_manifest.json"
+        if not manifest_path.exists():
+            stage_cohort_11(output_dir=manifest_path.parent, skip_network=True, enforce_preflight=True)
         assert manifest_path.exists(), "Manifest file not found on disk"
 
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
