@@ -3292,9 +3292,22 @@ class BountyRadarSupervisor:
         }
 
     def _save_state(self):
+        """Atomically persists state to disk using a temporary file and rename."""
         self.state_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.state_file, "w", encoding="utf-8") as f:
-            json.dump(self.state, f, indent=2)
+        tmp_file = self.state_file.with_suffix(".tmp")
+        try:
+            with open(tmp_file, "w", encoding="utf-8") as f:
+                json.dump(self.state, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_file, self.state_file)
+        except Exception as err:
+            if tmp_file.exists():
+                try:
+                    tmp_file.unlink()
+                except Exception:
+                    pass
+            raise err
 
     def dispatch_bounty_alert(
         self,
@@ -3496,4 +3509,275 @@ class BountyRadarSupervisor:
             "disclosed_files": disclosed_files,
             "crypto_bundles": crypto_bundles,
         }
+
+
+# --------------------------------------------------------------------------- #
+# Severity Triage Ranking (Roadmap W4.2)
+# --------------------------------------------------------------------------- #
+
+HIGH_IMPACT_FLAW_TYPES: Set[str] = {
+    "subdomain_takeover",
+    "cloud_storage_takeover",
+    "open_cloud_bucket",
+    "oauth_redirect_uri_hijack",
+    "http_request_smuggling_cl_te",
+    "http_request_smuggling_te_cl",
+    "http_request_smuggling_h2_downgrade",
+    "dependency_confusion_namespace_takeover",
+    "sensitive_exposure",
+}
+
+LOW_NOISE_FLAW_TYPES: Set[str] = {
+    "cors_wildcard_origin",
+    "cors_misconfiguration",
+}
+
+
+def triage_finding_priority(vuln: Any) -> Tuple[int, float, str]:
+    """Computes a sorting key for severity triage.
+
+    Returns (priority_rank, -cvss_score, timestamp) where LOWER priority_rank
+    means HIGHER urgency:
+      - Rank 0: High-Impact Takeover / RCE / Account Hijack (CRITICAL/HIGH + HIGH_CONFIDENCE)
+      - Rank 1: Other CRITICAL / HIGH findings
+      - Rank 2: MEDIUM findings (GraphQL introspection, conditional spoofing)
+      - Rank 3: LOW / INFORMATIONAL noise (CORS wildcard reflection, low signal)
+    """
+    if isinstance(vuln, dict):
+        flaw = str(vuln.get("flaw_type", "") or "").lower().strip()
+        sev = vuln.get("severity", Severity.LOW)
+        sev_val = getattr(sev, "value", str(sev)).upper()
+        viab = str(vuln.get("bounty_viability", "HIGH_CONFIDENCE") or "")
+        cvss = float(vuln.get("cvss_score", 0.0) or 0.0)
+        ts = str(vuln.get("timestamp", "") or "")
+    else:
+        flaw = str(getattr(vuln, "flaw_type", "") or "").lower().strip()
+        sev = getattr(vuln, "severity", Severity.LOW)
+        sev_val = getattr(sev, "value", str(sev)).upper()
+        viab = str(getattr(vuln, "bounty_viability", "HIGH_CONFIDENCE") or "")
+        cvss = float(getattr(vuln, "cvss_score", 0.0) or 0.0)
+        ts = str(getattr(vuln, "timestamp", "") or "")
+
+    # Tier 0: Actionable Takeover / RCE / Account Takeover (High/Critical + High Confidence)
+    if flaw in HIGH_IMPACT_FLAW_TYPES and sev_val in ("CRITICAL", "HIGH") and viab == "HIGH_CONFIDENCE":
+        rank = 0
+    # Tier 1: Other High/Critical findings
+    elif sev_val in ("CRITICAL", "HIGH"):
+        rank = 1
+    # Tier 2: Medium findings
+    elif sev_val == "MEDIUM":
+        rank = 2
+    # Tier 3: Low/Informational noise
+    else:
+        rank = 3
+
+    return (rank, -cvss, ts)
+
+
+def sort_findings_by_triage(findings: List[Any]) -> List[Any]:
+    """Sorts vulnerabilities so actionable takeovers and RCEs appear first."""
+    return sorted(findings, key=triage_finding_priority)
+
+
+# --------------------------------------------------------------------------- #
+# Class BountyRadar (Roadmap W4.2: Full-Scope 27-Program Triage Engine)
+# --------------------------------------------------------------------------- #
+
+class BountyRadar(BountyRadarSupervisor):
+    """Full-Scope Bug Bounty Radar & Severity Triage Engine (Act III & Roadmap W4.2).
+
+    Iterates all registered programs with high-impact severity triage,
+    atomic watermark persistence in data/bounty_radar_state.json, and
+    an operational exit gate ensuring programs_scanned >= 20.
+    """
+
+    def _save_state(self):
+        """Atomically persists state to disk using a temporary file and rename."""
+        self.state_file.parent.mkdir(parents=True, exist_ok=True)
+        tmp_file = self.state_file.with_suffix(".tmp")
+        try:
+            with open(tmp_file, "w", encoding="utf-8") as f:
+                json.dump(self.state, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_file, self.state_file)
+        except Exception as err:
+            if tmp_file.exists():
+                try:
+                    tmp_file.unlink()
+                except Exception:
+                    pass
+            raise err
+
+    @staticmethod
+    def triage_findings(findings: List[Any]) -> List[Any]:
+        """Class method for sorting findings by exploitability priority."""
+        return sort_findings_by_triage(findings)
+
+    def scan_all_programs(
+        self,
+        force_now: bool = True,
+        max_domains_per_program: int = 15,
+        min_programs_scanned: int = 20,
+        enforce_exit_gate: bool = True,
+        use_passive_ct: bool = False,
+        use_archive_harvest: bool = False,
+        audit_cloud_buckets: bool = True,
+        audit_graphql: bool = True,
+        audit_cors: bool = True,
+        audit_smuggling: bool = False,
+        audit_oauth: bool = True,
+        audit_dependency: bool = False,
+        audit_sensitive_exposure: bool = False,
+        save_disclosures: bool = True,
+        sync_attack_graph: bool = True,
+        output_dir: Optional[Path] = None,
+        package_crypto_bundle: bool = True,
+        dispatch_alerts: bool = True,
+    ) -> Dict[str, Any]:
+        """Iterates all registered programs with high-impact triage and exit gate check."""
+        start_time = datetime.datetime.now(datetime.timezone.utc)
+        if not force_now and not OffPeakWindow.is_off_peak(start_time):
+            return {
+                "status": "SKIPPED_OUTSIDE_WINDOW",
+                "message": "Current time is outside the off-peak window (2:00 AM - 5:00 AM MST). Use force_now=True to run immediately.",
+                "programs_scanned": 0,
+                "programs_list": [],
+                "exit_gate_passed": False,
+                "min_programs_threshold": min_programs_scanned,
+                "vulnerabilities_found": 0,
+                "vulnerabilities": [],
+                "disclosed_files": [],
+                "crypto_bundles": [],
+            }
+
+        programs = [p for p in self.ingester.list_programs() if p and p.state == "active"]
+
+        total_findings: List[BountyVulnerability] = []
+        disclosed_files: List[str] = []
+        crypto_bundles: List[Dict[str, Any]] = []
+        watermarks: Dict[str, Any] = dict(self.state.get("watermarks", {}))
+        scanned_programs: List[str] = []
+
+        for prog in programs:
+            logger.info(f"Scanning program {prog.name} ({len(prog.in_scope)} scopes)...")
+            vulns = self.sweeper.sweep_program(
+                prog,
+                max_domains=max_domains_per_program,
+                use_passive_ct=use_passive_ct,
+                use_archive_harvest=use_archive_harvest,
+                audit_cloud_buckets=audit_cloud_buckets,
+                audit_graphql=audit_graphql,
+                audit_cors=audit_cors,
+                audit_smuggling=audit_smuggling,
+                audit_oauth=audit_oauth,
+                audit_dependency=audit_dependency,
+                audit_sensitive_exposure=audit_sensitive_exposure,
+            )
+            scanned_programs.append(prog.program_id)
+            total_findings.extend(vulns)
+
+            # Record per-program watermark
+            high_impact_count = sum(
+                1
+                for v in vulns
+                if (
+                    getattr(v, "flaw_type", "") in HIGH_IMPACT_FLAW_TYPES
+                    and getattr(
+                        getattr(v, "severity", Severity.LOW),
+                        "value",
+                        str(getattr(v, "severity", "LOW")),
+                    ).upper()
+                    in ("HIGH", "CRITICAL")
+                )
+            )
+            watermarks[prog.program_id] = {
+                "last_scanned_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "findings_count": len(vulns),
+                "high_impact_count": high_impact_count,
+            }
+
+            for v in vulns:
+                if save_disclosures and getattr(v, "bounty_viability", "HIGH_CONFIDENCE") != "INFORMATIONAL_LOW":
+                    p = HackerOneDisclosureGenerator.save_disclosure(v, prog, output_dir=output_dir)
+                    if p is not None:
+                        disclosed_files.append(str(p))
+
+                    if package_crypto_bundle:
+                        try:
+                            bundle_info = ResponsibleDisclosureDrafter.export_cryptographic_bundle(
+                                v, prog, output_dir=output_dir
+                            )
+                            if bundle_info and "zip_path" in bundle_info:
+                                crypto_bundles.append({
+                                    "target": v.target_domain,
+                                    "flaw_type": v.flaw_type,
+                                    "zip_path": str(bundle_info["zip_path"]),
+                                    "zip_sha256": bundle_info["zip_sha256"],
+                                    "total_files": bundle_info["total_files"],
+                                })
+                        except Exception as bundle_err:
+                            logger.warning(f"Failed to export cryptographic bundle for {v.target_domain}: {bundle_err}")
+
+                # Real-Time Cash Bounty Alerting for HIGH_CONFIDENCE findings
+                if dispatch_alerts and v.bounty_viability == "HIGH_CONFIDENCE":
+                    try:
+                        self.dispatch_bounty_alert(v, prog)
+                    except Exception as alert_err:
+                        logger.warning(f"Failed to dispatch bounty alert for {v.target_domain}: {alert_err}")
+
+        end_time = datetime.datetime.now(datetime.timezone.utc)
+        triaged_findings = sort_findings_by_triage(total_findings)
+
+        # Update persistent state
+        self.state["last_sweep_utc"] = end_time.isoformat()
+        self.state["sweep_window_utc"] = {
+            "start": start_time.isoformat(),
+            "end": end_time.isoformat(),
+            "duration_seconds": (end_time - start_time).total_seconds(),
+        }
+        self.state["total_sweeps"] = self.state.get("total_sweeps", 0) + 1
+        self.state["total_vulnerabilities_found"] = self.state.get("total_vulnerabilities_found", 0) + len(total_findings)
+        self.state["programs_scanned"] = scanned_programs
+        self.state["programs_scanned_count"] = len(scanned_programs)
+        self.state["watermarks"] = watermarks
+        # Keep top 20 triaged findings (takeovers prioritized over CORS)
+        self.state["recent_findings"] = [
+            asdict(v) if hasattr(v, "__dataclass_fields__") else v
+            for v in triaged_findings[:20]
+        ]
+        self._save_state()
+
+        if sync_attack_graph:
+            try:
+                from orbit_security.bounty_graph import BountyAttackGraph
+                BountyAttackGraph.build_from_ecosystem(
+                    programs_path=self.ingester.data_path,
+                    output_dir=output_dir,
+                )
+            except Exception as graph_err:
+                logger.warning(f"Failed to auto-sync attack graph after sweep: {graph_err}")
+
+        # Exit Gate Evaluation
+        gate_passed = len(scanned_programs) >= min_programs_scanned
+        if enforce_exit_gate and not gate_passed:
+            raise RuntimeError(
+                f"Bounty Radar Exit Gate Failed: Scanned {len(scanned_programs)} programs, required >= {min_programs_scanned}"
+            )
+
+        return {
+            "status": "COMPLETED",
+            "programs_scanned": len(scanned_programs),
+            "programs_list": scanned_programs,
+            "exit_gate_passed": gate_passed,
+            "min_programs_threshold": min_programs_scanned,
+            "vulnerabilities_found": len(total_findings),
+            "vulnerabilities": [
+                asdict(v) if hasattr(v, "__dataclass_fields__") else v
+                for v in triaged_findings
+            ],
+            "disclosed_files": disclosed_files,
+            "crypto_bundles": crypto_bundles,
+        }
+
 

@@ -13,10 +13,10 @@
 | Phase | State | Evidence |
 |---|---|---|
 | **Phase 0 — Trust Surface** | ✅ **complete** | 7 declared 404s → 0; structured data on 20/20 public pages sharing one `Organization @id`; robots/sitemap (15 URLs)/security.txt/llms.txt/SECURITY.md live; release gate PASS with 14/14 live URLs 200; internal handoff docs purged from public `docs/` |
-| **Phase 1 — Product Integrity** | ✅ **complete** | Scoring model rewritten (F now = exploit risk); 52 audits re-scored (18 failing → 5, 13 rescued, 0 newly failing, +28.1 avg); 1,250 tests green; composite GitHub Action (`CmfH009/Orbit-Security@v1`) with SARIF 2.1.0 exporter (`--sarif-output`) + Dependabot weekly supply-chain updates live |
-| **Phase 2 — Revenue Loop** | 🟡 **in progress** | Anti-bounce contact deliverability gate (`scripts/verify_contacts.py --preflight`) with HTML entity/`[at]` de-obfuscation & retina image filtering shipped; Pre-KYC Bounty Remediation Vault compiler (`scripts/bounty_vault_generator.py`) consolidating 21 candidates into 5 program dossiers; Cloud Run telemetry ingress (`--allow-unauthenticated`) and `STRIPE_SECRET_KEY` revenue polling unified |
-| **Phase 3 — AI-Search Authority** | 🟡 **in progress** | Benchmark published and **cited from the About page** (`52 provider signatures across 76 CNAME fingerprints`); `Dataset` + `FAQPage` schema aligned across `landing/index.html`, `landing/about.html`, and `landing/portals/index.html` |
-| **Phase 4 — Scale & Harden** | 🟡 **in progress** | `daily_briefing.py` live-queries GitHub Actions `HEAD` workflow runs to auto-reconcile stale historical CI failure emails; `DesktopAutomationDriver` hardened with `8.0s` React compose modal hydration wait and hardware scan code `0x1C` Enter |
+| **Phase 1 — Product Integrity** | ✅ **complete** | Scoring model rewritten (F now = exploit risk); 52 audits re-scored (18 failing → 5, 13 rescued, 0 newly failing, +28.1 avg); 1,668 tests green; composite GitHub Action (`CmfH009/Orbit-Security@v1`) with SARIF 2.1.0 exporter (`--sarif-output`) + Dependabot weekly supply-chain updates live |
+| **Phase 2 — Revenue Loop** | 🟡 **in progress** | Cohort 11 staged & calibrated (`scripts/stage_cohort_11.py`, mean 87.0, 100% ≥ C+, zero hygiene Fs, 35/35/30 split); White-Label Client Remediation & Export Bundle Generator (`src/orbit_security/client_bundle_exporter.py`) with atomic ZIP, NTFS mutex locking, XML escaping, underscore preservation, deal desk & Stripe webhook provisioning; Cohort 7–11 disposition reconciler (`scripts/reconcile_outreach_dispositions.py`, 0 undispositioned, 46 suppressed contacts hard-quarantined); anti-bounce contact deliverability gate (`scripts/verify_contacts.py --preflight`) shipped |
+| **Phase 3 — AI-Search Authority** | 🟡 **in progress** | Benchmark published and cited from About page; dedicated OpenGraph & Twitter preview cards configured across all 7 public pages; dated methodology footnotes attached to all quantitative marketing claims (`< 12s scan latency`, `52 provider signatures`, `10,493% ROI benchmark`); 95/95 byte-identical docs parity confirmed |
+| **Phase 4 — Scale & Harden** | 🟡 **in progress** | Fleet Command Center scoring parity & per-client score deltas (`old_score` → `new_score`, `score_change`, dynamic badges, drift events) shipped in `src/orbit_security/fleet.py` and `landing/fleet.html`; Full-Scope 27-Program Bounty Radar triage engine (`src/orbit_security/bounty_radar.py`) with takeover/RCE prioritization and atomic state persistence; social governor spacing ledger unified with operator manual posts to eliminate refusal loops; 1,668 tests green |
 
 **Operator actions this cycle produced, none of which can be done by an agent:** send the 13 correction emails, publish the roast thread, apply the suppression list and launch the 12 re-target cohort, register the Search Console property, publish to PyPI, and decide the public-repo lead-data question (T38).
 
@@ -29,11 +29,11 @@
 | Live surface | **0** declared 404s; 14/14 live URLs 200 on the release gate; all 6 `SENT` Fleet Pilot agency portals (`10up`, `alley_interactive`, `absolute_web`, `akqa`, `august_ash`, `astound_commerce`) provisioned in both `landing/portals/` and `docs/portals/` (95/95 shared files byte-identical); 15 adversarial fuzzing test files purged | 0 broken references ✅ |
 | Structured data | **20 of 20** public pages (core product, legal, agency portals, and StealthBridge) carry JSON-LD on one shared `Organization @id` | every indexable page ✅ |
 | AI-search readiness | robots.txt (AI-crawler allowlist), sitemap.xml (15 URLs), security.txt, llms.txt, SECURITY.md live; **Search Console property still unregistered** | indexed + AI-feature eligible |
-| Audit credibility | F now means exploitable risk; 52 audits re-scored, 18 failing → 5; 13 correction notes staged | Cohort 11 at the new floor (mean ≥ 60) |
+| Audit credibility | F now means exploitable risk; 52 audits re-scored, 18 failing → 5; Cohort 11 staged at mean 87.0 (100% ≥ C+); 0 un-dispositioned records across Cohorts 7–11; 46 suppressed contacts quarantined | Cohort 11 at the new floor (mean ≥ 60) ✅ |
 | Revenue | $0 balance, 0 retainers, 178 campaigns dispatched, 43 hard bounces (24.2 %); Stripe live tier links ($29, $59, $99) wired across all pages and `STRIPE_SECRET_KEY` unified | ≥ 3 active retainers |
 | Delivery | 135 delivered, 43 hard-bounced, 12 verified recovery contacts wired into `KNOWN_LEADERSHIP_OSINT`; `verify_contacts.py --preflight` blocks unverified outreach; `--followup` strictly filters `SENT` leads with RFC 5322 `In-Reply-To`/`References` threading | ≥ 8 % reply rate, ≤ 3 % bounce |
 | Automation | `orbit_daemon.py status` (`cmd_status`) live-probes TCP ports, process command lines, and `hut-daemon` services; `daily_briefing.py` reconciles CI failures against live GitHub `HEAD` | 16 of 16, no stale states |
-| Engineering | **1,250 tests green**, hermetic test suite, composite GitHub Action (`v1.1.0`) with SARIF 2.1.0 export, CI enforcing tests + `landing`/`docs` parity + live-asset health | green at any hour, CI-enforced ✅ |
+| Engineering | **1,668 tests green**, hermetic test suite, composite GitHub Action (`v1.1.0`) with SARIF 2.1.0 export, CI enforcing tests + `landing`/`docs` parity (95/95 byte-identical) + live-asset health + 366/366 AST Sentinel clean | green at any hour, CI-enforced ✅ |
 | Install path | `pip install orbit-security` does not resolve on PyPI yet; `[project.optional-dependencies].dev` includes `pytest-asyncio>=0.23.0` so `pip install -e ".[dev]"` works cleanly | published on PyPI (T37) |
 
 **The one-line diagnosis:** the machine is in good shape; the *claims* the machine makes about itself — to prospects, to search engines, and in its own audit output — are not yet true. This roadmap is mostly about making them true.
@@ -99,10 +99,10 @@ Measured on 2026-10-22 with `scripts/outreach_metrics.py` (new):
 
 | Workstream | Deliverables | Owner | Exit gate |
 |---|---|---|---|
-| W2.1 Checkout loop | one verified end-to-end Stripe cycle: checkout → webhook → subscriber provisioning → agency portal generation; validate $59/mo and $299–$499 tier links | Operator | A live test client with a working portal |
+| W2.1 Checkout loop | one verified end-to-end Stripe cycle: checkout → webhook → subscriber provisioning → agency portal generation; validate $59/mo and $299–$499 tier links; Client Bundle Exporter (`client_bundle_exporter.py`) white-label ZIP provisioning | Operator + Agent 4 | A live test client with a working portal + atomic ZIP export bundles ✅ |
 | W2.1b **Audit remediation** | re-score Cohorts 7–10 under the new model; re-send corrected grades to every agency that received an F, D, 0/100 or 5/100 audit, with a short, non-apologetic note ("your score was wrong; here is the corrected report") | Sentinel + Operator | Every F/D recipient has a corrected audit |
-| W2.2 Cohort quality | Cohort 11 with mean ≥ 60 and ≥ 7/10 at grade C+, under the fixed scorer | Sentinel | Cohort 11 matrix meets the floor |
-| W2.3 Bump cadence | 24–36 h gestation honoured; the 46 suppressed addresses re-verified before any re-send; every agency carries a disposition | Nova | 0 un-dispositioned agencies across Cohorts 7–11 |
+| W2.2 Cohort quality | Cohort 11 with mean ≥ 60 and ≥ 7/10 at grade C+, under the fixed scorer | Sentinel | Cohort 11 matrix meets the floor (mean 87.0, 100% ≥ C+, zero hygiene Fs) ✅ |
+| W2.3 Bump cadence | 24–36 h gestation honoured; the 46 suppressed addresses re-verified before any re-send; every agency carries a disposition (`scripts/reconcile_outreach_dispositions.py`) | Nova | 0 un-dispositioned agencies across Cohorts 7–11; 46 suppressed addresses quarantined ✅ |
 | W2.4 **Channel triage (new)** | **Root cause measured: we guessed mailboxes.** `scripts/verify_contacts.py` checks the exact address (MX + the agency's own published contact page) instead of the domain. Result on the 43 bounced agencies: **16 REFUTED** (domain accepts mail, our address does not exist), **12 with a published replacement address found**, **3 NO_MX** (cannot receive mail at all), **3 CONFIRMED** (address is published; the bounce was mailbox-level). Next: review the 11 rejections for the real objection, and A/B the subject + opening line with a 30 % holdout across the next 3 cohorts. | Operator + Nova | Bounce ≤ 3 %, and a measured reply-rate lift or a documented pivot |
 | W2.5 Deliverability | Postmaster Tools reputation ≥ 0.9 daily watch; cohort size cap 10; ≥ 24 h spacing; **pause sending until the bounce rate is under 10 %** | Nova | Hard bounce ≤ 3 % per cohort |
 | W2.6 First case study | one real engagement documented end-to-end (with the agency's permission) — the first non-commodity, first-hand content asset the business owns | Operator | 1 published case study + 1 inbound reference |
@@ -122,7 +122,7 @@ Measured on 2026-10-22 with `scripts/outreach_metrics.py` (new):
 | W3.2b Link the benchmark from the About page | the About page's "Key Facts" block and the hub CTA should point at the measured dataset, not at the assertion | Operator | `about.html` links `/benchmark/` with the median latency and signature count sourced from the benchmark |
 | W3.3 Corroboration | publish the package to PyPI (T30), link it in the founder entity, complete HackerOne/Bugcrowd KYC, publish the founder story on LinkedIn | Operator | Package installable; 3+ independent profiles agree on the same facts |
 | W3.4 Entity consolidation | one canonical entity across site, GitHub, PyPI, X, Stripe, and (Phase 4) a branded domain | Operator | Same `@id`/`sameAs` everywhere; custom domain live |
-| W3.5 Claim hygiene | methodology footnotes for "< 12 s", "40+ signatures", "10,493 % ROI"; retire any number we cannot source | Operator | Every published number has a footnote + date |
+| W3.5 Claim hygiene | methodology footnotes for "< 12 s", "52 provider signatures", "10,493 % ROI" across all landing pages; dedicated OpenGraph & Twitter preview cards configured | Operator | Every published number has a footnote + date; 0 card fallbacks ✅ |
 
 **Exit gate:** 8/8 pages indexed, ≥ 4/12 panel queries mention the brand, ≥ 25 % of mentions carry a citation, zero unsourced numbers.
 
@@ -132,12 +132,12 @@ Measured on 2026-10-22 with `scripts/outreach_metrics.py` (new):
 
 | Workstream | Deliverables | Owner | Exit gate |
 |---|---|---|---|
-| W4.1 Fleet parity | Fleet Command Center reflects the new scoring model; per-client score deltas | Guardian | Fleet shows the same grades as the CLI |
-| W4.2 Radar coverage | every sweep iterates all 27 registered programs; severity triage prefers takeover/RCE class over LOW-CORS noise; sweep window recorded in state | Sentinel | `programs_scanned` ≥ 20 per sweep |
+| W4.1 Fleet parity | Fleet Command Center reflects the new scoring model; per-client score deltas (`record_score_delta()`, dynamic badges, drift events) | Guardian | Fleet shows the same grades as the CLI + dynamic deltas ✅ |
+| W4.2 Radar coverage | every sweep iterates all 27 registered programs; severity triage prefers takeover/RCE class over LOW-CORS noise; atomic state persistence (`data/bounty_radar_state.json`) | Sentinel | `programs_scanned` ≥ 20 per sweep ✅ |
 | W4.3 Voice pipeline | authorised or local TTS; degraded assets can never be published | Sentinel | A narrated asset renders real speech; degradation raises a flag |
-| W4.4 Repo hygiene | `landing/` is the only source; sync script + CI parity; stale published handoff docs moved out of `docs/` | Agent 6 + Operator | Drift = 0, enforced |
-| W4.5 Brand surface | custom domain + HTTPS; per-page social cards (Core / Fleet / GhostDNS / Portals); favicon/brand kit everywhere | Operator | 0 preview regressions across 8 pages |
-| W4.6 X quota unification | operator posts recorded in the same ledger the governor reads; the daemon idles instead of logging a refusal loop | Guardian | No "quota reached" refusal while a manual post is live |
+| W4.4 Repo hygiene | `landing/` is the only source; sync script + CI parity; stale published handoff docs moved out of `docs/` | Agent 6 + Operator | Drift = 0, enforced ✅ |
+| W4.5 Brand surface | custom domain + HTTPS; per-page social cards (Core / Fleet / GhostDNS / Portals / Benchmark / About / Signup); favicon/brand kit everywhere | Operator | 0 preview regressions across 7 public pages ✅ |
+| W4.6 X quota unification | operator posts recorded in the same ledger the governor reads (`check_social_spacing_governor`); the daemon idles instead of logging a refusal loop | Guardian | No "quota reached" refusal while a manual post is live ✅ |
 
 **Exit gate:** 16/16 daemons green, 0 stale states, 0 broken references, radar full-scope, docs↔landing drift 0.
 

@@ -65,6 +65,8 @@ _LAZY_IMPORTS = {
     "PrivateDefensiveAlert": ("orbit_security.private_alerting", "PrivateDefensiveAlert"),
     "BucketListingEvaluator": ("orbit_security.bounty_radar", "BucketListingEvaluator"),
     "SensitiveExposureScanner": ("orbit_security.bounty_radar", "SensitiveExposureScanner"),
+    "BountyRadar": ("orbit_security.bounty_radar", "BountyRadar"),
+    "BountyRadarSupervisor": ("orbit_security.bounty_radar", "BountyRadarSupervisor"),
 }
 
 __all__ = list(_LAZY_IMPORTS.keys()) + ["hello"]

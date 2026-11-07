@@ -32,6 +32,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from orbit_security.bounty_radar import (
+    BountyRadar,
     BountyRadarSupervisor,
     BountyScopeIngester,
     BountyTakeoverSweeper,
@@ -87,7 +88,8 @@ def main():
         print(f"✓ Ingested {len(ingested)} program(s) from Bugcrowd scope: {[p.name for p in ingested]}")
         return
 
-    supervisor = BountyRadarSupervisor(ingester=ingester)
+    radar = BountyRadar(ingester=ingester)
+    supervisor = radar
 
     if args.status:
         st = supervisor.state
@@ -116,20 +118,40 @@ def main():
     is_off_peak = OffPeakWindow.is_off_peak()
     print(f" Off-Peak Window (2:00 AM - 5:00 AM MST): {'🟢 IN WINDOW' if is_off_peak else '🟡 OUTSIDE WINDOW'}")
 
-    res = supervisor.run_sweep(
-        program_id=args.program,
-        force_now=args.now,
-        max_domains_per_program=args.max_targets,
-        use_passive_ct=args.passive_ct,
-        output_dir=Path(args.output_dir) if args.output_dir else None,
-        max_programs=args.max_programs,
-        package_crypto_bundle=args.crypto_bundle,
-    )
+    if args.program:
+        res = radar.run_sweep(
+            program_id=args.program,
+            force_now=args.now,
+            max_domains_per_program=args.max_targets,
+            use_passive_ct=args.passive_ct,
+            output_dir=Path(args.output_dir) if args.output_dir else None,
+            max_programs=args.max_programs,
+            package_crypto_bundle=args.crypto_bundle,
+        )
+    else:
+        try:
+            res = radar.scan_all_programs(
+                force_now=args.now,
+                max_domains_per_program=args.max_targets,
+                min_programs_scanned=20,
+                enforce_exit_gate=True,
+                use_passive_ct=args.passive_ct,
+                output_dir=Path(args.output_dir) if args.output_dir else None,
+                package_crypto_bundle=args.crypto_bundle,
+            )
+        except RuntimeError as gate_err:
+            print(f"\n❌ Operational Exit Gate Failure: {gate_err}")
+            sys.exit(1)
 
     if res.get("status") == "SKIPPED_OUTSIDE_WINDOW":
         print(f"\n⚠️  {res.get('message')}")
         print("Tip: Run with --now to bypass the off-peak restriction.")
         return
+
+    scanned = res.get("programs_scanned", 0)
+    if not args.program and scanned < 20:
+        print(f"\n❌ Operational Exit Gate Failure: only {scanned} programs scanned (< 20 required).")
+        sys.exit(1)
 
     print(f"\n✓ Sweep Completed.")
     print(f"  • Programs Scanned:         {res.get('programs_scanned')}")

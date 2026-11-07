@@ -10,10 +10,11 @@
 
     <!-- Open Graph / Social Meta -->
     <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Orbit Security">
     <meta property="og:url" content="https://cmfh009.github.io/Orbit-Security/about.html">
     <meta property="og:title" content="About Orbit Security | Autonomous Perimeter Intelligence for Web Agencies">
     <meta property="og:description" content="Orbit Security continuously maps agency client perimeters, prevents subdomain takeovers, neutralizes DMARC spoofing, and generates white-label security retainers.">
-    <meta property="og:image" content="https://cmfh009.github.io/Orbit-Security/assets/og-image.png">
+    <meta property="og:image" content="https://cmfh009.github.io/Orbit-Security/assets/orbit_cyber_command_deck.jpg">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="About Orbit Security — autonomous perimeter intelligence for web agencies, covering dangling DNS takeover defense, DMARC enforcement and white-label client audits.">
@@ -22,9 +23,10 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="@_arsoncode">
     <meta name="twitter:creator" content="@_arsoncode">
-    <meta name="twitter:title" content="About Orbit Security — Autonomous Attack Surface Management">
-    <meta name="twitter:description" content="Zero-drift perimeter monitoring, dangling CNAME takeover defense, and white-label client security deliverables for Shopify Plus, WordPress VIP, and Laravel agencies.">
-    <meta name="twitter:image" content="https://cmfh009.github.io/Orbit-Security/assets/og-image.png">
+    <meta name="twitter:url" content="https://cmfh009.github.io/Orbit-Security/about.html">
+    <meta name="twitter:title" content="About Orbit Security | Autonomous Perimeter Intelligence for Web Agencies">
+    <meta name="twitter:description" content="Orbit Security continuously maps agency client perimeters, prevents subdomain takeovers, neutralizes DMARC spoofing, and generates white-label security retainers.">
+    <meta name="twitter:image" content="https://cmfh009.github.io/Orbit-Security/assets/orbit_cyber_command_deck.jpg">
     <meta name="twitter:image:alt" content="About Orbit Security — autonomous perimeter intelligence for web agencies, covering dangling DNS takeover defense, DMARC enforcement and white-label client audits.">
 
     <!-- JSON-LD Entity & Organization Schema for AI Search Engines (Perplexity, ChatGPT, Claude, Gemini) -->
@@ -587,6 +589,22 @@
                 </a>
             </div>
         </section>
+
+        <!-- Methodology Footnotes Section -->
+        <div class="mt-8 pt-6 border-t border-slate-800/80 text-xs text-slate-400 font-sans space-y-2">
+            <p>
+                <strong class="text-slate-300">* Latency Methodology Note (Measured 2026-10-22):</strong>
+                4.1s (4,063 ms) median active processing time per domain audit (scanner + network, throttle sleeps removed; 5,907 ms p95) across 25 live audits. Wall-clock duration is ~19.2s when governed by the strict 1 req/sec per host politeness limit. Open benchmark data published at <a href="benchmark/" class="text-cyan-400 hover:underline">/benchmark/</a>.
+            </p>
+            <p>
+                <strong class="text-slate-300">† Signature Coverage Methodology Note (Audited 2026-10-22):</strong>
+                52 provider signatures carrying 76 distinct provider fingerprints and 69 distinct dangling hostname classes, with 3 providers additionally verified by NXDOMAIN. Takeover reported only upon confirmed CNAME pattern match AND provider fingerprint response.
+            </p>
+            <p>
+                <strong class="text-slate-300">‡ Retainer ROI Methodology Note (Benchmark 2026-10-22):</strong>
+                10,493% annualized ROI model calculated on an agency managing 25 client domains on a $250/mo security care plan ($75,000/yr gross retainer billings) against Orbit Pro tier subscription ($59/mo, or $708/yr fixed cost), yielding $74,292/yr in gross margin with zero incremental headcount.
+            </p>
+        </div>
 
     </main>
 

@@ -9,11 +9,13 @@ import datetime
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
+from orbit_security.blackboard import TOPIC_TELEMETRY, Blackboard, get_blackboard
 from orbit_security.models import AgencyBranding, DomainAuditResult, Finding, Severity
 from orbit_security.reporter import ReportGenerator
 from orbit_security.scanner import OrbitSecurityScanner
+from orbit_security.scoring import coerce_severity, score_findings
 
 DEFAULT_FLEET_DATA_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "clients.json"
 
@@ -111,9 +113,78 @@ class FleetSentinel:
         self,
         registry: Optional[FleetRegistry] = None,
         scanner: Optional[OrbitSecurityScanner] = None,
+        blackboard: Optional[Blackboard] = None,
     ):
         self.registry = registry or FleetRegistry()
         self.scanner = scanner or OrbitSecurityScanner()
+        self.blackboard = blackboard
+
+    def record_score_delta(
+        self,
+        client_id: str,
+        findings: Iterable[Any],
+        broadcast: bool = True,
+        override_score: Optional[int] = None,
+        override_grade: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Calculates scoring parity delta via score_findings, updates client metrics,
+        and broadcasts 'fleet_score_delta' event to blackboard.
+        """
+        client = self.registry.get_client(client_id)
+        if not client:
+            raise ValueError(f"Client '{client_id}' not found in registry")
+
+        old_score = client.last_score
+        audit_score = score_findings(findings)
+        new_score = override_score if override_score is not None else audit_score.score
+        grade = override_grade if override_grade is not None else audit_score.grade
+
+        critical_findings = sum(
+            1 for f in findings if coerce_severity(getattr(f, "severity", None)) == Severity.CRITICAL
+        )
+        high_findings = sum(
+            1 for f in findings if coerce_severity(getattr(f, "severity", None)) == Severity.HIGH
+        )
+
+        score_change = (new_score - old_score) if old_score is not None else 0
+
+        self.registry.update_scan_metrics(client_id, new_score, grade)
+
+        delta_record = {
+            "client_id": client_id,
+            "client_name": client.client_name,
+            "domain": client.apex_domain,
+            "old_score": old_score,
+            "new_score": new_score,
+            "score_change": score_change,
+            "critical_findings": critical_findings,
+            "high_findings": high_findings,
+            "grade": grade,
+        }
+
+        if broadcast:
+            try:
+                bb = self.blackboard or get_blackboard()
+                bb.publish(
+                    event_type="fleet_score_delta",
+                    payload=delta_record,
+                    source="FleetSentinel",
+                    topic=TOPIC_TELEMETRY,
+                )
+            except Exception:
+                pass
+
+        return {
+            "client_id": client_id,
+            "client_name": client.client_name,
+            "domain": client.apex_domain,
+            "old_score": old_score,
+            "new_score": new_score,
+            "score_change": score_change,
+            "critical_findings": critical_findings,
+            "high_findings": high_findings,
+            "grade": grade,
+        }
 
     async def scan_client(
         self, client: ClientTarget, agency_branding: Optional[AgencyBranding] = None
@@ -133,37 +204,41 @@ class FleetSentinel:
         self, agency_branding: Optional[AgencyBranding] = None
     ) -> List[DriftEvent]:
         """Runs automated perimeter hygiene scan across all active fleet clients,
-
         identifying posture regressions and critical findings.
         """
         active_clients = self.registry.list_active()
         drift_events: List[DriftEvent] = []
 
         for client in active_clients:
-            old_score = client.last_score
             audit_result = await self.scan_client(client, agency_branding)
 
-            # Record metrics
-            self.registry.update_scan_metrics(
-                client.client_id, audit_result.score, audit_result.grade
+            override_score = None
+            override_grade = None
+            if hasattr(audit_result, "score") and hasattr(audit_result, "findings"):
+                computed = score_findings(audit_result.findings)
+                if audit_result.score != computed.score and audit_result.score != 100:
+                    override_score = audit_result.score
+                    override_grade = audit_result.grade
+
+            delta = self.record_score_delta(
+                client.client_id,
+                audit_result.findings,
+                broadcast=True,
+                override_score=override_score,
+                override_grade=override_grade,
             )
 
-            crit_count = sum(1 for f in audit_result.findings if f.severity == Severity.CRITICAL)
-            high_count = sum(1 for f in audit_result.findings if f.severity == Severity.HIGH)
-
-            # Detect negative score drift or presence of severe issues
-            score_change = (audit_result.score - old_score) if old_score is not None else 0
-            if score_change < -5 or crit_count > 0:
+            if delta["score_change"] < -5 or delta["critical_findings"] > 0:
                 drift_events.append(
                     DriftEvent(
                         client_id=client.client_id,
                         client_name=client.client_name,
                         domain=client.apex_domain,
-                        old_score=old_score,
-                        new_score=audit_result.score,
-                        score_change=score_change,
-                        critical_findings=crit_count,
-                        high_findings=high_count,
+                        old_score=delta["old_score"],
+                        new_score=delta["new_score"],
+                        score_change=delta["score_change"],
+                        critical_findings=delta["critical_findings"],
+                        high_findings=delta["high_findings"],
                         findings=audit_result.findings,
                     )
                 )

@@ -32,7 +32,10 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUT_DIR = REPO_ROOT / "outbound_queue" / "cohort_11"
 
-# Add project root to path for imports if needed
+# Add project root and src to path for imports if needed
+SRC_DIR = REPO_ROOT / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 

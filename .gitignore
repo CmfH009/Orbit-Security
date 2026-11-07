@@ -121,6 +121,10 @@ data/*_audit_*.md
 data/*_audit_*.pdf
 docs/SESSION_HANDOFF*.md
 docs/*HANDOFF*.md
+data/quarantined_addresses.json
+data/disposition_ledger.json
+*.eml
+
 
 
 

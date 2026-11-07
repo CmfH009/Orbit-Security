@@ -7,9 +7,33 @@
     <title>Fleet Command Center | Orbit Security</title>
     
     <!-- Primary SEO Meta Tags -->
-    <meta name="title" content="Orbit Security | Multi-Domain Fleet Command Center">
-    <meta name="description" content="Real-time multi-client attack surface sentinel and perimeter hygiene dashboard for web and Shopify agencies.">
+    <meta name="title" content="Fleet Command Center | Orbit Security">
+    <meta name="description" content="Real-time multi-client attack surface sentinel, DNS drift telemetry, and perimeter hygiene dashboard for web and Shopify agencies.">
     <meta name="author" content="Carson Haynes | Founder, Orbit Security">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://cmfh009.github.io/Orbit-Security/fleet.html">
+
+    <!-- Open Graph / Facebook / LinkedIn -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Orbit Security">
+    <meta property="og:url" content="https://cmfh009.github.io/Orbit-Security/fleet.html">
+    <meta property="og:title" content="Fleet Command Center | Orbit Security">
+    <meta property="og:description" content="Real-time multi-client attack surface sentinel, DNS drift telemetry, and perimeter hygiene dashboard for web and Shopify agencies.">
+    <meta property="og:image" content="https://cmfh009.github.io/Orbit-Security/assets/fleet_command_center_live.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Orbit Security Fleet Command Center — real-time multi-client attack surface sentinel and perimeter hygiene dashboard.">
+
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@_arsoncode">
+    <meta name="twitter:creator" content="@_arsoncode">
+    <meta name="twitter:url" content="https://cmfh009.github.io/Orbit-Security/fleet.html">
+    <meta name="twitter:title" content="Fleet Command Center | Orbit Security">
+    <meta name="twitter:description" content="Real-time multi-client attack surface sentinel, DNS drift telemetry, and perimeter hygiene dashboard for web and Shopify agencies.">
+    <meta name="twitter:image" content="https://cmfh009.github.io/Orbit-Security/assets/fleet_command_center_live.png">
+    <meta name="twitter:image:alt" content="Orbit Security Fleet Command Center — real-time multi-client attack surface sentinel and perimeter hygiene dashboard.">
 
     <!-- Favicon & High-Performance Preconnects -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'><path d='M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z'/></svg>">
@@ -22,6 +46,8 @@
     <link rel="stylesheet" href="assets/styles.min.css?v=20261026v6">
     <!-- Simple Cat 16-Bit Companion & Plain-English Decoder -->
     <script src="assets/simple_cat.js?v=20261026v6" defer></script>
+    <!-- Orbit Radar Shared Engine & Score Delta Formatter -->
+    <script src="assets/orbit_radar.js?v=20261026v6" defer></script>
 
     <style>
         /* 0% CPU Idle Governor (Pillar 5 Resiliency) - Low-Recalc Targeted Selectors */
@@ -118,7 +144,6 @@
             padding: 8px 12px !important;
         }
     </style>
-    <link rel="canonical" href="https://cmfh009.github.io/Orbit-Security/fleet.html">
 
     <!-- Structured Data: Schema.org entity graph (shared Organization @id) -->
     <script type="application/ld+json">
@@ -557,6 +582,23 @@
 
     <!-- Footer -->
     <footer class="relative z-10 mt-auto border-t border-slate-800/80 bg-slate-950 py-6 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-6 mb-6">
+            <!-- Methodology Footnotes Section -->
+            <div class="pt-2 border-b border-slate-800/80 text-xs text-slate-400 font-sans space-y-2 text-left pb-6">
+                <p>
+                    <strong class="text-slate-300">* Latency Methodology Note (Measured 2026-10-22):</strong>
+                    4.1s (4,063 ms) median active processing time per domain audit (scanner + network, throttle sleeps removed; 5,907 ms p95) across 25 live audits. Wall-clock duration is ~19.2s when governed by the strict 1 req/sec per host politeness limit. Open benchmark data published at <a href="benchmark/" class="text-cyan-400 hover:underline">/benchmark/</a>.
+                </p>
+                <p>
+                    <strong class="text-slate-300">† Signature Coverage Methodology Note (Audited 2026-10-22):</strong>
+                    52 provider signatures carrying 76 distinct provider fingerprints and 69 distinct dangling hostname classes, with 3 providers additionally verified by NXDOMAIN. Takeover reported only upon confirmed CNAME pattern match AND provider fingerprint response.
+                </p>
+                <p>
+                    <strong class="text-slate-300">‡ Retainer ROI Methodology Note (Benchmark 2026-10-22):</strong>
+                    10,493% annualized ROI model calculated on an agency managing 25 client domains on a $250/mo security care plan ($75,000/yr gross retainer billings) against Orbit Pro tier subscription ($59/mo, or $708/yr fixed cost), yielding $74,292/yr in gross margin with zero incremental headcount.
+                </p>
+            </div>
+        </div>
         <div class="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>Orbit Security Fleet Sentinel &copy; 2026. Built by Carson Haynes (`@_arsoncode`).</div>
             <div class="flex items-center gap-4">
@@ -579,6 +621,23 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
+        }
+
+        function formatScoreDeltaBadge(scoreChange, options = {}) {
+            if (window.formatScoreDeltaBadge && window.formatScoreDeltaBadge !== formatScoreDeltaBadge) {
+                return window.formatScoreDeltaBadge(scoreChange, options);
+            }
+            if (scoreChange === null || scoreChange === undefined || scoreChange === '') return '';
+            const num = Number(scoreChange);
+            if (isNaN(num)) return '';
+            if (num > 0) {
+                return `<span class="score-delta-badge score-delta-up px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">+${num}</span>`;
+            } else if (num <= -5) {
+                return `<span class="score-delta-badge score-delta-drift px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse">${num} DRIFT</span>`;
+            } else if (num < 0) {
+                return `<span class="score-delta-badge score-delta-down px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">${num}</span>`;
+            }
+            return `<span class="score-delta-badge score-delta-neutral px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-400 border border-slate-700">±0</span>`;
         }
 
         // On-demand lazy loader for 513KB PDF engine
@@ -613,25 +672,25 @@
         });
 
         const initialFleet = [
-            { domain: "candykittens.co.uk", client: "Candy Kittens (Charle)", score: 95, grade: "A+", dmarc: "v=DMARC1; p=reject", cname: "Apex Direct", headers: "5/7", status: "Clean" },
-            { domain: "recipetineats.com", client: "RecipeTin Eats (Human Made)", score: 90, grade: "A", dmarc: "v=DMARC1; p=none", cname: "Cloudflare Edge", headers: "4/7", status: "Clean" },
-            { domain: "footanstey.com", client: "Foot Anstey (Illustrate)", score: 90, grade: "A", dmarc: "v=DMARC1; p=none", cname: "WP Engine", headers: "4/7", status: "Clean" },
-            { domain: "nutopia.com", client: "Nutopia (KOTA)", score: 80, grade: "B", dmarc: "Missing DMARC", cname: "AWS CloudFront", headers: "3/7", status: "Missing HSTS" },
-            { domain: "politico.com", client: "POLITICO (10up)", score: 100, grade: "A+", dmarc: "v=DMARC1; p=reject", cname: "Fastly Enterprise", headers: "7/7", status: "Pristine" },
-            { domain: "cotswoldsdistillery.com", client: "Cotswolds (Propeller)", score: 85, grade: "B+", dmarc: "v=DMARC1; p=none", cname: "Shopify Edge", headers: "4/7", status: "Clean" }
+            { domain: "candykittens.co.uk", client: "Candy Kittens (Charle)", score: 95, grade: "A+", score_change: 3, critical_findings: 0, dmarc: "v=DMARC1; p=reject", cname: "Apex Direct", headers: "5/7", status: "Clean" },
+            { domain: "recipetineats.com", client: "RecipeTin Eats (Human Made)", score: 90, grade: "A", score_change: 0, critical_findings: 0, dmarc: "v=DMARC1; p=none", cname: "Cloudflare Edge", headers: "4/7", status: "Clean" },
+            { domain: "footanstey.com", client: "Foot Anstey (Illustrate)", score: 90, grade: "A", score_change: -2, critical_findings: 0, dmarc: "v=DMARC1; p=none", cname: "WP Engine", headers: "4/7", status: "Clean" },
+            { domain: "nutopia.com", client: "Nutopia (KOTA)", score: 80, grade: "B", score_change: -8, critical_findings: 1, dmarc: "Missing DMARC", cname: "AWS CloudFront", headers: "3/7", status: "Missing HSTS" },
+            { domain: "politico.com", client: "POLITICO (10up)", score: 100, grade: "A+", score_change: 5, critical_findings: 0, dmarc: "v=DMARC1; p=reject", cname: "Fastly Enterprise", headers: "7/7", status: "Pristine" },
+            { domain: "cotswoldsdistillery.com", client: "Cotswolds (Propeller)", score: 85, grade: "B+", score_change: 0, critical_findings: 0, dmarc: "v=DMARC1; p=none", cname: "Shopify Edge", headers: "4/7", status: "Clean" }
         ];
 
         const cohort5Fleet = [
-            { domain: "carawayhome.com", client: "Caraway Home (Verbal+Visual)", score: 60, grade: "B", dmarc: "v=DMARC1; p=quarantine", cname: "Apex Direct", headers: "2/7", status: "Missing CSP" },
-            { domain: "rothys.com", client: "Rothy's (Anatta)", score: 84, grade: "B+", dmarc: "v=DMARC1; p=quarantine", cname: "Apex Direct", headers: "5/7", status: "Clean" },
-            { domain: "victoriabeckham.com", client: "Victoria Beckham (Fostr)", score: 84, grade: "B+", dmarc: "v=DMARC1; p=quarantine", cname: "Apex Direct", headers: "5/7", status: "Clean" },
-            { domain: "johnnycupcakes.com", client: "Johnny Cupcakes (Growth Spark)", score: 84, grade: "B+", dmarc: "v=DMARC1; p=quarantine", cname: "Apex Direct", headers: "5/7", status: "Clean" },
-            { domain: "burlington.com", client: "Burlington (Guidance)", score: 52, grade: "C", dmarc: "v=DMARC1; p=none", cname: "Apex Direct", headers: "1/7", status: "Missing Headers" },
-            { domain: "broadway.com", client: "Broadway.com (Lounge Lizard)", score: 84, grade: "B+", dmarc: "v=DMARC1; p=quarantine", cname: "Apex Direct", headers: "5/7", status: "Clean" },
-            { domain: "nationalgeographic.org", client: "National Geographic (Taoti)", score: 44, grade: "D", dmarc: "Missing DMARC", cname: "Apex Direct", headers: "0/7", status: "High Risk" },
-            { domain: "rexall.ca", client: "Rexall (Northern)", score: 52, grade: "C", dmarc: "v=DMARC1; p=none", cname: "Apex Direct", headers: "1/7", status: "Missing HSTS" },
-            { domain: "zeek.com", client: "Zeek Interactive (Zeek)", score: 44, grade: "D", dmarc: "Missing DMARC", cname: "Apex Direct", headers: "0/7", status: "Missing Headers" },
-            { domain: "reynoldsam.com", client: "Reynolds (WebFX)", score: 76, grade: "B", dmarc: "v=DMARC1; p=none", cname: "Apex Direct", headers: "4/7", status: "Clean" }
+            { domain: "carawayhome.com", client: "Caraway Home (Verbal+Visual)", score: 60, grade: "B", score_change: -5, critical_findings: 0, dmarc: "v=DMARC1; p=quarantine", cname: "Apex Direct", headers: "2/7", status: "Missing CSP" },
+            { domain: "rothys.com", client: "Rothy's (Anatta)", score: 84, grade: "B+", score_change: 4, critical_findings: 0, dmarc: "v=DMARC1; p=quarantine", cname: "Apex Direct", headers: "5/7", status: "Clean" },
+            { domain: "victoriabeckham.com", client: "Victoria Beckham (Fostr)", score: 84, grade: "B+", score_change: 0, critical_findings: 0, dmarc: "v=DMARC1; p=quarantine", cname: "Apex Direct", headers: "5/7", status: "Clean" },
+            { domain: "johnnycupcakes.com", client: "Johnny Cupcakes (Growth Spark)", score: 84, grade: "B+", score_change: 2, critical_findings: 0, dmarc: "v=DMARC1; p=quarantine", cname: "Apex Direct", headers: "5/7", status: "Clean" },
+            { domain: "burlington.com", client: "Burlington (Guidance)", score: 52, grade: "C", score_change: -6, critical_findings: 1, dmarc: "v=DMARC1; p=none", cname: "Apex Direct", headers: "1/7", status: "Missing Headers" },
+            { domain: "broadway.com", client: "Broadway.com (Lounge Lizard)", score: 84, grade: "B+", score_change: 0, critical_findings: 0, dmarc: "v=DMARC1; p=quarantine", cname: "Apex Direct", headers: "5/7", status: "Clean" },
+            { domain: "nationalgeographic.org", client: "National Geographic (Taoti)", score: 44, grade: "D", score_change: -12, critical_findings: 2, dmarc: "Missing DMARC", cname: "Apex Direct", headers: "0/7", status: "High Risk" },
+            { domain: "rexall.ca", client: "Rexall (Northern)", score: 52, grade: "C", score_change: -7, critical_findings: 1, dmarc: "v=DMARC1; p=none", cname: "Apex Direct", headers: "1/7", status: "Missing HSTS" },
+            { domain: "zeek.com", client: "Zeek Interactive (Zeek)", score: 44, grade: "D", score_change: -9, critical_findings: 1, dmarc: "Missing DMARC", cname: "Apex Direct", headers: "0/7", status: "Missing Headers" },
+            { domain: "reynoldsam.com", client: "Reynolds (WebFX)", score: 76, grade: "B", score_change: 1, critical_findings: 0, dmarc: "v=DMARC1; p=none", cname: "Apex Direct", headers: "4/7", status: "Clean" }
         ];
 
         const STORAGE_KEY = "orbit_fleet_registry_v2";
@@ -848,9 +907,13 @@
                         <div class="text-xs text-slate-400">${escapeHtml(item.client)}</div>
                     </td>
                     <td class="py-4 px-4 text-center">
-                        <span class="inline-block px-2.5 py-1 rounded-full text-xs font-mono font-bold border ${scoreColor}">
-                            ${item.score}/100 (${item.grade})
-                        </span>
+                        <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                            <span class="inline-block px-2.5 py-1 rounded-full text-xs font-mono font-bold border ${scoreColor}">
+                                ${item.score}/100 (${item.grade})
+                            </span>
+                            ${formatScoreDeltaBadge(item.score_change)}
+                            ${item.critical_findings > 0 ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-rose-950 text-rose-300 border border-rose-800">${item.critical_findings} CRIT</span>` : ''}
+                        </div>
                     </td>
                     <td class="py-4 px-4">
                         ${dmarcBadge}

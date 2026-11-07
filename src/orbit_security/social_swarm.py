@@ -21,6 +21,7 @@ Emits blackboard events:
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import os
 import sys
@@ -28,7 +29,7 @@ import time
 import uuid
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 try:
     from orbit_security.blackboard import (
@@ -224,12 +225,194 @@ class CommunityEngagementSentinel:
         return reply_payload
 
 
+def _resolve_social_state_file(custom_path: Optional[Union[str, Path]] = None) -> Path:
+    """Resolves social daemon state file location checking state/ then data/."""
+    if custom_path:
+        return Path(custom_path)
+
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    candidates = [
+        WORKSPACE_ROOT / "system" / "state" / "social_daemon_state.json",
+        repo_root / "state" / "social_daemon_state.json",
+        repo_root / "data" / "social_daemon_state.json",
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+
+    return repo_root / "data" / "social_daemon_state.json"
+
+
+def check_social_spacing_governor(
+    state_file: Optional[Union[str, Path]] = None,
+    quota_manager: Optional[Any] = None,
+) -> Dict[str, Any]:
+    """Inspects the social spacing ledger to enforce the 8.0h post interval and idle cleanly.
+
+    Prevents X refusal loops by detecting automated or manual operator posts and calculating
+    cooldown remaining without throwing exceptions.
+    """
+    resolved_file = _resolve_social_state_file(state_file)
+    st: Dict[str, Any] = {}
+    if resolved_file.exists():
+        try:
+            st = json.loads(resolved_file.read_text(encoding="utf-8"))
+        except Exception:
+            st = {}
+
+    quotas = st.get("quotas", {})
+    min_spacing_hours = float(quotas.get("min_post_spacing_hours", 8.0))
+    daily_caps = quotas.get("daily_caps", {})
+    daily_executed = quotas.get("daily_executed", {})
+    daily_posts_cap = int(daily_caps.get("posts", 2))
+    daily_posts_count = int(daily_executed.get("posts_count", 0))
+
+    # Determine last post timestamp
+    last_ts_str = st.get("last_post_timestamp") or st.get("timestamp")
+    is_manual = bool(
+        st.get("manual_post_detected")
+        or st.get("last_post_is_manual")
+        or st.get("is_manual")
+    )
+
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    elapsed_seconds = 0.0
+    elapsed_hours = 999.0  # Default assuming plenty of time elapsed if no post recorded
+
+    if last_ts_str:
+        try:
+            s = str(last_ts_str).strip()
+            if s.endswith("Z"):
+                s = s[:-1] + "+00:00"
+            last_dt = datetime.datetime.fromisoformat(s)
+            if last_dt.tzinfo is None:
+                last_dt = last_dt.replace(tzinfo=datetime.timezone.utc)
+            elapsed_seconds = max(0.0, (now_utc - last_dt).total_seconds())
+            elapsed_hours = elapsed_seconds / 3600.0
+        except Exception:
+            try:
+                last_dt = datetime.datetime.fromtimestamp(float(last_ts_str), tz=datetime.timezone.utc)
+                elapsed_seconds = max(0.0, (now_utc - last_dt).total_seconds())
+                elapsed_hours = elapsed_seconds / 3600.0
+            except Exception:
+                elapsed_hours = 999.0
+
+    # 1. Check inter-post spacing (8.0h default)
+    if elapsed_hours < min_spacing_hours:
+        cooldown_remaining_sec = max(0.0, (min_spacing_hours - elapsed_hours) * 3600.0)
+        return {
+            "ok": True,
+            "status": "PACED_IDLE",
+            "post_allowed": False,
+            "reason": (
+                f"Post spacing interval active ({elapsed_hours:.1f}h elapsed < {min_spacing_hours:.1f}h min spacing). "
+                f"Governor idles cleanly without refusal loop."
+            ),
+            "cooldown_remaining_seconds": round(cooldown_remaining_sec, 1),
+            "cooldown_remaining_hours": round(cooldown_remaining_sec / 3600.0, 2),
+            "manual_post_detected": is_manual,
+            "elapsed_hours": round(elapsed_hours, 2),
+            "state_file": str(resolved_file),
+        }
+
+    # 2. Check daily hard cap
+    if daily_posts_count >= daily_posts_cap:
+        return {
+            "ok": True,
+            "status": "PACED_IDLE",
+            "post_allowed": False,
+            "reason": f"Daily post cap reached ({daily_posts_count} >= {daily_posts_cap}). Governor idles cleanly.",
+            "cooldown_remaining_seconds": 0.0,
+            "cooldown_remaining_hours": 0.0,
+            "manual_post_detected": is_manual,
+            "elapsed_hours": round(elapsed_hours, 2),
+            "state_file": str(resolved_file),
+        }
+
+    # 3. Post is permitted
+    return {
+        "ok": True,
+        "status": "READY",
+        "post_allowed": True,
+        "reason": f"Spacing interval clear ({elapsed_hours:.1f}h >= {min_spacing_hours:.1f}h). Posting permitted.",
+        "cooldown_remaining_seconds": 0.0,
+        "cooldown_remaining_hours": 0.0,
+        "manual_post_detected": is_manual,
+        "elapsed_hours": round(elapsed_hours, 2),
+        "state_file": str(resolved_file),
+    }
+
+
+def ingest_manual_operator_post(
+    post_text: str,
+    media_path: Optional[str] = None,
+    timestamp_utc: Optional[str] = None,
+    state_file: Optional[Union[str, Path]] = None,
+) -> Dict[str, Any]:
+    """Ingests a manual post published by the operator into the governor state ledger."""
+    resolved_file = _resolve_social_state_file(state_file)
+    ts = timestamp_utc or datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    st: Dict[str, Any] = {}
+    if resolved_file.exists():
+        try:
+            st = json.loads(resolved_file.read_text(encoding="utf-8"))
+        except Exception:
+            st = {}
+
+    st["timestamp"] = ts
+    st["last_post_timestamp"] = ts
+    st["last_post_is_manual"] = True
+    st["manual_post_detected"] = True
+
+    if "quotas" not in st:
+        st["quotas"] = {
+            "min_post_spacing_hours": 8.0,
+            "hourly_executed": {"POST": 0},
+            "hourly_limits": {"posts": 1},
+            "daily_executed": {"posts_count": 0},
+            "daily_caps": {"posts": 2},
+        }
+
+    quotas = st["quotas"]
+    quotas.setdefault("hourly_executed", {})
+    quotas.setdefault("daily_executed", {})
+    quotas["hourly_executed"]["POST"] = int(quotas["hourly_executed"].get("POST", 0)) + 1
+    quotas["daily_executed"]["posts_count"] = int(quotas["daily_executed"].get("posts_count", 0)) + 1
+
+    if "manual_posts" not in st:
+        st["manual_posts"] = []
+    st["manual_posts"].append({
+        "post_text": post_text,
+        "timestamp": ts,
+        "media_path": media_path,
+    })
+
+    resolved_file.parent.mkdir(parents=True, exist_ok=True)
+    resolved_file.write_text(json.dumps(st, indent=2), encoding="utf-8")
+
+    return {
+        "ok": True,
+        "manual_post_recorded": True,
+        "timestamp": ts,
+        "post_text": post_text,
+        "state_file": str(resolved_file),
+    }
+
+
 class SocialEngagementSwarm:
     """Master Coordinator for X Social Engagement Swarm."""
 
-    def __init__(self, queue_file: Optional[Path] = None):
+    def __init__(
+        self,
+        queue_file: Optional[Path] = None,
+        state_file: Optional[Union[str, Path]] = None,
+        enforce_governor: bool = False,
+    ):
         self.queue_file = Path(queue_file) if queue_file else SOCIAL_QUEUE_FILE
         self.queue_file.parent.mkdir(parents=True, exist_ok=True)
+        self.state_file = Path(state_file) if state_file else None
+        self.enforce_governor = enforce_governor or (self.state_file is not None)
         self.roast_crafter = PerimeterRoastCrafter()
         self.thread_architect = ViralThreadArchitect()
         self.community_sentinel = CommunityEngagementSentinel()
@@ -249,9 +432,24 @@ class SocialEngagementSwarm:
     def run_social_cycle(
         self,
         audit_sample: Dict[str, Any],
-        threat_topic: str
+        threat_topic: str,
+        ignore_spacing: bool = False,
     ) -> Dict[str, Any]:
-        """Runs an end-to-end social generation pass adhering to ADR-002."""
+        """Runs an end-to-end social generation pass adhering to ADR-002 and spacing governor."""
+        if self.enforce_governor and not ignore_spacing:
+            gov = check_social_spacing_governor(state_file=self.state_file)
+            if not gov.get("post_allowed", True):
+                return {
+                    "ok": True,
+                    "status": "PACED_IDLE",
+                    "post_allowed": False,
+                    "reason": gov.get("reason", "Post spacing interval active. Governor idles cleanly."),
+                    "cooldown_remaining_seconds": gov.get("cooldown_remaining_seconds", 0.0),
+                    "manual_post_detected": gov.get("manual_post_detected", False),
+                    "adr002_compliant": True,
+                    "queue_file": str(self.queue_file),
+                }
+
         roast = self.roast_crafter.craft_roast(
             agency_name=audit_sample.get("agency_name", "Avex Designs"),
             domain=audit_sample.get("domain", "avexdesigns.com"),
@@ -286,6 +484,8 @@ class SocialEngagementSwarm:
 
         return {
             "ok": True,
+            "status": "STAGED",
+            "post_allowed": True,
             "roast": roast,
             "thread": thread,
             "reply": reply,

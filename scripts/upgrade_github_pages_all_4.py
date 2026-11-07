@@ -454,7 +454,7 @@ replacement_body_end = """            <div class="mt-4 pt-3 border-t border-slat
             const subjEl = document.getElementById('pitchSubjectDisplay');
             const bodyEl = document.getElementById('pitchBodyDisplay');
             if (subjEl) subjEl.textContent = tpl.subject;
-            if (bodyEl) bodyEl.textContent = tpl.body.replace(/\{\{AGENCY\}\}/g, agency);
+            if (bodyEl) bodyEl.textContent = tpl.body.replace(/\\{\\{AGENCY\\}\\}/g, agency);
 
             ['cve', 'quarterly', 'handover'].forEach(k => {
                 const btn = document.getElementById('pitchTab-' + k);

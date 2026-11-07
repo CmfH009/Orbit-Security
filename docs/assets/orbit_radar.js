@@ -5715,6 +5715,20 @@ ${payload.url}`;
         }, 50);
     }
 
+    function formatScoreDeltaBadge(scoreChange, options = {}) {
+        if (scoreChange === null || scoreChange === undefined || scoreChange === '') return '';
+        const num = Number(scoreChange);
+        if (isNaN(num)) return '';
+        if (num > 0) {
+            return `<span class="score-delta-badge score-delta-up px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">+${num}</span>`;
+        } else if (num <= -5) {
+            return `<span class="score-delta-badge score-delta-drift px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse">${num} DRIFT</span>`;
+        } else if (num < 0) {
+            return `<span class="score-delta-badge score-delta-down px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">${num}</span>`;
+        }
+        return `<span class="score-delta-badge score-delta-neutral px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-400 border border-slate-700">±0</span>`;
+    }
+
     // Expose to window
     window.performClientDohAudit = performClientDohAudit;
     window.runRealScanAndGeneratePdf = runRealScanAndGeneratePdf;
@@ -5748,5 +5762,12 @@ ${payload.url}`;
     window.resetPortalBranding = resetPortalBranding;
     window.copyClientInviteLink = copyClientInviteLink;
     window.initPortalCustomizer = initPortalCustomizer;
+    window.formatScoreDeltaBadge = formatScoreDeltaBadge;
+    if (typeof global !== 'undefined') {
+        global.formatScoreDeltaBadge = formatScoreDeltaBadge;
+    }
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports.formatScoreDeltaBadge = formatScoreDeltaBadge;
+    }
 
 })();
