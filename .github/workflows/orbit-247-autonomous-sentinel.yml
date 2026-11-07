@@ -34,7 +34,7 @@ jobs:
 
     steps:
       - name: Hardened Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -191,7 +191,7 @@ jobs:
 
       - name: "Upload Autonomous Audit & Staged Proposals"
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: orbit-247-audit-report-${{ github.run_id }}
           path: |
