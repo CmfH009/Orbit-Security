@@ -63,7 +63,10 @@ from orbit_security.deal_desk import (
     RetainerDealDeskConcierge,
     RETAINER_PRICING_TIERS,
 )
-import blackboard
+try:
+    from orbit_security import blackboard
+except ImportError:
+    import blackboard
 
 
 # ============================================================================

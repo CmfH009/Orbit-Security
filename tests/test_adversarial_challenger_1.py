@@ -59,7 +59,10 @@ for p in [str(SRC_DIR), str(SYSTEM_SCRIPTS), str(COCKPIT_DIR)]:
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from blackboard import Blackboard, get_blackboard
+try:
+    from orbit_security.blackboard import Blackboard, get_blackboard
+except ImportError:
+    from blackboard import Blackboard, get_blackboard
 from orbit_security.osint_verifier import ExecutiveOSINTVerifier
 from orbit_security.deal_desk import RetainerDealDeskConcierge, RETAINER_PRICING_TIERS
 from orbit_security.bounty_radar import ResponsibleDisclosureDrafter, BountyTakeoverSweeper

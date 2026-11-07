@@ -249,6 +249,9 @@ async function runTests() {
         if (name.startsWith('_dmarc.')) {
             return { success: true, status: 0, answer: [{ type: 16, data: '"v=DMARC1; p=reject; pct=100; rua=mailto:dmarc@uchicago.edu"' }] };
         }
+        if (name === '_spf.uchicago.edu' && type === 16) {
+            return { success: true, status: 0, answer: [{ type: 16, data: '"v=spf1 ip4:128.135.0.0/16 -all"' }] };
+        }
         if (type === 16) {
             return { success: true, status: 0, answer: [{ type: 16, data: '"v=spf1 include:_spf.uchicago.edu -all"' }] };
         }

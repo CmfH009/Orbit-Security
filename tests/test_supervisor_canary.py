@@ -30,11 +30,10 @@ SYSTEM_SCRIPTS = Path("A:/system/scripts") if Path("A:/system/scripts").exists()
 if str(SYSTEM_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SYSTEM_SCRIPTS))
 
-from orbit_daemon import (
-    OrbitMasterSupervisor,
-    ServiceSpec,
-    SupervisorCanaryProbe,
-)
+orbit_daemon = pytest.importorskip("orbit_daemon", reason="orbit_daemon system script not present")
+OrbitMasterSupervisor = orbit_daemon.OrbitMasterSupervisor
+ServiceSpec = orbit_daemon.ServiceSpec
+SupervisorCanaryProbe = orbit_daemon.SupervisorCanaryProbe
 
 
 # ============================================================================

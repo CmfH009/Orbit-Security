@@ -12,11 +12,10 @@ SYSTEM_SCRIPTS = Path("A:/system/scripts") if Path("A:/system/scripts").exists()
 if str(SYSTEM_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SYSTEM_SCRIPTS))
 
-from nova_email_daemon import (
-    NovaEmailDaemon,
-    EmailCategory,
-    EmailMessage,
-)
+nova_email_daemon = pytest.importorskip("nova_email_daemon", reason="nova_email_daemon system script not present")
+NovaEmailDaemon = nova_email_daemon.NovaEmailDaemon
+EmailCategory = nova_email_daemon.EmailCategory
+EmailMessage = nova_email_daemon.EmailMessage
 
 
 @pytest.fixture

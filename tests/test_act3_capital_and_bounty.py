@@ -52,7 +52,11 @@ SYSTEM_SCRIPTS = (
 if str(SYSTEM_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SYSTEM_SCRIPTS))
 
-from orbit_daemon import BountyRadarSupervisorWorker, OrbitMasterSupervisor
+try:
+    from orbit_daemon import BountyRadarSupervisorWorker, OrbitMasterSupervisor
+except ImportError:
+    BountyRadarSupervisorWorker = None
+    OrbitMasterSupervisor = None
 
 
 # ============================================================================
@@ -295,6 +299,11 @@ class TestAct3AgencyWhiteLabelRetainers:
 
 class TestAct3DaemonIntegration:
     """Tests the orbit_daemon.py worker and CLI integration for Bug Bounty Radar."""
+
+    @pytest.fixture(autouse=True)
+    def _check_orbit_daemon(self):
+        if BountyRadarSupervisorWorker is None:
+            pytest.skip("orbit_daemon system script not present")
 
     def test_daemon_bounty_worker_initialization(self):
         worker = BountyRadarSupervisorWorker()
