@@ -73,10 +73,12 @@ class DesktopDriverConfig:
     preferred_processes: List[str] = field(
         default_factory=lambda: ["chrome.exe", "msedge.exe", "brave.exe"]
     )
-    nav_wait_sec: float = 2.8
-    post_submit_wait_sec: float = 3.2
-    media_wait_sec: float = 2.5
+    nav_wait_sec: float = 8.0
+    post_submit_wait_sec: float = 5.0
+    media_wait_sec: float = 3.5
     action_delay: float = 0.25
+    address_bar_offset: Tuple[int, int] = (350, 62)
+    composer_box_offset: Tuple[int, int] = (650, 260)
     mock_mode: bool = False
 
 
@@ -396,8 +398,30 @@ class DesktopAutomationDriver:
             logger.error(f"Failed to set clipboard text: {last_err}")
         return False
 
+    def _send_hardware_enter(self, ctrl: bool = False) -> None:
+        """Sends Enter (optionally with Ctrl) using hardware scan code 0x1C for Chrome/React reliability."""
+        if self.auto is desktop_automation and HAS_WIN32 and win32api is not None:
+            try:
+                if ctrl:
+                    win32api.keybd_event(win32con.VK_CONTROL, 0x1D, 0, 0)
+                    time.sleep(0.05)
+                win32api.keybd_event(0x0D, 0x1C, 0, 0)
+                time.sleep(0.05)
+                win32api.keybd_event(0x0D, 0x1C, win32con.KEYEVENTF_KEYUP, 0)
+                if ctrl:
+                    time.sleep(0.05)
+                    win32api.keybd_event(win32con.VK_CONTROL, 0x1D, win32con.KEYEVENTF_KEYUP, 0)
+                return
+            except Exception as e:
+                logger.debug(f"Hardware scan code 0x1C Enter fallback triggered: {e}")
+
+        if hasattr(self.auto, "send_key"):
+            self.auto.send_key("enter", ctrl=ctrl)
+        elif ctrl and hasattr(self.auto, "send_shortcut"):
+            self.auto.send_shortcut("ctrl+enter")
+
     def navigate_to_url(self, url: str, wait_seconds: Optional[float] = None) -> bool:
-        """Navigates active Chrome window to target URL via address bar (Ctrl+L)."""
+        """Navigates active Chrome window to target URL via address bar focus and hardware Enter."""
         wait_time = wait_seconds if wait_seconds is not None else self.config.nav_wait_sec
 
         if self.config.mock_mode:
@@ -407,9 +431,18 @@ class DesktopAutomationDriver:
         if not self.focus_x_window():
             return False
 
-        # Focus address bar via Ctrl+L
+        # Click address bar coordinates relative to window top-left, then Ctrl+L + Ctrl+A
+        win = self._last_matched_window or {}
+        if hasattr(self.auto, "click_at"):
+            addr_x = int(win.get("left", 0)) + self.config.address_bar_offset[0]
+            addr_y = int(win.get("top", 0)) + self.config.address_bar_offset[1]
+            self.auto.click_at(addr_x, addr_y)
+            time.sleep(0.1)
+
         if hasattr(self.auto, "send_shortcut"):
             self.auto.send_shortcut("ctrl+l")
+            time.sleep(0.1)
+            self.auto.send_shortcut("ctrl+a")
         elif hasattr(self.auto, "send_key"):
             self.auto.send_key("l", ctrl=True)
         time.sleep(0.15)
@@ -421,11 +454,10 @@ class DesktopAutomationDriver:
             self.set_clipboard_text(url)
             if hasattr(self.auto, "send_shortcut"):
                 self.auto.send_shortcut("ctrl+v")
-        time.sleep(0.15)
+        time.sleep(0.2)
 
-        # Press Enter to navigate
-        if hasattr(self.auto, "send_key"):
-            self.auto.send_key("enter")
+        # Press Enter with hardware scan code 0x1C to commit omnibox navigation
+        self._send_hardware_enter(ctrl=False)
         time.sleep(wait_time)
 
         self._record_action("navigate_to_url", url=url, success=True)
@@ -445,12 +477,20 @@ class DesktopAutomationDriver:
             logger.error("Cannot post tweet: active X Chrome window could not be focused.")
             return False
 
-        # Navigate directly to composer URL
+        # Navigate directly to composer URL and wait for React modal hydration
         composer_url = "https://x.com/compose/post"
         if not self.navigate_to_url(composer_url, wait_seconds=self.config.nav_wait_sec):
             return False
 
         time.sleep(0.5)
+
+        # Explicitly click inside the hydrated X compose text box
+        win = self._last_matched_window or {}
+        if hasattr(self.auto, "click_at"):
+            box_x = int(win.get("left", 0)) + self.config.composer_box_offset[0]
+            box_y = int(win.get("top", 0)) + self.config.composer_box_offset[1]
+            self.auto.click_at(box_x, box_y)
+            time.sleep(0.3)
 
         # Attach media first if provided so preview attaches while inserting text
         if media_path:
@@ -479,6 +519,13 @@ class DesktopAutomationDriver:
 
                 time.sleep(self.config.media_wait_sec)
 
+        # Re-click compose editor box to ensure text focus after media preview attaches
+        if media_path and hasattr(self.auto, "click_at"):
+            box_x = int(win.get("left", 0)) + self.config.composer_box_offset[0]
+            box_y = int(win.get("top", 0)) + self.config.composer_box_offset[1]
+            self.auto.click_at(box_x, box_y)
+            time.sleep(0.2)
+
         # Inject tweet text via clipboard paste
         if hasattr(self.auto, "paste_text"):
             self.auto.paste_text(text)
@@ -489,12 +536,9 @@ class DesktopAutomationDriver:
 
         time.sleep(0.6)
 
-        # Submit tweet using Ctrl+Enter shortcut
+        # Submit tweet using Ctrl+Enter with hardware scan code 0x1C
         logger.info("Submitting tweet with Ctrl+Enter keyboard shortcut...")
-        if hasattr(self.auto, "send_key"):
-            self.auto.send_key("enter", ctrl=True)
-        elif hasattr(self.auto, "send_shortcut"):
-            self.auto.send_shortcut("ctrl+enter")
+        self._send_hardware_enter(ctrl=True)
 
         time.sleep(self.config.post_submit_wait_sec)
 

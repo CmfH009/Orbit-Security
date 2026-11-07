@@ -107,8 +107,31 @@ def test_driver_config_defaults():
     assert "Carson Haynes" in config.target_window_patterns
     assert "@_arsoncode" in config.target_window_patterns
     assert "chrome.exe" in config.preferred_processes
-    assert config.nav_wait_sec > 0
+    assert config.nav_wait_sec == 8.0
+    assert config.post_submit_wait_sec == 5.0
+    assert config.media_wait_sec == 3.5
+    assert config.address_bar_offset == (350, 62)
+    assert config.composer_box_offset == (650, 260)
     assert config.mock_mode is False
+
+
+def test_hardware_scan_code_enter(monkeypatch):
+    """Verifies _send_hardware_enter dispatches hardware scan code 0x1C via win32api."""
+    import orbit_security.desktop_x_bridge as bridge_mod
+
+    driver = DesktopAutomationDriver()
+    events = []
+    mock_win32api = MagicMock()
+    mock_win32api.keybd_event.side_effect = lambda vk, scan, flags, extra: events.append((vk, scan, flags))
+
+    monkeypatch.setattr(bridge_mod, "HAS_WIN32", True)
+    monkeypatch.setattr(bridge_mod, "win32api", mock_win32api)
+
+    driver._send_hardware_enter(ctrl=True)
+    # Must include scan code 0x1C for Enter (0x0D) and 0x1D for Control
+    scan_codes = [scan for _, scan, _ in events]
+    assert 0x1C in scan_codes
+    assert 0x1D in scan_codes
 
 
 def test_alias_equivalence():
