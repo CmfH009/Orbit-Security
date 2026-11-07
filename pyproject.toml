@@ -3,6 +3,16 @@ name = "orbit-security"
 version = "0.1.0"
 description = "Autonomous external perimeter hygiene, subdomain takeover sentinel, and white-label client security auditing for web & Shopify agencies."
 readme = "README.md"
+license = { file = "LICENSE" }
+keywords = ["security", "perimeter-hygiene", "dns", "subdomain-takeover", "ast-sentinel", "ci-cd"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Topic :: Security",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+]
 authors = [
     { name = "CmfH009", email = "carsonmail009@gmail.com" }
 ]
