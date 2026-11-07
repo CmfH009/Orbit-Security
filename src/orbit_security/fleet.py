@@ -4,6 +4,8 @@ Provides persistent client target management, scheduled continuous surveillance,
 score drift detection, and automated monthly executive PDF generation.
 """
 
+from __future__ import annotations
+
 from dataclasses import asdict, dataclass, field
 import datetime
 import json

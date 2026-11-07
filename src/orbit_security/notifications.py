@@ -5,6 +5,8 @@ when client domain drift, dangling CNAME takeovers, or security regressions occu
 Includes alert deduplication and safe failure handling.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 import datetime
 import hashlib

@@ -5,6 +5,8 @@ for Cloudflare, AWS Route 53, GoDaddy, and Namecheap to resolve
 dangling CNAME takeovers, missing/weak DMARC, and permissive SPF records.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional

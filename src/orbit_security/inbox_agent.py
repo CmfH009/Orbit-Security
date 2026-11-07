@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import email
 from email.header import decode_header
 from enum import Enum

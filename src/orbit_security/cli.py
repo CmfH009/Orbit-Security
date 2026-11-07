@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import asyncio
 import datetime
@@ -5,7 +7,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional, Tuple
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
