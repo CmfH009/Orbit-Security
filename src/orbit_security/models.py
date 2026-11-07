@@ -67,9 +67,11 @@ class DomainAuditResult(BaseModel):
     @property
     def takeover_findings(self) -> List[Finding]:
         """Returns findings related to dangling CNAMEs or subdomain takeover."""
-        return [
-            f for f in self.findings
-            if "TAKEOVER" in (getattr(f, "title", None) or "").upper()
-            or "CNAME" in (getattr(f, "title", None) or "").upper()
-            or getattr(f, "category", "") == "Subdomain Takeover"
-        ]
+        results: List[Finding] = []
+        for f in self.findings:
+            title = str(getattr(f, "title", None) or (f.get("title") if isinstance(f, dict) else "") or "").upper()
+            cat = str(getattr(f, "category", None) or (f.get("category") if isinstance(f, dict) else "") or "").upper()
+            target = getattr(f, "cname_target", None) or (f.get("cname_target") if isinstance(f, dict) else None)
+            if "TAKEOVER" in title or "CNAME" in title or "TAKEOVER" in cat or target:
+                results.append(f)
+        return results

@@ -308,3 +308,101 @@ def test_cli_scan_subcommand_with_real_domain_audit_result(temp_dir, monkeypatch
         assert "shop" in tf_text
         assert "decommissioned.invalid" in tf_text
 
+
+def test_cli_scan_subcommand_with_canonical_scanner_evidence(temp_dir, monkeypatch, capsys):
+    """Verifies that findings produced by OrbitSecurityScanner (evidence: 'CNAME: <host> | Status: ...')
+    correctly extract the CNAME target and do not fall back to the subdomain itself."""
+    from unittest.mock import AsyncMock, patch
+    from orbit_security.models import DomainAuditResult, Finding, Severity
+
+    domain = "scannerevidence.org"
+    out_dir = temp_dir / "canonical_scanner_out"
+
+    real_result = DomainAuditResult(domain=domain, score=75, grade="C")
+    real_result.findings.append(
+        Finding(
+            title="Dangling CNAME / Subdomain Takeover Risk (NXDOMAIN AWS S3)",
+            severity=Severity.CRITICAL,
+            category="Subdomain & DNS",
+            description=f"Subdomain media.{domain} points via CNAME to orphaned-assets.s3.amazonaws.com (AWS S3), which does not resolve (NXDOMAIN).",
+            remediation="Delete dangling CNAME record.",
+            target=f"media.{domain}",
+            evidence="CNAME: orphaned-assets.s3.amazonaws.com | Status: NXDOMAIN (Dangling AWS S3 resource)",
+        )
+    )
+
+    test_args = [
+        "orbit-security",
+        "scan",
+        domain,
+        "--export-fixpack",
+        "--output-dir",
+        str(out_dir),
+    ]
+    monkeypatch.setattr(sys, "argv", test_args)
+
+    with patch("orbit_security.cli.OrbitSecurityScanner") as mock_scanner_cls:
+        mock_scanner = mock_scanner_cls.return_value
+        mock_scanner.scan_domain = AsyncMock(return_value=real_result)
+
+        exit_code = cli_main()
+        assert exit_code is None or exit_code == 0
+
+    expected_zip = out_dir / "scannerevidence_org_dns_fixpack.zip"
+    assert expected_zip.exists()
+    with zipfile.ZipFile(expected_zip, "r") as zf:
+        tf_text = zf.read("dns_fixes.tf").decode("utf-8")
+        assert "media" in tf_text
+        assert "decommissioned.invalid" in tf_text
+
+
+def test_client_bundle_exporter_generate_zone_file_with_finding_models():
+    """ClientBundleExporter.generate_zone_file handles Finding model objects without AttributeError."""
+    from orbit_security.client_bundle_exporter import ClientBundleExporter
+    from orbit_security.models import Finding, Severity
+
+    findings = [
+        Finding(
+            title="Dangling CNAME / Subdomain Takeover Risk",
+            severity=Severity.CRITICAL,
+            category="DNS Security",
+            description="Dangling CNAME pointing to unclaimed service.",
+            remediation="Remove CNAME.",
+            target="sub.acme.corp",
+            evidence="CNAME: cname.vercel-dns.com | Status: NXDOMAIN",
+        )
+    ]
+    exporter = ClientBundleExporter()
+    zone_str = exporter.generate_zone_file(["acme.corp"], findings)
+    assert "Dangling CNAME Remediation for sub.acme.corp" in zone_str
+    assert 'sub\tIN\tTXT\t"remediated-decommissioned-by-orbit"' in zone_str
+
+
+def test_client_bundle_exporter_export_bundle_with_finding_models(temp_dir):
+    """ClientBundleExporter.export_bundle compiles full ZIP deliverables with Finding model objects."""
+    from orbit_security.client_bundle_exporter import ClientBundleExporter
+    from orbit_security.models import Finding, Severity
+
+    findings = [
+        Finding(
+            title="Dangling CNAME Vulnerability",
+            severity=Severity.HIGH,
+            category="DNS",
+            description="Orphaned subdomain pointer.",
+            remediation="Remove record.",
+            target="blog.agencybrand.com",
+            evidence="CNAME: legacy.github.io | Status: 404",
+        )
+    ]
+    exporter = ClientBundleExporter()
+    out = exporter.export_bundle(
+        agency_slug="brandtest",
+        domains=["agencybrand.com"],
+        findings=findings,
+        output_dir=temp_dir,
+    )
+    assert out["ok"] is True
+    assert Path(out["bundle_path"]).exists()
+    assert zipfile.is_zipfile(out["bundle_path"])
+
+

@@ -542,7 +542,12 @@ class ClientBundleExporter:
         if dangling_cnames:
             for i, c in enumerate(dangling_cnames, 1):
                 sub = _finding_get(c, "subdomain") or _finding_get(c, "domain") or _finding_get(c, "target") or f"sub{i}.{primary_domain}"
-                name_part = sub.split(".")[0] if "." in sub else sub
+                if sub.lower().endswith(f".{primary_domain.lower()}"):
+                    name_part = sub[: -len(f".{primary_domain.lower()}")].strip(".") or "@"
+                elif sub.lower() == primary_domain.lower():
+                    name_part = "@"
+                else:
+                    name_part = sub.split(".")[0] if "." in sub else sub
                 cname_blocks.append(f"""# Dangling CNAME Remediation: {sub}
 # Option A: Safely route to decommission placeholder or update Cloudflare record:
 resource "cloudflare_record" "remediated_cname_{i}" {{
@@ -845,8 +850,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "remediation_bucke
         ]
 
         for f in findings:
-            if "CNAME" in str(f.get("title", "")).upper() and f.get("subdomain"):
-                sub = str(f["subdomain"])
+            f_title = str(_finding_get(f, "title", "")).upper()
+            f_sub = _finding_get(f, "subdomain") or _finding_get(f, "domain") or _finding_get(f, "target")
+            if "CNAME" in f_title and f_sub:
+                sub = str(f_sub)
                 sub_label = sub.replace(f".{primary_domain}", "").replace(primary_domain, "@")
                 lines.append(f"; Dangling CNAME Remediation for {sub}")
                 lines.append(f'{sub_label}\tIN\tTXT\t"remediated-decommissioned-by-orbit"')

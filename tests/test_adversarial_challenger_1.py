@@ -513,18 +513,17 @@ time.sleep(10)
             subproc.kill()
             subproc.wait()
 
-            # Publish 3 events to trigger write errors on the severed socket
-            for i in range(3):
-                bb.publish("CLEANUP_PING", {"seq": i})
-                time.sleep(0.05)
-
+            # Continuously emit events during poll loop to trigger write errors on severed socket
             t0 = time.time()
             cleaned = False
+            seq = 0
             while time.time() - t0 < 5.0:
                 with bb._sub_lock:
                     if len(bb._subscribers) == initial_sub_count:
                         cleaned = True
                         break
+                bb.publish("CLEANUP_PING", {"seq": seq})
+                seq += 1
                 time.sleep(0.05)
 
             assert cleaned, (

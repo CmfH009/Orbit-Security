@@ -17,6 +17,35 @@ from orbit_security.scanner import OrbitSecurityScanner
 console = Console()
 
 
+def _extract_cname_target(f: Any, default_sub: str = "") -> Optional[str]:
+    """Extracts dangling CNAME target host from finding dicts or model objects."""
+    from orbit_security.client_bundle_exporter import _finding_get
+    tgt = _finding_get(f, "cname_target")
+    if tgt and str(tgt).strip().lower().rstrip(".") != default_sub.lower().rstrip("."):
+        return str(tgt).strip().rstrip(".")
+
+    evidence = str(_finding_get(f, "evidence", "") or "")
+    description = str(_finding_get(f, "description", "") or "")
+    combined = f"{evidence} {description}"
+
+    patterns = [
+        r"CNAME:\s*([^\s\|;'\"]+)",
+        r"points\s+via\s+CNAME\s+to\s+([^\s\(;'\"]+)",
+        r"CNAME\s+points\s+to\s+([^\s\|;'\"]+)",
+        r"[Dd]angling\s+CNAME\s+['\"`]?([a-zA-Z0-9\._-]+)['\"`]?",
+        r"CNAME\s+['\"`]?([a-zA-Z0-9\._-]+)['\"`]?\s+resolving\s+to\s+NXDOMAIN",
+    ]
+    for pat in patterns:
+        m = re.search(pat, combined)
+        if m:
+            cand = m.group(1).strip().strip("'\"`").rstrip(".")
+            if cand and cand.lower().rstrip(".") != default_sub.lower().rstrip(".") and "." in cand:
+                return cand
+
+    fallback = _finding_get(f, "target")
+    return str(fallback).strip().rstrip(".") if fallback else None
+
+
 async def run_scan(args):
     console.print(
         Panel.fit(
@@ -120,7 +149,7 @@ async def run_scan(args):
 
     # Export 1-Click DNS Fix Pack if requested
     if getattr(args, "export_fixpack", False):
-        from orbit_security.client_bundle_exporter import ClientBundleExporter
+        from orbit_security.client_bundle_exporter import ClientBundleExporter, _finding_get
         from orbit_security.input_sanitizer import sanitize_domain, SecurityValidationError
         from orbit_security.scanner import is_safe_host
 
@@ -135,34 +164,21 @@ async def run_scan(args):
                     raw_findings = list(result.takeover_findings)
                 elif hasattr(result, "findings") and result.findings:
                     for f in result.findings:
-                        t = str(getattr(f, "title", f.get("title", "") if isinstance(f, dict) else "")).upper()
-                        cat = str(getattr(f, "category", f.get("category", "") if isinstance(f, dict) else "")).upper()
-                        if "TAKEOVER" in t or "CNAME" in t or "TAKEOVER" in cat:
+                        t = str(_finding_get(f, "title", "")).upper()
+                        cat = str(_finding_get(f, "category", "")).upper()
+                        tgt = _finding_get(f, "cname_target")
+                        if "TAKEOVER" in t or "CNAME" in t or "TAKEOVER" in cat or tgt:
                             raw_findings.append(f)
 
                 for i, f in enumerate(raw_findings):
-                    if isinstance(f, dict):
-                        f_id = f.get("id", f"FIND-{i+1}")
-                        f_title = f.get("title", "Subdomain Takeover")
-                        f_sub = f.get("subdomain") or f.get("domain") or f.get("target") or clean_domain
-                        f_prov = f.get("saas_provider") or f.get("provider", "Unknown")
-                        f_tgt = f.get("cname_target") or f.get("target")
-                        f_sev = f.get("severity", "CRITICAL")
-                        f_desc = f.get("description", "Vulnerable dangling CNAME")
-                    else:
-                        f_id = getattr(f, "id", None) or f"FIND-{i+1}"
-                        f_title = getattr(f, "title", "Subdomain Takeover")
-                        f_sub = getattr(f, "subdomain", None) or getattr(f, "target", None) or clean_domain
-                        f_prov = getattr(f, "saas_provider", None) or getattr(f, "provider", "Unknown")
-                        f_tgt = getattr(f, "cname_target", None) or getattr(f, "target", None)
-                        sev_val = getattr(f, "severity", "CRITICAL")
-                        f_sev = sev_val.value if hasattr(sev_val, "value") else str(sev_val)
-                        f_desc = getattr(f, "description", "Vulnerable dangling CNAME")
-                        evidence = getattr(f, "evidence", "") or ""
-                        if (not f_tgt or f_tgt == f_sub) and "CNAME points to " in evidence:
-                            m = re.search(r"CNAME points to ([^\s]+)", evidence)
-                            if m:
-                                f_tgt = m.group(1).rstrip(".")
+                    f_id = _finding_get(f, "id") or f"FIND-{i+1}"
+                    f_title = _finding_get(f, "title") or "Subdomain Takeover"
+                    f_sub = _finding_get(f, "subdomain") or _finding_get(f, "domain") or _finding_get(f, "target") or clean_domain
+                    f_prov = _finding_get(f, "saas_provider") or _finding_get(f, "provider") or "Unknown"
+                    f_tgt = _extract_cname_target(f, default_sub=f_sub)
+                    sev_val = _finding_get(f, "severity", "CRITICAL")
+                    f_sev = sev_val.value if hasattr(sev_val, "value") else str(sev_val)
+                    f_desc = _finding_get(f, "description", "Vulnerable dangling CNAME")
 
                     findings_payload.append({
                         "id": f_id,
