@@ -277,8 +277,15 @@ def query_live_github_ci_status(
 
     try:
         req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+        except Exception:
+            # Fallback to unauthenticated public repo query if token fails or transient timeout occurs
+            fallback_headers = {k: v for k, v in headers.items() if k != "Authorization"}
+            req2 = urllib.request.Request(url, headers=fallback_headers)
+            with urllib.request.urlopen(req2, timeout=timeout + 4.0) as resp:
+                data = json.loads(resp.read().decode("utf-8", errors="ignore"))
         runs = data.get("workflow_runs", [])
         if not runs:
             return {"status": "empty", "head_sha": "", "all_green": False, "failing_workflows": [], "passing_workflows": []}
@@ -321,9 +328,66 @@ def query_live_github_ci_status(
         }
 
 
+def archive_superseded_ci_alerts_in_imap(live_ci: Dict[str, Any]) -> int:
+    """Marks superseded GitHub Actions failure emails as read, labels them Orbit/CI-CD, and archives them from INBOX when live HEAD is all_green."""
+    if not live_ci.get("all_green"):
+        return 0
+
+    try:
+        import imaplib
+
+        env_file = os.path.join(_email_org_root, ".env")
+        imap_user = os.environ.get("IMAP_USER", "carsonmail009@gmail.com")
+        imap_pass = os.environ.get("IMAP_PASS", "")
+        if os.path.exists(env_file):
+            with open(env_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("IMAP_USER="):
+                        imap_user = line.split("=", 1)[1].strip().strip("'\"")
+                    elif line.startswith("IMAP_PASS="):
+                        imap_pass = line.split("=", 1)[1].strip().strip("'\"")
+        if not imap_pass:
+            imap_pass = os.environ.get("GMAIL_APP_PASSWORD", "")
+        if not imap_pass:
+            return 0
+
+        conn = imaplib.IMAP4_SSL("imap.gmail.com", 993)
+        conn.login(imap_user, imap_pass)
+        conn.select("INBOX")
+        status, data = conn.search(None, 'SUBJECT "Run failed"')
+        if status != "OK" or not data or not data[0]:
+            conn.logout()
+            return 0
+
+        msg_ids = data[0].split()
+        archived_count = 0
+        try:
+            conn.create('"Orbit/CI-CD"')
+        except Exception:
+            pass
+
+        for mid in msg_ids:
+            try:
+                conn.store(mid, "+X-GM-LABELS", '("Orbit/CI-CD")')
+            except Exception:
+                pass
+            conn.store(mid, "+FLAGS", r"(\Seen \Deleted)")
+            archived_count += 1
+
+        if archived_count > 0:
+            conn.expunge()
+        conn.close()
+        conn.logout()
+        return archived_count
+    except Exception:
+        return 0
+
+
 def reconcile_ci_alerts_with_live_status(
     email_ci_alerts: List[str],
     live_ci: Dict[str, Any],
+    archived_in_imap: int = 0,
 ) -> Dict[str, Any]:
     """Reconciles historical inbox CI failure emails against live GitHub Actions HEAD status."""
     head_sha = live_ci.get("head_sha", "")
@@ -332,12 +396,15 @@ def reconcile_ci_alerts_with_live_status(
 
     if all_green:
         lines = [f"  - 🟢 All GitHub Actions green on `HEAD` (`{head_sha}`)"]
+        if archived_in_imap > 0:
+            lines.append(f"  - 🧹 Auto-archived {archived_in_imap} superseded CI failure notification(s) to `Orbit/CI-CD`")
         for s in email_ci_alerts[:3]:
             clean_s = s.replace("\r", "").replace("\n", " ").strip()
             lines.append(f"  - ✅ [RESOLVED on HEAD {head_sha}] {clean_s}")
         return {
             "active_failures": 0,
             "resolved_alerts": list(email_ci_alerts),
+            "archived_in_imap": archived_in_imap,
             "summary_markdown": "\n".join(lines),
             "spoken_note": f"all CI test runs are green on HEAD {head_sha}",
         }
@@ -424,11 +491,16 @@ def generate_briefing(speak: bool = False, email: bool = False, recipient: Optio
     campaigns = query_campaign_outreach()
     email_data = query_live_email_telemetry()
     live_ci = query_live_github_ci_status()
+    archived_ci_count = archive_superseded_ci_alerts_in_imap(live_ci) if email_data.get("ci_alerts") else 0
     geo_panel = query_geo_panel_telemetry()
 
     recent_str = "\n".join([f"  - {r}" for r in campaigns.get("recent_dispatched", [])]) or "  - None yet"
 
-    ci_reconciled = reconcile_ci_alerts_with_live_status(email_data.get("ci_alerts", []), live_ci)
+    ci_reconciled = reconcile_ci_alerts_with_live_status(
+        email_data.get("ci_alerts", []),
+        live_ci,
+        archived_in_imap=archived_ci_count,
+    )
     ci_count = ci_reconciled["active_failures"]
     ci_summary_str = ci_reconciled["summary_markdown"]
 

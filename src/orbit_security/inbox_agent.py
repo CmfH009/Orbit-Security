@@ -120,11 +120,18 @@ class InboxAgent:
             "propeller.co.uk", "neverbland.com", "alley.com", "tri.be", "rtcamp.com",
             "impressiondigital.com", "verbalplusvisual.com", "anatta.io", "fostr.online",
             "growthspark.com", "guidance.com", "loungelizard.com", "taoti.com", "northern.co",
-            "zeekinteractive.com", "webfx.com"
+            "zeekinteractive.com", "webfx.com",
+            # Enterprise outbound wave (Nov 2026)
+            "goodface.agency", "b-reel.com", "immersive-g.com", "majortom.com",
+            "basicagency.com", "work.co", "rga.com", "digitas.com",
+            "chromatichq.com", "askphill.com", "avexdesigns.com", "swankyagency.com",
+            "area17.com", "hugeinc.com", "deptagency.com", "ustwo.com"
         ])
         self.known_keywords = set([
             "orbit security", "orbit-security", "agencysentry", "security notice regarding",
-            "retainer", "perimeter", "dmarc", "cname", "white-label", "audit"
+            "retainer", "perimeter", "dmarc", "cname", "white-label", "audit",
+            "loreal", "nike", "goodman", "redcross", "kfc", "ikea", "samsung",
+            "whirlpool", "outsideonline", "fillingpieces", "simmons", "wilkinson-sword"
         ])
 
         if os.path.exists(self.prospects_file):
