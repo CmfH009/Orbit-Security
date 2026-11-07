@@ -13,7 +13,7 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 from PIL import Image
 
-REPO_ROOT = Path("A:/projects/orbit-security")
+REPO_ROOT = Path(__file__).resolve().parent.parent
 LANDING_DIR = REPO_ROOT / "landing"
 DOCS_DIR = REPO_ROOT / "docs"
 

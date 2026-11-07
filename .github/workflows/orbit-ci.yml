@@ -50,6 +50,9 @@ jobs:
           ffmpeg -version | head -n 1
 
       - name: Run pytest
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONUTF8: "1"
         run: python -m pytest -q --junitxml=report/junit.xml
 
       - name: Upload JUnit report
