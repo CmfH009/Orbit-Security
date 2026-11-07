@@ -18,6 +18,7 @@ __pycache__/
 .coverage
 htmlcov/
 data/*_cache.json
+.agents/
 
 # PyInstaller Build Artifacts
 build/
@@ -111,6 +112,7 @@ data/*retarget*
 data/ct_watermark.json
 data/contact_verification/
 data/remediation/
+data/client_bundles/
 data/dispatched_followups.json
 data/dispatched_security_advisories.json
 data/roast_f_grades_posts.json

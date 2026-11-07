@@ -53,20 +53,29 @@ RETAINER_PRICING_TIERS = {
 class RetainerDealDeskConcierge:
     """Manages commercial intake, negotiation drafts, co-branded portal provisioning, and Stripe checkouts."""
 
-    def __init__(self, workspace_root: Optional[Path] = None, portals_dir: Optional[Path] = None):
+    def __init__(
+        self,
+        workspace_root: Optional[Path] = None,
+        portals_dir: Optional[Path] = None,
+        bundles_dir: Optional[Path] = None,
+    ):
         if workspace_root:
             self.workspace_root = Path(workspace_root)
             if (self.workspace_root / "docs" / "portals").exists() or (self.workspace_root / "src" / "orbit_security").exists():
                 self.portals_dir = portals_dir or (self.workspace_root / "docs" / "portals")
+                self.bundles_dir = bundles_dir or (self.workspace_root / "data" / "client_bundles")
                 self._is_repo_workspace = True
             else:
                 self.portals_dir = portals_dir or (self.workspace_root / "projects" / "orbit-security" / "docs" / "portals")
+                self.bundles_dir = bundles_dir or (self.workspace_root / "projects" / "orbit-security" / "data" / "client_bundles")
                 self._is_repo_workspace = False
         else:
             self.workspace_root = REPO_ROOT
             self.portals_dir = portals_dir or PORTALS_OUTPUT_DIR
+            self.bundles_dir = bundles_dir or (REPO_ROOT / "data" / "client_bundles")
             self._is_repo_workspace = (self.portals_dir.resolve() == PORTALS_OUTPUT_DIR.resolve())
         self.portals_dir.mkdir(parents=True, exist_ok=True)
+        self.bundles_dir.mkdir(parents=True, exist_ok=True)
 
     def generate_portal_for_agency(
         self,
@@ -380,6 +389,73 @@ class RetainerDealDeskConcierge:
             "checkout_url": tier_info["checkout_url"],
             "portfolio_domains": portfolio_domains or []
         }
+
+    def generate_bundle_for_agency(
+        self,
+        agency_id: str,
+        agency_name: Optional[str] = None,
+        tier: str = "remediation",
+        primary_client_domain: Optional[str] = None,
+        portfolio_domains: Optional[List[str]] = None,
+        findings: Optional[List[Dict[str, Any]]] = None,
+        primary_color: Optional[str] = None,
+        accent_color: Optional[str] = None,
+        support_email: Optional[str] = None,
+        tagline: Optional[str] = None,
+        custom_domain: Optional[str] = None,
+        output_dir: Optional[Path] = None,
+    ) -> Dict[str, Any]:
+        """Generates a complete white-label remediation ZIP bundle for the given agency."""
+        from orbit_security.client_bundle_exporter import ClientBundleExporter
+
+        bundles_target = Path(output_dir) if output_dir else self.bundles_dir
+        exporter = ClientBundleExporter(
+            workspace_root=self.workspace_root,
+            bundles_dir=bundles_target,
+        )
+
+        all_domains: List[str] = []
+        if primary_client_domain:
+            all_domains.append(primary_client_domain)
+        if portfolio_domains:
+            for d in portfolio_domains:
+                if d and d not in all_domains:
+                    all_domains.append(d)
+        if not all_domains:
+            all_domains = [f"{agency_id}.com"]
+
+        result = exporter.export_bundle(
+            agency_slug=agency_id,
+            agency_name=agency_name or agency_id.replace("_", " ").replace("-", " ").title(),
+            domains=all_domains,
+            findings=findings,
+            primary_color=primary_color,
+            accent_color=accent_color,
+            support_email=support_email,
+            tagline=tagline,
+            tier=tier,
+            output_dir=bundles_target,
+        )
+
+        # Broadcast event to blackboard if available
+        try:
+            from orbit_security.blackboard import get_blackboard
+            bb = get_blackboard()
+            bb.publish(
+                event_type="CLIENT_BUNDLE_GENERATED",
+                data={
+                    "agency_id": agency_id,
+                    "bundle_path": result.get("bundle_path"),
+                    "sha256": result.get("sha256"),
+                    "timestamp": result.get("generated_at"),
+                },
+                source="deal_desk",
+                topic="commercial",
+            )
+        except Exception:
+            pass
+
+        return result
 
     def get_pricing_tiers(self) -> Dict[str, Any]:
         """Returns standard retainer pricing tiers."""

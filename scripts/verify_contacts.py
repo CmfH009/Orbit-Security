@@ -53,6 +53,13 @@ from urllib.parse import urljoin, urlparse
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
+try:
+    import certifi
+    import ssl
+    SSL_CTX = ssl.create_default_context(cafile=certifi.where())
+except Exception:
+    SSL_CTX = None
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA = REPO_ROOT / "data"
 OUT_DIR = DATA / "contact_verification"
@@ -123,7 +130,10 @@ def has_mx(domain: str) -> tuple[bool, list[str]]:
 def fetch(url: str) -> tuple[int, str]:
     req = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,text/plain"})
     try:
-        with urlopen(req, timeout=TIMEOUT) as resp:
+        kwargs: dict[str, Any] = {"timeout": TIMEOUT}
+        if SSL_CTX is not None:
+            kwargs["context"] = SSL_CTX
+        with urlopen(req, **kwargs) as resp:
             raw = resp.read(400_000)
             charset = resp.headers.get_content_charset() or "utf-8"
             return resp.status, raw.decode(charset, errors="ignore")
@@ -224,11 +234,23 @@ def classify(target: dict) -> dict:
 
     mx_ok, mx_hosts = has_mx(domain)
     if not mx_ok:
-        return {**target, "classification": "NO_MX", "published_addresses": [], "pages_read": []}
+        return {
+            **target,
+            "classification": "NO_MX",
+            "published_addresses": [],
+            "replacement_addresses": [],
+            "pages_read": [],
+        }
 
     published, visited = mine_addresses(domain)
     if not published:
-        return {**target, "classification": "UNKNOWN", "published_addresses": [], "pages_read": visited}
+        return {
+            **target,
+            "classification": "UNKNOWN",
+            "published_addresses": [],
+            "replacement_addresses": [],
+            "pages_read": visited,
+        }
 
     if guessed and guessed in published:
         classification = "CONFIRMED"

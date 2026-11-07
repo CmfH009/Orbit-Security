@@ -17,11 +17,13 @@ from dataclasses import asdict, dataclass, field
 import datetime
 import hashlib
 import hmac
+import html
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import logging
 import os
 from pathlib import Path
+import re
 import sys
 import time
 from typing import Any, Dict, List, Optional, Tuple
@@ -127,6 +129,49 @@ def compute_sla_crypto_hash(
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+def normalize_apex_domain(domain_str: Optional[str]) -> str:
+    """Normalizes and sanitizes an apex domain string.
+
+    Strips protocol schemes, basic auth credentials, URL paths, query parameters,
+    ports, and path traversal sequences, retaining only valid domain characters.
+    """
+    if not domain_str:
+        return ""
+    d = str(domain_str).strip().lower()
+    # Strip protocol scheme (e.g. https://, http://, ftp://)
+    d = re.sub(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", "", d)
+    # Strip query parameters and fragment anchors
+    d = d.split("?")[0].split("#")[0]
+    # Strip basic auth credentials if present
+    if "@" in d and "/" not in d.split("@")[0]:
+        d = d.split("@", 1)[1]
+
+    # Split into path components by / and \
+    parts = [p.strip() for p in re.split(r"[/\\]+", d) if p.strip() and p.strip() not in (".", "..")]
+    if not parts:
+        return ""
+
+    # Identify the domain component:
+    # 1. If parts[0] has a dot (e.g. example.com/path), it is the host
+    # 2. If it is a traversal attempt (../../malicious/test.domain.com), search for segment with domain format
+    candidate = ""
+    for p in parts:
+        host_candidate = p.split(":")[0]
+        cleaned = re.sub(r"[^a-zA-Z0-9._-]", "", host_candidate).strip("._-")
+        if "." in cleaned and not cleaned.endswith("."):
+            candidate = cleaned
+            if p == parts[0]:
+                break
+
+    if not candidate:
+        first_clean = re.sub(r"[^a-zA-Z0-9._-]", "", parts[0].split(":")[0]).strip("._-")
+        last_clean = re.sub(r"[^a-zA-Z0-9._-]", "", parts[-1].split(":")[0]).strip("._-")
+        candidate = first_clean or last_clean
+
+    candidate = re.sub(r"^[-._]+|[-._]+$", "", candidate)
+    return candidate
+
+
 class SlaCertificateGenerator:
     """Synthesizes high-assurance cryptographic SLA certificates in PDF format."""
 
@@ -147,8 +192,17 @@ class SlaCertificateGenerator:
         cid = cert_id or f"ORBIT-SLA-{uuid.uuid4().hex[:8].upper()}"
         crypto_hash = compute_sla_crypto_hash(cid, client_name, apex_domain, plan, date_str)
 
-        clean_domain = apex_domain.replace(".", "_")
-        pdf_path = self.output_dir / f"SLA_{clean_domain}_{cid}.pdf"
+        # Sanitize clean_domain to strictly alphanumeric, underscore, and hyphen characters to prevent path traversal
+        clean_domain = re.sub(r"[^a-zA-Z0-9_-]", "_", str(apex_domain))
+        clean_domain = re.sub(r"_+", "_", clean_domain).strip("_-") or "domain"
+        target_filename = f"SLA_{clean_domain}_{cid}.pdf"
+        pdf_path = (self.output_dir / target_filename).resolve()
+
+        # Hard containment defense: verify the path is strictly inside self.output_dir
+        try:
+            pdf_path.relative_to(self.output_dir.resolve())
+        except ValueError:
+            pdf_path = self.output_dir.resolve() / f"SLA_sanitized_{cid}.pdf"
 
         # Build PDF Document
         doc = SimpleDocTemplate(
@@ -212,10 +266,16 @@ class SlaCertificateGenerator:
             HRFlowable(width="100%", thickness=2, color=colors.HexColor("#2563EB"), spaceAfter=15)
         )
 
-        # Overview Paragraph
+        # Overview Paragraph (escape user inputs for ReportLab XML parser)
+        safe_client_name = html.escape(str(client_name))
+        safe_apex_domain = html.escape(str(apex_domain))
+        safe_plan = html.escape(str(plan))
+        safe_cid = html.escape(str(cid))
+        safe_date_str = html.escape(str(date_str))
+
         intro = (
-            f"This certifies that <b>{client_name}</b> has successfully enrolled the digital assets under "
-            f"<b>{apex_domain}</b> into the Orbit Security Autonomous Perimeter & Zero-Drift Sentinel Fleet. "
+            f"This certifies that <b>{safe_client_name}</b> has successfully enrolled the digital assets under "
+            f"<b>{safe_apex_domain}</b> into the Orbit Security Autonomous Perimeter &amp; Zero-Drift Sentinel Fleet. "
             f"Orbit Security guarantees continuous, high-frequency surveillance, automated RFC compliance diffing, "
             f"and cryptographic drift verification."
         )
@@ -224,11 +284,11 @@ class SlaCertificateGenerator:
 
         # Certificate Details Table
         details_data = [
-            [Paragraph("<b>Certificate Identifier:</b>", body_style), Paragraph(f"<code>{cid}</code>", body_style)],
-            [Paragraph("<b>Subscribed Organization:</b>", body_style), Paragraph(f"<b>{client_name}</b>", body_style)],
-            [Paragraph("<b>Protected Apex Domain:</b>", body_style), Paragraph(f"<code>{apex_domain}</code>", body_style)],
-            [Paragraph("<b>Retainer Plan Tier:</b>", body_style), Paragraph(f"<b>{plan}</b>", body_style)],
-            [Paragraph("<b>Effective Commencement:</b>", body_style), Paragraph(date_str, body_style)],
+            [Paragraph("<b>Certificate Identifier:</b>", body_style), Paragraph(f"<code>{safe_cid}</code>", body_style)],
+            [Paragraph("<b>Subscribed Organization:</b>", body_style), Paragraph(f"<b>{safe_client_name}</b>", body_style)],
+            [Paragraph("<b>Protected Apex Domain:</b>", body_style), Paragraph(f"<code>{safe_apex_domain}</code>", body_style)],
+            [Paragraph("<b>Retainer Plan Tier:</b>", body_style), Paragraph(f"<b>{safe_plan}</b>", body_style)],
+            [Paragraph("<b>Effective Commencement:</b>", body_style), Paragraph(safe_date_str, body_style)],
             [Paragraph("<b>Autonomous SLA Term:</b>", body_style), Paragraph("Continuous 24/7/365 Autonomous Active Sentinel", body_style)],
         ]
         t = Table(details_data, colWidths=[180, 360])
@@ -422,7 +482,13 @@ class StripeWebhookHandler:
         self.subscriber_mgr = subscriber_manager or SubscriberManager()
         self.sla_generator = sla_generator or SlaCertificateGenerator()
         self.fleet_registry = fleet_registry or FleetRegistry()
-        self.retainer_manager = retainer_manager or AgencyRetainerManager()
+        if retainer_manager is not None:
+            self.retainer_manager = retainer_manager
+        elif subscriber_manager is not None:
+            data_dir = self.subscriber_mgr.subscribers_file.parent
+            self.retainer_manager = AgencyRetainerManager(data_path=data_dir / "agency_retainers.json")
+        else:
+            self.retainer_manager = AgencyRetainerManager()
         self.signature_tolerance = signature_tolerance
         self.onboarding_service = onboarding_service
         self.deal_desk = deal_desk
@@ -454,6 +520,7 @@ class StripeWebhookHandler:
                 self.deal_desk = RetainerDealDeskConcierge(
                     workspace_root=base_tmp,
                     portals_dir=base_tmp / "portals",
+                    bundles_dir=base_tmp / "client_bundles",
                 )
             else:
                 self.deal_desk = RetainerDealDeskConcierge()
@@ -554,8 +621,15 @@ class StripeWebhookHandler:
             logger.error(f"Invalid JSON in webhook payload: {e}")
             return {"status": "ERROR", "message": "Invalid JSON"}
 
+        if not isinstance(event, dict):
+            logger.error("Invalid JSON structure in webhook payload: expected object.")
+            return {"status": "ERROR", "message": "Invalid JSON: expected object"}
+
         event_type = event.get("type")
-        event_data = event.get("data", {}).get("object", {})
+        raw_data = event.get("data")
+        event_data = raw_data.get("object") if isinstance(raw_data, dict) else {}
+        if not isinstance(event_data, dict):
+            event_data = {}
 
         logger.info(f"Processing Stripe Webhook Event: {event_type} (ID: {event.get('id')})")
 
@@ -566,7 +640,7 @@ class StripeWebhookHandler:
         # 4. Handle customer.subscription.deleted
         elif event_type == "customer.subscription.deleted":
             customer_id = event_data.get("customer")
-            domain = event_data.get("metadata", {}).get("domain")
+            domain = normalize_apex_domain(event_data.get("metadata", {}).get("domain"))
             target = domain or customer_id
             if target:
                 self.subscriber_mgr.update_status(target, "canceled")
@@ -612,11 +686,10 @@ class StripeWebhookHandler:
             or customer_email.split("@")[0].title()
         )
 
-        apex_domain = resolved_meta.get("domain") or resolved_meta.get("apex_domain")
-        if not apex_domain and resolved_meta.get("website"):
-            import re as _re
-            clean_web = _re.sub(r"^https?://", "", str(resolved_meta["website"]).strip().lower())
-            clean_web = _re.sub(r"/.*$", "", clean_web).rstrip(".")
+        raw_domain = resolved_meta.get("domain") or resolved_meta.get("apex_domain")
+        apex_domain = normalize_apex_domain(raw_domain) if raw_domain else ""
+        if (not apex_domain or "." not in apex_domain) and resolved_meta.get("website"):
+            clean_web = normalize_apex_domain(str(resolved_meta["website"]))
             if "." in clean_web:
                 apex_domain = clean_web
 
@@ -624,12 +697,15 @@ class StripeWebhookHandler:
             f"{resolved_meta['tier']} Retainer" if resolved_meta.get("tier") else "Scale Retainer ($299/mo)"
         )
 
-        # Fallback domain if metadata omitted
-        if not apex_domain:
+        # Fallback domain if metadata omitted or invalid
+        if not apex_domain or "." not in apex_domain:
             if "@" in customer_email and not any(customer_email.endswith(d) for d in ("gmail.com", "yahoo.com", "hotmail.com")):
-                apex_domain = customer_email.split("@")[1].lower()
+                apex_domain = normalize_apex_domain(customer_email.split("@")[1].lower())
             else:
-                apex_domain = f"{customer_name.lower().replace(' ', '')}.com"
+                clean_name = re.sub(r"[^a-zA-Z0-9]", "", customer_name.lower()) or "agency"
+                apex_domain = f"{clean_name}.com"
+
+        apex_domain = normalize_apex_domain(apex_domain) or "agency.com"
 
         amount_cents = session.get("amount_total", 29900)
         currency = session.get("currency", "usd")
@@ -690,6 +766,39 @@ class StripeWebhookHandler:
                 except Exception as ex:
                     logger.warning(f"Failed to provision white-label portal for {retainer.agency_id}: {ex}")
 
+        # Step 6: Automatically generate client remediation export bundle in data/client_bundles/<agency_slug>/
+        bundle_path: Optional[str] = None
+        bundle_sha256: Optional[str] = None
+        concierge = self._get_deal_desk()
+        if concierge and hasattr(concierge, "generate_bundle_for_agency"):
+            try:
+                bundle_agency_id = (
+                    retainer.agency_id
+                    if retainer
+                    else str(resolved_meta.get("agency_id") or "client").strip()
+                )
+                bundle_domains: List[str] = [apex_domain] if apex_domain else []
+                if retainer and retainer.client_domains:
+                    for cd in retainer.client_domains:
+                        d_name = getattr(cd, "domain", cd) if not isinstance(cd, str) else cd
+                        if d_name and d_name not in bundle_domains:
+                            bundle_domains.append(d_name)
+                bundle_res = concierge.generate_bundle_for_agency(
+                    agency_id=bundle_agency_id,
+                    agency_name=retainer.agency_name if retainer else customer_name,
+                    tier=str(resolved_meta.get("tier") or (retainer.tier.value if retainer else "Scale")),
+                    primary_client_domain=apex_domain,
+                    portfolio_domains=bundle_domains,
+                    primary_color=retainer.primary_color if retainer else resolved_meta.get("primary_color"),
+                    accent_color=retainer.accent_color if retainer else resolved_meta.get("accent_color"),
+                    support_email=retainer.support_email if retainer else customer_email,
+                    tagline=retainer.agency_tagline if retainer else resolved_meta.get("tagline"),
+                )
+                bundle_path = bundle_res.get("bundle_path")
+                bundle_sha256 = bundle_res.get("sha256")
+            except Exception as ex:
+                logger.warning(f"Failed to generate client bundle for {customer_name}: {ex}")
+
         return {
             "status": "PROVISIONED",
             "apex_domain": apex_domain,
@@ -703,6 +812,8 @@ class StripeWebhookHandler:
             "stripe_subscription_id": retainer.stripe_subscription_id if retainer else None,
             "billing_status": retainer.billing_status if retainer else None,
             "portal_path": portal_path,
+            "bundle_path": bundle_path,
+            "bundle_sha256": bundle_sha256,
         }
 
     def _sync_agency_retainer(
@@ -742,9 +853,11 @@ class StripeWebhookHandler:
             except ValueError:
                 tier = RetainerTier.SCALE
 
+        cust_name = (session.get("customer_details") or {}).get("name")
+        resolved_agency_name = metadata.get("agency_name") or cust_name or agency_id.replace("_", " ").replace("-", " ").title()
         retainer = self.retainer_manager.register_agency(
             agency_id=agency_id,
-            agency_name=metadata.get("agency_name") or agency_id,
+            agency_name=resolved_agency_name,
             tier=tier,
             custom_domain=metadata.get("custom_domain") or None,
             support_email=metadata.get("support_email") or metadata.get("contact_email") or None,
