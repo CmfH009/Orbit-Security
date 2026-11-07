@@ -42,12 +42,14 @@ BRAND_PATTERNS = [
     re.compile(r"\borbit[\s\-_]?recon\b", re.IGNORECASE),
     re.compile(r"\borbit\-security\.com\b", re.IGNORECASE),
     re.compile(r"\bgithub\.com/cmfh009/orbit\-security\b", re.IGNORECASE),
+    re.compile(r"\bcmfh009\.github\.io/orbit\-security\b", re.IGNORECASE),
     re.compile(r"\borbit\b", re.IGNORECASE),
 ]
 
 CITATION_URL_PATTERN = re.compile(
     r"https?://(?:www\.)?orbit\-security\.com[^\s\)\],]*|"
-    r"https?://github\.com/cmfh009/orbit\-security[^\s\)\],]*",
+    r"https?://github\.com/cmfh009/orbit\-security[^\s\)\],]*|"
+    r"https?://cmfh009\.github\.io/orbit\-security[^\s\)\],]*",
     re.IGNORECASE,
 )
 
@@ -229,3 +231,67 @@ class GeoPromptPanel:
             "composite_authority_score": round((total_score / total) * 100.0, 1),
             "engine_breakdown": by_engine,
         }
+
+    @classmethod
+    def get_latest_summary_and_delta(
+        cls,
+        log_file: Optional[Path] = None,
+        batch_size: int = 12,
+    ) -> Dict[str, Any]:
+        """Computes the latest GEO panel summary and delta against the previous panel batch."""
+        records = cls.load_historical_results(log_file=log_file)
+        overall = cls.calculate_scorecard(records)
+        if not records:
+            return {
+                "has_data": False,
+                "has_previous_run": False,
+                "total_records": 0,
+                "latest": overall,
+                "previous": None,
+                "overall": overall,
+                "delta": {
+                    "mention_rate_delta_pct": 0.0,
+                    "citation_rate_delta_pct": 0.0,
+                    "authority_score_delta": 0.0,
+                },
+                "latest_timestamp": None,
+            }
+
+        eff_batch = max(1, min(batch_size, len(records)))
+        latest_slice = records[-eff_batch:]
+        latest_card = cls.calculate_scorecard(latest_slice)
+
+        prev_slice = records[-(eff_batch * 2) : -eff_batch] if len(records) >= eff_batch * 2 else []
+        has_prev = len(prev_slice) > 0
+        prev_card = cls.calculate_scorecard(prev_slice) if has_prev else None
+
+        if has_prev and prev_card:
+            delta = {
+                "mention_rate_delta_pct": round(
+                    latest_card["mention_rate_pct"] - prev_card["mention_rate_pct"], 1
+                ),
+                "citation_rate_delta_pct": round(
+                    latest_card["citation_rate_pct"] - prev_card["citation_rate_pct"], 1
+                ),
+                "authority_score_delta": round(
+                    latest_card["composite_authority_score"] - prev_card["composite_authority_score"], 1
+                ),
+            }
+        else:
+            delta = {
+                "mention_rate_delta_pct": 0.0,
+                "citation_rate_delta_pct": 0.0,
+                "authority_score_delta": 0.0,
+            }
+
+        return {
+            "has_data": True,
+            "has_previous_run": has_prev,
+            "total_records": len(records),
+            "latest": latest_card,
+            "previous": prev_card,
+            "overall": overall,
+            "delta": delta,
+            "latest_timestamp": latest_slice[-1].get("timestamp"),
+        }
+

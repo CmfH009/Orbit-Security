@@ -51,10 +51,9 @@ def main():
     panel = GeoPromptPanel(log_file=custom_log)
 
     if args.summary:
-        history = panel.load_historical_results(log_file=custom_log)
-        scorecard = panel.calculate_scorecard(history)
-        print("\n=== Orbit Security GEO Prompt Panel Scorecard ===")
-        print(json.dumps(scorecard, indent=2))
+        summary_delta = panel.get_latest_summary_and_delta(log_file=custom_log)
+        print("\n=== Orbit Security GEO Prompt Panel Scorecard & Delta ===")
+        print(json.dumps(summary_delta, indent=2))
         return 0
 
     print(f"[*] Booting GEO Prompt Panel: {len(CANONICAL_QUERIES)} queries across {args.engines} engines...")
@@ -67,6 +66,13 @@ def main():
     if args.dry_run:
         print("[!] Dry-run enabled: Results were not persisted to JSONL.")
     else:
+        summary_delta = panel.get_latest_summary_and_delta(log_file=custom_log, batch_size=len(results))
+        d = summary_delta["delta"]
+        print(
+            f"[Δ vs Previous Batch] Mention: {d['mention_rate_delta_pct']:+.1f}% | "
+            f"Citation: {d['citation_rate_delta_pct']:+.1f}% | "
+            f"Authority: {d['authority_score_delta']:+.1f} pts"
+        )
         print(f"[✓] Appended {len(results)} probe records to {panel.log_file}")
     return 0
 

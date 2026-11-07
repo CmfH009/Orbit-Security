@@ -292,6 +292,15 @@ def format_discord_radar_embed(
         },
     ]
 
+    if record.get("contact_email"):
+        fields.append(
+            {
+                "name": "📧 Captured Work Email Lead",
+                "value": f"`{record['contact_email']}`",
+                "inline": False,
+            }
+        )
+
     if enrich:
         def _as_int(value: Any, default: int = 0) -> int:
             try:
@@ -452,9 +461,14 @@ class RadarQueryRecord:
     user_agent: Optional[str] = None
     screen_resolution: Optional[str] = None
     client_ip: Optional[str] = None
+    contact_email: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
+
+
+EMAIL_SIMPLE_REGEX = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$")
+HEX_COLOR_REGEX = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
 class RadarTelemetryService:
@@ -468,10 +482,12 @@ class RadarTelemetryService:
         dedup_window_seconds: float = 3.0,
         radar_webhook_url: Optional[str] = None,
         slack_webhook_url: Optional[str] = None,
+        onboarding_file: Optional[Path] = None,
     ):
         effective_data = get_effective_data_dir()
         self.queries_file = Path(queries_file) if queries_file else (effective_data / "radar_queries.jsonl")
         self.queries_file.parent.mkdir(parents=True, exist_ok=True)
+        self.onboarding_file = Path(onboarding_file) if onboarding_file else (self.queries_file.parent / "agency_onboardings.json")
         self.dedup_window_seconds = dedup_window_seconds
         # Explicit overrides keep alerting testable without mutating process env,
         # which background enrichment threads read at dispatch time.
@@ -483,6 +499,160 @@ class RadarTelemetryService:
         campaigns_path = campaigns_dir or (effective_data / "campaigns" if effective_data != DATA_DIR else DEFAULT_CAMPAIGNS_DIR)
         self.enricher = RadarLeadEnricher(leads_file=leads_path)
         self.proposal_stager = RadarRetainerProposalStager(campaigns_dir=campaigns_path)
+
+    @staticmethod
+    def sanitize_email(raw_email: Any) -> Optional[str]:
+        """Normalizes and validates an optional work email string."""
+        if not raw_email or not isinstance(raw_email, str):
+            return None
+        clean = raw_email.strip().lower()[:128]
+        if EMAIL_SIMPLE_REGEX.match(clean):
+            return clean
+        return None
+
+    @staticmethod
+    def compute_client_reference_id(agency_id: str, contact_email: str = "") -> str:
+        """Generates a deterministic Stripe-compatible client_reference_id for white-label onboarding."""
+        raw_slug = str(agency_id or "").strip().lower()
+        clean_slug = re.sub(r"[^a-z0-9_-]", "-", raw_slug).strip("-_")
+        if not clean_slug and contact_email and "@" in str(contact_email):
+            local_part = str(contact_email).split("@")[0].strip().lower()
+            clean_slug = re.sub(r"[^a-z0-9_-]", "-", local_part).strip("-_")
+        if not clean_slug:
+            clean_slug = "agency"
+        clean_slug = clean_slug[:40]
+        clean_email = str(contact_email or "").strip().lower()
+        seed = f"{clean_slug}:{clean_email}"
+        digest = hashlib.sha256(seed.encode("utf-8")).hexdigest()[:8]
+        return f"{clean_slug}-{digest}"
+
+    def record_onboarding(
+        self,
+        payload: Dict[str, Any],
+        client_ip: str = "",
+    ) -> Dict[str, Any]:
+        """Persists pre-checkout white-label agency onboarding metadata keyed by deterministic client_reference_id."""
+        raw_agency_id = str(payload.get("agency_id") or "").strip().lower()
+        clean_agency_id = re.sub(r"[^a-z0-9_-]", "-", raw_agency_id).strip("-_")[:64]
+        contact_email = self.sanitize_email(payload.get("contact_email")) or ""
+        support_email = self.sanitize_email(payload.get("support_email")) or contact_email
+        agency_name = str(payload.get("agency_name") or clean_agency_id or "Agency Partner").strip()[:120]
+
+        if not clean_agency_id:
+            clean_agency_id = re.sub(r"[^a-z0-9_-]", "-", agency_name.lower()).strip("-_")[:64] or "agency"
+
+        provided_ref = str(payload.get("client_reference_id") or "").strip()
+        if provided_ref and re.match(r"^[a-zA-Z0-9_-]{3,128}$", provided_ref):
+            client_ref_id = provided_ref
+        else:
+            client_ref_id = self.compute_client_reference_id(clean_agency_id, contact_email)
+
+        primary_color = str(payload.get("primary_color") or "#0f172a").strip()
+        if not HEX_COLOR_REGEX.match(primary_color):
+            primary_color = "#0f172a"
+        accent_color = str(payload.get("accent_color") or "#10b981").strip()
+        if not HEX_COLOR_REGEX.match(accent_color):
+            accent_color = "#10b981"
+
+        website = str(payload.get("website") or "").strip()[:256]
+        custom_domain = self.normalize_domain(str(payload.get("custom_domain") or ""))[:128]
+        tier = str(payload.get("tier") or "Scale").strip()[:32]
+        tagline = str(payload.get("tagline") or "Managed Web & Security Operations").strip()[:160]
+        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+        record = {
+            "client_reference_id": client_ref_id,
+            "agency_id": clean_agency_id,
+            "agency_name": agency_name,
+            "contact_email": contact_email or None,
+            "support_email": support_email or None,
+            "website": website or None,
+            "tier": tier,
+            "custom_domain": custom_domain or None,
+            "tagline": tagline,
+            "primary_color": primary_color,
+            "accent_color": accent_color,
+            "client_ip": anonymize_client_ip(client_ip),
+            "saved_at": now_iso,
+        }
+
+        with self._lock:
+            store = self._load_onboardings_unlocked()
+            store[client_ref_id] = record
+            self._save_onboardings_unlocked(store)
+
+        return {
+            "ok": True,
+            "client_reference_id": client_ref_id,
+            "agency_id": clean_agency_id,
+            "record": record,
+        }
+
+    def get_onboarding_record(
+        self,
+        client_reference_id: Optional[str] = None,
+        email: Optional[str] = None,
+        agency_id: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Resolves a stored white-label agency onboarding record by client_reference_id, agency_id, or email."""
+        with self._lock:
+            store = self._load_onboardings_unlocked()
+
+        if not store:
+            return None
+
+        ref = (client_reference_id or "").strip()
+        if ref:
+            if ref in store:
+                return dict(store[ref])
+            ref_lower = ref.lower()
+            for k, rec in store.items():
+                if k.lower() == ref_lower or (rec.get("agency_id") or "").lower() == ref_lower:
+                    return dict(rec)
+            # Also check if ref has -<8hex> suffix and matches agency_id
+            base_slug = re.sub(r"-[0-9a-f]{8}$", "", ref_lower)
+            for rec in store.values():
+                if (rec.get("agency_id") or "").lower() == base_slug:
+                    return dict(rec)
+
+        aid = (agency_id or "").strip().lower()
+        if aid:
+            for rec in reversed(list(store.values())):
+                if (rec.get("agency_id") or "").lower() == aid:
+                    return dict(rec)
+
+        clean_email = self.sanitize_email(email)
+        if clean_email:
+            for rec in reversed(list(store.values())):
+                if (rec.get("contact_email") or "").lower() == clean_email or (rec.get("support_email") or "").lower() == clean_email:
+                    return dict(rec)
+
+        return None
+
+    def _load_onboardings_unlocked(self) -> Dict[str, Dict[str, Any]]:
+        if not self.onboarding_file.exists():
+            return {}
+        try:
+            data = json.loads(self.onboarding_file.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return data
+        except Exception as ex:
+            logger.warning(f"Failed to read onboarding store {self.onboarding_file}: {ex}")
+        return {}
+
+    def _save_onboardings_unlocked(self, store: Dict[str, Dict[str, Any]]) -> None:
+        self.onboarding_file.parent.mkdir(parents=True, exist_ok=True)
+        tmp = self.onboarding_file.with_suffix(".tmp")
+        try:
+            tmp.write_text(json.dumps(store, indent=2), encoding="utf-8")
+            tmp.replace(self.onboarding_file)
+        except Exception as ex:
+            if tmp.exists():
+                try:
+                    tmp.unlink()
+                except Exception:
+                    pass
+            logger.warning(f"Failed to persist onboarding store {self.onboarding_file}: {ex}")
 
     @staticmethod
     def normalize_domain(domain_raw: str) -> str:
@@ -573,6 +743,9 @@ class RadarTelemetryService:
         cname_status = audit.get("cname_status") or event_data.get("cname_status")
         is_nxdomain = bool(audit.get("is_nxdomain") or event_data.get("is_nxdomain"))
         is_lookup_failed = bool(audit.get("is_lookup_failed") or event_data.get("is_lookup_failed"))
+        contact_email = self.sanitize_email(
+            event_data.get("contact_email") or audit.get("contact_email")
+        )
 
         # Deterministic unique query ID
         safe_ip = anonymize_client_ip(client_ip)
@@ -600,6 +773,7 @@ class RadarTelemetryService:
             user_agent=str(event_data.get("user_agent") or "")[:256] or None,
             screen_resolution=str(event_data.get("screen_resolution") or "")[:32] or None,
             client_ip=str(safe_ip)[:64] if safe_ip else None,
+            contact_email=contact_email,
         )
 
         record_dict = record.to_dict()
@@ -635,6 +809,7 @@ class RadarTelemetryService:
             "domain": domain,
             "score": record_dict.get("score"),
             "grade": record_dict.get("grade"),
+            "contact_email": contact_email,
             "recorded_at": now.isoformat(),
             "trigger_source": trigger_source,
         }
@@ -824,12 +999,40 @@ class RadarTelemetryService:
         queries.reverse()
         return queries[:limit]
 
+    def get_captured_email_leads(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Returns recent radar probes that captured a validated work contact_email."""
+        recent = self.get_recent_queries(limit=500)
+        leads: List[Dict[str, Any]] = []
+        seen = set()
+        for q in recent:
+            email = self.sanitize_email(q.get("contact_email"))
+            dom = q.get("domain")
+            if not email or not dom:
+                continue
+            key = f"{dom}:{email}"
+            if key in seen:
+                continue
+            seen.add(key)
+            leads.append({
+                "domain": dom,
+                "contact_email": email,
+                "score": q.get("score"),
+                "grade": q.get("grade"),
+                "risk_label": q.get("risk_label"),
+                "timestamp": q.get("timestamp"),
+                "trigger_source": q.get("trigger_source"),
+            })
+            if len(leads) >= limit:
+                break
+        return leads
+
     def get_query_stats(self) -> Dict[str, Any]:
         """Calculates aggregate metrics across recorded perimeter radar probes with enriched grade back-propagation."""
         if not self.queries_file.exists():
             return {
                 "total_probes": 0,
                 "unique_domains": 0,
+                "captured_emails_count": 0,
                 "top_domains": [],
                 "grade_breakdown": {},
                 "latest_probe": None,
@@ -838,6 +1041,7 @@ class RadarTelemetryService:
         all_leads = self.enricher.get_all_enriched_leads()
         domain_counts: Dict[str, int] = {}
         grade_counts: Dict[str, int] = {}
+        captured_emails = set()
         total = 0
         latest: Optional[Dict[str, Any]] = None
 
@@ -855,6 +1059,8 @@ class RadarTelemetryService:
                         domain_counts[d] = domain_counts.get(d, 0) + 1
                         g = record.get("grade") or "PENDING"
                         grade_counts[g] = grade_counts.get(g, 0) + 1
+                        if record.get("contact_email"):
+                            captured_emails.add(str(record["contact_email"]).lower())
                         latest = record
                     except json.JSONDecodeError:
                         continue
@@ -867,6 +1073,7 @@ class RadarTelemetryService:
         return {
             "total_probes": total,
             "unique_domains": len(domain_counts),
+            "captured_emails_count": len(captured_emails),
             "top_domains": top_domains,
             "grade_breakdown": grade_counts,
             "latest_probe": latest,
@@ -913,12 +1120,15 @@ class RadarTelemetryService:
         recent_queries = self.get_recent_queries(limit=500)
 
         latest_query_by_domain: Dict[str, Dict[str, Any]] = {}
+        latest_email_by_domain: Dict[str, str] = {}
         probe_counts: Dict[str, int] = {}
         for q in recent_queries:
             dom = q.get("domain")
             if not dom:
                 continue
             probe_counts[dom] = probe_counts.get(dom, 0) + 1
+            if q.get("contact_email") and dom not in latest_email_by_domain:
+                latest_email_by_domain[dom] = str(q["contact_email"])
             if dom not in latest_query_by_domain or (
                 q.get("score") is not None and latest_query_by_domain[dom].get("score") is None
             ):
@@ -949,6 +1159,7 @@ class RadarTelemetryService:
                 "company_name": (lead.get("company_profile") or {}).get("company_name") or dom,
                 "title": (lead.get("company_profile") or {}).get("title") or dom,
                 "description": (lead.get("company_profile") or {}).get("description") or "",
+                "contact_email": q.get("contact_email") or latest_email_by_domain.get(dom) or lead.get("contact_email"),
                 "score": score,
                 "grade": grade,
                 "dmarc_status": q.get("dmarc_status") or lead.get("dmarc_status") or "unknown",
@@ -1326,6 +1537,8 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
             "/api/radar/deliverable",
             "/api/orbit/radar/tunnel",
             "/api/radar/tunnel",
+            "/api/orbit/onboarding",
+            "/api/onboarding",
         ):
             if not self._is_authorized_reader():
                 self._send_json_error(403, "Forbidden: loopback or Bearer token required for telemetry inspection")
@@ -1335,6 +1548,22 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
             state = self.tunnel_watchdog.get_state()
             body = json.dumps({"ok": True, "tunnel": state}).encode("utf-8")
             self.send_cors_headers(200, "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        elif parsed.path in ("/api/orbit/onboarding", "/api/onboarding"):
+            q_params = urllib.parse.parse_qs(parsed.query)
+            client_ref = q_params.get("client_reference_id", [None])[0]
+            email = q_params.get("email", [None])[0]
+            agency_id = q_params.get("agency_id", [None])[0]
+            rec = self.service.get_onboarding_record(
+                client_reference_id=client_ref,
+                email=email,
+                agency_id=agency_id,
+            )
+            status = 200 if rec else 404
+            body = json.dumps({"ok": bool(rec), "record": rec}).encode("utf-8")
+            self.send_cors_headers(status, "application/json")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
@@ -1385,7 +1614,12 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
-        if parsed.path in ("/api/orbit/radar/telemetry", "/api/radar/telemetry"):
+        if parsed.path in (
+            "/api/orbit/radar/telemetry",
+            "/api/radar/telemetry",
+            "/api/orbit/onboarding",
+            "/api/onboarding",
+        ):
             client_ip = self._extract_client_ip()
             if not self._check_rate_limit(client_ip):
                 self._send_json_error(429, "Rate limit exceeded (max 30 telemetry events per minute)")
@@ -1414,7 +1648,10 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
                 self._send_json_error(400, f"Invalid JSON payload: {ex}")
                 return
 
-            res = self.service.record_query(data, client_ip=client_ip)
+            if parsed.path in ("/api/orbit/onboarding", "/api/onboarding") or data.get("event") == "AGENCY_ONBOARDING":
+                res = self.service.record_onboarding(data, client_ip=client_ip)
+            else:
+                res = self.service.record_query(data, client_ip=client_ip)
             status_code = 200 if res.get("ok") else 400
             body = json.dumps(res).encode("utf-8")
             self.send_cors_headers(status_code, "application/json")

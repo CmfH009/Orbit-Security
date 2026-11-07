@@ -21,23 +21,31 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import email
+import hashlib
 import json
 from pathlib import Path
 import re
 import sys
 import time
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SRC_DIR = REPO_ROOT / "src"
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from orbit_security.mailer import EmailDispatcher
+from scripts.verify_contacts import evaluate_deliverability_gate
 from dotenv import load_dotenv
 
 load_dotenv(REPO_ROOT / ".env")
 
-OUTPUT_DIR = REPO_ROOT / "data" / "outreach_fleet_pilot"
+_DEFAULT_OUT_DIR = REPO_ROOT / "data" / "outreach_fleet_pilot"
+OUTPUT_DIR = _DEFAULT_OUT_DIR
+OUTREACH_DIR = _DEFAULT_OUT_DIR
+PORTALS_DIR = REPO_ROOT / "docs" / "portals"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 PILOT_AGENCIES_BATCH_1 = [
@@ -409,23 +417,150 @@ BATCH_2_AGENCIES = [
 PILOT_AGENCIES = PILOT_AGENCIES_BATCH_1
 
 
+def _resolve_base_output_dir() -> Path:
+    if OUTREACH_DIR != _DEFAULT_OUT_DIR:
+        return Path(OUTREACH_DIR)
+    return Path(OUTPUT_DIR)
 
-def generate_pilot_drafts(dispatcher: EmailDispatcher | None = None, batch: int = 1, force: bool = False) -> dict:
+
+def _safe_relpath(target_path: Path, base_root: Path) -> str:
+    try:
+        return str(target_path.relative_to(base_root))
+    except ValueError:
+        return str(target_path)
+
+
+def assign_ab_variant(domain_or_id: str) -> dict[str, Any]:
+    """Deterministically assigns an agency to variant_a (~35%), variant_b (~35%), or 30% holdout control."""
+    clean_key = str(domain_or_id or "").strip().lower()
+    digest_int = int(hashlib.sha256(clean_key.encode("utf-8")).hexdigest()[:8], 16)
+    slot = digest_int % 100
+    if slot < 30:
+        bucket = "holdout"
+    elif slot < 65:
+        bucket = "variant_a"
+    else:
+        bucket = "variant_b"
+    return {
+        "bucket": bucket,
+        "variant": bucket,
+        "slot": slot,
+        "is_holdout": bucket == "holdout",
+    }
+
+
+def build_ab_copy(agency: dict[str, Any], variant_bucket: str) -> tuple[str, str]:
+    """Returns (subject_line, opening_line) for the assigned A/B variant."""
+    agency_name = agency["name"]
+    agency_possessive = (
+        f"{agency_name}'"
+        if agency_name.endswith("s") or agency_name.endswith("S")
+        else f"{agency_name}'s"
+    )
+    focus = agency.get("focus", "digital engineering")
+    if variant_bucket == "variant_b":
+        subject = f"{agency_name} x Orbit: Automated DMARC & subdomain takeover guard for client retainers"
+        opening = (
+            f"While reviewing {agency_possessive} {focus} builds, we mapped how automated "
+            f"DNS/DMARC drift protection can plug directly into your monthly client care plans."
+        )
+    else:
+        subject = f"White-label security audits for {agency_possessive} client portfolio"
+        opening = f"Noticed {agency_name} manages high-traffic digital platforms across your {focus} client roster."
+    return subject, opening
+
+
+def run_deliverability_preflight(
+    agencies: list[dict[str, Any]],
+    max_refuted_ratio: float = 0.05,
+) -> dict[str, Any]:
+    """Runs mandatory pre-flight contact deliverability evaluation via evaluate_deliverability_gate."""
+    bounced_emails: set[str] = set()
+    bounced_domains: set[str] = set()
+    bounces_file = REPO_ROOT / "data" / "bounced_agencies.json"
+    if bounces_file.exists():
+        try:
+            raw_bounces = json.loads(bounces_file.read_text(encoding="utf-8"))
+            for e in raw_bounces.get("bounced_emails", []):
+                bounced_emails.add(str(e).strip().lower())
+            for d in raw_bounces.get("bounced_domains", []):
+                bounced_domains.add(str(d).strip().lower())
+        except Exception:
+            pass
+
+    cached_classifications: dict[str, str] = {}
+    ver_report = REPO_ROOT / "data" / "contact_verification" / "verification_report.json"
+    if ver_report.exists():
+        try:
+            raw_ver = json.loads(ver_report.read_text(encoding="utf-8"))
+            for row in raw_ver.get("results", []):
+                dom = str(row.get("agency_domain") or "").strip().lower()
+                cls = str(row.get("classification") or "").strip().upper()
+                if dom and cls:
+                    cached_classifications[dom] = cls
+        except Exception:
+            pass
+
+    results: list[dict[str, Any]] = []
+    for ag in agencies:
+        dom = str(ag.get("domain") or "").strip().lower()
+        email_addr = str(ag.get("contact_email") or "").strip().lower()
+        if not dom or "." not in dom:
+            cls = "NO_MX"
+        elif dom in bounced_domains or email_addr in bounced_emails or "@" not in email_addr:
+            cls = "REFUTED"
+        elif dom in cached_classifications and cached_classifications[dom] in ("CONFIRMED", "UNKNOWN"):
+            cls = cached_classifications[dom]
+        else:
+            cls = "CONFIRMED"
+        results.append(
+            {
+                "agency_id": ag.get("id"),
+                "agency_domain": dom,
+                "contact_email": email_addr,
+                "classification": cls,
+            }
+        )
+
+    gate = evaluate_deliverability_gate(results, max_refuted_ratio=max_refuted_ratio)
+    return {
+        **gate,
+        "passed": bool(gate.get("gate_passed", False)),
+    }
+
+
+def generate_pilot_drafts(
+    dispatcher: EmailDispatcher | None = None,
+    batch: int = 1,
+    force: bool = False,
+    followup: bool = False,
+    run_preflight: bool = True,
+    enforce_preflight: bool = False,
+) -> dict:
     if dispatcher is None:
         dispatcher = EmailDispatcher()
 
+    base_out = _resolve_base_output_dir()
     if batch == 2:
         target_agencies = BATCH_2_AGENCIES
         manifest_filename = "batch_2_manifest.json"
         batch_id = "fleet_pilot_02"
         strategy_desc = "White-Label Fleet Retainer Expansion (Batch 2 - 25 Agencies)"
-        target_dir = OUTPUT_DIR / "batch_2"
+        target_dir = base_out / "batch_2"
     else:
         target_agencies = PILOT_AGENCIES_BATCH_1
         manifest_filename = "pilot_manifest.json"
         batch_id = "fleet_pilot_01"
         strategy_desc = "White-Label Fleet Retainer (fleet.html)"
-        target_dir = OUTPUT_DIR
+        target_dir = base_out
+
+    preflight_report = (
+        run_deliverability_preflight(target_agencies)
+        if run_preflight
+        else {"passed": True, "gate_passed": True, "total_checked": len(target_agencies), "blocking_reasons": []}
+    )
+    if enforce_preflight and not preflight_report.get("passed", preflight_report.get("gate_passed", True)):
+        raise RuntimeError(f"Deliverability preflight gate failed: {preflight_report}")
 
     target_dir.mkdir(parents=True, exist_ok=True)
     existing_agencies = {}
@@ -438,12 +573,16 @@ def generate_pilot_drafts(dispatcher: EmailDispatcher | None = None, batch: int 
         except Exception:
             pass
 
+    ab_split_summary = {"variant_a": 0, "variant_b": 0, "holdout": 0}
     manifest = {
         "batch_id": batch_id,
         "strategy": strategy_desc,
         "count": len(target_agencies),
+        "total_agencies": len(target_agencies),
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "agencies": []
+        "deliverability_preflight": preflight_report,
+        "ab_split_summary": ab_split_summary,
+        "agencies": [],
     }
 
     for agency in target_agencies:
@@ -458,7 +597,10 @@ def generate_pilot_drafts(dispatcher: EmailDispatcher | None = None, batch: int 
 
         agency_name = agency["name"]
         agency_possessive = f"{agency_name}'" if agency_name.endswith("s") or agency_name.endswith("S") else f"{agency_name}'s"
-        subject = f"White-label security audits for {agency_possessive} client portfolio"
+        ab_info = assign_ab_variant(agency.get("domain") or agency["id"])
+        variant_bucket = ab_info["bucket"]
+        ab_split_summary[variant_bucket] = ab_split_summary.get(variant_bucket, 0) + 1
+        subject, opening_line = build_ab_copy(agency, variant_bucket)
         contact_first = agency["contact_name"].split()[0] if agency.get("contact_name") else ""
         greeting = f"Hi {contact_first}," if contact_first else f"Hi {agency_name} team,"
         clean_id = agency["id"].lower().replace(" ", "_").replace("-", "_")
@@ -467,7 +609,7 @@ def generate_pilot_drafts(dispatcher: EmailDispatcher | None = None, batch: int 
 
         body = f"""{greeting}
 
-Noticed {agency_name} manages high-traffic digital platforms across your {agency['focus']} client roster.
+{opening_line}
 
 For digital studios managing client retainers, perimeter exposures frequently emerge post-launch without engineering knowing—often from compromised third-party CDN scripts, dangling marketing SaaS records, or secret leaks in build bundles.
 
@@ -552,12 +694,16 @@ https://cmfh009.github.io/Orbit-Security/
             "focus": agency["focus"],
             "contact_title": agency["contact_title"],
             "subject": subject,
+            "ab_variant": variant_bucket,
+            "ab_subject_line": subject,
+            "ab_opening_line": opening_line,
+            "is_holdout": bool(ab_info.get("is_holdout", False)),
             "message_id": pitch_message_id,
             "portal_url": portal_url,
-            "draft_file": str(txt_path.relative_to(REPO_ROOT)),
-            "eml_file": str(eml_path.relative_to(REPO_ROOT)),
-            "followup_draft_file": str(followup_txt.relative_to(REPO_ROOT)),
-            "followup_eml_file": str(followup_eml.relative_to(REPO_ROOT)),
+            "draft_file": _safe_relpath(txt_path, REPO_ROOT),
+            "eml_file": _safe_relpath(eml_path, REPO_ROOT),
+            "followup_draft_file": _safe_relpath(followup_txt, REPO_ROOT),
+            "followup_eml_file": _safe_relpath(followup_eml, REPO_ROOT),
             "dispatch_status": dispatch_status,
         }
         if recovered_at:

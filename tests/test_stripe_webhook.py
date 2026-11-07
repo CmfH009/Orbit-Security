@@ -311,3 +311,108 @@ def test_handle_subscription_deleted_event():
         # Check status changed
         subs = sub_mgr.list_subscribers()
         assert subs[0]["status"] == "canceled"
+
+
+def test_white_label_onboarding_to_stripe_payment_link_portal_provisioning():
+    """Tests that pre-checkout white-label onboarding branding is resolved via client_reference_id/email on checkout.session.completed and provisions a custom-branded portal."""
+    from orbit_security.agency_retainer import AgencyRetainerManager
+    from orbit_security.deal_desk import RetainerDealDeskConcierge
+    from orbit_security.radar_telemetry import RadarTelemetryService
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = Path(tmpdir)
+        sub_file = tmp / "subscribers.json"
+        clients_file = tmp / "clients.json"
+        certs_dir = tmp / "certificates"
+        retainers_file = tmp / "retainers.json"
+        portals_dir = tmp / "portals"
+        onboarding_file = tmp / "agency_onboardings.json"
+
+        telemetry = RadarTelemetryService(
+            queries_file=tmp / "queries.jsonl",
+            leads_file=tmp / "leads.json",
+            campaigns_dir=tmp / "campaigns",
+            onboarding_file=onboarding_file,
+        )
+
+        onb_res = telemetry.record_onboarding(
+            {
+                "agency_id": "nova-creative",
+                "agency_name": "Nova Creative Labs",
+                "contact_email": "billing@novacreative.dev",
+                "support_email": "secops@novacreative.dev",
+                "website": "https://novacreative.dev",
+                "tier": "Scale",
+                "custom_domain": "security.novacreative.dev",
+                "tagline": "Zero-Drift Digital Fleet Protection",
+                "primary_color": "#1e293b",
+                "accent_color": "#10b981",
+            }
+        )
+        assert onb_res["ok"] is True
+        client_ref_id = onb_res["client_reference_id"]
+
+        sub_mgr = SubscriberManager(subscribers_file=sub_file)
+        cert_gen = SlaCertificateGenerator(output_dir=certs_dir)
+        registry = FleetRegistry(data_path=clients_file)
+        retainer_mgr = AgencyRetainerManager(data_path=retainers_file)
+        deal_desk = RetainerDealDeskConcierge(workspace_root=tmp, portals_dir=portals_dir)
+
+        handler = StripeWebhookHandler(
+            subscriber_manager=sub_mgr,
+            sla_generator=cert_gen,
+            fleet_registry=registry,
+            retainer_manager=retainer_mgr,
+            onboarding_service=telemetry,
+            deal_desk=deal_desk,
+        )
+
+        # Simulate Stripe Payment Link checkout.session.completed (no metadata, only client_reference_id + customer_details.email)
+        event = {
+            "id": "evt_whitelabel_payment_link_001",
+            "type": "checkout.session.completed",
+            "data": {
+                "object": {
+                    "id": "cs_live_payment_link_001",
+                    "client_reference_id": client_ref_id,
+                    "customer": "cus_nova_001",
+                    "subscription": "sub_nova_001",
+                    "customer_details": {
+                        "email": "billing@novacreative.dev",
+                        "name": "Nova Creative Labs",
+                    },
+                    "metadata": {},
+                    "amount_total": 29900,
+                    "currency": "usd",
+                    "payment_status": "paid",
+                }
+            },
+        }
+
+        result = handler.handle_webhook(json.dumps(event).encode("utf-8"))
+        assert result["status"] == "PROVISIONED"
+        assert result["agency_id"] == "nova-creative"
+        assert result["agency_name"] == "Nova Creative Labs"
+        assert result["billing_status"] == "active"
+        assert result.get("portal_path") is not None
+
+        portal_path = Path(result["portal_path"])
+        assert portal_path.exists()
+        assert portal_path.name == "nova_creative.html"
+        portal_html = portal_path.read_text(encoding="utf-8")
+        assert "Nova Creative Labs" in portal_html
+        assert "Zero-Drift Digital Fleet Protection" in portal_html
+        assert "security.novacreative.dev" in portal_html
+        assert "#10b981" in portal_html
+
+        retainer = retainer_mgr.get_agency("nova-creative")
+        assert retainer is not None
+        assert retainer.agency_name == "Nova Creative Labs"
+        assert retainer.custom_domain == "security.novacreative.dev"
+        assert retainer.support_email == "secops@novacreative.dev"
+        assert retainer.primary_color == "#1e293b"
+        assert retainer.accent_color == "#10b981"
+        assert retainer.agency_tagline == "Zero-Drift Digital Fleet Protection"
+        assert retainer.stripe_customer_id == "cus_nova_001"
+        assert retainer.stripe_subscription_id == "sub_nova_001"
+

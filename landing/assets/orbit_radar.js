@@ -1721,13 +1721,22 @@
         } catch (_) {}
     }
 
-    function dispatchRadarTelemetry(domain, triggerSource, auditResult) {
+    function dispatchRadarTelemetry(domain, triggerSource, auditResult, contactEmailOverride) {
         if (!domain) return null;
         const now = new Date();
+        let rawEmail = typeof contactEmailOverride === 'string' ? contactEmailOverride.trim() : '';
+        if (!rawEmail && typeof document !== 'undefined') {
+            const emailEl = document.getElementById('contactEmail');
+            if (emailEl && typeof emailEl.value === 'string') {
+                rawEmail = emailEl.value.trim();
+            }
+        }
+        const contactEmail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(rawEmail) ? rawEmail.toLowerCase() : null;
         const payload = {
             event: 'RADAR_DOMAIN_ENTERED',
             domain: domain,
             trigger_source: triggerSource || 'radar_submit',
+            contact_email: contactEmail,
             timestamp: now.toISOString(),
             timestamp_epoch: Math.floor(now.getTime() / 1000),
             session_id: getOrCreateSessionId(),

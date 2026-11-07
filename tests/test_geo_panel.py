@@ -113,3 +113,42 @@ def test_calculate_scorecard():
     empty_card = GeoPromptPanel.calculate_scorecard([])
     assert empty_card["total_probes"] == 0
     assert empty_card["mention_rate_pct"] == 0.0
+
+
+def test_latest_summary_and_delta_calculation(tmp_path: Path):
+    log_file = tmp_path / "geo_panels.jsonl"
+    panel = GeoPromptPanel(log_file=log_file)
+
+    # Empty state
+    empty_delta = panel.get_latest_summary_and_delta(log_file=log_file, batch_size=2)
+    assert empty_delta["has_data"] is False
+    assert empty_delta["has_previous_run"] is False
+
+    # First batch of 2 probes: 1 mention+citation (1.0), 1 miss (0.0) -> 50% mention, 50% citation, 50.0 authority
+    batch1 = [
+        panel.evaluate_response("q1", "mock", "Orbit Security https://orbit-security.com"),
+        panel.evaluate_response("q2", "mock", "Unrelated answer"),
+    ]
+    panel.record_results(batch1, target_file=log_file)
+
+    first_delta = panel.get_latest_summary_and_delta(log_file=log_file, batch_size=2)
+    assert first_delta["has_data"] is True
+    assert first_delta["has_previous_run"] is False
+    assert first_delta["latest"]["mention_rate_pct"] == 50.0
+
+    # Second batch of 2 probes: both mention+citation (1.0) -> 100% mention, 100% citation, 100.0 authority
+    batch2 = [
+        panel.evaluate_response("q1", "mock", "Orbit Security https://cmfh009.github.io/Orbit-Security/"),
+        panel.evaluate_response("q2", "mock", "Orbit Security https://github.com/cmfh009/orbit-security"),
+    ]
+    panel.record_results(batch2, target_file=log_file)
+
+    second_delta = panel.get_latest_summary_and_delta(log_file=log_file, batch_size=2)
+    assert second_delta["has_data"] is True
+    assert second_delta["has_previous_run"] is True
+    assert second_delta["latest"]["mention_rate_pct"] == 100.0
+    assert second_delta["previous"]["mention_rate_pct"] == 50.0
+    assert second_delta["delta"]["mention_rate_delta_pct"] == 50.0
+    assert second_delta["delta"]["citation_rate_delta_pct"] == 50.0
+    assert second_delta["delta"]["authority_score_delta"] == 50.0
+

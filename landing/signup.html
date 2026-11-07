@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https://cmfh009.github.io; connect-src 'self' https://api.stripe.com https://checkout.stripe.com https://buy.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com https://buy.stripe.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https://cmfh009.github.io; connect-src 'self' https://api.stripe.com https://checkout.stripe.com https://buy.stripe.com http://127.0.0.1:* http://localhost:* https://*.run.app https://*.lhr.life https://raw.githubusercontent.com; object-src 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com https://buy.stripe.com;">
     <title>Orbit Security — Agency Retainer Onboarding</title>
     
     <!-- Primary SEO Meta Tags -->
@@ -356,39 +356,112 @@
             if (notice) notice.classList.remove('hidden');
         }
 
-        document.getElementById('signupForm').addEventListener('submit', function(e) {
+        async function computeClientReferenceId(agencySlug, email) {
+            const cleanSlug = (agencySlug || '')
+                .toLowerCase()
+                .replace(/[^a-z0-9_-]/g, '-')
+                .replace(/^[-_]+|[-_]+$/g, '')
+                .slice(0, 40) || 'agency';
+            const seed = `${cleanSlug}:${(email || '').trim().toLowerCase()}`;
+            try {
+                if (window.crypto && window.crypto.subtle && typeof TextEncoder !== 'undefined') {
+                    const buf = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(seed));
+                    const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+                    return `${cleanSlug}-${hex.slice(0, 8)}`;
+                }
+            } catch (_) {}
+            let h = 2166136261;
+            for (let i = 0; i < seed.length; i++) {
+                h ^= seed.charCodeAt(i);
+                h = Math.imul(h, 16777619);
+            }
+            return `${cleanSlug}-${(h >>> 0).toString(16).padStart(8, '0')}`;
+        }
+
+        function getOnboardingEndpoints() {
+            const endpoints = [];
+            if (window.ORBIT_ONBOARDING_ENDPOINT) endpoints.push(window.ORBIT_ONBOARDING_ENDPOINT);
+            if (window.location && window.location.protocol && window.location.protocol.startsWith('http') && !window.location.hostname.endsWith('github.io') && !window.location.hostname.endsWith('pages.dev')) {
+                endpoints.push(`${window.location.origin}/api/orbit/onboarding`);
+            }
+            endpoints.push(
+                'https://orbit-security-api-911438991206.us-central1.run.app/api/orbit/onboarding',
+                'https://orbit-security-api-911438991206.us-central1.run.app/api/orbit/radar/telemetry',
+                'http://127.0.0.1:9090/api/orbit/onboarding',
+                'http://127.0.0.1:9095/api/orbit/onboarding'
+            );
+            return endpoints;
+        }
+
+        async function dispatchAgencyOnboarding(formData) {
+            const jsonStr = JSON.stringify(formData);
+            const endpoints = getOnboardingEndpoints();
+            const requests = endpoints.map(url => {
+                try {
+                    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+                        try {
+                            const blob = new Blob([jsonStr], { type: 'application/json' });
+                            navigator.sendBeacon(url, blob);
+                        } catch (_) {}
+                    }
+                    if (typeof fetch === 'function') {
+                        return fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: jsonStr,
+                            mode: 'cors',
+                            keepalive: true
+                        }).catch(() => null);
+                    }
+                } catch (_) {}
+                return Promise.resolve(null);
+            });
+            await Promise.race([
+                Promise.allSettled(requests),
+                new Promise(resolve => setTimeout(resolve, 650))
+            ]);
+        }
+
+        document.getElementById('signupForm').addEventListener('submit', async function(e) {
+            const agencySlug = document.getElementById('agency_id').value.trim();
+            const email = document.getElementById('contact_email').value.trim();
+            const clientRefId = await computeClientReferenceId(agencySlug, email);
+
+            const formData = {
+                event: 'AGENCY_ONBOARDING',
+                client_reference_id: clientRefId,
+                agency_id: agencySlug,
+                agency_name: document.getElementById('agency_name').value.trim(),
+                contact_email: email,
+                website: document.getElementById('website').value.trim(),
+                tier: selectedTierValue,
+                custom_domain: document.getElementById('custom_domain').value.trim(),
+                support_email: document.getElementById('support_email').value.trim(),
+                tagline: document.getElementById('tagline').value.trim(),
+                primary_color: document.getElementById('primary_color').value,
+                accent_color: document.getElementById('accent_color').value,
+                saved_at: new Date().toISOString()
+            };
+
+            try {
+                localStorage.setItem('orbit_agency_onboarding', JSON.stringify(formData));
+            } catch (err) {}
+
             if (isStaticHost) {
                 e.preventDefault();
-                const agencySlug = document.getElementById('agency_id').value.trim();
-                const email = document.getElementById('contact_email').value.trim();
-
-                // Cache profile locally for post-checkout retrieval
-                try {
-                    const formData = {
-                        agency_id: agencySlug,
-                        agency_name: document.getElementById('agency_name').value.trim(),
-                        contact_email: email,
-                        website: document.getElementById('website').value.trim(),
-                        tier: selectedTierValue,
-                        custom_domain: document.getElementById('custom_domain').value.trim(),
-                        support_email: document.getElementById('support_email').value.trim(),
-                        tagline: document.getElementById('tagline').value.trim(),
-                        primary_color: document.getElementById('primary_color').value,
-                        accent_color: document.getElementById('accent_color').value,
-                        saved_at: new Date().toISOString()
-                    };
-                    localStorage.setItem('orbit_agency_onboarding', JSON.stringify(formData));
-                } catch (err) {}
+                await dispatchAgencyOnboarding(formData);
 
                 let targetUrl = STRIPE_LINKS[selectedTierValue] || STRIPE_LINKS['Scale'];
                 const params = new URLSearchParams();
-                if (agencySlug) params.set('client_reference_id', agencySlug);
+                if (clientRefId) params.set('client_reference_id', clientRefId);
                 if (email) params.set('prefilled_email', email);
                 const queryStr = params.toString();
                 if (queryStr) {
                     targetUrl += (targetUrl.includes('?') ? '&' : '?') + queryStr;
                 }
                 window.location.href = targetUrl;
+            } else {
+                dispatchAgencyOnboarding(formData);
             }
         });
     </script>

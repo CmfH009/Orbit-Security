@@ -780,4 +780,109 @@ class TestRadarLeadEnricherAndProposalStager:
         assert state2["telemetry_endpoint"] == "https://21ebe34e0d176c.lhr.life/api/orbit/radar/telemetry"
         assert state2["rotation_count"] == 2
 
+    def test_contact_email_lead_capture_and_surfacing(self, tmp_path):
+        service = RadarTelemetryService(
+            queries_file=tmp_path / "email_queries.jsonl",
+            leads_file=tmp_path / "email_leads.json",
+            campaigns_dir=tmp_path / "email_campaigns",
+             onboarding_file=tmp_path / "onboardings.json",
+        )
+        res = service.record_query(
+            {
+                "domain": "clientbrand.com",
+                "trigger_source": "audit_complete",
+                "contact_email": "CTO@ClientBrand.com",
+                "audit_result": {
+                    "score": 68,
+                    "grade": "D",
+                    "risk_label": "HIGH RISK",
+                },
+            },
+            background_enrich=False,
+        )
+        assert res["ok"] is True
+        assert res["contact_email"] == "cto@clientbrand.com"
+
+        recent = service.get_recent_queries(limit=10)
+        assert len(recent) == 1
+        assert recent[0]["contact_email"] == "cto@clientbrand.com"
+
+        captured = service.get_captured_email_leads()
+        assert len(captured) == 1
+        assert captured[0]["contact_email"] == "cto@clientbrand.com"
+        assert captured[0]["domain"] == "clientbrand.com"
+
+        summary = service.get_enriched_leads_summary(limit=10)
+        assert len(summary) == 1
+        assert summary[0]["contact_email"] == "cto@clientbrand.com"
+
+        stats = service.get_query_stats()
+        assert stats["captured_emails_count"] == 1
+
+    def test_agency_onboarding_persistence_and_http_endpoint(self, tmp_path):
+        import http.server
+
+        service = RadarTelemetryService(
+            queries_file=tmp_path / "onb_queries.jsonl",
+            leads_file=tmp_path / "onb_leads.json",
+            campaigns_dir=tmp_path / "onb_campaigns",
+            onboarding_file=tmp_path / "agency_onboardings.json",
+        )
+
+        ref_id_1 = service.compute_client_reference_id("apex-studio", "ops@apexstudio.io")
+        ref_id_2 = service.compute_client_reference_id("apex-studio", "ops@apexstudio.io")
+        assert ref_id_1 == ref_id_2
+        assert ref_id_1.startswith("apex-studio-")
+
+        class BoundHandler(RadarTelemetryHTTPHandler):
+            pass
+
+        BoundHandler.service = service
+        httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), BoundHandler)
+        port = httpd.server_address[1]
+        t = threading.Thread(target=httpd.serve_forever, daemon=True)
+        t.start()
+
+        try:
+            payload = {
+                "event": "AGENCY_ONBOARDING",
+                "agency_id": "apex-studio",
+                "agency_name": "Apex Digital Studio",
+                "contact_email": "ops@apexstudio.io",
+                "support_email": "security@apexstudio.io",
+                "website": "https://apexstudio.io",
+                "tier": "Scale",
+                "custom_domain": "trust.apexstudio.io",
+                "tagline": "Enterprise Web & Perimeter Engineering",
+                "primary_color": "#112233",
+                "accent_color": "#00ff88",
+            }
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{port}/api/orbit/onboarding",
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                assert resp.status == 200
+                body = json.loads(resp.read().decode("utf-8"))
+                assert body["ok"] is True
+                assert body["client_reference_id"] == ref_id_1
+                assert body["agency_id"] == "apex-studio"
+
+            by_ref = service.get_onboarding_record(client_reference_id=ref_id_1)
+            assert by_ref is not None
+            assert by_ref["agency_name"] == "Apex Digital Studio"
+            assert by_ref["primary_color"] == "#112233"
+            assert by_ref["accent_color"] == "#00ff88"
+            assert by_ref["custom_domain"] == "trust.apexstudio.io"
+
+            by_email = service.get_onboarding_record(email="OPS@apexstudio.io")
+            assert by_email is not None
+            assert by_email["client_reference_id"] == ref_id_1
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+
+
 

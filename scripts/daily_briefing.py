@@ -370,6 +370,52 @@ def reconcile_ci_alerts_with_live_status(
     }
 
 
+def query_geo_panel_telemetry(log_file: Optional[str] = None) -> Dict[str, Any]:
+    """Queries the latest 12-query GEO visibility & citation panel summary and delta from data/geo_panels.jsonl."""
+    try:
+        from pathlib import Path
+        from orbit_security.geo_panel import GeoPromptPanel
+
+        target_log = Path(log_file) if log_file else None
+        summary = GeoPromptPanel.get_latest_summary_and_delta(log_file=target_log)
+        latest = summary.get("latest") or {}
+        delta = summary.get("delta") or {}
+        has_data = bool(summary.get("has_data"))
+        has_prev = bool(summary.get("has_previous_run"))
+
+        if not has_data:
+            md_line = "- **GEO Panel Status:** No GEO panel runs recorded yet (`python scripts/run_geo_panel.py`)"
+        else:
+            m_rate = latest.get("mention_rate_pct", 0.0)
+            c_rate = latest.get("citation_rate_pct", 0.0)
+            auth = latest.get("composite_authority_score", 0.0)
+            if has_prev:
+                dm = delta.get("mention_rate_delta_pct", 0.0)
+                dc = delta.get("citation_rate_delta_pct", 0.0)
+                da = delta.get("authority_score_delta", 0.0)
+                delta_str = f"Δ Mention `{dm:+.1f}%` | Δ Citation `{dc:+.1f}%` | Δ Authority `{da:+.1f} pts`"
+            else:
+                delta_str = "Baseline run established (awaiting next panel for delta)"
+            md_line = (
+                f"- **Latest 12-Query Panel:** Mention Rate `{m_rate:.1f}%` | Citation Rate `{c_rate:.1f}%` | Authority Score `{auth:.1f}/100`\n"
+                f"- **Panel Run-over-Run Delta:** {delta_str}\n"
+                f"- **Total Logged GEO Probes:** {summary.get('total_records', 0)}"
+            )
+        return {
+            **summary,
+            "summary_markdown": md_line,
+        }
+    except Exception as ex:
+        return {
+            "has_data": False,
+            "has_previous_run": False,
+            "total_records": 0,
+            "latest": {},
+            "delta": {"mention_rate_delta_pct": 0.0, "citation_rate_delta_pct": 0.0, "authority_score_delta": 0.0},
+            "summary_markdown": f"- **GEO Panel Status:** Unavailable ({ex})",
+        }
+
+
 def generate_briefing(speak: bool = False, email: bool = False, recipient: Optional[str] = None):
     today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     stripe = query_stripe_telemetry()
@@ -378,6 +424,7 @@ def generate_briefing(speak: bool = False, email: bool = False, recipient: Optio
     campaigns = query_campaign_outreach()
     email_data = query_live_email_telemetry()
     live_ci = query_live_github_ci_status()
+    geo_panel = query_geo_panel_telemetry()
 
     recent_str = "\n".join([f"  - {r}" for r in campaigns.get("recent_dispatched", [])]) or "  - None yet"
 
@@ -434,6 +481,9 @@ def generate_briefing(speak: bool = False, email: bool = False, recipient: Optio
 - **Eligible Inbox Zero Archiving:** {hygiene.get("archived_count", 0)}
 - **Marketing Promos & Spam Purged:** {hygiene.get("trashed_count", 0)}
 - **Active Unsubscribe Targets Extracted:** {hygiene.get("unsubscribed_count", 0)}
+
+### 7. GEO Visibility & AI Citation Panel (`data/geo_panels.jsonl`)
+{geo_panel.get("summary_markdown", "- **GEO Panel Status:** Pending")}
 
 ---
 *Unified briefing autonomously synthesized by Nova & Orbit Security Sentinel.*

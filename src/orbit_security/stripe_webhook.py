@@ -415,6 +415,8 @@ class StripeWebhookHandler:
         fleet_registry: Optional[FleetRegistry] = None,
         retainer_manager: Optional[AgencyRetainerManager] = None,
         signature_tolerance: int = DEFAULT_STRIPE_TOLERANCE_SECONDS,
+        onboarding_service: Optional[Any] = None,
+        deal_desk: Optional[Any] = None,
     ):
         self.webhook_secret = webhook_secret or os.environ.get("STRIPE_WEBHOOK_SECRET")
         self.subscriber_mgr = subscriber_manager or SubscriberManager()
@@ -422,6 +424,90 @@ class StripeWebhookHandler:
         self.fleet_registry = fleet_registry or FleetRegistry()
         self.retainer_manager = retainer_manager or AgencyRetainerManager()
         self.signature_tolerance = signature_tolerance
+        self.onboarding_service = onboarding_service
+        self.deal_desk = deal_desk
+
+    def _get_onboarding_service(self) -> Optional[Any]:
+        if self.onboarding_service is not None:
+            return self.onboarding_service
+        try:
+            from orbit_security.radar_telemetry import RadarTelemetryService
+            data_dir = self.subscriber_mgr.subscribers_file.parent
+            self.onboarding_service = RadarTelemetryService(
+                queries_file=data_dir / "radar_queries.jsonl",
+                leads_file=data_dir / "radar_enriched_leads.json",
+                campaigns_dir=data_dir / "campaigns",
+                onboarding_file=data_dir / "agency_onboardings.json",
+            )
+            return self.onboarding_service
+        except Exception as ex:
+            logger.debug(f"Onboarding service lookup unavailable: {ex}")
+            return None
+
+    def _get_deal_desk(self) -> Optional[Any]:
+        if self.deal_desk is not None:
+            return self.deal_desk
+        try:
+            from orbit_security.deal_desk import RetainerDealDeskConcierge
+            if self.sla_generator.output_dir.resolve() != DEFAULT_CERTIFICATES_DIR.resolve():
+                base_tmp = self.sla_generator.output_dir.parent
+                self.deal_desk = RetainerDealDeskConcierge(
+                    workspace_root=base_tmp,
+                    portals_dir=base_tmp / "portals",
+                )
+            else:
+                self.deal_desk = RetainerDealDeskConcierge()
+            return self.deal_desk
+        except Exception as ex:
+            logger.debug(f"Deal desk concierge unavailable: {ex}")
+            return None
+
+    def _resolve_onboarding_metadata(self, session: Dict[str, Any]) -> Dict[str, Any]:
+        """Merges Stripe session metadata with pre-checkout white-label onboarding record (by client_reference_id / email)."""
+        raw_meta = dict(session.get("metadata") or {})
+        client_ref_id = str(session.get("client_reference_id") or raw_meta.get("client_reference_id") or "").strip()
+        customer_details = session.get("customer_details") or {}
+        customer_email = str(customer_details.get("email") or raw_meta.get("contact_email") or "").strip()
+        agency_id = str(raw_meta.get("agency_id") or "").strip()
+
+        onb_record: Optional[Dict[str, Any]] = None
+        svc = self._get_onboarding_service()
+        if svc and hasattr(svc, "get_onboarding_record"):
+            onb_record = svc.get_onboarding_record(
+                client_reference_id=client_ref_id or None,
+                email=customer_email or None,
+                agency_id=agency_id or None,
+            )
+
+        merged: Dict[str, Any] = {}
+        if onb_record:
+            for k in (
+                "client_reference_id",
+                "agency_id",
+                "agency_name",
+                "contact_email",
+                "support_email",
+                "website",
+                "tier",
+                "custom_domain",
+                "tagline",
+                "primary_color",
+                "accent_color",
+            ):
+                if onb_record.get(k):
+                    merged[k] = onb_record[k]
+
+        for k, v in raw_meta.items():
+            if v is not None and v != "":
+                merged[k] = v
+
+        if not merged.get("agency_id") and client_ref_id:
+            import re as _re
+            derived_slug = _re.sub(r"-[0-9a-fA-F]{8}$", "", client_ref_id).strip("-_")
+            if derived_slug:
+                merged["agency_id"] = derived_slug
+
+        return merged
 
     def register_client_for_monitoring(
         self,
@@ -512,14 +598,31 @@ class StripeWebhookHandler:
 
     def _handle_checkout_session_completed(self, session: Dict[str, Any]) -> Dict[str, Any]:
         """Provisions client from checkout session."""
+        resolved_meta = self._resolve_onboarding_metadata(session)
         customer_id = session.get("customer") or session.get("id") or "cus_unknown"
         customer_details = session.get("customer_details") or {}
-        customer_email = customer_details.get("email") or "ops@client.com"
-        customer_name = customer_details.get("name") or customer_email.split("@")[0].title()
+        customer_email = (
+            customer_details.get("email")
+            or resolved_meta.get("contact_email")
+            or "ops@client.com"
+        )
+        customer_name = (
+            customer_details.get("name")
+            or resolved_meta.get("agency_name")
+            or customer_email.split("@")[0].title()
+        )
 
-        metadata = session.get("metadata") or {}
-        apex_domain = metadata.get("domain") or metadata.get("apex_domain")
-        plan = metadata.get("plan") or "Scale Retainer ($299/mo)"
+        apex_domain = resolved_meta.get("domain") or resolved_meta.get("apex_domain")
+        if not apex_domain and resolved_meta.get("website"):
+            import re as _re
+            clean_web = _re.sub(r"^https?://", "", str(resolved_meta["website"]).strip().lower())
+            clean_web = _re.sub(r"/.*$", "", clean_web).rstrip(".")
+            if "." in clean_web:
+                apex_domain = clean_web
+
+        plan = resolved_meta.get("plan") or (
+            f"{resolved_meta['tier']} Retainer" if resolved_meta.get("tier") else "Scale Retainer ($299/mo)"
+        )
 
         # Fallback domain if metadata omitted
         if not apex_domain:
@@ -563,7 +666,29 @@ class StripeWebhookHandler:
 
         # Step 4: Create/update the agency retainer and link the Stripe
         # customer + subscription so billing status stays in sync.
-        retainer = self._sync_agency_retainer(session)
+        retainer = self._sync_agency_retainer(session, resolved_metadata=resolved_meta)
+
+        # Step 5: Automatically provision the custom-branded white-label portal (portals/<agency>.html)
+        portal_path: Optional[str] = None
+        if retainer:
+            concierge = self._get_deal_desk()
+            if concierge and hasattr(concierge, "generate_portal_for_agency"):
+                try:
+                    portal_res = concierge.generate_portal_for_agency(
+                        agency_id=retainer.agency_id,
+                        agency_name=retainer.agency_name,
+                        tier=str(resolved_meta.get("tier") or retainer.tier.value),
+                        primary_client_domain=apex_domain,
+                        custom_domain=retainer.custom_domain,
+                        support_email=retainer.support_email,
+                        primary_color=retainer.primary_color,
+                        accent_color=retainer.accent_color,
+                        tagline=retainer.agency_tagline,
+                        website=retainer.website,
+                    )
+                    portal_path = portal_res.get("portal_path")
+                except Exception as ex:
+                    logger.warning(f"Failed to provision white-label portal for {retainer.agency_id}: {ex}")
 
         return {
             "status": "PROVISIONED",
@@ -577,16 +702,21 @@ class StripeWebhookHandler:
             "stripe_customer_id": retainer.stripe_customer_id if retainer else None,
             "stripe_subscription_id": retainer.stripe_subscription_id if retainer else None,
             "billing_status": retainer.billing_status if retainer else None,
+            "portal_path": portal_path,
         }
 
-    def _sync_agency_retainer(self, session: Dict[str, Any]) -> Optional[Any]:
+    def _sync_agency_retainer(
+        self,
+        session: Dict[str, Any],
+        resolved_metadata: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Any]:
         """Create/update the AgencyRetainer from a completed checkout session.
 
-        Registers the agency (tier + branding from Checkout Session metadata)
-        and persists the Stripe customer id, subscription id, and an active
-        billing status on the retainer.
+        Registers the agency (tier + branding from Checkout Session metadata
+        or pre-checkout white-label onboarding record) and persists the Stripe
+        customer id, subscription id, and an active billing status on the retainer.
         """
-        metadata = session.get("metadata") or {}
+        metadata = resolved_metadata if resolved_metadata is not None else self._resolve_onboarding_metadata(session)
         agency_id = metadata.get("agency_id")
         if not agency_id:
             logger.warning(
@@ -595,17 +725,29 @@ class StripeWebhookHandler:
             )
             return None
 
-        try:
-            tier = RetainerTier(metadata.get("tier", RetainerTier.SCALE.value))
-        except ValueError:
-            tier = RetainerTier.SCALE
+        raw_tier = str(metadata.get("tier") or RetainerTier.SCALE.value).strip()
+        tier_lookup = {
+            "starter": RetainerTier.STARTER,
+            "monitoring": RetainerTier.STARTER,
+            "scale": RetainerTier.SCALE,
+            "growth": RetainerTier.SCALE,
+            "remediation": RetainerTier.SCALE,
+            "enterprise": RetainerTier.ENTERPRISE,
+            "pro": RetainerTier.ENTERPRISE,
+        }
+        tier = tier_lookup.get(raw_tier.lower())
+        if tier is None:
+            try:
+                tier = RetainerTier(raw_tier)
+            except ValueError:
+                tier = RetainerTier.SCALE
 
         retainer = self.retainer_manager.register_agency(
             agency_id=agency_id,
-            agency_name=metadata.get("agency_name", agency_id),
+            agency_name=metadata.get("agency_name") or agency_id,
             tier=tier,
             custom_domain=metadata.get("custom_domain") or None,
-            support_email=metadata.get("support_email") or None,
+            support_email=metadata.get("support_email") or metadata.get("contact_email") or None,
             primary_color=metadata.get("primary_color") or "#0F172A",
             accent_color=metadata.get("accent_color") or "#3B82F6",
             agency_tagline=metadata.get("tagline") or "Managed Web & Security Operations",

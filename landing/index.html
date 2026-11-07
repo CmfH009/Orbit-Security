@@ -891,8 +891,8 @@
 
                 <div class="p-4 sm:p-6 scanlines relative z-10">
                     <!-- Input Form (Anti-Zoom text-base on mobile, min-h-[48px]) -->
-                    <form id="auditForm" onsubmit="handleAuditRequest(event)" class="flex flex-col sm:flex-row gap-2.5">
-                        <div class="relative flex-1">
+                    <form id="auditForm" onsubmit="handleAuditRequest(event)" class="flex flex-col sm:flex-row flex-wrap gap-2.5">
+                        <div class="relative flex-1 min-w-[220px]">
                             <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-400 font-mono text-sm">
                                 &gt;
                             </div>
@@ -905,6 +905,18 @@
                                 autocapitalize="none"
                                 spellcheck="false"
                                 class="w-full min-h-[48px] bg-slate-900/90 border border-slate-700/80 rounded-xl pl-8 pr-4 py-3 text-base sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20 font-mono transition-all"
+                            />
+                        </div>
+                        <div class="relative flex-1 min-w-[220px]">
+                            <input 
+                                type="email" 
+                                id="contactEmail" 
+                                name="contact_email"
+                                aria-label="Work email for full 100-pt CLI and Terraform remediation bundle (optional)"
+                                placeholder="Work email for full 100-pt CLI &amp; Terraform remediation bundle (optional)" 
+                                autocomplete="email"
+                                spellcheck="false"
+                                class="w-full min-h-[48px] bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-base sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20 font-mono transition-all"
                             />
                         </div>
                         <button 

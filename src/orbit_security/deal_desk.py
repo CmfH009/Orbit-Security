@@ -79,6 +79,12 @@ class RetainerDealDeskConcierge:
         portfolio_subtitle: Optional[str] = None,
         findings_count: int = 0,
         findings: Optional[List[Dict[str, Any]]] = None,
+        custom_domain: Optional[str] = None,
+        support_email: Optional[str] = None,
+        primary_color: Optional[str] = None,
+        accent_color: Optional[str] = None,
+        tagline: Optional[str] = None,
+        website: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Provisions a dedicated co-branded client security portal HTML document."""
         # Sanitize clean_id to strictly alphanumeric + underscores to prevent path traversal
@@ -101,14 +107,49 @@ class RetainerDealDeskConcierge:
         if not is_safe:
             portal_file = (self.portals_dir / f"agency_{int(time.time())}.html").resolve()
 
-        tier_info = RETAINER_PRICING_TIERS.get(tier, RETAINER_PRICING_TIERS["remediation"])
-        client_dom = primary_client_domain or f"client.{clean_id}.com"
+        tier_map = {
+            "starter": "monitoring",
+            "monitoring": "monitoring",
+            "scale": "remediation",
+            "growth": "remediation",
+            "remediation": "remediation",
+            "enterprise": "enterprise",
+            "pro": "enterprise",
+        }
+        normalized_tier = tier_map.get(str(tier or "remediation").strip().lower(), "remediation")
+        tier_info = RETAINER_PRICING_TIERS.get(normalized_tier, RETAINER_PRICING_TIERS["remediation"])
+        client_dom = primary_client_domain or custom_domain or f"client.{clean_id}.com"
 
         # HTML Escape dynamic content to prevent XSS / markup injection
         safe_agency_name = html.escape(str(agency_name))
         safe_client_dom = html.escape(str(client_dom))
         safe_tier_name = html.escape(str(tier_info["tier_name"]))
         safe_checkout_url = html.escape(str(tier_info["checkout_url"]))
+
+        safe_primary_color = (
+            primary_color.strip()
+            if isinstance(primary_color, str) and re.match(r"^#[0-9a-fA-F]{6}$", primary_color.strip())
+            else "#090d16"
+        )
+        safe_accent_color = (
+            accent_color.strip()
+            if isinstance(accent_color, str) and re.match(r"^#[0-9a-fA-F]{6}$", accent_color.strip())
+            else "#00FF66"
+        )
+        branding_meta_html = ""
+        if any([tagline, custom_domain, support_email, website]):
+            parts = []
+            if tagline:
+                parts.append(f"<span>{html.escape(str(tagline))}</span>")
+            if custom_domain:
+                parts.append(f"<span>Portal CNAME: <code>{html.escape(str(custom_domain))}</code></span>")
+            if support_email:
+                parts.append(f"<span>Support: <code>{html.escape(str(support_email))}</code></span>")
+            branding_meta_html = (
+                '\n        <div style="font-size: 12px; color: var(--cyan); margin-top: 4px; font-family: \'JetBrains Mono\', monospace;">\n'
+                f"          {' • '.join(parts)}\n"
+                "        </div>"
+            )
 
         total_findings = max(int(findings_count or 0), len(findings or []))
         if total_findings > 0:
@@ -182,12 +223,12 @@ class RetainerDealDeskConcierge:
   <style>
     :root {{
       --bg: #030712;
-      --card-bg: #090d16;
+      --card-bg: {safe_primary_color};
       --border: rgba(56, 189, 248, 0.25);
       --text: #f8fafc;
       --muted: #94a3b8;
       --cyan: #38bdf8;
-      --emerald: #00FF66;
+      --emerald: {safe_accent_color};
       --amber: #FFB000;
     }}
     body {{
@@ -260,7 +301,7 @@ class RetainerDealDeskConcierge:
         </div>
         <div style="font-size: 13px; color: var(--muted); margin-top: 6px;">
           Dedicated Co-Branded Client Security Center • Tier: <strong>{safe_tier_name}</strong> (${tier_info['monthly_usd']}/mo)
-        </div>
+        </div>{branding_meta_html}
       </div>
       <div>
         <a href="{safe_checkout_url}" class="btn-checkout">⚡ Activate Subscription (${tier_info['monthly_usd']}/mo)</a>

@@ -92,3 +92,21 @@ def test_query_live_github_ci_status_parses_workflow_runs(monkeypatch):
     assert res["all_green"] is True
     assert res["failing_workflows"] == []
     assert "Orbit Security CI" in res["passing_workflows"]
+
+
+def test_query_geo_panel_telemetry_surfaces_summary_and_delta(tmp_path):
+    from orbit_security.geo_panel import GeoPromptPanel
+    from scripts.daily_briefing import query_geo_panel_telemetry
+
+    log_file = tmp_path / "geo_panels.jsonl"
+    panel = GeoPromptPanel(log_file=log_file)
+    panel.run_panel(engines=["mock"], dry_run=False)
+    panel.run_panel(engines=["mock"], dry_run=False)
+
+    geo = query_geo_panel_telemetry(log_file=str(log_file))
+    assert geo["has_data"] is True
+    assert geo["has_previous_run"] is True
+    assert geo["total_records"] == 24
+    assert "Latest 12-Query Panel" in geo["summary_markdown"]
+    assert "Panel Run-over-Run Delta" in geo["summary_markdown"]
+
