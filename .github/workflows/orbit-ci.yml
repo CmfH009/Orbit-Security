@@ -64,6 +64,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - uses: actions/setup-python@v5
         with:
@@ -77,17 +79,10 @@ jobs:
 
       - name: AST Code Sentinel & CISA KEV PR Security Gate
         run: |
-          python src/orbit_security/ast_sentinel.py --check src/orbit_security
-          python - <<'PY'
-          import subprocess, sys
-          sys.path.insert(0, "src")
-          from orbit_security.github_sentinel import GitHubPRAuditor
-          diff_out = subprocess.run(["git", "diff", "HEAD~1..HEAD"], capture_output=True, text=True).stdout
-          res = GitHubPRAuditor().audit_pr_against_cisa_kev(diff_out)
-          print(f"CISA KEV PR Verdict: {res['verdict']}")
-          if not res["passed"]:
-              sys.exit(1)
-          PY
+          python scripts/github_action_entrypoint.py \
+            --target-path src/orbit_security \
+            --scan-types ast,cisa-kev \
+            --sarif-output orbit-security.sarif
 
   post-assets:
     name: Public Asset Availability

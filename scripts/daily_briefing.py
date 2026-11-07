@@ -260,6 +260,116 @@ def query_live_email_telemetry() -> Dict[str, Any]:
         return {"status": f"error: {e}", "scanned": 0, "unread": 0, "ci_alerts": [], "deal_threads": [], "urgent": []}
 
 
+def query_live_github_ci_status(
+    repo: str = "CmfH009/Orbit-Security",
+    branch: str = "main",
+    timeout: float = 6.0,
+) -> Dict[str, Any]:
+    """Queries GitHub Actions REST API for the latest workflow runs on HEAD of `branch`."""
+    url = f"https://api.github.com/repos/{repo}/actions/runs?branch={branch}&per_page=15"
+    headers = {
+        "User-Agent": "OrbitSecurity-DailyBriefing/1.0",
+        "Accept": "application/vnd.github+json",
+    }
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+        runs = data.get("workflow_runs", [])
+        if not runs:
+            return {"status": "empty", "head_sha": "", "all_green": False, "failing_workflows": [], "passing_workflows": []}
+
+        head_full_sha = str(runs[0].get("head_sha", ""))
+        head_sha = head_full_sha[:7]
+        head_runs = [r for r in runs if str(r.get("head_sha", "")).startswith(head_sha)]
+
+        failing_workflows: List[str] = []
+        passing_workflows: List[str] = []
+        seen_names = set()
+        for r in head_runs:
+            name = str(r.get("name", "Workflow"))
+            if name in seen_names:
+                continue
+            seen_names.add(name)
+            conclusion = str(r.get("conclusion") or "").lower()
+            status = str(r.get("status") or "").lower()
+            if status == "completed":
+                if conclusion == "success":
+                    passing_workflows.append(name)
+                elif conclusion in ("failure", "timed_out", "action_required", "cancelled"):
+                    failing_workflows.append(name)
+
+        all_green = len(passing_workflows) > 0 and len(failing_workflows) == 0
+        return {
+            "status": "ok",
+            "head_sha": head_sha,
+            "all_green": all_green,
+            "failing_workflows": failing_workflows,
+            "passing_workflows": passing_workflows,
+        }
+    except Exception as exc:
+        return {
+            "status": f"error: {exc}",
+            "head_sha": "",
+            "all_green": False,
+            "failing_workflows": [],
+            "passing_workflows": [],
+        }
+
+
+def reconcile_ci_alerts_with_live_status(
+    email_ci_alerts: List[str],
+    live_ci: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Reconciles historical inbox CI failure emails against live GitHub Actions HEAD status."""
+    head_sha = live_ci.get("head_sha", "")
+    all_green = bool(live_ci.get("all_green", False))
+    failing_wf = live_ci.get("failing_workflows", [])
+
+    if all_green:
+        lines = [f"  - 🟢 All GitHub Actions green on `HEAD` (`{head_sha}`)"]
+        for s in email_ci_alerts[:3]:
+            clean_s = s.replace("\r", "").replace("\n", " ").strip()
+            lines.append(f"  - ✅ [RESOLVED on HEAD {head_sha}] {clean_s}")
+        return {
+            "active_failures": 0,
+            "resolved_alerts": list(email_ci_alerts),
+            "summary_markdown": "\n".join(lines),
+            "spoken_note": f"all CI test runs are green on HEAD {head_sha}",
+        }
+
+    if failing_wf:
+        active_count = len(failing_wf)
+        lines = [f"  - ⚠️ Live failing workflow on `HEAD` (`{head_sha}`): {wf}" for wf in failing_wf[:3]]
+        for s in email_ci_alerts[:2]:
+            clean_s = s.replace("\r", "").replace("\n", " ").strip()
+            lines.append(f"  - ⚠️ {clean_s}")
+        return {
+            "active_failures": active_count,
+            "resolved_alerts": [],
+            "summary_markdown": "\n".join(lines),
+            "spoken_note": f"heads up, {active_count} GitHub CI workflows failing on HEAD",
+        }
+
+    # Fallback when live API is unreachable
+    ci_count = len(email_ci_alerts)
+    summary_str = (
+        "\n".join([f"  - ⚠️ {s.replace(chr(13), '').replace(chr(10), ' ').strip()}" for s in email_ci_alerts[:3]])
+        if ci_count > 0
+        else "  - All GitHub Actions green on CmfH009/Orbit-Security"
+    )
+    return {
+        "active_failures": ci_count,
+        "resolved_alerts": [],
+        "summary_markdown": summary_str,
+        "spoken_note": f"heads up, {ci_count} GitHub CI failures logged in Orbit CI CD" if ci_count > 0 else "all CI test runs are green",
+    }
+
+
 def generate_briefing(speak: bool = False, email: bool = False, recipient: Optional[str] = None):
     today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     stripe = query_stripe_telemetry()
@@ -267,11 +377,13 @@ def generate_briefing(speak: bool = False, email: bool = False, recipient: Optio
     inbox = query_inbox_pipeline()
     campaigns = query_campaign_outreach()
     email_data = query_live_email_telemetry()
+    live_ci = query_live_github_ci_status()
 
     recent_str = "\n".join([f"  - {r}" for r in campaigns.get("recent_dispatched", [])]) or "  - None yet"
 
-    ci_count = len(email_data.get("ci_alerts", []))
-    ci_summary_str = "\n".join([f"  - ⚠️ {s}" for s in email_data.get("ci_alerts", [])[:3]]) if ci_count > 0 else "  - All GitHub Actions green on CmfH009/Orbit-Security"
+    ci_reconciled = reconcile_ci_alerts_with_live_status(email_data.get("ci_alerts", []), live_ci)
+    ci_count = ci_reconciled["active_failures"]
+    ci_summary_str = ci_reconciled["summary_markdown"]
 
     deal_count = len(email_data.get("deal_threads", []))
     deals_summary_str = "\n".join([f"  - 💼 {s}" for s in email_data.get("deal_threads", [])[:3]]) if deal_count > 0 else "  - No pending customer inquiries waiting in Orbit/Deal-Desk"
@@ -345,7 +457,7 @@ def generate_briefing(speak: bool = False, email: bool = False, recipient: Optio
     sentinel_str = f"Sentinel is green on PID {daemon.get('sentinel_pid')}" if daemon.get("sentinel_running") else "Sentinel daemon needs attention"
     stripe_bal = f"${stripe.get('available_usd', 0.0):.0f}"
     unread_str = f"{email_data.get('unread', 0)} unread"
-    ci_note = f"heads up, {ci_count} GitHub CI failures logged in Orbit CI CD" if ci_count > 0 else "all CI test runs are green"
+    ci_note = ci_reconciled["spoken_note"]
 
     spoken_summary = (
         f"[chuckle] Morning Carson. Nova here with your unified Orbit and mailbox debrief. "

@@ -3,6 +3,16 @@ name = "orbit-security"
 version = "0.1.0"
 description = "Autonomous external perimeter hygiene, subdomain takeover sentinel, and white-label client security auditing for web & Shopify agencies."
 readme = "README.md"
+license = { file = "LICENSE" }
+keywords = ["security", "perimeter-hygiene", "dns", "subdomain-takeover", "ast-sentinel", "ci-cd"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Topic :: Security",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+]
 authors = [
     { name = "CmfH009", email = "carsonmail009@gmail.com" }
 ]
@@ -51,7 +61,7 @@ browser = [
 ]
 dev = [
     "pytest>=9.1.1",
-    "pytest-asyncio>=0.23.0",
+    "pytest-asyncio>=1.4.0",
     "pyyaml>=6.0.3",
 ]
 
@@ -73,8 +83,11 @@ orbit-recon = "orbit_security.cli:main_recon"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = ["-q"]
+norecursedirs = ["AppData", ".venv", "scratch"]
 pythonpath = ["src"]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     "live: marks a test as a live/network integration test (deselect with -m 'not live')",
 ]

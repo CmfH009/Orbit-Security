@@ -84,8 +84,14 @@ data/EMERGENCY_STOP
 data/hackerone_staging/
 HACKERONE_*.md
 HANDOFF_BUG_BOUNTY_*.md
+*HANDOFF*.md
+*handoff*.md
+TEST_READY.md
 *CORS_SUBMISSION*.md
 *READY_SUBMISSION*.md
+data/security_txt_registry.json
+data/security_txt_registry.md
+data/bounty_radar_state.json
 
 # Browser automation storage state & session cookies
 **/storage_state.json
