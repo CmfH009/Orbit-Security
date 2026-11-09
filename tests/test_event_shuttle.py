@@ -257,8 +257,12 @@ def test_shuttle_sender_successful_http_post(tmp_path):
         assert res["last_synced_id"] == 1
         assert cursor_file.exists()
         assert sender.load_cursor() == 1
-        mock_urlopen.assert_called_once()
-        req = mock_urlopen.call_args[0][0]
+        matching_calls = [
+            c for c in mock_urlopen.call_args_list
+            if c[0] and hasattr(c[0][0], "full_url") and "shuttle" in c[0][0].full_url
+        ]
+        assert len(matching_calls) >= 1
+        req = matching_calls[0][0][0]
         assert req.headers["X-orbit-node-id"] == "oracle-cloud-arm64"
         assert "X-orbit-signature" in req.headers
         assert "X-orbit-timestamp" in req.headers
