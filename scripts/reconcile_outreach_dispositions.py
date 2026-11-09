@@ -18,10 +18,13 @@ from __future__ import annotations
 import argparse
 import datetime
 import json
+import logging
 import os
 from pathlib import Path
 import sys
 from typing import Any, Dict, List, Optional, Set, Tuple
+
+logger = logging.getLogger("reconcile_outreach_dispositions")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -37,11 +40,15 @@ CANONICAL_DISPOSITIONS = {
 
 
 def load_json_file(path: Path) -> Any:
-    """Safely loads a JSON file, returning empty dict/list if absent."""
+    """Safely loads a JSON file, returning empty dict/list if absent or corrupted."""
     if not path.exists():
         return {}
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.warning("Corrupt or invalid JSON file at %s: %s", path, e)
+        return {}
 
 
 def save_json_file(path: Path, data: Any) -> None:
@@ -164,11 +171,13 @@ def ensure_baseline_outreach_state(
 
 def load_quarantined_addresses(
     quarantine_file: Optional[Path] = None,
+    repo_root: Optional[Path] = None,
 ) -> Dict[str, Any]:
     """Loads quarantined addresses mapping from disk or defaults."""
+    root = repo_root or (quarantine_file.parent.parent if quarantine_file else REPO_ROOT)
     if quarantine_file is None:
-        ensure_baseline_outreach_state(REPO_ROOT, create_quarantine_if_missing=False)
-    q_path = quarantine_file or (REPO_ROOT / "data" / "quarantined_addresses.json")
+        ensure_baseline_outreach_state(root, create_quarantine_if_missing=False)
+    q_path = quarantine_file or (root / "data" / "quarantined_addresses.json")
     if q_path.exists():
         try:
             with open(q_path, "r", encoding="utf-8") as f:
@@ -183,9 +192,17 @@ def load_quarantined_addresses(
             }
 
     # Fallback to loading from bounced_agencies.json if quarantine file not yet created
-    bounced_path = REPO_ROOT / "data" / "bounced_agencies.json"
+    bounced_path = root / "data" / "bounced_agencies.json"
     bounced_data = load_json_file(bounced_path)
-    emails = sorted({info.get("bounced_email", "").strip().lower() for info in bounced_data.values() if info.get("bounced_email")})
+    if not isinstance(bounced_data, dict):
+        bounced_data = {}
+    emails = sorted(
+        {
+            info.get("bounced_email", "").strip().lower()
+            for info in bounced_data.values()
+            if isinstance(info, dict) and info.get("bounced_email")
+        }
+    )
     domains = sorted(list(bounced_data.keys()))
     return {
         "total_quarantined": len(emails),
@@ -251,8 +268,10 @@ def audit_cohort_dispositions(repo_root: Optional[Path] = None) -> Dict[str, Any
     data_dir = root / "data"
     outbound_dir = root / "outbound_queue"
 
-    dispatched_campaigns: Dict[str, Any] = load_json_file(data_dir / "dispatched_campaigns.json")
-    bounced_agencies: Dict[str, Any] = load_json_file(data_dir / "bounced_agencies.json")
+    dispatched_campaigns_raw = load_json_file(data_dir / "dispatched_campaigns.json")
+    dispatched_campaigns: Dict[str, Any] = dispatched_campaigns_raw if isinstance(dispatched_campaigns_raw, dict) else {}
+    bounced_agencies_raw = load_json_file(data_dir / "bounced_agencies.json")
+    bounced_agencies: Dict[str, Any] = bounced_agencies_raw if isinstance(bounced_agencies_raw, dict) else {}
 
     all_targets: List[Dict[str, Any]] = []
     cohort_summaries: Dict[str, Any] = {}
@@ -263,7 +282,8 @@ def audit_cohort_dispositions(repo_root: Optional[Path] = None) -> Dict[str, Any
     for c_id in (7, 8, 9, 10):
         c_key = f"cohort_{c_id}"
         c_file = data_dir / f"cohort_{c_id}_staged.json"
-        items = load_json_file(c_file) if c_file.exists() else []
+        raw_items = load_json_file(c_file) if c_file.exists() else []
+        items = raw_items if isinstance(raw_items, list) else []
 
         c_undisp = 0
         c_targets: List[Dict[str, Any]] = []
@@ -320,7 +340,7 @@ def audit_cohort_dispositions(repo_root: Optional[Path] = None) -> Dict[str, Any
     c11_key = "cohort_11"
     c11_file = outbound_dir / "cohort_11" / "cohort_11_manifest.json"
     c11_manifest = load_json_file(c11_file) if c11_file.exists() else {}
-    c11_targets_raw = c11_manifest.get("targets", [])
+    c11_targets_raw = c11_manifest.get("targets", []) if isinstance(c11_manifest, dict) else []
 
     c11_undisp = 0
     c11_targets: List[Dict[str, Any]] = []
@@ -387,8 +407,14 @@ def reconcile_dispositions(
     # 1. Compile quarantine ledger from data/bounced_agencies.json (46 entries)
     bounced_path = data_dir / "bounced_agencies.json"
     bounced_data = load_json_file(bounced_path)
+    if not isinstance(bounced_data, dict):
+        bounced_data = {}
     quarantined_emails = sorted(
-        {info.get("bounced_email", "").strip().lower() for info in bounced_data.values() if info.get("bounced_email")}
+        {
+            info.get("bounced_email", "").strip().lower()
+            for info in bounced_data.values()
+            if isinstance(info, dict) and info.get("bounced_email")
+        }
     )
     quarantined_domains = sorted(list(bounced_data.keys()))
 
@@ -406,8 +432,10 @@ def reconcile_dispositions(
 
     # 2. Patch missing statuses in data/cohort_7_staged.json
     c7_file = data_dir / "cohort_7_staged.json"
-    c7_items = load_json_file(c7_file)
-    dispatched_campaigns = load_json_file(data_dir / "dispatched_campaigns.json")
+    c7_raw = load_json_file(c7_file)
+    c7_items = c7_raw if isinstance(c7_raw, list) else []
+    dispatched_raw = load_json_file(data_dir / "dispatched_campaigns.json")
+    dispatched_campaigns = dispatched_raw if isinstance(dispatched_raw, dict) else {}
 
     patched_c7_count = 0
     for item in c7_items:
@@ -467,11 +495,20 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--audit", action="store_true", help="Run read-only audit across Cohorts 7–11")
     parser.add_argument("--apply", action="store_true", help="Apply reconciliation and generate quarantine ledger")
     parser.add_argument("--check", action="store_true", help="Check gate: exit 0 if 0 undispositioned and 46 quarantined")
+    parser.add_argument(
+        "--repo-root",
+        type=Path,
+        default=None,
+        help="Optional repository root directory (defaults to script parent.parent or ORBIT_REPO_ROOT)",
+    )
     args = parser.parse_args(argv)
+
+    env_root = Path(os.environ["ORBIT_REPO_ROOT"]).resolve() if "ORBIT_REPO_ROOT" in os.environ else None
+    root = args.repo_root or env_root or REPO_ROOT
 
     if args.apply:
         print("[*] Applying disposition reconciliation across Cohorts 7–11...")
-        res = reconcile_dispositions(apply=True)
+        res = reconcile_dispositions(repo_root=root, apply=True)
         print(f"  ✓ Patched Cohort 7 missing statuses: {res['patched_c7_count']}")
         print(f"  ✓ Generated data/quarantined_addresses.json ({res['quarantined_count']} addresses)")
         print(f"  ✓ Generated data/disposition_ledger.json ({res['audit']['total_targets']} targets)")
@@ -480,12 +517,12 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if args.check:
         print("[*] Running disposition & quarantine verification check...")
-        q_path = REPO_ROOT / "data" / "quarantined_addresses.json"
+        q_path = root / "data" / "quarantined_addresses.json"
         if not q_path.exists():
             print(f"  ❌ Quarantined addresses ledger missing at {q_path}. Run --apply first.")
             return 1
 
-        quarantine_data = load_quarantined_addresses(q_path)
+        quarantine_data = load_quarantined_addresses(q_path, repo_root=root)
         if "error" in quarantine_data:
             print(f"  ❌ Corrupted quarantined addresses ledger at {q_path}: {quarantine_data['error']}")
             return 1
@@ -494,7 +531,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f"  ❌ Incomplete quarantine ledger: {quarantine_data.get('total_quarantined')} < 46")
             return 1
 
-        audit = audit_cohort_dispositions()
+        audit = audit_cohort_dispositions(repo_root=root)
         if audit["total_targets"] != 50:
             print(f"  ❌ Expected 50 total targets across Cohorts 7–11, found {audit['total_targets']}")
             return 1
@@ -512,7 +549,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 0
 
     # Default or --audit mode
-    audit = audit_cohort_dispositions()
+    audit = audit_cohort_dispositions(repo_root=root)
     print("=" * 70)
     print("  ORBIT SECURITY: OUTREACH DISPOSITION AUDIT (COHORTS 7–11)")
     print("=" * 70)

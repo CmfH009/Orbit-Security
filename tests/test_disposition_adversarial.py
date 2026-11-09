@@ -220,85 +220,91 @@ def test_all_46_bounced_addresses_invariant_zero_leak():
     )
 
 
-def test_cli_check_missing_quarantine_file():
+def test_cli_check_missing_quarantine_file(tmp_path: Path):
     """Tests that CLI --check exits non-zero when quarantined_addresses.json is missing."""
     script_path = REPO_ROOT / "scripts" / "reconcile_outreach_dispositions.py"
-    q_file = REPO_ROOT / "data" / "quarantined_addresses.json"
+    from scripts.reconcile_outreach_dispositions import (
+        ensure_baseline_outreach_state,
+        reconcile_dispositions,
+    )
+
+    ensure_baseline_outreach_state(tmp_path, create_quarantine_if_missing=True)
+    reconcile_dispositions(tmp_path, apply=True)
+    q_file = tmp_path / "data" / "quarantined_addresses.json"
     assert q_file.exists(), f"quarantined_addresses.json missing before test: {q_file}"
 
-    backup_content = q_file.read_text(encoding="utf-8")
-    try:
-        q_file.unlink()
-        assert not q_file.exists()
+    q_file.unlink()
+    assert not q_file.exists()
 
-        proc = subprocess.run(
-            [sys.executable, str(script_path), "--check"],
-            capture_output=True,
-            text=True,
-            cwd=str(REPO_ROOT),
-        )
-        assert proc.returncode != 0, (
-            f"Expected non-zero exit code on missing quarantine file, got {proc.returncode}\n"
-            f"STDOUT: {proc.stdout}\nSTDERR: {proc.stderr}"
-        )
-        assert "missing" in proc.stdout.lower() or "missing" in proc.stderr.lower()
-    finally:
-        # Guarantee restoration of quarantine file
-        q_file.write_text(backup_content, encoding="utf-8")
+    proc = subprocess.run(
+        [sys.executable, str(script_path), "--repo-root", str(tmp_path), "--check"],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO_ROOT),
+    )
+    assert proc.returncode != 0, (
+        f"Expected non-zero exit code on missing quarantine file, got {proc.returncode}\n"
+        f"STDOUT: {proc.stdout}\nSTDERR: {proc.stderr}"
+    )
+    assert "missing" in proc.stdout.lower() or "missing" in proc.stderr.lower()
 
 
-def test_cli_check_corrupted_quarantine_file():
+def test_cli_check_corrupted_quarantine_file(tmp_path: Path):
     """Tests that CLI --check exits non-zero when quarantined_addresses.json is corrupted."""
     script_path = REPO_ROOT / "scripts" / "reconcile_outreach_dispositions.py"
-    q_file = REPO_ROOT / "data" / "quarantined_addresses.json"
+    from scripts.reconcile_outreach_dispositions import (
+        ensure_baseline_outreach_state,
+        reconcile_dispositions,
+    )
+
+    ensure_baseline_outreach_state(tmp_path, create_quarantine_if_missing=True)
+    reconcile_dispositions(tmp_path, apply=True)
+    q_file = tmp_path / "data" / "quarantined_addresses.json"
     assert q_file.exists(), f"quarantined_addresses.json missing before test: {q_file}"
 
-    backup_content = q_file.read_text(encoding="utf-8")
-    try:
-        # Write corrupted JSON to quarantine file
-        q_file.write_text("{\n  \"total_quarantined\": 46,\n  \"quarantined_emails\": [ INVALID_JSON_SYNTAX ...", encoding="utf-8")
+    # Write corrupted JSON to quarantine file
+    q_file.write_text("{\n  \"total_quarantined\": 46,\n  \"quarantined_emails\": [ INVALID_JSON_SYNTAX ...", encoding="utf-8")
 
-        proc = subprocess.run(
-            [sys.executable, str(script_path), "--check"],
-            capture_output=True,
-            text=True,
-            cwd=str(REPO_ROOT),
-        )
-        # Empirical invariant requirement: CLI --check MUST exit non-zero on corrupted file
-        assert proc.returncode != 0, (
-            f"VULNERABILITY DETECTED: CLI --check exited 0 on corrupted quarantine file!\n"
-            f"STDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}"
-        )
-    finally:
-        # Guarantee restoration of quarantine file
-        q_file.write_text(backup_content, encoding="utf-8")
+    proc = subprocess.run(
+        [sys.executable, str(script_path), "--repo-root", str(tmp_path), "--check"],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO_ROOT),
+    )
+    # Empirical invariant requirement: CLI --check MUST exit non-zero on corrupted file
+    assert proc.returncode != 0, (
+        f"VULNERABILITY DETECTED: CLI --check exited 0 on corrupted quarantine file!\n"
+        f"STDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}"
+    )
 
 
-def test_cli_check_empty_quarantine_file():
+def test_cli_check_empty_quarantine_file(tmp_path: Path):
     """Tests that CLI --check exits non-zero when quarantined_addresses.json is 0-byte empty."""
     script_path = REPO_ROOT / "scripts" / "reconcile_outreach_dispositions.py"
-    q_file = REPO_ROOT / "data" / "quarantined_addresses.json"
+    from scripts.reconcile_outreach_dispositions import (
+        ensure_baseline_outreach_state,
+        reconcile_dispositions,
+    )
+
+    ensure_baseline_outreach_state(tmp_path, create_quarantine_if_missing=True)
+    reconcile_dispositions(tmp_path, apply=True)
+    q_file = tmp_path / "data" / "quarantined_addresses.json"
     assert q_file.exists(), f"quarantined_addresses.json missing before test: {q_file}"
 
-    backup_content = q_file.read_text(encoding="utf-8")
-    try:
-        # Write empty content to quarantine file
-        q_file.write_text("", encoding="utf-8")
+    # Write empty content to quarantine file
+    q_file.write_text("", encoding="utf-8")
 
-        proc = subprocess.run(
-            [sys.executable, str(script_path), "--check"],
-            capture_output=True,
-            text=True,
-            cwd=str(REPO_ROOT),
-        )
-        # Empirical invariant requirement: CLI --check MUST exit non-zero on empty file
-        assert proc.returncode != 0, (
-            f"VULNERABILITY DETECTED: CLI --check exited 0 on 0-byte quarantine file!\n"
-            f"STDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}"
-        )
-    finally:
-        # Guarantee restoration of quarantine file
-        q_file.write_text(backup_content, encoding="utf-8")
+    proc = subprocess.run(
+        [sys.executable, str(script_path), "--repo-root", str(tmp_path), "--check"],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO_ROOT),
+    )
+    # Empirical invariant requirement: CLI --check MUST exit non-zero on empty file
+    assert proc.returncode != 0, (
+        f"VULNERABILITY DETECTED: CLI --check exited 0 on 0-byte quarantine file!\n"
+        f"STDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}"
+    )
 
 
 def test_load_quarantined_addresses_corrupted_and_empty_direct(tmp_path: Path):
