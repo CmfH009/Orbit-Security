@@ -231,4 +231,27 @@ A work item is done only when **all** of the following hold:
 
 ---
 
+## 9. 4-Day Sovereign Autonomous Sprint (OpenRig & KaiExplains Architecture)
+
+**Execution Window:** Nov 9–13, 2026 · **Execution Engine:** OpenRig Autonomous Daemon (`A:\system\deepcoder`) · **Cost:** $0.00 Cloud Tokens
+
+### 9.1 Hardware & Concurrency Invariants (KaiExplains Architecture)
+- **Memory-Bandwidth Roofline**: Governed by Tiger Lake UP3 sustained dual-channel UMA bandwidth (~28.5 GB/s).
+- **Concurrency Floor**: Maximum 2 concurrent seats (`max_concurrent_seats = 2`). Parallel batching beyond 2 seats saturates memory bus and risks thermal throttling past 28W cTDP.
+- **KV Cache Quantization**: All long-context tasks enforce quantized KV cache (`-ctk q8_0 -ctv q8_0`), saving 50% RAM and reducing decode bus traffic.
+- **Quantization Standard**: IQ4_XS (Importance Matrix) at 4.0 bits/weight standard for 7B/9B models, cutting memory bandwidth requirements by ~19% compared to Q4_K_M.
+- **Hardware Isolation**: Pinned to physical cores `[0, 2, 4, 6]` with `BELOW_NORMAL_PRIORITY_CLASS`. Peak thermal ceiling < 83°C (currently ~39–49°C).
+
+### 9.2 Pipelined Assembly Line (OpenRig Topology)
+Tasks flow across specialized, domain-isolated seats in persistent SQLite WAL storage (`deepcoder_rig.db`):
+1. **Recon & Bounty Sweeps** (`rig-bounty-hunter` / `orbit-osint`): Continuous passive audits across 38 enrolled programs (Shopify, GitLab, Yahoo, Uber, PayPal, etc.).
+2. **Safe Harbor CVD & PII Screening** (`rig-compliance-guard` / `orbit-guard`): Inline Llama-Guard-3 verification in <250ms ensuring zero PII leaks and RFC 9116 compliance.
+3. **Infrastructure-as-Code Fixpacks** (`rig-coder-core` / `orbit-coder`): Compiles Terraform Cloudflare resources, BIND 9 zone lines, and Cloudflare API JSON for detected SPF PermErrors.
+4. **B2B Executive Teardown Campaigns** (`rig-outreach-copywriter` / `orbit-copywriter`): Synthesizes high-urgency 3-sentence briefings staged in `data/staged_campaigns/` for operator 1-click review.
+5. **Continuous Nuclei Template Synthesis** (`rig-bounty-hunter`): Automatically converts 52 SaaS takeover signatures into Nuclei v3 YAML templates in `data/nuclei_templates/`.
+6. **Code Hygiene & Pre-Commit Sentinels** (`rig-maintenance-janitor` / `orbit-coder-fast`): AST linting, dirty tree recovery, and Conventional Commit hygiene.
+7. **Strategic Revenue Loop Ideation** (`rig-brainstormer` / `orbit-brainstormer`): GraphRAG traversal for high-leverage monetization hypotheses.
+
+---
+
 *Roadmap maintained by the coordinator. Next revision: on completion of Phase 1 exit gate, or on any material change to the live site.*
