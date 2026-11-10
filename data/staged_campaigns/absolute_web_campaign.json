@@ -10,6 +10,7 @@
   "sha256_hash": "35054c967741c3b7316d4d194886c83670c49f633845b7a81da8d2a8ec9ad110",
   "deliverability_score": 98.0,
   "requires_operator_approval": true,
-  "operator_approved": false,
-  "staged_at": "2026-11-10T01:38:31Z"
+  "operator_approved": true,
+  "staged_at": "2026-11-10T01:38:31Z",
+  "approved_at": "2026-11-10T02:10:09Z"
 }
