@@ -1,0 +1,15 @@
+{
+  "agency_slug": "absolute_web",
+  "agency_name": "Absolute Web",
+  "target_domain": "absolute_web.com",
+  "recipient_role": "VP of Engineering / CTO",
+  "audit_score": 72.0,
+  "audit_grade": "C+",
+  "core_finding": "RFC 7208 SPF PermError (>10 lookups)",
+  "briefing_pitch": "During recent ecosystem audits of Absolute Web's attack surface (absolute_web.com), our scanner identified RFC 7208 SPF PermError (>10 lookups). This misconfiguration leaves the estate exposed to spoofing or resource diversion. We have generated a verified 1-click DNS fixpack and remediation bundle to resolve this.",
+  "sha256_hash": "35054c967741c3b7316d4d194886c83670c49f633845b7a81da8d2a8ec9ad110",
+  "deliverability_score": 98.0,
+  "requires_operator_approval": true,
+  "operator_approved": false,
+  "staged_at": "2026-11-10T01:38:31Z"
+}

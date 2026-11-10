@@ -1,0 +1,7 @@
+{
+  "type": "TXT",
+  "name": "@",
+  "content": "v=spf1 ip4:192.0.2.1 ip4:198.51.100.2 -all",
+  "ttl": 300,
+  "comment": "Orbit Security RFC 7208 SPF PermError Flattened Fix"
+}
