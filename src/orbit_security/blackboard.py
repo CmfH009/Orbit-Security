@@ -201,8 +201,13 @@ class Blackboard:
                 INSERT INTO blackboard_events (topic, event_type, source, payload, created_at, processed)
                 VALUES (?, ?, ?, ?, ?, 0);
             """, (topic, event_type, source, payload_json, now))
-            conn.commit()
             ev_id = cur.lastrowid
+            if ev_id and ev_id % 500 == 0 and topic in ("telemetry", "proactive_heartbeat"):
+                cur.execute(
+                    "DELETE FROM blackboard_events WHERE topic IN ('telemetry', 'proactive_heartbeat') AND id < ?",
+                    (max(0, ev_id - 5000),)
+                )
+            conn.commit()
 
         event_dict = {
             "id": ev_id,
@@ -587,6 +592,10 @@ def publish_event(
                     "INSERT INTO events (event_type, topic, source, payload, created_at) VALUES (?, ?, ?, ?, ?)",
                     (event_type, topic, source, payload_json, now_iso)
                 )
+                if ev_id and ev_id % 500 == 0 and topic in ("telemetry", "proactive_heartbeat"):
+                    conn.execute(
+                        "DELETE FROM events WHERE topic IN ('telemetry', 'proactive_heartbeat') AND id < (SELECT COALESCE(MAX(id), 0) - 5000 FROM events)"
+                    )
                 conn.commit()
             finally:
                 try:
