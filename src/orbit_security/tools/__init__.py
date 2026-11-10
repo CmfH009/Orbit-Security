@@ -85,6 +85,27 @@ from orbit_security.tools.yt_threat_harvester import (
     YTThreatHarvester,
     default_harvester,
 )
+from orbit_security.tools.gemini_multimodal import (
+    GoogleFilesApiAdapter,
+    MediaProcessingConfig,
+    MediaProcessingMode,
+    MultimodalDocumentType,
+    MultimodalToolReturn,
+    UploadedArtifact,
+    adapt_mcp_result_to_multimodal,
+)
+from orbit_security.tools.koa_gemma_router import (
+    KoaGemmaDecisionRouter,
+    ModelTier,
+    RouterDecision,
+    TaskType,
+)
+from orbit_security.tools.embedding_search import (
+    CodeSymbolChunk,
+    EmbeddingGemmaEngine,
+    OnDeviceCodeSearcher,
+    SearchResultItem,
+)
 
 __all__ = [
     # Everything Search
@@ -151,4 +172,22 @@ __all__ = [
     "YTDLPNotInstalledError",
     "VideoExtractionError",
     "default_harvester",
+    # Gemini Multimodal Tool Return & Files API
+    "GoogleFilesApiAdapter",
+    "MediaProcessingConfig",
+    "MediaProcessingMode",
+    "MultimodalDocumentType",
+    "MultimodalToolReturn",
+    "UploadedArtifact",
+    "adapt_mcp_result_to_multimodal",
+    # Koa / Gemma Decision Router
+    "KoaGemmaDecisionRouter",
+    "RouterDecision",
+    "TaskType",
+    "ModelTier",
+    # EmbeddingGemma 2 On-Device Code Search
+    "EmbeddingGemmaEngine",
+    "OnDeviceCodeSearcher",
+    "CodeSymbolChunk",
+    "SearchResultItem",
 ]

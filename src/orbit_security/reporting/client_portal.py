@@ -667,3 +667,24 @@ class ClientThreatPortalExporter:
             return True
         except Exception:
             return False
+
+    def export_and_upload_to_files_api(
+        self,
+        data: ClientBriefingData,
+        output_pdf_path: Union[str, Path],
+        files_adapter: Optional[Any] = None,
+    ) -> Any:
+        """Compiles audit PDF deliverable, uploads to Google Files API, and returns clean UploadedArtifact pointer."""
+        pdf_p = Path(output_pdf_path)
+        pdf_p.parent.mkdir(parents=True, exist_ok=True)
+        success = self.export_pdf(data, pdf_p)
+        if not success or not pdf_p.exists():
+            raise RuntimeError(f"Failed to generate audit deliverable PDF at {pdf_p}")
+
+        from orbit_security.tools.gemini_multimodal import GoogleFilesApiAdapter
+        adapter = files_adapter or GoogleFilesApiAdapter()
+        return adapter.upload_file(
+            pdf_p,
+            display_name=f"Security Audit Briefing - {data.client_name or data.domain}",
+            mime_type="application/pdf",
+        )
