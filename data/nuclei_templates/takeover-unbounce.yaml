@@ -1,0 +1,37 @@
+id: orbit-takeover-unbounce
+info:
+  name: Subdomain Takeover - Unbounce
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Unbounce where the
+    remote resource is unallocated and subject to hostile takeover.
+  remediation: Delete the dangling CNAME DNS record in your DNS manager or re-attach
+    the custom domain in Unbounce.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - unbounce
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - unbouncepages.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - The requested URL was not found on this server
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

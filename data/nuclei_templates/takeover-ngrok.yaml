@@ -1,0 +1,37 @@
+id: orbit-takeover-ngrok
+info:
+  name: Subdomain Takeover - Ngrok
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Ngrok where the remote
+    resource is unallocated and subject to hostile takeover.
+  remediation: Remove the ngrok CNAME or bind an active tunnel reservation.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - ngrok
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - ngrok.io
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - Tunnel .*.ngrok.io not found
+    - ngrok gateway error
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

@@ -1,0 +1,38 @@
+id: orbit-takeover-fly-io
+info:
+  name: Subdomain Takeover - Fly.io
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Fly.io where the
+    remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the CNAME record or attach the custom domain to a registered
+    Fly.io application.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - fly-io
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - fly.dev
+    - edge.fly.io
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - 404 Not Found
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

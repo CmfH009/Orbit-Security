@@ -1,0 +1,36 @@
+id: orbit-takeover-uptimerobot
+info:
+  name: Subdomain Takeover - UptimeRobot
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to UptimeRobot where
+    the remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the UptimeRobot CNAME or link the public status page.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - uptimerobot
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - stats.uptimerobot.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - page not found
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

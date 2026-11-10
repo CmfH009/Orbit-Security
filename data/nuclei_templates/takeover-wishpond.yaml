@@ -1,0 +1,36 @@
+id: orbit-takeover-wishpond
+info:
+  name: Subdomain Takeover - Wishpond
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Wishpond where the
+    remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the Wishpond CNAME record.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - wishpond
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - wishpond.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - https://www.wishpond.com/404?campaign=true
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

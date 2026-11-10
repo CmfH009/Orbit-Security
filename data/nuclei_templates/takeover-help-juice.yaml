@@ -1,0 +1,36 @@
+id: orbit-takeover-help-juice
+info:
+  name: Subdomain Takeover - Help Juice
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Help Juice where
+    the remote resource is unallocated and subject to hostile takeover.
+  remediation: Delete the Help Juice DNS record or re-attach the knowledge base.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - help-juice
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - helpjuice.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - We could not find what you're looking for.
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

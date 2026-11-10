@@ -1,0 +1,39 @@
+id: orbit-takeover-netlify
+info:
+  name: Subdomain Takeover - Netlify
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Netlify where the
+    remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the dangling CNAME or configure the custom domain on an active
+    Netlify site.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - netlify
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - netlify.app
+    - netlify.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - Not Found - Request ID
+    - Netlify site not found
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

@@ -1,0 +1,37 @@
+id: orbit-takeover-bitbucket
+info:
+  name: Subdomain Takeover - Bitbucket
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Bitbucket where the
+    remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the CNAME pointing to bitbucket.io or publish a repository under
+    that name.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - bitbucket
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - bitbucket.io
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - Repository not found
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

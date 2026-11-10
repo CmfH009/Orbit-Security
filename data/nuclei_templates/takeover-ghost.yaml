@@ -1,0 +1,39 @@
+id: orbit-takeover-ghost
+info:
+  name: Subdomain Takeover - Ghost
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Ghost where the remote
+    resource is unallocated and subject to hostile takeover.
+  remediation: Delete the CNAME pointing to ghost.io or update your publication domain
+    in Ghost.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - ghost
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - ghost.io
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - The thing you were looking for is no longer here
+    - 'Fastly error: unknown domain'
+    - Site unavailable
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

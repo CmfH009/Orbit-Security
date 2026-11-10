@@ -1,0 +1,38 @@
+id: orbit-takeover-pantheon
+info:
+  name: Subdomain Takeover - Pantheon
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Pantheon where the
+    remote resource is unallocated and subject to hostile takeover.
+  remediation: Delete the CNAME record or bind the hostname to your active Pantheon
+    environment.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - pantheon
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - pantheonsite.io
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - The gods are wise, but do not know of the site which you seek
+    - 404 error unknown site!
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

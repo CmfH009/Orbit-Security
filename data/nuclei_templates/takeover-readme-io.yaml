@@ -1,0 +1,37 @@
+id: orbit-takeover-readme-io
+info:
+  name: Subdomain Takeover - Readme.io
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Readme.io where the
+    remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the CNAME or claim the project subdomain in Readme.io.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - readme-io
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - readme.io
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - Project doesn't exist
+    - Project not found
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

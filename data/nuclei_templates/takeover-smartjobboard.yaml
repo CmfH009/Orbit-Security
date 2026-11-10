@@ -1,0 +1,36 @@
+id: orbit-takeover-smartjobboard
+info:
+  name: Subdomain Takeover - SmartJobBoard
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to SmartJobBoard where
+    the remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the SmartJobBoard CNAME or renew the board subscription.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - smartjobboard
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - smartjobboard.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - This job board website is either expired or its domain name is invalid.
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

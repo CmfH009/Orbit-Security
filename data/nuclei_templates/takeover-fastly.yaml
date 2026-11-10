@@ -1,0 +1,36 @@
+id: orbit-takeover-fastly
+info:
+  name: Subdomain Takeover - Fastly
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Fastly where the
+    remote resource is unallocated and subject to hostile takeover.
+  remediation: Reclaim the Fastly service domain or purge the DNS record.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - fastly
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - fastly.net
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - 'Fastly error: unknown domain'
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

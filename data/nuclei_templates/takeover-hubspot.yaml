@@ -1,0 +1,37 @@
+id: orbit-takeover-hubspot
+info:
+  name: Subdomain Takeover - HubSpot
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to HubSpot where the
+    remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the CNAME or bind the domain inside HubSpot CMS settings.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - hubspot
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - hubspot.net
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - Domain not found
+    - HubSpot page not found
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

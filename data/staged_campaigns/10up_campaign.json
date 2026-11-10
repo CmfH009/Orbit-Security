@@ -1,0 +1,15 @@
+{
+  "agency_slug": "10up",
+  "agency_name": "10Up",
+  "target_domain": "10up.com",
+  "recipient_role": "VP of Engineering / CTO",
+  "audit_score": 72.0,
+  "audit_grade": "C+",
+  "core_finding": "RFC 7208 SPF PermError (>10 lookups)",
+  "briefing_pitch": "During recent ecosystem audits of 10Up's attack surface (10up.com), our scanner identified RFC 7208 SPF PermError (>10 lookups). This misconfiguration leaves the estate exposed to spoofing or resource diversion. We have generated a verified 1-click DNS fixpack and remediation bundle to resolve this.",
+  "sha256_hash": "944340a9753c0fa0cf9dab4551bfb79211b4b92d41fe943380731ab9a5599d9b",
+  "deliverability_score": 98.0,
+  "requires_operator_approval": true,
+  "operator_approved": false,
+  "staged_at": "2026-11-10T00:56:47Z"
+}

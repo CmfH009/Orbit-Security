@@ -1,0 +1,36 @@
+id: orbit-takeover-kinsta
+info:
+  name: Subdomain Takeover - Kinsta
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Kinsta where the
+    remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the Kinsta CNAME or re-associate the domain with a Kinsta site.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - kinsta
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - kinsta.cloud
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - No Site Found on Kinsta
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

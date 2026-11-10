@@ -1,0 +1,44 @@
+id: orbit-takeover-microsoft-azure
+info:
+  name: Subdomain Takeover - Microsoft Azure
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Microsoft Azure where
+    the remote resource is unallocated and subject to hostile takeover.
+  remediation: Ensure custom domain is attached to an active Azure App Service / Traffic
+    Manager or remove the DNS record.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - microsoft-azure
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - azurewebsites.net
+    - cloudapp.net
+    - cloudapp.azure.com
+    - blob.core.windows.net
+    - azureedge.net
+    - azurecontainer.io
+    - trafficmanager.net
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - NXDOMAIN
+    - 404 Web Site not found
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

@@ -1,0 +1,38 @@
+id: orbit-takeover-bigcommerce
+info:
+  name: Subdomain Takeover - BigCommerce
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to BigCommerce where
+    the remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the BigCommerce CNAME or claim the domain in your BigCommerce
+    store control panel.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - bigcommerce
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - mybigcommerce.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - Store not found
+    - This store is currently unavailable
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

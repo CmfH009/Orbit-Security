@@ -1,0 +1,36 @@
+id: orbit-takeover-agile-crm
+info:
+  name: Subdomain Takeover - Agile CRM
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Agile CRM where the
+    remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the Agile CRM CNAME record.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - agile-crm
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - agilecrm.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - Sorry, this page is no longer available.
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

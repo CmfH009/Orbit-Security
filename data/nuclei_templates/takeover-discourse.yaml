@@ -1,0 +1,36 @@
+id: orbit-takeover-discourse
+info:
+  name: Subdomain Takeover - Discourse
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Discourse where the
+    remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the Discourse CNAME record.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - discourse
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - trydiscourse.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - NXDOMAIN
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

@@ -1,0 +1,40 @@
+id: orbit-takeover-aws-s3
+info:
+  name: Subdomain Takeover - AWS S3
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to AWS S3 where the
+    remote resource is unallocated and subject to hostile takeover.
+  remediation: Either create the matching S3 bucket name in your AWS account or remove
+    the orphaned CNAME record.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - aws-s3
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - s3.amazonaws.com
+    - s3-website
+    - .s3.
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - NoSuchBucket
+    - The specified bucket does not exist
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

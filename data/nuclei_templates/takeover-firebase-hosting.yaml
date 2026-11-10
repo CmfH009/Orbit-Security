@@ -1,0 +1,39 @@
+id: orbit-takeover-firebase-hosting
+info:
+  name: Subdomain Takeover - Firebase Hosting
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Firebase Hosting
+    where the remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the orphaned Firebase CNAME or connect the domain inside the
+    Firebase Console.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - firebase-hosting
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - web.app
+    - firebaseapp.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - Site Not Found
+    - Firebase Hosting Setup
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

@@ -1,0 +1,36 @@
+id: orbit-takeover-anima
+info:
+  name: Subdomain Takeover - Anima
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Anima where the remote
+    resource is unallocated and subject to hostile takeover.
+  remediation: Remove the Anima CNAME or link the custom domain in your Anima dashboard.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - anima
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - animaapp.io
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - The page you were looking for does not exist.
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

@@ -1,0 +1,36 @@
+id: orbit-takeover-campaign-monitor
+info:
+  name: Subdomain Takeover - Campaign Monitor
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Campaign Monitor
+    where the remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the Campaign Monitor CNAME or complete custom domain verification.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - campaign-monitor
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - createsend.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - Trying to access your account?
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

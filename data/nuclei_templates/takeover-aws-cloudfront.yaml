@@ -1,0 +1,37 @@
+id: orbit-takeover-aws-cloudfront
+info:
+  name: Subdomain Takeover - AWS CloudFront
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to AWS CloudFront where
+    the remote resource is unallocated and subject to hostile takeover.
+  remediation: Ensure the alternate domain name (CNAME) is configured on an active
+    CloudFront distribution, or remove the DNS record.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - aws-cloudfront
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - cloudfront.net
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - 'ERROR: The request could not be satisfied'
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

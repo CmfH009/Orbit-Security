@@ -1,0 +1,38 @@
+id: orbit-takeover-github-pages
+info:
+  name: Subdomain Takeover - GitHub Pages
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to GitHub Pages where
+    the remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the CNAME pointing to github.io or add the domain to a designated
+    GitHub repository's custom domains settings.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - github-pages
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - github.io
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - There isn't a GitHub Pages site here
+    - For root URLs (like http://example.com/) you must provide an index.html file
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

@@ -1,0 +1,37 @@
+id: orbit-takeover-surge-sh
+info:
+  name: Subdomain Takeover - Surge.sh
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Surge.sh where the
+    remote resource is unallocated and subject to hostile takeover.
+  remediation: Claim the custom domain using `surge --domain` or delete the DNS record.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - surge-sh
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - surge.sh
+    - na-west1.surge.sh
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - project not found
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

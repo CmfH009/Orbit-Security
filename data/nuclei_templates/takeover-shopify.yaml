@@ -1,0 +1,38 @@
+id: orbit-takeover-shopify
+info:
+  name: Subdomain Takeover - Shopify
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Shopify where the
+    remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the DNS entry or claim the domain inside your active Shopify
+    store admin panel.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - shopify
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - myshopify.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - Sorry, this shop is currently unavailable
+    - You'll be able to visit this store soon
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

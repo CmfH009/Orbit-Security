@@ -1,0 +1,36 @@
+id: orbit-takeover-wufoo
+info:
+  name: Subdomain Takeover - Wufoo
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Wufoo where the remote
+    resource is unallocated and subject to hostile takeover.
+  remediation: Remove the Wufoo CNAME or configure the custom form URL.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - wufoo
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - wufoo.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - Profile not found
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

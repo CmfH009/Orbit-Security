@@ -1,0 +1,37 @@
+id: orbit-takeover-wordpress-com
+info:
+  name: Subdomain Takeover - WordPress.com
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to WordPress.com where
+    the remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the WordPress.com CNAME or complete custom domain mapping.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - wordpress-com
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - wordpress.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - Do you want to register
+    - doesn't exist
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

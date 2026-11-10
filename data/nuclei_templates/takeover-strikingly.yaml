@@ -1,0 +1,38 @@
+id: orbit-takeover-strikingly
+info:
+  name: Subdomain Takeover - Strikingly
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Strikingly where
+    the remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the Strikingly CNAME record or assign the domain to a published
+    site.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - strikingly
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - strikinglydns.com
+    - s.strikinglydns.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - PAGE NOT FOUND.
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

@@ -1,0 +1,36 @@
+id: orbit-takeover-help-scout
+info:
+  name: Subdomain Takeover - Help Scout
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Help Scout where
+    the remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the Help Scout CNAME record or configure docs settings.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - help-scout
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - helpscoutdocs.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - 'No settings were found for this company:'
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

@@ -1,0 +1,38 @@
+id: orbit-takeover-supabase
+info:
+  name: Subdomain Takeover - Supabase
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Supabase where the
+    remote resource is unallocated and subject to hostile takeover.
+  remediation: Delete the dangling CNAME record or associate the custom domain inside
+    your Supabase project settings.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - supabase
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - supabase.co
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - Project not found
+    - Project not found or paused
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

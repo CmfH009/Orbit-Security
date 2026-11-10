@@ -1,0 +1,36 @@
+id: orbit-takeover-gemfury
+info:
+  name: Subdomain Takeover - Gemfury
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Gemfury where the
+    remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the Gemfury CNAME record or configure the repository.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - gemfury
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - furyns.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - '404: This page could not be found.'
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

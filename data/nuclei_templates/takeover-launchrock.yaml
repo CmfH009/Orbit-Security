@@ -1,0 +1,36 @@
+id: orbit-takeover-launchrock
+info:
+  name: Subdomain Takeover - LaunchRock
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to LaunchRock where
+    the remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the LaunchRock CNAME or reactivate the campaign.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - launchrock
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - launchrock.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - It looks like you may have taken a wrong turn.
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404

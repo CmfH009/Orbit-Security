@@ -1,0 +1,39 @@
+id: orbit-takeover-render
+info:
+  name: Subdomain Takeover - Render
+  author: Orbit Security / rig-bounty-hunter
+  severity: high
+  description: Identifies dangling DNS CNAME records pointing to Render where the
+    remote resource is unallocated and subject to hostile takeover.
+  remediation: Remove the CNAME record or bind the domain to an active Render web
+    service.
+  reference:
+  - https://github.com/EdOverflow/can-i-take-over-xyz
+  - https://orbitsecurity.io/security.txt
+  tags:
+  - takeover
+  - dns
+  - subdomain
+  - orbit-security
+  - render
+  metadata:
+    verified: true
+    max-request: 1
+    cname-patterns:
+    - onrender.com
+    - render.com
+http:
+- method: GET
+  path:
+  - '{{BaseURL}}'
+  matchers-condition: and
+  matchers:
+  - type: word
+    words:
+    - Not Found
+    - Render 404
+    condition: or
+    part: body
+  - type: status
+    status:
+    - 404
