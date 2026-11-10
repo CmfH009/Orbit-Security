@@ -1,0 +1,2 @@
+; BIND 9 Zone SPF remediation for 10up.com
+@    300    IN    TXT    "v=spf1 ip4:192.0.2.1 ip4:198.51.100.2 -all"
