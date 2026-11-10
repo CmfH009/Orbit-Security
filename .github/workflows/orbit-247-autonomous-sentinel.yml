@@ -58,7 +58,14 @@ jobs:
 
       - name: "Unit & Security Invariant Verification"
         run: |
-          PYTHONPATH=src pytest tests/test_input_sanitizer.py tests/test_orbit_recon.py tests/test_infra_validation.py tests/test_radar_telemetry.py tests/test_cloud_sentinels.py tests/test_bounty_active_prober.py tests/test_inbox_guardrail.py tests/test_inbox_triage_bridge.py -v
+          PYTHONPATH=src pytest tests/test_input_sanitizer.py tests/test_orbit_recon.py tests/test_infra_validation.py tests/test_radar_telemetry.py tests/test_cloud_sentinels.py tests/test_bounty_active_prober.py tests/test_inbox_guardrail.py tests/test_inbox_triage_bridge.py tests/test_nuclei_generator.py tests/test_agency_teardown_publisher.py tests/test_dns_fixpack_optimizer.py -v
+
+      - name: "Synthesize Curated Nuclei v3 Templates & Audit Engine"
+        run: |
+          echo "Synthesizing 52 curated SaaS takeover & DNS PermError Nuclei templates..."
+          PYTHONPATH=src python -m orbit_security.nuclei_generator
+          echo "Generated templates:"
+          ls -la data/nuclei_templates/ | head -n 15
 
       - name: "Refresh Compacted CISA KEV + EPSS Radar Feed & Cloud/Email/TLS Sentinels"
         run: |
@@ -201,4 +208,7 @@ jobs:
             data/outbound_campaigns/*.pdf
             data/outbound_campaigns/*.md
             data/radar_queries.jsonl
+            data/nuclei_templates/*.yaml
+            data/dns_fixpacks/**
+            data/staged_campaigns/*.json
           retention-days: 30
