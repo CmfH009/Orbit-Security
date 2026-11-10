@@ -1,0 +1,15 @@
+{
+  "agency_slug": "astound_commerce",
+  "agency_name": "Astound Commerce",
+  "target_domain": "astound_commerce.com",
+  "recipient_role": "VP of Engineering / CTO",
+  "audit_score": 72.0,
+  "audit_grade": "C+",
+  "core_finding": "RFC 7208 SPF PermError (>10 lookups)",
+  "briefing_pitch": "During recent ecosystem audits of Astound Commerce's attack surface (astound_commerce.com), our scanner identified RFC 7208 SPF PermError (>10 lookups). This misconfiguration leaves the estate exposed to spoofing or resource diversion. We have generated a verified 1-click DNS fixpack and remediation bundle to resolve this.",
+  "sha256_hash": "446de7e9f70226b4fe750246bbfede946f37b00fc7de81966a566aad1095e146",
+  "deliverability_score": 98.0,
+  "requires_operator_approval": true,
+  "operator_approved": false,
+  "staged_at": "2026-11-10T03:19:10Z"
+}
