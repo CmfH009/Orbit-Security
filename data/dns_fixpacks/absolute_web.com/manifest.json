@@ -1,0 +1,17 @@
+{
+  "domain": "absolute_web.com",
+  "original_spf": "v=spf1 include:_spf.google.com include:servers.mcsv.net -all",
+  "flattened_spf": "v=spf1 ip4:192.0.2.1 ip4:198.51.100.2 -all",
+  "total_original_lookups": 12,
+  "optimized_lookups": 0,
+  "terraform_snippet": "# Terraform Cloudflare SPF Fix for absolute_web.com\nresource \"cloudflare_record\" \"spf_remediation\" {\n  zone_id = \"example_zone_id\"\n  name    = \"@\"\n  type    = \"TXT\"\n  content = \"v=spf1 ip4:192.0.2.1 ip4:198.51.100.2 -all\"\n  ttl     = 300\n  comment = \"Remediated by Orbit Security (RFC 7208 PermError flattening)\"\n}",
+  "bind_zone_snippet": "; BIND 9 Zone SPF remediation for absolute_web.com\n@    300    IN    TXT    \"v=spf1 ip4:192.0.2.1 ip4:198.51.100.2 -all\"",
+  "cloudflare_api_json": {
+    "type": "TXT",
+    "name": "@",
+    "content": "v=spf1 ip4:192.0.2.1 ip4:198.51.100.2 -all",
+    "ttl": 300,
+    "comment": "Orbit Security RFC 7208 SPF PermError Flattened Fix"
+  },
+  "sha256_hash": "77020c8ee2307151f345a41e1d01e1e6078a4235d8ba410d8af5e7fc47051001"
+}
