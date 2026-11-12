@@ -5,11 +5,11 @@
   "recipient_role": "VP of Engineering / CTO",
   "audit_score": 72.0,
   "audit_grade": "C+",
-  "core_finding": "RFC 7208 SPF PermError (>10 lookups)",
-  "briefing_pitch": "During recent ecosystem audits of Absolute Web's attack surface (absoluteweb.com), our scanner identified RFC 7208 SPF PermError (>10 lookups). This misconfiguration leaves the estate exposed to spoofing or resource diversion. We have generated a verified 1-click DNS fixpack and remediation bundle to resolve this.",
-  "sha256_hash": "9517966f20fe16fa944e9f4a033a4811e21cc56149c66f8b1751473bc4a28e8e",
+  "core_finding": "RFC 7208 SPF PermError (13 DNS lookups, limit 10)",
+  "briefing_pitch": "During recent ecosystem audits of Absolute Web's attack surface (absoluteweb.com), our scanner identified RFC 7208 SPF PermError (13 DNS lookups, limit 10). This misconfiguration leaves the estate exposed to spoofing or resource diversion. We have generated a verified 1-click DNS fixpack and remediation bundle to resolve this.",
+  "sha256_hash": "859c50b181ee16d88b0215b536d9b62e6765fc5404363a17876e73cc2c356bbc",
   "deliverability_score": 98.0,
   "requires_operator_approval": true,
   "operator_approved": false,
-  "staged_at": "2026-11-11T23:55:36Z"
+  "staged_at": "2026-11-12T00:55:30Z"
 }
