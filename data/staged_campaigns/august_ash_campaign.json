@@ -1,15 +1,15 @@
 {
   "agency_slug": "august_ash",
   "agency_name": "August Ash",
-  "target_domain": "august_ash.com",
+  "target_domain": "augustash.com",
   "recipient_role": "VP of Engineering / CTO",
   "audit_score": 72.0,
   "audit_grade": "C+",
   "core_finding": "RFC 7208 SPF PermError (>10 lookups)",
-  "briefing_pitch": "During recent ecosystem audits of August Ash's attack surface (august_ash.com), our scanner identified RFC 7208 SPF PermError (>10 lookups). This misconfiguration leaves the estate exposed to spoofing or resource diversion. We have generated a verified 1-click DNS fixpack and remediation bundle to resolve this.",
-  "sha256_hash": "9f909bc4b5665fbf6b22f96d57c9f4e98c4f6e1ad894d4382145bc75be96eecc",
+  "briefing_pitch": "During recent ecosystem audits of August Ash's attack surface (augustash.com), our scanner identified RFC 7208 SPF PermError (>10 lookups). This misconfiguration leaves the estate exposed to spoofing or resource diversion. We have generated a verified 1-click DNS fixpack and remediation bundle to resolve this.",
+  "sha256_hash": "f026267edebfbd8c1665c2e30b5295d8429ec7c3624bc7a70a4da06649f0199b",
   "deliverability_score": 98.0,
   "requires_operator_approval": true,
   "operator_approved": false,
-  "staged_at": "2026-11-11T23:18:58Z"
+  "staged_at": "2026-11-12T00:11:30Z"
 }
