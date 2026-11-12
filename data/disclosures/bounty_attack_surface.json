@@ -6502,8 +6502,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'elasticacademy.com' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:dmarc@elastic.co,mailto:dmarc_agg@vali.email;' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "provider:email_/_dns_infrastructure",
@@ -6529,8 +6528,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'elasticps.co' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:dmarc@elastic.co,mailto:dmarc_agg@vali.email;' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:elastic:elasticsearch.com:mail_spoofing",
@@ -6547,8 +6545,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'elasticsearch.com' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:dmarc@elastic.co,mailto:dmarc_agg@vali.email;' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:elastic:elasticsearch.org:mail_spoofing",
@@ -6565,8 +6562,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'elasticsearch.org' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:dmarc@elastic.co,mailto:dmarc_agg@vali.email;' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:elastic:insight.io:mail_spoofing",
@@ -6583,8 +6579,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'insight.io' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:dmarc@elastic.co,mailto:dmarc_agg@vali.email;' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:elastic:prelert.com:mail_spoofing",
@@ -6601,8 +6596,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'prelert.com' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:dmarc@elastic.co,mailto:dmarc_agg@vali.email;' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:eternal:edition.in:mail_spoofing",
@@ -6619,8 +6613,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'edition.in' has NO DMARC record published at _dmarc.edition.in. Anyone can spoof email headers with arbitrary envelope senders."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:eternal:eternal.com:mail_spoofing",
@@ -6637,8 +6630,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'eternal.com' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:g72jrssx@ag.ap.dmarcian.com;' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:eternal:insider.in:mail_spoofing",
@@ -6655,8 +6647,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'insider.in' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:g72jrssx@ag.ap.dmarcian.com;' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:eternal:runnr.in:mail_spoofing",
@@ -6673,8 +6664,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'runnr.in' publishes DMARC record 'v=DMARC1; p=none' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:eternal:ticketnew.com:mail_spoofing",
@@ -6691,8 +6681,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'ticketnew.com' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:paytm-t@dmarc.report-uri.com; ruf=mailto:mailadmin@ticketnew.com' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:eternal:tktnew.com:mail_spoofing",
@@ -6709,8 +6698,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'tktnew.com' has NO DMARC record published at _dmarc.tktnew.com. Anyone can spoof email headers with arbitrary envelope senders."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:eternal:zdev.net:mail_spoofing",
@@ -6727,8 +6715,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'zdev.net' has NO DMARC record published at _dmarc.zdev.net. Anyone can spoof email headers with arbitrary envelope senders."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:expedia:www.hotwire.com:graphql_introspection",
@@ -6745,8 +6732,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Production GraphQL schema introspection is enabled at 'https://www.hotwire.com/graphql'. Root Query type 'Query' and full schema definition retrieved via public POST request."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "provider:graphql",
@@ -6772,8 +6758,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'bookabach.co.nz' has NO DMARC record published at _dmarc.bookabach.co.nz. Anyone can spoof email headers with arbitrary envelope senders."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:expedia:expedia-aarp.com:mail_spoofing",
@@ -6790,8 +6775,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'expedia-aarp.com' has NO DMARC record published at _dmarc.expedia-aarp.com. Anyone can spoof email headers with arbitrary envelope senders."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:expedia:flights.com:mail_spoofing",
@@ -6808,8 +6792,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'flights.com' has NO DMARC record published at _dmarc.flights.com. Anyone can spoof email headers with arbitrary envelope senders."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:expedia:lastminute.co.nz:mail_spoofing",
@@ -6826,8 +6809,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'lastminute.co.nz' has NO DMARC record published at _dmarc.lastminute.co.nz. Anyone can spoof email headers with arbitrary envelope senders."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:flutter:metrocompetitions.com:mail_spoofing",
@@ -6844,8 +6826,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'metrocompetitions.com' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:support@metrocompetitions.com; pct=100' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:flutter:platformservices.io:mail_spoofing",
@@ -6862,8 +6843,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'platformservices.io' has NO DMARC record published at _dmarc.platformservices.io. Anyone can spoof email headers with arbitrary envelope senders."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:flutter:ppb.com:mail_spoofing",
@@ -6880,8 +6860,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'ppb.com' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:5a23cdd989f4495586147bb0e27cd1d2@dmarc-reports.cloudflare.net' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:flutter:ppbdev.com:mail_spoofing",
@@ -6898,8 +6877,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'ppbdev.com' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:6e58900eb1a44d31b0ac9ce03aa6cc49@dmarc-reports.cloudflare.net;' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:flutter:rafflee.co.uk:mail_spoofing",
@@ -6916,8 +6894,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'rafflee.co.uk' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:postmaster@rafflee.co.uk; pct=100' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:gitlab:assets.gitlab.com:cloud_storage_takeover",
@@ -6934,8 +6911,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Dangling AWS S3 storage bucket detected on 'assets.gitlab.com'. Response body matches unallocated bucket signature: 'NoSuchBucket'."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "domain:assets.gitlab.com",
@@ -6983,8 +6959,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Production GraphQL schema introspection is enabled at 'https://gitlab.com/api/graphql'. Root Query type 'Query' and full schema definition retrieved via public POST request."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:khealth:cdn.khealth-test.com:cloud_storage_takeover",
@@ -7001,8 +6976,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Dangling AWS S3 storage bucket detected on 'cdn.khealth-test.com'. Response body matches unallocated bucket signature: 'NoSuchBucket'."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "domain:cdn.khealth-test.com",
@@ -7030,8 +7004,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'hhc247.org' publishes DMARC record 'v=DMARC1; p=none;' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:khealth:khealth.com:mail_spoofing",
@@ -7048,8 +7021,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'khealth.com' publishes DMARC record 'v=DMARC1;p=none;sp=none;rua=mailto:mailauth-reports@khealth.com' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:mercadolibre:buyingflow.mercadolibre.com.co:cors_arbitrary_origin_with_credentials",
@@ -7066,8 +7038,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'buyingflow.mercadolibre.com.co': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session cook"
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "domain:buyingflow.mercadolibre.com.co",
@@ -7104,8 +7075,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'buyingflow.mercadolibre.com.mx': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session cook"
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "domain:buyingflow.mercadolibre.com.mx",
@@ -7133,8 +7103,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'buyingflow.mercadolibre.com.pe': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session cook"
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "domain:buyingflow.mercadolibre.com.pe",
@@ -7162,8 +7131,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'images.mercadolibre.com.co': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session cookies "
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "domain:images.mercadolibre.com.co",
@@ -7191,8 +7159,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'lhstage.mercadolibre.com.ar': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session cookies"
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "domain:lhstage.mercadolibre.com.ar",
@@ -7220,8 +7187,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'realtime-test.mercadolibre.com.mx': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session c"
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "domain:realtime-test.mercadolibre.com.mx",
@@ -7249,8 +7215,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'test-vendedores.mercadolibre.cl': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session coo"
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "domain:test-vendedores.mercadolibre.cl",
@@ -7278,8 +7243,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'test-vendedores.mercadolibre.com.co': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session"
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "domain:test-vendedores.mercadolibre.com.co",
@@ -7307,8 +7271,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'tucarro.com.co': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session cookies and read res"
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:mercadolibre:furycloud.io:mail_spoofing",
@@ -7325,8 +7288,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'furycloud.io' has NO DMARC record published at _dmarc.furycloud.io. Anyone can spoof email headers with arbitrary envelope senders."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:mercadolibre:mlstatic.com:mail_spoofing",
@@ -7343,8 +7305,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'mlstatic.com' has NO DMARC record published at _dmarc.mlstatic.com. Anyone can spoof email headers with arbitrary envelope senders."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:mercadolibre:mpago.la:mail_spoofing",
@@ -7361,8 +7322,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'mpago.la' has NO DMARC record published at _dmarc.mpago.la. Anyone can spoof email headers with arbitrary envelope senders."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:mercadolibre:portalinmobiliario.cl:mail_spoofing",
@@ -7379,8 +7339,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'portalinmobiliario.cl' publishes DMARC record 'v=DMARC1; p=none;' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:mercadolibre:portalinmobiliario.com:mail_spoofing",
@@ -7397,8 +7356,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'portalinmobiliario.com' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:dmarcrua@mercadolibre.com, mailto:mercadolibre@rua.netcraft.com, mailto:dmarc_agg@vali.email; ruf=mailto:dmarcruf@mercadolibre.com,mailto:mercadolibre@ruf.netcraft.com; adkim=r; aspf=r; rf=afrf; pct=100;' with 'p=no"
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:mercadolibre:tucarro.com:mail_spoofing",
@@ -7415,8 +7373,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'tucarro.com' publishes DMARC record 'v=DMARC1; p=none; adkim=s; aspf=r; rf=afrf; pct=100;' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:playtika:slotomania.com:cors_arbitrary_origin_with_credentials",
@@ -7433,8 +7390,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'slotomania.com': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session cookies and read res"
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:playtika:bestfiends.com:mail_spoofing",
@@ -7451,8 +7407,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'bestfiends.com' has NO DMARC record published at _dmarc.bestfiends.com. Anyone can spoof email headers with arbitrary envelope senders."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:shopify:media.myshopify.com:graphql_introspection",
@@ -7469,8 +7424,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Production GraphQL schema introspection is enabled at 'https://media.myshopify.com/api/graphql'. Root Query type 'QueryRoot' and full schema definition retrieved via public POST request."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "domain:media.myshopify.com",
@@ -7498,8 +7452,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Public cloud storage bucket listing is exposed on 'cdn.byspotify.com'. Signature match: '<ListBucketResult'."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "domain:cdn.byspotify.com",
@@ -7536,8 +7489,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'apps.stage.napoleoncasino.be': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session cookie"
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "domain:apps.stage.napoleoncasino.be",
@@ -7565,8 +7517,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'apps.stage.napoleonsports.be': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session cookie"
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "domain:apps.stage.napoleonsports.be",
@@ -7594,8 +7545,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'luckydays.ca' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:dmarc@luckydays.ca' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:superbet:luckydays.com:mail_spoofing",
@@ -7612,8 +7562,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'luckydays.com' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:dkim@luckydays.com' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:superbet:spinaway.com:mail_spoofing",
@@ -7630,8 +7579,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'spinaway.com' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:dmarc@spinaway.com' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:superbet:superbet.gr:mail_spoofing",
@@ -7648,8 +7596,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'superbet.gr' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:qsv7ltdg@ag.eu.dmarcian.com' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:superbet:superbet.pl:mail_spoofing",
@@ -7666,8 +7613,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'superbet.pl' publishes DMARC record 'v=DMARC1; p=none; rua=mailto:qsv7ltdg@ag.eu.dmarcian.com' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:superbet:superbet.ro:mail_spoofing",
@@ -7684,8 +7630,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'superbet.ro' publishes DMARC record 'v=DMARC1;p=none;rua=mailto:qsv7ltdg@ag.eu.dmarcian.com; ruf=mailto:qsv7ltdg@fr.eu.dmarcian.com;' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:trip.com:tyo-masters.co.jp:mail_spoofing",
@@ -7702,8 +7647,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'tyo-masters.co.jp' publishes DMARC record 'v=DMARC1; p=none; sp=none; rua=mailto:leon@tyo-masters.co.jp' with 'p=none' monitoring-only policy. Spoofed emails are delivered without rejection."
-      },
-      "severity": "MEDIUM"
+      }
     },
     {
       "id": "vuln:uber:fpbi8c1t.ubereats.com:cors_arbitrary_origin_with_credentials",
@@ -7720,8 +7664,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'fpbi8c1t.ubereats.com': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session cookies and r"
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "domain:fpbi8c1t.ubereats.com",
@@ -7749,8 +7692,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'fpfcpn2u.ubereats.com': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session cookies and r"
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "domain:fpfcpn2u.ubereats.com",
@@ -7778,8 +7720,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'airstarfinance.net': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session cookies and read"
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:xiaomi:mijiayoupin.com:cors_arbitrary_origin_with_credentials",
@@ -7796,8 +7737,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'mijiayoupin.com': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session cookies and read re"
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:xiaomi:wali.com:cors_arbitrary_origin_with_credentials",
@@ -7814,8 +7754,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'wali.com': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session cookies and read responses"
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:xiaomi:www.airstarfinance.net:cors_arbitrary_origin_with_credentials",
@@ -7832,8 +7771,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'www.airstarfinance.net': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session cookies and "
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "domain:www.airstarfinance.net",
@@ -7861,8 +7799,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'xiaomiyoupin.com': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session cookies and read r"
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:xiaomi:youpin.cn:cors_arbitrary_origin_with_credentials",
@@ -7879,8 +7816,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "HIGH_CONFIDENCE",
         "evidence": "Vulnerable CORS policy on 'youpin.cn': Server blindly reflects untrusted Origin 'https://untrusted-adversary.com' in Access-Control-Allow-Origin while setting Access-Control-Allow-Credentials to true. Any third-party website can forge cross-origin requests with user session cookies and read response"
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:xiaomi:duokan.com:mail_spoofing",
@@ -7897,8 +7833,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'duokan.com' has NO DMARC record published at _dmarc.duokan.com. Anyone can spoof email headers with arbitrary envelope senders."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:xiaomi:miui.com:mail_spoofing",
@@ -7915,8 +7850,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'miui.com' has NO DMARC record published at _dmarc.miui.com. Anyone can spoof email headers with arbitrary envelope senders."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:xiaomi:wali.com:mail_spoofing",
@@ -7933,8 +7867,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'wali.com' has NO DMARC record published at _dmarc.wali.com. Anyone can spoof email headers with arbitrary envelope senders."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:xiaomi:xiaomi.net:mail_spoofing",
@@ -7951,8 +7884,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'xiaomi.net' has NO DMARC record published at _dmarc.xiaomi.net. Anyone can spoof email headers with arbitrary envelope senders."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:xiaomi:xunkids.com:mail_spoofing",
@@ -7969,8 +7901,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'xunkids.com' has NO DMARC record published at _dmarc.xunkids.com. Anyone can spoof email headers with arbitrary envelope senders."
-      },
-      "severity": "HIGH"
+      }
     },
     {
       "id": "vuln:xiaomi:zmifi.com:mail_spoofing",
@@ -7987,8 +7918,7 @@
         "cwe_id": "CWE-284: Improper Access Control",
         "bounty_viability": "CONDITIONAL",
         "evidence": "Domain 'zmifi.com' has NO DMARC record published at _dmarc.zmifi.com. Anyone can spoof email headers with arbitrary envelope senders."
-      },
-      "severity": "HIGH"
+      }
     }
   ],
   "edges": [
