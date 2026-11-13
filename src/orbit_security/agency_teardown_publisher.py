@@ -53,10 +53,12 @@ class AgencyTeardownPublisher:
         staged_dir: Optional[Path] = None,
         ollama_url: str = "http://127.0.0.1:11434",
         copywriter_model: str = "orbit-copywriter",
+        blackboard: Optional[Any] = None,
     ) -> None:
         self.staged_dir = Path(staged_dir or Path("A:/projects/orbit-security/data/staged_campaigns"))
         self.ollama_url = ollama_url
         self.copywriter_model = copywriter_model
+        self.blackboard = blackboard
 
     def _generate_copy_via_llm(self, agency_name: str, domain: str, core_finding: str) -> Optional[str]:
         """Attempts to generate high-converting copy via sovereign orbit-copywriter."""
@@ -75,7 +77,7 @@ class AgencyTeardownPublisher:
                 data=req_payload,
                 headers={"Content-Type": "application/json"},
             )
-            with urllib.request.urlopen(req, timeout=12.0) as res:
+            with urllib.request.urlopen(req, timeout=12.0) as res:  # roe-exempt: local Ollama IPC inference endpoint
                 data = json.loads(res.read().decode("utf-8"))
                 resp = data.get("response", "").strip()
                 if resp:
@@ -117,6 +119,8 @@ class AgencyTeardownPublisher:
                 target_domain=target_domain,
                 core_finding=core_finding,
                 audit_score=audit_score,
+                blackboard=self.blackboard,
+                require_artifact_grounding=bool(self.blackboard),
             )
             critic_verdict = verdict.to_dict()
             if not verdict.passed:
@@ -134,6 +138,8 @@ class AgencyTeardownPublisher:
                 target_domain=target_domain,
                 core_finding=core_finding,
                 audit_score=audit_score,
+                blackboard=self.blackboard,
+                require_artifact_grounding=False,
             )
             critic_verdict = verdict.to_dict()
 

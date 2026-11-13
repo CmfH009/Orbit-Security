@@ -26,3 +26,21 @@
 - [x] Radar Audit Parity: 316/316 checks passed on `node tests/test_radar_parity_suite.js`
 - [x] AST Hygiene: 366/366 files scanned with 0 omissions (`ast_sentinel.py --check` across `src/orbit_security`, `scripts`, `tests`)
 - [x] OpSec Gate: Runtime state files (`data/bounty_radar_state.json`, `data/quarantined_addresses.json`, `data/disposition_ledger.json`) untracked and strictly gitignored
+
+## Layer 5: Deep-Defense Hardening Sprint (Commit accd597 Follow-up)
+- [x] Track 1: Transport-Layer RoE Egress & Redirect Hook (`src/orbit_security/egress_guard.py`, `tests/test_egress_roe_guard.py`)
+  - Intercepts 301/302/307/308 redirects before following `Location`
+  - Validates outbound target hostnames against `RulesOfEngagementEngine.is_target_permitted()`
+  - DNS resolution & Bogon/SSRF guard blocks loopback, link-local, RFC 1918, and RFC 6598 CGNAT (`100.64.0.0/10`)
+  - Centralized client factories for `httpx.Client`, `httpx.AsyncClient`, and `requests.Session`
+  - Publishes structured `ROE_REDIRECT_BLOCKED`, `ROE_BOGON_BLOCKED`, `ROE_SCOPE_BLOCKED` events to blackboard
+- [x] Track 2: SQLite WAL Busy Timeout & Synchronous PRAGMA Alignment (`src/orbit_security/blackboard.py`)
+  - Enforces `PRAGMA busy_timeout = 5000;` and `PRAGMA synchronous = NORMAL;` on all newly established SQLite connections
+- [x] Track 3: Cryptographic Artifact-Hash Evidence Grounding (`src/orbit_security/report_verifier.py`, `src/orbit_security/agency_teardown_publisher.py`, `tests/test_critic_artifact_grounding.py`)
+  - Deterministic SHA-256 evidence digests (`ev_<12-char-hex>`) over target, status code, flaw type, snippet, and provider
+  - Critic gate verifies all cited endpoints and HTTP status codes match empirical blackboard artifacts
+  - Fail-closed fallback to deterministic template copy in `AgencyTeardownPublisher` on ungrounded claims
+- [x] Track 4: AST Sentinel Static Egress Compliance Gate (`src/orbit_security/ast_sentinel.py`, `tests/test_ast_sentinel_egress.py`)
+  - Added `EgressGuardASTVisitor` flagging raw `requests`, `httpx`, `aiohttp`, `socket`, `urllib.request` primitives
+  - Added CLI flag `--check-egress` and exempts `egress_guard.py` plus `# roe-exempt:` pragmas
+  - 100% AST hygiene verified across all 105 source modules and 175 test files with 0 omissions

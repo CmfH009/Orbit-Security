@@ -12,11 +12,12 @@ Fail Gate: Any missing import or unresolved standard library symbol fails immedi
 from __future__ import annotations
 
 import ast
+from dataclasses import dataclass
 import os
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Set, Tuple, Optional
+from typing import Any, Dict, List, Set, Tuple, Optional, Iterable
 
 import builtins
 
@@ -37,6 +38,176 @@ CRITICAL_STDLIB_SYMBOLS = {
 }
 
 PYTHON_BUILTINS = set(dir(builtins))
+
+
+@dataclass(frozen=True)
+class EgressViolation:
+    file_path: str
+    line: int
+    col: int
+    symbol: str
+    rule_id: str = "ROE-EGRESS-001"
+    message: str = ""
+
+
+# Modules allowed to instantiate raw transport clients
+ALLOWED_RAW_EGRESS_MODULES: frozenset[str] = frozenset({
+    "egress_guard.py",
+})
+
+# High-risk network sinks that bypass RulesOfEngagementEngine if called directly
+FORBIDDEN_MODULE_CALLS: dict[str, frozenset[str]] = {
+    "requests": frozenset({
+        "get", "post", "put", "delete", "head", "options", "patch", "request", "Session", "session",
+    }),
+    "httpx": frozenset({
+        "get", "post", "put", "delete", "head", "options", "patch", "request",
+        "Client", "AsyncClient", "stream",
+    }),
+    "aiohttp": frozenset({
+        "ClientSession", "request",
+    }),
+    "socket": frozenset({
+        "socket", "create_connection", "create_server",
+    }),
+    "urllib.request": frozenset({
+        "urlopen", "urlretrieve", "build_opener",
+    }),
+}
+
+# Direct symbol imports (e.g., `from httpx import AsyncClient` -> `AsyncClient()`)
+FORBIDDEN_DIRECT_SYMBOLS: dict[str, str] = {
+    "requests.Session": "requests.Session",
+    "requests.session": "requests.session",
+    "requests.get": "requests.get",
+    "requests.post": "requests.post",
+    "requests.request": "requests.request",
+    "httpx.Client": "httpx.Client",
+    "httpx.AsyncClient": "httpx.AsyncClient",
+    "httpx.get": "httpx.get",
+    "httpx.post": "httpx.post",
+    "httpx.request": "httpx.request",
+    "aiohttp.ClientSession": "aiohttp.ClientSession",
+    "socket.socket": "socket.socket",
+    "socket.create_connection": "socket.create_connection",
+    "urllib.request.urlopen": "urllib.request.urlopen",
+}
+
+
+class EgressGuardASTVisitor(ast.NodeVisitor):
+    """Flags raw HTTP/socket primitives that bypass egress_guard.py."""
+
+    def __init__(self, file_path: Path, source_lines: list[str]) -> None:
+        self.file_path = file_path
+        self.source_lines = source_lines
+        self.violations: list[EgressViolation] = []
+        # Maps local alias -> canonical module name (e.g., {"req": "requests"})
+        self._module_aliases: dict[str, str] = {}
+        # Maps local symbol -> canonical dotted path (e.g., {"AsyncClient": "httpx.AsyncClient"})
+        self._symbol_aliases: dict[str, str] = {}
+
+    def visit_Import(self, node: ast.Import) -> None:
+        for alias in node.names:
+            bound_name = alias.asname or alias.name.split(".")[0]
+            if alias.name in FORBIDDEN_MODULE_CALLS:
+                self._module_aliases[bound_name] = alias.name
+            elif alias.name == "urllib.request" and alias.asname:
+                self._module_aliases[alias.asname] = "urllib.request"
+            elif alias.name == "urllib":
+                self._module_aliases[bound_name] = "urllib"
+        self.generic_visit(node)
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        if not node.module:
+            return
+        for alias in node.names:
+            bound_name = alias.asname or alias.name
+            canonical = f"{node.module}.{alias.name}"
+            if canonical in FORBIDDEN_DIRECT_SYMBOLS:
+                self._symbol_aliases[bound_name] = canonical
+            elif canonical == "urllib.request":
+                self._module_aliases[bound_name] = "urllib.request"
+        self.generic_visit(node)
+
+    def visit_Call(self, node: ast.Call) -> None:
+        dotted = self._resolve_dotted_name(node.func)
+        if dotted:
+            violation_target = self._match_forbidden_call(dotted)
+            if violation_target and not self._has_inline_exemption(node.lineno):
+                self.violations.append(
+                    EgressViolation(
+                        file_path=str(self.file_path),
+                        line=node.lineno,
+                        col=node.col_offset,
+                        symbol=violation_target,
+                        message=(
+                            f"Unguarded network call '{violation_target}' bypasses "
+                            "RulesOfEngagementEngine egress hooks; use egress_guard client factory."
+                        ),
+                    )
+                )
+        self.generic_visit(node)
+
+    def _resolve_dotted_name(self, expr: ast.expr) -> str | None:
+        parts: list[str] = []
+        curr: ast.expr | None = expr
+        while isinstance(curr, ast.Attribute):
+            parts.append(curr.attr)
+            curr = curr.value
+        if isinstance(curr, ast.Name):
+            parts.append(curr.id)
+            parts.reverse()
+            return ".".join(parts)
+        return None
+
+    def _match_forbidden_call(self, dotted: str) -> str | None:
+        parts = dotted.split(".")
+        root = parts[0]
+
+        # Case 1: Direct imported symbol (`AsyncClient(...)` or `urlopen(...)`)
+        if len(parts) == 1 and root in self._symbol_aliases:
+            return self._symbol_aliases[root]
+
+        # Case 2: Module attribute call (`requests.get(...)`, `req.Session(...)`)
+        if len(parts) >= 2 and root in self._module_aliases:
+            canonical_mod = self._module_aliases[root]
+            if canonical_mod == "urllib" and len(parts) >= 3 and parts[1] == "request":
+                method = parts[2]
+                if method in FORBIDDEN_MODULE_CALLS["urllib.request"]:
+                    return f"urllib.request.{method}"
+            elif canonical_mod in FORBIDDEN_MODULE_CALLS:
+                method = parts[1]
+                if method in FORBIDDEN_MODULE_CALLS[canonical_mod]:
+                    return f"{canonical_mod}.{method}"
+
+        return None
+
+    def _has_inline_exemption(self, lineno: int) -> bool:
+        if 1 <= lineno <= len(self.source_lines):
+            line_text = self.source_lines[lineno - 1]
+            return "# roe-exempt:" in line_text
+        return False
+
+
+def check_file_egress_compliance(file_path: Path, source: str) -> list[EgressViolation]:
+    """Run ROE-EGRESS-001 check on a single Python module."""
+    if file_path.name in ALLOWED_RAW_EGRESS_MODULES:
+        return []
+    tree = ast.parse(source, filename=str(file_path))
+    visitor = EgressGuardASTVisitor(file_path=file_path, source_lines=source.splitlines())
+    visitor.visit(tree)
+    return visitor.violations
+
+
+def audit_egress_guard_compliance(files: Iterable[Path]) -> list[EgressViolation]:
+    """Scan all target source files and return any raw egress bypasses."""
+    all_violations: list[EgressViolation] = []
+    for path in files:
+        if path.suffix != ".py":
+            continue
+        source = path.read_text(encoding="utf-8")
+        all_violations.extend(check_file_egress_compliance(path, source))
+    return all_violations
 
 
 class ASTSymbolVisitor(ast.NodeVisitor):
@@ -161,12 +332,15 @@ class ASTCodeSentinel:
                 seen.add(k)
                 unique_missing.append(mi)
 
+        egress_violations = check_file_egress_compliance(path, content)
+
         return {
             "ok": len(unique_missing) == 0,
             "file": str(path),
             "missing_imports": unique_missing,
             "has_pydantic": visitor.has_pydantic_models,
             "imports_count": len(visitor.imports) + len(visitor.imported_symbols),
+            "egress_violations": egress_violations,
         }
 
     def auto_fix_missing_imports(self, file_path: Path) -> Tuple[bool, List[str]]:
@@ -384,12 +558,27 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description="AST Code Sentinel: Static Symbol & Import Verifier")
     parser.add_argument("--check", type=str, help="Check single file or directory")
+    parser.add_argument("--check-egress", type=str, help="Audit egress compliance across Python files in directory")
     parser.add_argument("--auto-fix", action="store_true", help="Autonomously patch missing standard library imports")
     parser.add_argument("--daemon", action="store_true", help="Run continuously in background")
     parser.add_argument("--interval", type=int, default=60, help="Check interval in seconds")
     args = parser.parse_args()
 
     sentinel = ASTCodeSentinel()
+
+    if args.check_egress:
+        target = Path(args.check_egress)
+        files = list(target.rglob("*.py")) if target.is_dir() else [target]
+        violations = audit_egress_guard_compliance(files)
+        print(f"AST Sentinel Egress Audit: {target}")
+        print(f"Scanned: {len(files)} files | Violations: {len(violations)}")
+        if violations:
+            for v in violations:
+                print(f"  ❌ {v.file_path}:{v.line}:{v.col} - {v.rule_id} ({v.symbol}): {v.message}")
+            sys.exit(1)
+        else:
+            print("  ✓ Egress guard compliance verified (0 violations).")
+            sys.exit(0)
 
     if args.check:
         target = Path(args.check)

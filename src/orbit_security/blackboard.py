@@ -147,7 +147,7 @@ class Blackboard:
         )
         sync_mode = "OFF" if _running_under_pytest() else "NORMAL"
         conn.execute(f"PRAGMA synchronous = {sync_mode};")
-        conn.execute("PRAGMA busy_timeout = 10000;")
+        conn.execute("PRAGMA busy_timeout = 5000;")
         conn.row_factory = sqlite3.Row
         try:
             yield conn
@@ -166,7 +166,7 @@ class Blackboard:
         )
         conn.execute("PRAGMA journal_mode = WAL;")
         conn.execute("PRAGMA synchronous = NORMAL;")
-        conn.execute("PRAGMA busy_timeout = 10000;")
+        conn.execute("PRAGMA busy_timeout = 5000;")
         conn.row_factory = sqlite3.Row
         return conn
 
