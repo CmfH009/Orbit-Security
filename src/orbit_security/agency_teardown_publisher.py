@@ -9,11 +9,16 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass, asdict
+import logging
+from dataclasses import dataclass, field, asdict
 from pathlib import Path
 import time
 from typing import Any, Dict, List, Optional
 import urllib.request
+
+from orbit_security.report_verifier import ReportCriticVerifier
+
+logger = logging.getLogger("orbit_security.agency_teardown_publisher")
 
 
 @dataclass
@@ -31,6 +36,8 @@ class AgencyTeardownCampaign:
     requires_operator_approval: bool = True
     operator_approved: bool = False
     staged_at: str = ""
+    critic_verified: bool = True
+    critic_verdict: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -102,8 +109,33 @@ class AgencyTeardownPublisher:
         self.staged_dir.mkdir(parents=True, exist_ok=True)
 
         pitch = self._generate_copy_via_llm(agency_name, target_domain, core_finding)
+        critic_verdict: Optional[Dict[str, Any]] = None
+
+        if pitch:
+            verdict = ReportCriticVerifier.verify_briefing_pitch(
+                pitch_text=pitch,
+                target_domain=target_domain,
+                core_finding=core_finding,
+                audit_score=audit_score,
+            )
+            critic_verdict = verdict.to_dict()
+            if not verdict.passed:
+                logger.warning(
+                    "ReportCriticVerifier rejected LLM copy for %s (%s). Reverting to deterministic fallback.",
+                    agency_slug,
+                    verdict.reasons,
+                )
+                pitch = None
+
         if not pitch:
             pitch = self._deterministic_copy_fallback(agency_name, target_domain, core_finding)
+            verdict = ReportCriticVerifier.verify_briefing_pitch(
+                pitch_text=pitch,
+                target_domain=target_domain,
+                core_finding=core_finding,
+                audit_score=audit_score,
+            )
+            critic_verdict = verdict.to_dict()
 
         raw_payload = f"{agency_slug}:{target_domain}:{audit_score}:{core_finding}:{pitch}"
         sha_hash = hashlib.sha256(raw_payload.encode("utf-8")).hexdigest()
@@ -123,6 +155,8 @@ class AgencyTeardownPublisher:
             requires_operator_approval=True,
             operator_approved=False,
             staged_at=now_iso,
+            critic_verified=bool(critic_verdict and critic_verdict.get("passed", True)),
+            critic_verdict=critic_verdict or {},
         )
 
         out_path = self.staged_dir / f"{agency_slug}_campaign.json"

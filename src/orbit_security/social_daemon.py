@@ -212,7 +212,10 @@ class SocialDaemon:
                 return False
 
             # Query Orbit Master Supervisor hardware governor telemetry
-            state_file = Path(r"A:\system\state\orbit_daemon_state.json")
+            workspace_root = Path("A:/") if Path("A:/").exists() else Path("C:/AgyHut")
+            state_file = workspace_root / "system" / "state" / "orbit_daemon_state.json"
+            if not state_file.exists():
+                state_file = self.base_dir / "data" / "orbit_daemon_state.json"
             if state_file.exists():
                 try:
                     with open(state_file, "r", encoding="utf-8") as f:

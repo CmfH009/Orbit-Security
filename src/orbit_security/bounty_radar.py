@@ -156,6 +156,91 @@ def is_vulnerability_in_scope(program: Optional[BountyProgram], flaw_type: str, 
     return True
 
 
+def is_target_in_scope(target: str, in_scope: List[str]) -> bool:
+    """Verifies that target matches at least one in-scope wildcard (*.target.com) or exact host."""
+    clean = (target or "").strip().lower().rstrip(".")
+    if not clean or not in_scope:
+        return False
+
+    for pat in in_scope:
+        pat_clean = pat.strip().lower().rstrip(".")
+        if pat_clean.startswith("*."):
+            suffix = pat_clean[2:]
+            if clean == suffix or clean.endswith("." + suffix):
+                return True
+        elif clean == pat_clean:
+            return True
+    return False
+
+
+def is_target_out_of_scope(target: str, out_of_scope: Optional[List[str]]) -> bool:
+    """Verifies whether target matches any explicit out-of-scope exclusions."""
+    clean = (target or "").strip().lower().rstrip(".")
+    if not clean or not out_of_scope:
+        return False
+
+    for pat in out_of_scope:
+        pat_clean = pat.strip().lower().rstrip(".")
+        if pat_clean.startswith("*."):
+            suffix = pat_clean[2:]
+            if clean == suffix or clean.endswith("." + suffix):
+                return True
+        elif clean == pat_clean:
+            return True
+    return False
+
+
+def is_target_permitted(
+    target: str,
+    in_scope: List[str],
+    out_of_scope: Optional[List[str]] = None,
+) -> bool:
+    """Strict zero-trust validation: target MUST match in_scope and MUST NOT match out_of_scope."""
+    if is_target_out_of_scope(target, out_of_scope):
+        return False
+    return is_target_in_scope(target, in_scope)
+
+
+class RulesOfEngagementEngine:
+    """Central Zero-Trust Rules of Engagement (RoE) validation engine.
+
+    Enforces target boundaries, out-of-scope exclusions, and permitted flaw vectors
+    prior to any passive harvesting, active probing, or advisory staging.
+    """
+
+    @classmethod
+    def is_permitted(cls, program: Optional[BountyProgram], target: str) -> bool:
+        if not program:
+            return False
+        return program.is_target_permitted(target)
+
+    @classmethod
+    def validate_action(
+        cls,
+        program: Optional[BountyProgram],
+        target: str,
+        flaw_type: str,
+        viability: str = "",
+    ) -> Tuple[bool, str]:
+        if not program:
+            return False, "PROGRAM_MISSING"
+        if not program.is_target_permitted(target):
+            if is_target_out_of_scope(target, program.out_of_scope):
+                return False, f"TARGET_EXPLICITLY_OUT_OF_SCOPE: {target}"
+            return False, f"TARGET_NOT_IN_SCOPE: {target}"
+        if not program.is_vulnerability_in_scope(flaw_type, viability):
+            return False, f"FLAW_TYPE_EXCLUDED_BY_POLICY: {flaw_type}"
+        return True, "ACTION_PERMITTED"
+
+    @classmethod
+    def filter_permitted_targets(
+        cls, program: Optional[BountyProgram], targets: List[str]
+    ) -> List[str]:
+        if not program:
+            return []
+        return [t for t in targets if program.is_target_permitted(t)]
+
+
 @dataclass
 class BountyProgram:
     program_id: str
@@ -176,6 +261,14 @@ class BountyProgram:
     def is_vulnerability_in_scope(self, flaw_type: str, viability: str = "") -> bool:
         """Evaluates whether vulnerability vector is permitted under program policy."""
         return is_vulnerability_in_scope(self, flaw_type, viability)
+
+    def is_target_in_scope(self, target: str) -> bool:
+        """Evaluates whether candidate target matches in_scope and is NOT excluded by out_of_scope."""
+        return is_target_permitted(target, self.in_scope, self.out_of_scope)
+
+    def is_target_permitted(self, target: str) -> bool:
+        """Strict RoE gate: alias for is_target_in_scope adhering to zero-trust principles."""
+        return self.is_target_in_scope(target)
 
 
 @dataclass

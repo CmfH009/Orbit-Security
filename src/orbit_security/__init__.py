@@ -67,6 +67,9 @@ _LAZY_IMPORTS = {
     "SensitiveExposureScanner": ("orbit_security.bounty_radar", "SensitiveExposureScanner"),
     "BountyRadar": ("orbit_security.bounty_radar", "BountyRadar"),
     "BountyRadarSupervisor": ("orbit_security.bounty_radar", "BountyRadarSupervisor"),
+    "RulesOfEngagementEngine": ("orbit_security.bounty_radar", "RulesOfEngagementEngine"),
+    "ReportCriticVerifier": ("orbit_security.report_verifier", "ReportCriticVerifier"),
+    "CriticVerificationResult": ("orbit_security.report_verifier", "CriticVerificationResult"),
 }
 
 __all__ = list(_LAZY_IMPORTS.keys()) + ["hello"]

@@ -71,6 +71,7 @@ class BountyRollingDaemon:
         self.ct_daemon = ct_daemon or CtStreamDaemon(
             watermark_file=ct_watermark_file,
             blackboard=self.blackboard,
+            offline=self.offline,
         )
         self.worker = BountyRollingWorker(
             prober=self.prober,
@@ -117,9 +118,18 @@ class BountyRollingDaemon:
         for res in poll_results:
             new_certificates += int(res.get("new_certificates", 0))
             for sub in res.get("new_subdomains", []):
+                # Zero-Trust RoE Gate: Validate discovered subdomains against program scope and exclusions
+                if hasattr(target, "is_target_permitted") and not target.is_target_permitted(sub):
+                    logger.debug("RoE: Excluded out-of-scope CT subdomain: %s", sub)
+                    continue
                 if sub not in new_subdomains:
                     new_subdomains.append(sub)
-            takeover_findings.extend(res.get("takeover_findings", []))
+            for tf in res.get("takeover_findings", []):
+                tf_domain = str(tf.get("domain") or "").strip()
+                if hasattr(target, "is_target_permitted") and not target.is_target_permitted(tf_domain):
+                    logger.debug("RoE: Excluded out-of-scope takeover finding: %s", tf_domain)
+                    continue
+                takeover_findings.append(tf)
 
         return {
             "program_id": target.program_id,
@@ -145,7 +155,10 @@ class BountyRollingDaemon:
 
         bb = blackboard if blackboard is not None else self._get_blackboard()
         if mock_targets is not None:
-            fleet_targets = mock_targets
+            fleet_targets = [
+                t for t in mock_targets
+                if not hasattr(target, "is_target_permitted") or target.is_target_permitted(str(t.get("domain", "")))
+            ]
         else:
             fleet_targets = [
                 {
@@ -155,6 +168,7 @@ class BountyRollingDaemon:
                     "mock_cors_responses": {} if self.offline else None,
                 }
                 for root in target.in_scope
+                if not hasattr(target, "is_target_permitted") or target.is_target_permitted(root.replace("*.", ""))
             ]
 
         bucket_sweep = CloudBucketTakeoverSentinel.sweep_cloud_fleet(

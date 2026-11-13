@@ -77,9 +77,11 @@ class CertificateTransparencyMonitor:
         self,
         cache_file: Optional[Path] = None,
         offline_fixtures: Optional[Dict[str, List[Dict[str, Any]]]] = None,
+        offline: bool = False,
     ):
         self.cache_file = Path(cache_file or DEFAULT_CT_CACHE_PATH)
         self.offline_fixtures = offline_fixtures or BUILTIN_CT_FALLBACK
+        self.offline = offline
         self.known_subdomains: Dict[str, Set[str]] = {}
 
     def is_cache_valid(self, domain: str, ttl_seconds: float = 86400.0) -> bool:
@@ -106,7 +108,7 @@ class CertificateTransparencyMonitor:
             return None
 
     def save_to_cache(self, domain: str, records: List[Dict[str, Any]]):
-        """Saves CT query results for domain to disk cache."""
+        """Saves CT query results for domain atomically to disk cache."""
         try:
             self.cache_file.parent.mkdir(parents=True, exist_ok=True)
             existing = {}
@@ -120,7 +122,9 @@ class CertificateTransparencyMonitor:
                 "timestamp": time.time(),
                 "records": records,
             }
-            self.cache_file.write_text(json.dumps(existing, indent=2), encoding="utf-8")
+            tmp_cache = self.cache_file.with_suffix(".tmp")
+            tmp_cache.write_text(json.dumps(existing, indent=2), encoding="utf-8")
+            tmp_cache.replace(self.cache_file)
         except Exception as ex:
             logger.debug(f"Failed to save CT cache: {ex}")
 
@@ -128,10 +132,12 @@ class CertificateTransparencyMonitor:
         self,
         domain: str,
         force_refresh: bool = False,
+        offline: Optional[bool] = None,
     ) -> List[CertificateEntry]:
         """Fetches certificates for domain from cache, live API, or fallback fixture."""
         clean_domain = domain.strip().lower()
         records: Optional[List[Dict[str, Any]]] = None
+        effective_offline = self.offline if offline is None else offline
 
         # 1. Use explicit test fixture if defined
         if clean_domain in self.offline_fixtures:
@@ -141,28 +147,37 @@ class CertificateTransparencyMonitor:
         elif not force_refresh and self.is_cache_valid(clean_domain):
             records = self.load_from_cache(clean_domain)
 
-        # 3. Live network pull if no cache or fixture
+        # 3. Live network pull if no cache or fixture and NOT in offline mode
         if records is None:
-            domain_regex = re.compile(r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$")
-            if not domain_regex.match(clean_domain):
-                logger.warning(f"Invalid domain rejected for CT scan: {clean_domain}")
-                records = []
+            if effective_offline:
+                logger.debug("Offline mode: skipping live CT network pull for %s", clean_domain)
+                records = self.offline_fixtures.get(clean_domain, [])
             else:
-                encoded_domain = urllib.parse.quote(clean_domain)
-                url = f"https://crt.sh/?q=%.{encoded_domain}&output=json"
-                req = urllib.request.Request(
-                    url,
-                    headers={"User-Agent": "OrbitSecurity-CTMonitor/1.0", "Accept": "application/json"},
-                )
-                try:
-                    with urllib.request.urlopen(req, timeout=6.0) as resp:
-                        if resp.status == 200:
-                            records = json.loads(resp.read().decode("utf-8"))
-                            self.save_to_cache(clean_domain, records)
-                except Exception as ex:
-                    logger.warning(f"Live CT pull failed for {clean_domain}: {ex}; checking fallback")
+                domain_regex = re.compile(r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$")
+                if not domain_regex.match(clean_domain):
+                    logger.warning(f"Invalid domain rejected for CT scan: {clean_domain}")
+                    records = []
+                else:
+                    encoded_domain = urllib.parse.quote(clean_domain)
+                    url = f"https://crt.sh/?q=%.{encoded_domain}&output=json"
+                    req = urllib.request.Request(
+                        url,
+                        headers={"User-Agent": "OrbitSecurity-CTMonitor/1.0", "Accept": "application/json"},
+                    )
+                    try:
+                        with urllib.request.urlopen(req, timeout=6.0) as resp:
+                            if resp.status == 200:
+                                records = json.loads(resp.read().decode("utf-8"))
+                                self.save_to_cache(clean_domain, records)
+                    except urllib.error.HTTPError as he:
+                        if he.code == 429:
+                            logger.warning(f"Live CT pull rate limited (429) for {clean_domain}; using fallback")
+                        else:
+                            logger.warning(f"Live CT pull HTTP {he.code} for {clean_domain}: {he}")
+                    except Exception as ex:
+                        logger.warning(f"Live CT pull failed for {clean_domain}: {ex}; checking fallback")
 
-        # 4. Fallback if network failed
+        # 4. Fallback if network failed or rate limited
         if records is None:
             records = self.offline_fixtures.get(clean_domain, [])
 
@@ -263,11 +278,14 @@ class CtStreamDaemon:
         takeover_detector: Any = None,
         cname_probe_map: Optional[Dict[str, Dict[str, Any]]] = None,
         offline_fixtures: Optional[Dict[str, List[Dict[str, Any]]]] = None,
+        offline: bool = False,
     ):
         self.watermark_file = Path(watermark_file or DEFAULT_CT_WATERMARK_PATH)
+        self.offline = offline
         self.monitor = CertificateTransparencyMonitor(
             cache_file=cache_file,
             offline_fixtures=offline_fixtures,
+            offline=self.offline,
         )
         self.blackboard = blackboard
         if takeover_detector is None:
@@ -316,7 +334,7 @@ class CtStreamDaemon:
     def poll_domain(self, domain: str, force_refresh: bool = False) -> Dict[str, Any]:
         """Polls CT log feed for domain, computes delta against persistent watermark, and chains takeover checks."""
         clean_domain = domain.strip().lower().lstrip("*.")
-        certs = self.monitor.fetch_certificates(clean_domain, force_refresh=force_refresh)
+        certs = self.monitor.fetch_certificates(clean_domain, force_refresh=force_refresh, offline=self.offline)
 
         seen_certs = self.seen_cert_ids.setdefault(clean_domain, set())
         known_subs = self.known_subdomains.setdefault(clean_domain, set())

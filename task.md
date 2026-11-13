@@ -12,7 +12,14 @@
 - [x] White-Label Client Remediation & Export Bundle Generator (W2.1): Atomic white-label ZIP packages, NTFS per-directory mutex locking, XML escaping, underscore preservation, DealDesk & Stripe webhook provisioning (`src/orbit_security/client_bundle_exporter.py`, `scripts/export_agency_bundle.py`)
 - [x] Cockpit Swarm & Specialist Sentinel Sweep: Real-time telemetry streaming across 10 fleet roles and 4 specialist swarms (`tests/test_cockpit_swarm_integration.py`)
 
-## Layer 3: Multi-Agent Verification & Pre-Flight Quality Gates
+## Layer 3: Principal Security Systems Hardening & Zero-Trust Reliability Sprint
+- [x] Track 1: Zero-Trust Rules of Engagement (RoE) Unified Engine (`src/orbit_security/bounty_radar.py`, `src/orbit_security/bounty_active_prober.py`, `src/orbit_security/bounty_rolling_daemon.py`, `tests/test_roe_zero_trust.py`)
+- [x] Track 2: SQLite WAL Jittered Exponential Retry Discipline (`src/orbit_security/blackboard.py`, `tests/test_wal_concurrency_stress.py`)
+- [x] Track 3: Empirical Report Critic & Anti-Hallucination Gate (`src/orbit_security/report_verifier.py`, `src/orbit_security/agency_teardown_publisher.py`, `tests/test_report_critic_verifier.py`)
+- [x] Track 4: Daemon Offline Mode Propagation, Atomic Cache & Path Resilience (`src/orbit_security/cert_transparency.py`, `src/orbit_security/bounty_rolling_daemon.py`, `src/orbit_security/social_daemon.py`, `tests/test_daemon_resilience.py`)
+- [x] Track 5: Full Regression Testing & Verification Suite (`pytest tests -q`)
+
+## Layer 4: Multi-Agent Verification & Pre-Flight Quality Gates
 - [x] Test Suite: 1,668/1,668 tests passing 100% green via `pytest tests -q`
 - [x] Parity Gate: 95/95 byte-identical files between `landing/` and `docs/` (`sync_landing_to_docs.py --check`)
 - [x] DOM & CSP Validation: 100% passed on `scripts/verify_landing_pages.py`

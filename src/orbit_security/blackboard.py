@@ -19,9 +19,12 @@ from __future__ import annotations
 
 import contextlib
 from datetime import datetime, timezone
+import functools
 import json
+import logging
 import os
 import queue
+import random
 import sqlite3
 import sys
 import tempfile
@@ -29,6 +32,8 @@ import threading
 import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set
+
+logger = logging.getLogger("orbit_security.blackboard")
 
 # Canonical Base Paths
 WORKSPACE_ROOT = Path("A:/") if Path("A:/").exists() else Path("C:/AgyHut")
@@ -41,6 +46,36 @@ else:
     # Standalone or CI environment fallback within repository tree
     _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
     DEFAULT_BLACKBOARD_DB = _REPO_ROOT / "data" / "blackboard.db"
+
+
+def wal_retry(max_retries: int = 5, initial_backoff: float = 0.05, max_backoff: float = 1.0):
+    """Decorator executing SQLite transactions with exponential backoff and jitter on database lock."""
+    def decorator(func: Callable):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            delay = initial_backoff
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except sqlite3.OperationalError as e:
+                    err_msg = str(e).lower()
+                    if "locked" in err_msg or "busy" in err_msg:
+                        if attempt == max_retries - 1:
+                            logger.error(f"WAL operation {func.__name__} failed after {max_retries} attempts: {e}")
+                            raise
+                        jitter = random.uniform(0.8, 1.2)
+                        sleep_time = min(delay * jitter, max_backoff)
+                        logger.warning(
+                            f"SQLite WAL lock contention on {func.__name__} (attempt {attempt + 1}/{max_retries}); "
+                            f"retrying in {sleep_time:.3f}s: {e}"
+                        )
+                        time.sleep(sleep_time)
+                        delay *= 2.0
+                    else:
+                        raise
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 def _running_under_pytest() -> bool:
@@ -135,6 +170,7 @@ class Blackboard:
         conn.row_factory = sqlite3.Row
         return conn
 
+    @wal_retry()
     def _init_db(self):
         with self._connection() as conn:
             conn.execute("PRAGMA journal_mode = WAL;")
@@ -185,6 +221,7 @@ class Blackboard:
             for dead_q in dead_queues:
                 self._subscribers.discard(dead_q)
 
+    @wal_retry()
     def publish(
         self,
         event_type: str,
@@ -222,6 +259,7 @@ class Blackboard:
         self.broadcast(event_dict)
         return ev_id
 
+    @wal_retry()
     def publish_batch(
         self,
         events: List[Dict[str, Any]],
@@ -271,6 +309,7 @@ class Blackboard:
 
         return inserted_ids
 
+    @wal_retry()
     def get_recent(
         self,
         limit: int = 50,
@@ -318,6 +357,7 @@ class Blackboard:
             })
         return events
 
+    @wal_retry()
     def get_unprocessed(
         self,
         limit: int = 100,
@@ -368,6 +408,7 @@ class Blackboard:
 
         return events
 
+    @wal_retry()
     def get_events_after(
         self,
         after_id: int = 0,
@@ -412,6 +453,7 @@ class Blackboard:
             })
         return events
 
+    @wal_retry()
     def get_max_event_id(self) -> int:
         """Returns the maximum event ID currently recorded in the blackboard."""
         with self._connection() as conn:
@@ -420,6 +462,7 @@ class Blackboard:
             row = cur.fetchone()
             return int(row[0]) if row and row[0] is not None else 0
 
+    @wal_retry()
     def mark_processed(self, event_id: int) -> bool:
         """Marks an event as processed."""
         with self._connection() as conn:
@@ -428,12 +471,14 @@ class Blackboard:
             conn.commit()
             return cur.rowcount > 0
 
+    @wal_retry()
     def clear(self):
         """Clears all events (useful for testing)."""
         with self._connection() as conn:
             conn.execute("DELETE FROM blackboard_events;")
             conn.commit()
 
+    @wal_retry()
     def checkpoint(self, mode: str = "PASSIVE") -> Dict[str, Any]:
         """Flushes SQLite WAL journal to the main database safely.
         Valid modes: PASSIVE, FULL, RESTART, TRUNCATE.
@@ -456,6 +501,7 @@ class Blackboard:
                 "ok": busy == 0
             }
 
+    @wal_retry()
     def get_stats(self) -> Dict[str, Any]:
         """Returns statistics on the blackboard database."""
         with self._connection() as conn:
@@ -645,6 +691,7 @@ __all__ = [
     "unsubscribe",
     "broadcast",
     "checkpoint",
+    "wal_retry",
     "DEFAULT_BLACKBOARD_DB",
     "TOPIC_TELEMETRY",
     "TOPIC_GROWTH",

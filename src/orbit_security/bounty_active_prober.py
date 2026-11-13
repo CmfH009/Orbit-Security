@@ -278,6 +278,11 @@ class BountyActiveProber:
         try:
             for root in program.in_scope:
                 base = root.replace("*.", "")
+                # Zero-Trust RoE: Verify root domain is permitted and not explicitly excluded
+                if hasattr(program, "is_target_permitted") and not program.is_target_permitted(base):
+                    logger.debug("RoE: Skipped excluded or out-of-scope root target: %s", base)
+                    continue
+
                 # Probe root domain
                 root_findings = self.probe_host_active(base, offline=offline)
                 for f in root_findings:
@@ -289,6 +294,10 @@ class BountyActiveProber:
                 if root.startswith("*."):
                     for pfx in prefixes:
                         sub = f"{pfx}.{base}"
+                        # Zero-Trust RoE: Enforce target allowlist and exclusion boundaries
+                        if hasattr(program, "is_target_permitted") and not program.is_target_permitted(sub):
+                            logger.debug("RoE: Skipped excluded candidate subdomain: %s", sub)
+                            continue
                         sub_findings = self.probe_host_active(sub, offline=offline)
                         for f in sub_findings:
                             f.program_id = program.program_id
