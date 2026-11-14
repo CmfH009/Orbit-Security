@@ -34,6 +34,7 @@ except Exception:
     pass
 
 from orbit_security.agency_retainer import AgencyRetainerManager  # noqa: E402
+from orbit_security.deal_desk import RetainerDealDeskConcierge  # noqa: E402
 from orbit_security.fleet import FleetRegistry  # noqa: E402
 from orbit_security.stripe_webhook import (
     SlaCertificateGenerator,
@@ -92,6 +93,11 @@ def dispatch_test_event(
             sla_generator=SlaCertificateGenerator(output_dir=target_root / "certificates"),
             fleet_registry=FleetRegistry(data_path=target_root / "clients.json"),
             retainer_manager=AgencyRetainerManager(data_path=target_root / "agency_retainers.json"),
+            deal_desk=RetainerDealDeskConcierge(
+                workspace_root=target_root,
+                portals_dir=target_root / "portals",
+                bundles_dir=target_root / "client_bundles",
+            ),
         )
 
     event_payload = {
