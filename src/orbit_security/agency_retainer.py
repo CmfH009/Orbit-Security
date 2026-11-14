@@ -721,7 +721,9 @@ class AgencyPortalRenderer:
         landing_dir: Optional[Path] = None,
     ) -> Tuple[Path, Optional[Path]]:
         """Generates and writes portal HTML files for docs/ and landing/ sites."""
-        out_dir = Path(output_dir or DEFAULT_PORTALS_OUTPUT_DIR)
+        from orbit_security._runtime_paths import is_pytest_active, resolve_isolated_data_path
+
+        out_dir = resolve_isolated_data_path(output_dir, DEFAULT_PORTALS_OUTPUT_DIR)
         out_dir.mkdir(parents=True, exist_ok=True)
         file_path = out_dir / f"{agency.agency_id}.html"
 
@@ -735,7 +737,7 @@ class AgencyPortalRenderer:
             landing_path = landing_dir / f"{agency.agency_id}.html"
             with open(landing_path, "w", encoding="utf-8") as f:
                 f.write(html_content)
-        elif output_dir is None or Path(output_dir) == DEFAULT_PORTALS_OUTPUT_DIR:
+        elif not is_pytest_active() and (output_dir is None or Path(output_dir) == DEFAULT_PORTALS_OUTPUT_DIR):
             if DEFAULT_LANDING_PORTALS_DIR.parent.exists():
                 DEFAULT_LANDING_PORTALS_DIR.mkdir(parents=True, exist_ok=True)
                 landing_path = DEFAULT_LANDING_PORTALS_DIR / f"{agency.agency_id}.html"
@@ -751,8 +753,10 @@ class AgencyPortalRenderer:
         landing_dir: Optional[Path] = None,
     ) -> Dict[str, Any]:
         """Batch provisions co-branded HTML portals and partner directory index for all enrolled agencies (Project #14)."""
-        out_docs = Path(docs_dir or DEFAULT_PORTALS_OUTPUT_DIR)
-        out_landing = Path(landing_dir or DEFAULT_LANDING_PORTALS_DIR)
+        from orbit_security._runtime_paths import resolve_isolated_data_path
+
+        out_docs = resolve_isolated_data_path(docs_dir, DEFAULT_PORTALS_OUTPUT_DIR)
+        out_landing = resolve_isolated_data_path(landing_dir, DEFAULT_LANDING_PORTALS_DIR)
         out_docs.mkdir(parents=True, exist_ok=True)
         out_landing.mkdir(parents=True, exist_ok=True)
 

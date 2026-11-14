@@ -99,6 +99,8 @@ def create_checkout_session(
     accent_color: str = "#3B82F6",
     tagline: str = "Managed Web & Security Operations",
     custom_domain: Optional[str] = None,
+    domain: Optional[str] = None,
+    client_reference_id: Optional[str] = None,
     success_url: Optional[str] = None,
     cancel_url: Optional[str] = None,
     http_open: Optional[Callable] = None,
@@ -134,6 +136,10 @@ def create_checkout_session(
     }
     if custom_domain:
         metadata["custom_domain"] = custom_domain
+    if domain:
+        metadata["domain"] = domain
+    if client_reference_id:
+        metadata["client_reference_id"] = client_reference_id
 
     body_fields: Dict[str, Any] = {
         "mode": "subscription",
@@ -143,6 +149,8 @@ def create_checkout_session(
         "success_url": success_url,
         "cancel_url": cancel_url,
     }
+    if client_reference_id:
+        body_fields["client_reference_id"] = client_reference_id
     for key, value in metadata.items():
         body_fields[f"metadata[{key}]"] = value
 

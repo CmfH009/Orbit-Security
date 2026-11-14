@@ -30,6 +30,7 @@ import zipfile
 
 import yaml
 
+from orbit_security._runtime_paths import resolve_isolated_data_path
 from orbit_security.agency_retainer import AgencyRetainer, AgencyRetainerManager
 
 logger = logging.getLogger("orbit_security.client_bundle_exporter")
