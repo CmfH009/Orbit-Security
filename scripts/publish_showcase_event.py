@@ -28,10 +28,9 @@ def main():
             "drift": 0
         },
         "asset_ingestion_manifest": {
-            "audio_cues_verified": 30,
-            "audio_dir": "A:/system/cockpit/static/audio",
-            "ui_frames_verified": 283,
-            "ui_dir": "A:/system/cockpit/static/img/ui"
+            "cockpit_template": "A:/system/cockpit/templates/cockpit.html",
+            "cockpit_client_js": "A:/system/cockpit/static/js/cockpit.js",
+            "lean_cockpit_ui": True
         },
         "zero_backend_api_dependencies": True,
         "source_url": "https://cmfh009.github.io/Orbit-Security/"

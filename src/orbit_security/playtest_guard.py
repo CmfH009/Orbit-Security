@@ -188,10 +188,8 @@ class HeadlessPlaytestGuard:
                 targets.append(p)
                 html_blobs.append((str(p), p.read_text(encoding="utf-8")))
         else:
-            p1 = self.cockpit_dir / "battlestation_standalone.html"
-            p2 = self.cockpit_dir / "templates" / "battlestation_standalone.html"
-            p3 = self.cockpit_dir / "templates" / "cockpit.html"
-            for p in [p1, p2, p3]:
+            p1 = self.cockpit_dir / "templates" / "cockpit.html"
+            for p in [p1]:
                 if p.exists() and p not in targets:
                     targets.append(p)
                     html_blobs.append((str(p), p.read_text(encoding="utf-8")))
@@ -239,8 +237,8 @@ class HeadlessPlaytestGuard:
         }
 
     def verify_javascript_syntax(self, html_path: Optional[Path] = None) -> Dict[str, Any]:
-        """Validates inline JavaScript blocks using V8 engine (node -c)."""
-        target = html_path or (self.cockpit_dir / "battlestation_standalone.html")
+        """Validates inline JavaScript blocks and static/js/cockpit.js using V8 engine (node -c)."""
+        target = html_path or (self.cockpit_dir / "templates" / "cockpit.html")
         if not target.exists():
             return {"ok": True, "note": "File skipped"}
 
@@ -273,9 +271,21 @@ class HeadlessPlaytestGuard:
                 # Basic balance check fallback
                 pass
 
+        extra_checked = 0
+        if html_path is None and node_bin:
+            cockpit_js = self.cockpit_dir / "static" / "js" / "cockpit.js"
+            if cockpit_js.exists():
+                extra_checked = 1
+                try:
+                    res = subprocess.run([node_bin, "-c", str(cockpit_js)], capture_output=True, text=True, timeout=5)
+                    if res.returncode != 0:
+                        issues.append(f"cockpit.js V8 Error: {res.stderr.strip()[:150]}")
+                except Exception as e:
+                    issues.append(f"cockpit.js node invocation error: {e}")
+
         return {
             "ok": len(issues) == 0,
-            "scripts_checked": len(scripts),
+            "scripts_checked": len(scripts) + extra_checked,
             "engine": "v8" if node_bin else "fallback",
             "issues": issues
         }

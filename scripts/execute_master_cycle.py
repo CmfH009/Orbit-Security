@@ -576,7 +576,8 @@ def run_worker_4_showcase_and_media(bus: DualBlackboardEventBus) -> Dict[str, An
     docs_dir = PROJECT_ROOT / "docs"
     index_html = docs_dir / "index.html"
     radar_js = docs_dir / "assets" / "orbit_radar.js"
-    cockpit_audio = SYSTEM_DIR / "cockpit" / "static" / "audio"
+    cockpit_html = SYSTEM_DIR / "cockpit" / "templates" / "cockpit.html"
+    cockpit_js = SYSTEM_DIR / "cockpit" / "static" / "js" / "cockpit.js"
 
     # 1. Verify GitHub Pages showcase deployment structure
     assert docs_dir.exists(), "docs/ directory missing"
@@ -592,24 +593,22 @@ def run_worker_4_showcase_and_media(bus: DualBlackboardEventBus) -> Dict[str, An
     assert ("Google & Yahoo 2024+ Bulk Sender Standard" in html_text or "Google &amp; Yahoo 2024+ Bulk Sender Standard" in html_text)
     print("[✓] Verified Interactive Client Scan Preview Widget embedded in docs/index.html")
 
-    # 3. Verify itch.io HUD Audio Assets
-    assert cockpit_audio.exists(), "cockpit/static/audio missing"
-    audio_files = list(cockpit_audio.glob("*.wav"))
-    print(f"[✓] Verified Ingested Retro HUD Audio Assets: {len(audio_files)} sound effects in cockpit/static/audio/")
-    for f in audio_files[:4]:
-        print(f"    - {f.name}")
+    # 3. Verify Consolidated Lean Cockpit UI Templates & Client Bundle
+    assert cockpit_html.exists(), "cockpit/templates/cockpit.html missing"
+    assert cockpit_js.exists(), "cockpit/static/js/cockpit.js missing"
+    print("[✓] Verified Consolidated Cockpit UI bundle: templates/cockpit.html & static/js/cockpit.js")
 
     bus.publish("SHOWCASE_UPDATED", {
         "showcase_url": "https://cmfh009.github.io/Orbit-Security/",
         "widgets_embedded": ["reportView-secrets", "reportView-compliance"],
-        "audio_assets_count": len(audio_files)
+        "cockpit_ui_consolidated": True
     }, source="worker-4-showcase", topic="assets")
 
     return {
         "status": "COMPLETED",
         "showcase_url": "https://cmfh009.github.io/Orbit-Security/",
         "widgets_verified": True,
-        "audio_assets_ingested": len(audio_files)
+        "cockpit_ui_consolidated": True
     }
 
 
