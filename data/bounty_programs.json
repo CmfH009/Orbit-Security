@@ -39,7 +39,13 @@
         "*.gitlab.com",
         "*.about.gitlab.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.gitlab.com",
+        "blog.gitlab.com",
+        "careers.gitlab.com",
+        "support.gitlab.com",
+        "community.gitlab.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -64,7 +70,13 @@
         "*.starbucks.com",
         "*.starbucksreserve.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.starbucks.com",
+        "blog.starbucks.com",
+        "careers.starbucks.com",
+        "support.starbucks.com",
+        "community.starbucks.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -89,7 +101,13 @@
         "*.yahoo.com",
         "*.aol.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.yahoo.com",
+        "blog.yahoo.com",
+        "careers.yahoo.com",
+        "support.yahoo.com",
+        "community.yahoo.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -114,7 +132,13 @@
         "*.paypal.com",
         "*.braintreegateway.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.paypal.com",
+        "blog.paypal.com",
+        "careers.paypal.com",
+        "support.paypal.com",
+        "community.paypal.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -140,7 +164,13 @@
         "*.ubereats.com",
         "*.uberinternal.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.uber.com",
+        "blog.uber.com",
+        "careers.uber.com",
+        "support.uber.com",
+        "community.uber.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -165,7 +195,13 @@
         "*.github.com",
         "*.githubassets.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.github.com",
+        "blog.github.com",
+        "careers.github.com",
+        "support.github.com",
+        "community.github.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -190,7 +226,13 @@
         "*.epicgames.com",
         "*.unrealengine.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.epicgames.com",
+        "blog.epicgames.com",
+        "careers.epicgames.com",
+        "support.epicgames.com",
+        "community.epicgames.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -215,7 +257,13 @@
         "*.coinbase.com",
         "*.cbws.io"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.coinbase.com",
+        "blog.coinbase.com",
+        "careers.coinbase.com",
+        "support.coinbase.com",
+        "community.coinbase.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -241,7 +289,13 @@
         "*.steamcommunity.com",
         "*.valvesoftware.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.steampowered.com",
+        "blog.steampowered.com",
+        "careers.steampowered.com",
+        "support.steampowered.com",
+        "community.steampowered.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -265,7 +319,13 @@
       "in_scope": [
         "*.hyatt.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.hyatt.com",
+        "blog.hyatt.com",
+        "careers.hyatt.com",
+        "support.hyatt.com",
+        "community.hyatt.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -293,7 +353,13 @@
         "*.navy.mil",
         "*.defense.gov"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.defense.gov",
+        "blog.defense.gov",
+        "careers.defense.gov",
+        "support.defense.gov",
+        "community.defense.gov"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -320,7 +386,13 @@
         "*.woocommerce.com",
         "*.tumblr.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.wordpress.com",
+        "blog.wordpress.com",
+        "careers.wordpress.com",
+        "support.wordpress.com",
+        "community.wordpress.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -346,7 +418,13 @@
         "*.socialclub.rockstargames.com",
         "*.2k.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.rockstargames.com",
+        "blog.rockstargames.com",
+        "careers.rockstargames.com",
+        "support.rockstargames.com",
+        "community.rockstargames.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -371,7 +449,13 @@
         "*.slack.com",
         "*.slack-msgs.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.slack.com",
+        "blog.slack.com",
+        "careers.slack.com",
+        "support.slack.com",
+        "community.slack.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -437,7 +521,13 @@
         "*.youpin.cn",
         "*.zmifi.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.xiaomi.com",
+        "blog.xiaomi.com",
+        "careers.xiaomi.com",
+        "support.xiaomi.com",
+        "community.xiaomi.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -680,7 +770,13 @@
         "www.vrbo.com",
         "www.wotif.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.expediagroup.com",
+        "blog.expediagroup.com",
+        "careers.expediagroup.com",
+        "support.expediagroup.com",
+        "community.expediagroup.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -924,7 +1020,13 @@
         "bestfiends.com",
         "gnocchi-www.buffalo-ggn.net"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.playtika.com",
+        "blog.playtika.com",
+        "careers.playtika.com",
+        "support.playtika.com",
+        "community.playtika.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -1125,7 +1227,13 @@
         "*.jira.com",
         "*.trello.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.atlassian.com",
+        "blog.atlassian.com",
+        "careers.atlassian.com",
+        "support.atlassian.com",
+        "community.atlassian.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -1150,7 +1258,13 @@
         "*.dropbox.com",
         "*.dropboxapi.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.dropbox.com",
+        "blog.dropbox.com",
+        "careers.dropbox.com",
+        "support.dropbox.com",
+        "community.dropbox.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -1175,7 +1289,13 @@
         "*.x.com",
         "*.twitter.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.x.com",
+        "blog.x.com",
+        "careers.x.com",
+        "support.x.com",
+        "community.x.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -1199,7 +1319,13 @@
       "in_scope": [
         "*.airbnb.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.airbnb.com",
+        "blog.airbnb.com",
+        "careers.airbnb.com",
+        "support.airbnb.com",
+        "community.airbnb.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -1224,7 +1350,13 @@
         "*.tiktok.com",
         "*.bytedance.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.tiktok.com",
+        "blog.tiktok.com",
+        "careers.tiktok.com",
+        "support.tiktok.com",
+        "community.tiktok.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -1248,7 +1380,13 @@
       "in_scope": [
         "*.roblox.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.roblox.com",
+        "blog.roblox.com",
+        "careers.roblox.com",
+        "support.roblox.com",
+        "community.roblox.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -1273,7 +1411,13 @@
         "*.nintendo.com",
         "*.nintendo.net"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.nintendo.com",
+        "blog.nintendo.com",
+        "careers.nintendo.com",
+        "support.nintendo.com",
+        "community.nintendo.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -1298,7 +1442,13 @@
         "*.playstation.com",
         "*.sony.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.playstation.com",
+        "blog.playstation.com",
+        "careers.playstation.com",
+        "support.playstation.com",
+        "community.playstation.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -1322,7 +1472,13 @@
       "in_scope": [
         "*.yelp.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.yelp.com",
+        "blog.yelp.com",
+        "careers.yelp.com",
+        "support.yelp.com",
+        "community.yelp.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -1347,7 +1503,13 @@
         "*.reddit.com",
         "*.redditmedia.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.reddit.com",
+        "blog.reddit.com",
+        "careers.reddit.com",
+        "support.reddit.com",
+        "community.reddit.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -1372,7 +1534,13 @@
         "*.squareup.com",
         "*.cash.app"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.squareup.com",
+        "blog.squareup.com",
+        "careers.squareup.com",
+        "support.squareup.com",
+        "community.squareup.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -1397,7 +1565,13 @@
         "*.cloudflare.com",
         "*.cloudflarepartners.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.cloudflare.com",
+        "blog.cloudflare.com",
+        "careers.cloudflare.com",
+        "support.cloudflare.com",
+        "community.cloudflare.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -1421,7 +1595,13 @@
       "in_scope": [
         "*.stripe.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.stripe.com",
+        "blog.stripe.com",
+        "careers.stripe.com",
+        "support.stripe.com",
+        "community.stripe.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -1447,7 +1627,13 @@
         "api.twilio.com",
         "*.sip.*.twilio.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.twilio.com",
+        "blog.twilio.com",
+        "careers.twilio.com",
+        "support.twilio.com",
+        "community.twilio.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -1471,7 +1657,13 @@
       "in_scope": [
         "*.grammarly.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.grammarly.com",
+        "blog.grammarly.com",
+        "careers.grammarly.com",
+        "support.grammarly.com",
+        "community.grammarly.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -1496,7 +1688,13 @@
         "app.snapchat.com",
         "accounts.snapchat.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.snapchat.com",
+        "blog.snapchat.com",
+        "careers.snapchat.com",
+        "support.snapchat.com",
+        "community.snapchat.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -1522,7 +1720,13 @@
         "api.linkedin.com",
         "business.linkedin.com"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.linkedin.com",
+        "blog.linkedin.com",
+        "careers.linkedin.com",
+        "support.linkedin.com",
+        "community.linkedin.com"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",
@@ -1548,7 +1752,13 @@
         "www.firefox.com",
         "vpn.mozilla.org"
       ],
-      "out_of_scope": [],
+      "out_of_scope": [
+        "status.mozilla.org",
+        "blog.mozilla.org",
+        "careers.mozilla.org",
+        "support.mozilla.org",
+        "community.mozilla.org"
+      ],
       "excluded_vulnerabilities": [
         "mail_spoofing",
         "missing_dmarc",

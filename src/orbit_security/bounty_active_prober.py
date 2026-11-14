@@ -13,7 +13,10 @@ Deepens real-time active scanning across the 27 target programs:
 
 from __future__ import annotations
 
+import base64
+import binascii
 import os
+import re
 import sys
 import time
 import json
@@ -25,6 +28,236 @@ from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Any, Optional, Tuple, Set
 
 logger = logging.getLogger("orbit_security.bounty_active_prober")
+
+_JWT_CANDIDATE_RE = re.compile(r"^(eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]*)$")
+_SENTRY_PUBLIC_DSN_RE = re.compile(
+    r"https?://[A-Za-z0-9]{16,}@(?:[a-z0-9.-]*\.)?sentry\.io/\d+",
+    re.IGNORECASE,
+)
+_FIREBASE_WEB_CONFIG_MARKERS: Tuple[str, ...] = (
+    "firebaseconfig",
+    "authdomain",
+    "firebaseapp.com",
+    "messagingsenderid",
+    "measurementid",
+    "initializeapp",
+    "firebaseoptions",
+    "firebase_config",
+    "storagebucket",
+)
+_SENSITIVE_JWT_CLAIMS: Tuple[str, ...] = (
+    "sub",
+    "uid",
+    "user_id",
+    "userid",
+    "account_id",
+    "email",
+    "username",
+    "preferred_username",
+    "role",
+    "roles",
+    "scope",
+    "scopes",
+    "permissions",
+    "perms",
+    "groups",
+    "admin",
+    "is_admin",
+    "superuser",
+    "session_id",
+    "session",
+    "sid",
+    "jti",
+    "client_secret",
+    "api_key",
+    "access_token",
+    "refresh_token",
+    "auth_time",
+    "amr",
+    "azp",
+    "privs",
+    "privileges",
+    "entitlements",
+)
+_PLACEHOLDER_SUB_VALUES = frozenset({"", "null", "none", "anonymous", "anon", "guest", "public"})
+
+
+def decode_jwt_payload(token: str) -> Optional[Dict[str, Any]]:
+    """Base64url-decodes a JWT payload segment and returns its JSON object if valid."""
+    parts = str(token or "").strip().split(".")
+    if len(parts) != 3 or not parts[1]:
+        return None
+    payload_b64 = parts[1] + ("=" * (-len(payload_b64_part := parts[1]) % 4))
+    try:
+        raw_bytes = base64.urlsafe_b64decode(payload_b64.encode("ascii"))
+        parsed = json.loads(raw_bytes.decode("utf-8"))
+        return parsed if isinstance(parsed, dict) else None
+    except (binascii.Error, UnicodeDecodeError, json.JSONDecodeError, ValueError):
+        return None
+
+
+def _has_sensitive_jwt_claims(payload: Dict[str, Any]) -> bool:
+    """Return True if a decoded JWT payload carries non-trivial auth, session, or privilege claims."""
+    for claim in _SENSITIVE_JWT_CLAIMS:
+        if claim not in payload:
+            continue
+        val = payload[claim]
+        if val is None:
+            continue
+        if isinstance(val, bool):
+            if val:
+                return True
+            continue
+        if isinstance(val, (list, tuple, set, dict)):
+            if len(val) > 0:
+                return True
+            continue
+        if isinstance(val, str):
+            if val.strip().lower() not in _PLACEHOLDER_SUB_VALUES:
+                return True
+            continue
+        return True
+
+    for nested_key in ("user", "claims", "auth", "https://hasura.io/jwt/claims"):
+        nested = payload.get(nested_key)
+        if isinstance(nested, dict) and any(nested.values()):
+            return True
+    return False
+
+
+def classify_js_secret_fp_reason(
+    pattern_name: str = "",
+    matched_value: str = "",
+    context_snippet: str = "",
+    script_url: str = "",
+) -> Optional[str]:
+    """Return a non-empty false-positive reason for public/consent/telemetry JS tokens, or None."""
+    pat_low = (pattern_name or "").strip().lower()
+    val = (matched_value or "").strip()
+    val_low = val.lower()
+    ctx = context_snippet or ""
+    ctx_low = ctx.lower()
+    url_low = (script_url or "").strip().lower()
+    combined_low = f"{pat_low} {val_low} {ctx_low} {url_low}"
+
+    # 1. Mapbox public tokens (pk.*) including substring JWT matches preceded by 'pk.' in context
+    if val_low.startswith("pk.") or (val and f"pk.{val}" in ctx) or (
+        "mapbox" in combined_low and ("pk." in val_low or "pk." in ctx_low) and "sk." not in val_low
+    ):
+        return "mapbox_public_token"
+
+    # 2. Stripe publishable keys (pk_live_* / pk_test_*)
+    if val_low.startswith(("pk_live_", "pk_test_")) or (
+        "stripe" in combined_low and "publishable" in combined_low and not val_low.startswith(("sk_live_", "rk_live_"))
+    ):
+        return "stripe_publishable_key"
+
+    # 3. Sentry public DSNs
+    if "sntrys_" not in val_low and (
+        _SENTRY_PUBLIC_DSN_RE.search(val)
+        or (
+            "sentry" in combined_low
+            and ("ingest." in combined_low or "sentry.io/" in val_low)
+            and "@" in (val_low or ctx_low)
+        )
+    ):
+        return "sentry_public_dsn"
+
+    # 4. Firebase public client web config keys
+    if (val.startswith("AIza") or "firebase" in pat_low) and (
+        any(marker in ctx_low for marker in _FIREBASE_WEB_CONFIG_MARKERS)
+        or ("firebase" in ctx_low and ("apikey" in ctx_low or "projectid" in ctx_low))
+    ):
+        return "firebase_public_web_config"
+
+    # 5. Algolia search-only public keys (never drop admin/write keys)
+    if "admin" not in f"{pat_low} {ctx_low}" and (
+        ("algolia" in pat_low and any(tok in pat_low for tok in ("search", "public", "client")))
+        or (
+            "algolia" in combined_low
+            and any(
+                tok in ctx_low
+                for tok in (
+                    "searchonlyapikey",
+                    "search_only",
+                    "search-only",
+                    "algolia_search_key",
+                    "searchapikey",
+                    "algoliasearch(",
+                    "searchkey",
+                )
+            )
+        )
+    ):
+        return "algolia_search_only_key"
+
+    # 6. JWT payload inspection (OneTrust / Consent Hub / authenticationRequired:false / non-auth)
+    if "jwt" in pat_low or "json web token" in pat_low or _JWT_CANDIDATE_RE.match(val):
+        payload = decode_jwt_payload(val)
+        if payload is None:
+            return "malformed_unparseable_jwt"
+
+        payload_text = json.dumps(payload, ensure_ascii=False).lower()
+        if (
+            "otJwtVersion" in payload
+            or "consent hub" in str(payload.get("description", "")).lower()
+            or "onetrust" in payload_text
+            or "onetrust" in url_low
+            or "cookielaw.org" in url_low
+            or {"consentType", "purposes", "doubleOptIn", "dynamicCollectionPoint"}.intersection(payload.keys())
+        ):
+            return "onetrust_consent_jwt"
+
+        auth_req = payload.get("authenticationRequired")
+        if auth_req is False or (isinstance(auth_req, str) and auth_req.strip().lower() == "false"):
+            return "jwt_authentication_not_required"
+
+        meta_text = " ".join(
+            str(payload.get(k, "") or "") for k in ("type", "token_use", "purpose", "description", "aud")
+        ).lower()
+        if any(tok in meta_text for tok in ("consent", "telemetry", "analytics", "publishable")):
+            return "public_telemetry_or_consent_jwt"
+
+        if not _has_sensitive_jwt_claims(payload):
+            return "jwt_missing_sensitive_auth_claims"
+
+    return None
+
+
+def is_public_js_secret(
+    pattern_name: str = "",
+    matched_value: str = "",
+    context_snippet: str = "",
+    script_url: str = "",
+) -> bool:
+    """Return True if a candidate JS secret finding is a benign public, consent, or telemetry token."""
+    return bool(
+        classify_js_secret_fp_reason(
+            pattern_name=pattern_name,
+            matched_value=matched_value,
+            context_snippet=context_snippet,
+            script_url=script_url,
+        )
+    )
+
+
+def filter_and_deduplicate_js_secrets(findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Filter out benign/public JS tokens and deduplicate findings by (script_url, matched_value)."""
+    dedup_map: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    for item in findings or []:
+        if not isinstance(item, dict):
+            continue
+        reason = classify_js_secret_fp_reason(
+            pattern_name=str(item.get("pattern_name") or ""),
+            matched_value=str(item.get("matched_value") or ""),
+            context_snippet=str(item.get("context_snippet") or ""),
+            script_url=str(item.get("script_url") or ""),
+        )
+        if reason:
+            continue
+        key = (str(item.get("script_url") or "").strip(), str(item.get("matched_value") or "").strip())
+        dedup_map[key] = item
+    return list(dedup_map.values())
 
 WORKSPACE_ROOT = Path("A:/") if Path("A:/").exists() else Path("C:/AgyHut")
 ORBIT_SRC = WORKSPACE_ROOT / "projects" / "orbit-security" / "src"
@@ -547,6 +780,30 @@ class BountyActiveProber:
             "signature_count": len(signatures),
             "signatures": signatures,
         }
+
+    def filter_js_secrets(self, findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Filter benign/public tokens and deduplicate JS secret findings by (script_url, matched_value)."""
+        return filter_and_deduplicate_js_secrets(findings)
+
+    def scan_js_for_actionable_secrets(
+        self,
+        js_text: str,
+        script_url: str = "",
+        target: str = "",
+    ) -> List[Dict[str, Any]]:
+        """Scan JS bundle content and return deduplicated actionable secret findings."""
+        from orbit_security.tools.secret_harvester import SecretHarvester
+
+        harvester = SecretHarvester()
+        raw_findings = [
+            {
+                "target": target,
+                "script_url": script_url,
+                **m.to_dict(),
+            }
+            for m in harvester.scan_text(js_text)
+        ]
+        return self.filter_js_secrets(raw_findings)
 
     def verify_browser_surface(
         self,

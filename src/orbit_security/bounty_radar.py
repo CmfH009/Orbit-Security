@@ -325,6 +325,71 @@ class RulesOfEngagementEngine:
         return [t for t in targets if program.is_target_permitted(t)]
 
 
+_STAGING_EXACT_LABELS: frozenset[str] = frozenset({
+    "stage",
+    "staging",
+    "stg",
+    "test",
+    "testing",
+    "uat",
+    "preprod",
+    "pre-prod",
+    "nonprod",
+    "non-prod",
+})
+_STAGING_PREFIXES: Tuple[str, ...] = ("lhstage", "stage-", "staging-", "stg-", "test-")
+_STAGING_SUFFIXES: Tuple[str, ...] = ("-stage", "-staging", "-stg", "-test", "-uat", "-preprod")
+
+
+def _extract_clean_hostname(host_or_url: str) -> str:
+    raw = (host_or_url or "").strip().lower()
+    if not raw:
+        return ""
+    if "://" in raw:
+        raw = urlparse(raw).hostname or ""
+    else:
+        raw = raw.split("/", 1)[0].split(":", 1)[0]
+    return raw.strip(".")
+
+
+def is_staging_or_test_hostname(host: str) -> bool:
+    """Return True if host matches common non-production staging or test naming patterns."""
+    clean = _extract_clean_hostname(host)
+    if not clean:
+        return False
+    labels = [lbl for lbl in clean.split(".") if lbl]
+    if len(labels) < 3:
+        return False
+    for label in labels[:-2]:
+        if label in _STAGING_EXACT_LABELS:
+            return True
+        if label.startswith(_STAGING_PREFIXES) or label.endswith(_STAGING_SUFFIXES):
+            return True
+    return False
+
+
+def is_host_explicitly_in_scope(host: str, in_scope: List[str]) -> bool:
+    """Return True when host matches an explicit (non-generic-wildcard) in_scope entry."""
+    clean_host = _extract_clean_hostname(host)
+    if not clean_host:
+        return False
+    for entry in in_scope or []:
+        pattern = _extract_clean_hostname(str(entry))
+        if not pattern:
+            continue
+        if "*" not in pattern:
+            if clean_host == pattern:
+                return True
+            continue
+        # Wildcard pattern only counts as explicit for staging/test if the wildcard itself names a staging/test label
+        prefix_part = pattern.lstrip("*.")
+        if is_staging_or_test_hostname(f"sub.{prefix_part}" if prefix_part else "") and (
+            clean_host == prefix_part or clean_host.endswith(f".{prefix_part}")
+        ):
+            return True
+    return False
+
+
 @dataclass
 class BountyProgram:
     program_id: str
@@ -2062,6 +2127,21 @@ class BountyTakeoverSweeper:
                 scanner = SensitiveExposureScanner()
                 sens_vulns = scanner.scan_subdomain(target, program=program)
                 vulns.extend(sens_vulns)
+
+        # Downgrade findings on non-production staging/test hosts unless explicitly listed in in_scope
+        for vuln in vulns:
+            if (
+                is_staging_or_test_hostname(vuln.target_domain)
+                and not is_host_explicitly_in_scope(vuln.target_domain, program.in_scope)
+            ):
+                if vuln.bounty_viability not in {"CONDITIONAL", "INFORMATIONAL_LOW"}:
+                    vuln.bounty_viability = "CONDITIONAL"
+                note = (
+                    "[STAGING_OR_TEST_HOST: non-production host matched only via wildcard; "
+                    "verify explicit in-scope eligibility and production impact before H1 submission]"
+                )
+                if note not in (vuln.evidence or ""):
+                    vuln.evidence = f"{vuln.evidence} {note}".strip()
 
         program.last_scanned = datetime.datetime.now(datetime.timezone.utc).isoformat()
         return vulns

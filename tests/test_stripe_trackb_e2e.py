@@ -32,7 +32,7 @@ from http.server import HTTPServer
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from orbit_security import stripe_checkout
+from orbit_security import stripe_checkout, stripe_webhook
 from orbit_security.agency_retainer import (
     AgencyPortalRenderer,
     AgencyRetainer,
@@ -416,3 +416,63 @@ def test_run_stripe_webhook_cli_test_event_is_hermetic(tmp_path: Path):
     assert (cli_out / "agency_retainers.json").exists()
 
     assert _snapshot_files(live_targets) == before_live
+
+
+def test_stripe_webhook_env_fallback_is_hermetic_under_pytest(tmp_path: Path, monkeypatch):
+    monkeypatch.delenv("STRIPE_WEBHOOK_SECRET", raising=False)
+
+    # 1. Under pytest, default handler NEVER reads live PROJECT_ROOT / ".env"
+    default_handler = stripe_webhook.StripeWebhookHandler(
+        subscriber_manager=SubscriberManager(subscribers_file=tmp_path / "subs_default.json"),
+        sla_generator=SlaCertificateGenerator(output_dir=tmp_path / "certs_default"),
+        fleet_registry=FleetRegistry(data_path=tmp_path / "clients_default.json"),
+        retainer_manager=AgencyRetainerManager(data_path=tmp_path / "retainers_default.json"),
+    )
+    assert default_handler.webhook_secret is None
+
+    # 2. Hermetic temp .env file resolves STRIPE_WEBHOOK_SECRET cleanly when os.environ is unset
+    fake_env = tmp_path / ".env"
+    fake_env.write_text(
+        "# Temp webhook test config\nSTRIPE_WEBHOOK_SECRET=whsec_tmp_fallback_verified\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(stripe_webhook, "DEFAULT_ENV_FILE", fake_env)
+
+    env_fallback_handler = stripe_webhook.StripeWebhookHandler(
+        subscriber_manager=SubscriberManager(subscribers_file=tmp_path / "subs_env.json"),
+        sla_generator=SlaCertificateGenerator(output_dir=tmp_path / "certs_env"),
+        fleet_registry=FleetRegistry(data_path=tmp_path / "clients_env.json"),
+        retainer_manager=AgencyRetainerManager(data_path=tmp_path / "retainers_env.json"),
+    )
+    assert env_fallback_handler.webhook_secret == "whsec_tmp_fallback_verified"
+
+    # Non-pytest runtime mode resolves PROJECT_ROOT / ".env" cleanly
+    monkeypatch.setattr(stripe_webhook, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(stripe_webhook, "is_pytest_active", lambda: False)
+    assert stripe_webhook._resolve_webhook_secret() == "whsec_tmp_fallback_verified"
+    monkeypatch.undo()
+    monkeypatch.delenv("STRIPE_WEBHOOK_SECRET", raising=False)
+    monkeypatch.setattr(stripe_webhook, "DEFAULT_ENV_FILE", fake_env)
+
+    # 3. Process os.environ takes precedence over .env fallback, and explicit arg beats both
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_os_env_priority")
+    assert (
+        stripe_webhook.StripeWebhookHandler(
+            subscriber_manager=SubscriberManager(subscribers_file=tmp_path / "subs_os.json"),
+            sla_generator=SlaCertificateGenerator(output_dir=tmp_path / "certs_os"),
+            fleet_registry=FleetRegistry(data_path=tmp_path / "clients_os.json"),
+            retainer_manager=AgencyRetainerManager(data_path=tmp_path / "retainers_os.json"),
+        ).webhook_secret
+        == "whsec_os_env_priority"
+    )
+    assert (
+        stripe_webhook.StripeWebhookHandler(
+            webhook_secret="whsec_explicit_priority",
+            subscriber_manager=SubscriberManager(subscribers_file=tmp_path / "subs_exp.json"),
+            sla_generator=SlaCertificateGenerator(output_dir=tmp_path / "certs_exp"),
+            fleet_registry=FleetRegistry(data_path=tmp_path / "clients_exp.json"),
+            retainer_manager=AgencyRetainerManager(data_path=tmp_path / "retainers_exp.json"),
+        ).webhook_secret
+        == "whsec_explicit_priority"
+    )
+

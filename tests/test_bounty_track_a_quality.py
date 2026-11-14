@@ -607,3 +607,320 @@ class TestRound3DisclosureVaultReadiness:
             assert expected_baseline.issubset(excl), (
                 f"Program {prog.get('program_id')} missing baseline exclusions: {expected_baseline - excl}"
             )
+
+
+def _build_test_jwt(payload_obj: dict) -> str:
+    import base64 as _b64
+
+    def _enc(obj: dict) -> str:
+        raw = json.dumps(obj, separators=(",", ":")).encode("utf-8")
+        return _b64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+    header = _enc({"alg": "HS256", "typ": "JWT"})
+    payload = _enc(payload_obj)
+    return f"{header}.{payload}.SigPart1234567890"
+
+
+class TestRound4JsSecretFilterAndProgramHygiene:
+    """Round 4 TDD verification for JS secret FP filtering, dedup, out_of_scope, and staging host downgrades."""
+
+    REPO_ROOT = Path(__file__).resolve().parent.parent
+
+    def test_onetrust_and_non_auth_jwt_rejected_while_auth_jwt_kept(self):
+        from orbit_security.bounty_active_prober import (
+            classify_js_secret_fp_reason,
+            filter_and_deduplicate_js_secrets,
+        )
+
+        onetrust_jwt = _build_test_jwt({
+            "otJwtVersion": 1,
+            "tenantId": "42dec10d-7eac-4f9f-af3b-e0072302f8ff",
+            "sub": None,
+            "iss": None,
+            "description": "Collection point for use with Consent Hub",
+            "authenticationRequired": False,
+        })
+        unauth_jwt = _build_test_jwt({
+            "iss": "https://cdn.example.com",
+            "authenticationRequired": False,
+            "sub": "anon",
+        })
+        claimsless_jwt = _build_test_jwt({
+            "iss": "https://config.example.com",
+            "iat": 1700000000,
+            "appVersion": "2.4.1",
+        })
+        auth_jwt = _build_test_jwt({
+            "sub": "usr_admin_42",
+            "email": "admin@example.com",
+            "role": "admin",
+            "scope": "org:write",
+        })
+
+        assert classify_js_secret_fp_reason(
+            pattern_name="JSON Web Token (JWT)",
+            matched_value=onetrust_jwt,
+            script_url="https://atl-onetrust-wrapper.atlassian.com/assets/atl-onetrust-wrapper.min.js",
+        ) is not None
+        assert classify_js_secret_fp_reason(
+            pattern_name="JSON Web Token (JWT)",
+            matched_value=unauth_jwt,
+        ) == "jwt_authentication_not_required"
+        assert classify_js_secret_fp_reason(
+            pattern_name="JSON Web Token (JWT)",
+            matched_value=claimsless_jwt,
+        ) == "jwt_missing_sensitive_auth_claims"
+        assert classify_js_secret_fp_reason(
+            pattern_name="JSON Web Token (JWT)",
+            matched_value=auth_jwt,
+            script_url="https://app.example.com/bundle.js",
+        ) is None
+
+        kept = filter_and_deduplicate_js_secrets([
+            {
+                "target": "https://atlassian.com",
+                "script_url": "https://atl-onetrust-wrapper.atlassian.com/assets/atl-onetrust-wrapper.min.js",
+                "pattern_name": "JSON Web Token (JWT)",
+                "matched_value": onetrust_jwt,
+                "context_snippet": "",
+            },
+            {
+                "target": "https://app.example.com",
+                "script_url": "https://app.example.com/bundle.js",
+                "pattern_name": "JSON Web Token (JWT)",
+                "matched_value": auth_jwt,
+                "context_snippet": "",
+            },
+        ])
+        assert len(kept) == 1
+        assert kept[0]["matched_value"] == auth_jwt
+
+    def test_public_publishable_client_tokens_rejected_while_real_secrets_kept(self):
+        from orbit_security.bounty_active_prober import (
+            BountyActiveProber,
+            classify_js_secret_fp_reason,
+        )
+
+        stripe_pk = "".join(["pk_", "live_", "51AbCdEfGhIjKlMnOpQrStUvWx"])
+        stripe_pk_test = "".join(["pk_", "test_", "51AbCdEfGhIjKlMnOpQrStUvWx"])
+        stripe_sk = "".join(["sk_", "live_", "51AbcDefGhIjKlMnOpQrStUvWxYz1234"])
+        sentry_dsn = "https://0123456789abcdef0123456789abcdef@o12345.ingest.sentry.io/67890"
+        sentry_auth = "".join(["sntrys_", "eyJpYXQiOjE3MDAwMDAwMDB9"])
+        firebase_key = "AIza" + ("A" * 35)
+        gcp_key = "AIza" + ("B" * 35)
+        mapbox_payload_jwt = _build_test_jwt({"u": "mapboxuser", "a": "pk"})
+        mapbox_full = f"pk.{mapbox_payload_jwt}"
+        mapbox_secret = f"sk.{_build_test_jwt({'sub': 'svc_tiles', 'scope': 'tiles:write'})}"
+
+        assert classify_js_secret_fp_reason("Stripe Key", stripe_pk) == "stripe_publishable_key"
+        assert classify_js_secret_fp_reason("Stripe Key", stripe_pk_test) == "stripe_publishable_key"
+        assert classify_js_secret_fp_reason("Stripe Live Secret Key", stripe_sk) is None
+
+        assert classify_js_secret_fp_reason("Sentry DSN", sentry_dsn) == "sentry_public_dsn"
+        assert classify_js_secret_fp_reason("Sentry Auth Token", sentry_auth) is None
+
+        assert classify_js_secret_fp_reason(
+            "Google Cloud API Key",
+            firebase_key,
+            context_snippet=f'const firebaseConfig = {{ apiKey: "{firebase_key}", authDomain: "demo.firebaseapp.com" }};',
+        ) == "firebase_public_web_config"
+        assert classify_js_secret_fp_reason(
+            "Google Cloud API Key",
+            gcp_key,
+            context_snippet=f'const mapsKey = "{gcp_key}";',
+        ) is None
+
+        assert classify_js_secret_fp_reason(
+            "Algolia API Key",
+            "search1234567890abcdef",
+            context_snippet='const client = algoliasearch("APPID1", "search1234567890abcdef");',
+        ) == "algolia_search_only_key"
+        assert classify_js_secret_fp_reason(
+            "Algolia Admin Key",
+            "adminkey1234567890abcd",
+            context_snippet='const adminApiKey = "adminkey1234567890abcd";',
+        ) is None
+
+        # Validate both full pk.eyJ token and SecretHarvester substring match preceded by pk.
+        assert classify_js_secret_fp_reason("Mapbox Token", mapbox_full) == "mapbox_public_token"
+        assert classify_js_secret_fp_reason("Secret", mapbox_secret) is None
+
+        prober = BountyActiveProber()
+        js_bundle = (
+            f'mapboxgl.accessToken = "{mapbox_full}";\n'
+            f'const stripe = Stripe("{stripe_sk}");\n'
+            f'const fb = {{ apiKey: "{firebase_key}", authDomain: "demo.firebaseapp.com" }};\n'
+        )
+        findings = prober.scan_js_for_actionable_secrets(
+            js_bundle,
+            script_url="https://app.example.com/static/main.js",
+            target="https://app.example.com",
+        )
+        matched_vals = [f["matched_value"] for f in findings]
+        assert matched_vals == [stripe_sk]
+
+    def test_harvest_target_secrets_filters_fps_and_deduplicates_by_script_url(self, tmp_path):
+        from scripts.mine_js_secrets import harvest_target_secrets
+
+        onetrust_jwt = _build_test_jwt({
+            "otJwtVersion": 1,
+            "description": "Collection point for use with Consent Hub",
+            "authenticationRequired": False,
+            "sub": None,
+        })
+        real_sk = "".join(["sk_", "live_", "99XyZaBcDeFgHiJkLmNoPqRsTuVwXyZ1"])
+        shared_js = "https://cdn.example.com/shared-bundle.js"
+        out_path = tmp_path / "js_leaked_secrets.json"
+
+        # Seed existing staged file with a stale OneTrust duplicate
+        out_path.write_text(
+            json.dumps([
+                {
+                    "target": "https://legacy.example.com",
+                    "script_url": "https://atl-onetrust-wrapper.atlassian.com/assets/atl-onetrust-wrapper.min.js",
+                    "pattern_name": "JSON Web Token (JWT)",
+                    "matched_value": onetrust_jwt,
+                    "redacted_value": "eyJh...w5c",
+                    "confidence": "Medium",
+                    "context_snippet": "",
+                }
+            ]),
+            encoding="utf-8",
+        )
+
+        class _FakeResp:
+            def __init__(self, status_code: int, text: str):
+                self.status_code = status_code
+                self.text = text
+
+        class _FakeSession:
+            def __init__(self):
+                self.headers = {}
+
+            def get(self, url, timeout=8, verify=False):
+                if url == shared_js:
+                    return _FakeResp(
+                        200,
+                        f'const consent = "{onetrust_jwt}"; const k = "{real_sk}";',
+                    )
+                return _FakeResp(200, f'<html><script src="{shared_js}"></script></html>')
+
+        with patch("scripts.mine_js_secrets.create_guarded_requests_session", return_value=_FakeSession()):
+            merged = harvest_target_secrets(
+                targets=["https://a.example.com", "https://b.example.com"],
+                output_path=out_path,
+            )
+
+        assert len(merged) == 1
+        assert merged[0]["script_url"] == shared_js
+        assert merged[0]["matched_value"] == real_sk
+        assert b"\r" not in out_path.read_bytes()
+
+    def test_staged_js_leaked_secrets_json_has_no_onetrust_false_positives(self):
+        from orbit_security.bounty_active_prober import classify_js_secret_fp_reason
+
+        staged_path = self.REPO_ROOT / "data" / "hackerone_staging" / "js_leaked_secrets.json"
+        findings = json.loads(staged_path.read_text(encoding="utf-8"))
+        assert findings == []
+        for item in findings:
+            assert classify_js_secret_fp_reason(
+                pattern_name=item.get("pattern_name", ""),
+                matched_value=item.get("matched_value", ""),
+                context_snippet=item.get("context_snippet", ""),
+                script_url=item.get("script_url", ""),
+            ) is None
+
+    def test_all_45_bounty_programs_populate_non_empty_out_of_scope(self):
+        catalog_path = self.REPO_ROOT / "data" / "bounty_programs.json"
+        programs = json.loads(catalog_path.read_text(encoding="utf-8")).get("programs", [])
+        assert len(programs) == 45
+        by_id = {p["program_id"]: p for p in programs}
+
+        # Preserve existing custom non-empty out_of_scope entries
+        assert by_id["shopify"]["out_of_scope"] == ["community.shopify.com"]
+        assert "everynoise.com" in by_id["spotify"]["out_of_scope"]
+        assert "*.betfair.com.au" in by_id["flutteruki"]["out_of_scope"]
+
+        for prog in programs:
+            oos = prog.get("out_of_scope", [])
+            assert isinstance(oos, list) and len(oos) > 0, (
+                f"Program {prog.get('program_id')} has empty out_of_scope"
+            )
+        assert b"\r" not in catalog_path.read_bytes()
+
+    def test_is_staging_or_test_hostname_classifier_and_sweep_downgrade(self):
+        from orbit_security.bounty_radar import (
+            BountyProgram,
+            BountyTakeoverSweeper,
+            is_staging_or_test_hostname,
+        )
+
+        for staging_host in (
+            "lhstage.example.com",
+            "realtime-test.example.com",
+            "test-vendedores.mercadolibre.com",
+            "api.stage.example.com",
+            "checkout-stage.shopify.com",
+            "billing-test.stripe.com",
+            "staging.gitlab.com",
+        ):
+            assert is_staging_or_test_hostname(staging_host) is True, staging_host
+
+        for prod_host in (
+            "api.example.com",
+            "stagecoach.com",
+            "latest.example.com",
+            "attest.corp.com",
+            "backstage.spotify.com",
+            "sub.test.com",
+            "test.com",
+        ):
+            assert is_staging_or_test_hostname(prod_host) is False, prod_host
+
+        sweeper = BountyTakeoverSweeper()
+        wildcard_prog = BountyProgram(
+            program_id="wildcorp",
+            name="Wild Corp",
+            platform="hackerone",
+            in_scope=["*.wildcorp.com"],
+        )
+        explicit_prog = BountyProgram(
+            program_id="explicitcorp",
+            name="Explicit Corp",
+            platform="hackerone",
+            in_scope=["lhstage.explicitcorp.com", "*.explicitcorp.com"],
+        )
+
+        # Avoid real DNS/HTTP by mocking sub-probes inside sweep_program
+        with patch.object(sweeper, "expand_wildcards", return_value=["lhstage.wildcorp.com", "api.wildcorp.com"]):
+            with patch.object(sweeper, "check_subdomain_takeover", return_value=None):
+                with patch.object(
+                    sweeper,
+                    "audit_graphql_introspection",
+                    return_value={
+                        "vulnerable": True,
+                        "has_sensitive_schema": True,
+                        "evidence": "GraphQL mutation + user schema exposed",
+                    },
+                ):
+                    wild_vulns = sweeper.sweep_program(wildcard_prog, audit_graphql=True)
+
+        wild_by_host = {v.target_domain: v for v in wild_vulns}
+        assert wild_by_host["lhstage.wildcorp.com"].bounty_viability == "CONDITIONAL"
+        assert "[STAGING_OR_TEST_HOST:" in wild_by_host["lhstage.wildcorp.com"].evidence
+        assert wild_by_host["api.wildcorp.com"].bounty_viability == "HIGH_CONFIDENCE"
+
+        with patch.object(sweeper, "expand_wildcards", return_value=["lhstage.explicitcorp.com"]):
+            with patch.object(sweeper, "check_subdomain_takeover", return_value=None):
+                with patch.object(
+                    sweeper,
+                    "audit_graphql_introspection",
+                    return_value={
+                        "vulnerable": True,
+                        "has_sensitive_schema": True,
+                        "evidence": "GraphQL mutation + user schema exposed",
+                    },
+                ):
+                    explicit_vulns = sweeper.sweep_program(explicit_prog, audit_graphql=True)
+
+        assert explicit_vulns[0].bounty_viability == "HIGH_CONFIDENCE"

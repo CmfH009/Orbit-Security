@@ -12,6 +12,9 @@ import json
 import os
 import re
 import sys
+import tempfile
+import time
+import urllib.parse
 import zipfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -119,13 +122,57 @@ def _check_landing_docs_parity(repo_root: Path) -> Dict[str, Any]:
     }
 
 
-def _check_stripe_env() -> Dict[str, Any]:
-    api_key_set = bool(os.getenv("STRIPE_SECRET_KEY") or os.getenv("STRIPE_API_KEY"))
-    webhook_secret_set = bool(os.getenv("STRIPE_WEBHOOK_SECRET"))
+def _load_dotenv_values(repo_root: Path) -> Dict[str, str]:
+    """Parse key=value pairs from repo_root/.env without mutating os.environ."""
+    env_file = repo_root / ".env"
+    if not env_file.is_file():
+        return {}
+    parsed: Dict[str, str] = {}
+    try:
+        content = env_file.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return {}
+    for raw_line in content.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[7:].strip()
+        if "=" not in line:
+            continue
+        key, val = line.split("=", 1)
+        key = key.strip()
+        if not key:
+            continue
+        val = val.strip()
+        if len(val) >= 2 and val[0] == val[-1] and val[0] in ("'", '"'):
+            val = val[1:-1]
+        else:
+            val = re.sub(r"\s+#.*$", "", val).strip()
+        parsed[key] = val
+    return parsed
+
+
+def _resolve_env_or_dotenv(key: str, dotenv_values: Dict[str, str]) -> Optional[str]:
+    """Resolve key from os.environ first, falling back to parsed .env values."""
+    if key in os.environ:
+        val = os.environ.get(key)
+        return val if val else None
+    val = dotenv_values.get(key)
+    return val if val else None
+
+
+def _check_stripe_env(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
+    dotenv_values = _load_dotenv_values(repo_root)
+    api_key_set = bool(
+        _resolve_env_or_dotenv("STRIPE_SECRET_KEY", dotenv_values)
+        or _resolve_env_or_dotenv("STRIPE_API_KEY", dotenv_values)
+    )
+    webhook_secret_set = bool(_resolve_env_or_dotenv("STRIPE_WEBHOOK_SECRET", dotenv_values))
     prices = {
-        "STRIPE_PRICE_STARTER": bool(os.getenv("STRIPE_PRICE_STARTER")),
-        "STRIPE_PRICE_SCALE": bool(os.getenv("STRIPE_PRICE_SCALE")),
-        "STRIPE_PRICE_ENTERPRISE": bool(os.getenv("STRIPE_PRICE_ENTERPRISE")),
+        "STRIPE_PRICE_STARTER": bool(_resolve_env_or_dotenv("STRIPE_PRICE_STARTER", dotenv_values)),
+        "STRIPE_PRICE_SCALE": bool(_resolve_env_or_dotenv("STRIPE_PRICE_SCALE", dotenv_values)),
+        "STRIPE_PRICE_ENTERPRISE": bool(_resolve_env_or_dotenv("STRIPE_PRICE_ENTERPRISE", dotenv_values)),
     }
     return {
         "api_key_configured": api_key_set,
@@ -177,12 +224,21 @@ def _check_bounty_catalog(data_dir: Path) -> Dict[str, Any]:
     unique_ids = set(ids)
     cash_count = sum(1 for p in programs if isinstance(p, dict) and p.get("bounty_tier") == "cash")
     active_count = sum(1 for p in programs if isinstance(p, dict) and p.get("state", "active") != "paused")
+    out_of_scope_populated = sum(
+        1
+        for p in programs
+        if isinstance(p, dict)
+        and isinstance(p.get("out_of_scope"), list)
+        and any(str(item).strip() for item in p.get("out_of_scope", []))
+    )
     return {
         "total_entries": len(ids),
         "unique_programs": len(unique_ids),
         "duplicate_count": len(ids) - len(unique_ids),
         "cash_tier_count": cash_count,
         "active_count": active_count,
+        "out_of_scope_populated": out_of_scope_populated,
+        "out_of_scope_total": len(ids),
     }
 
 
@@ -484,13 +540,294 @@ def _check_track_b_funnel(repo_root: Path, data_dir: Path) -> Dict[str, Any]:
     }
 
 
-def run_readiness_audit(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
+def _classify_stripe_key_prefix(raw_value: Optional[str]) -> str:
+    """Return a non-secret prefix label for a Stripe key or webhook secret."""
+    val = str(raw_value or "").strip()
+    if not val:
+        return "unset"
+    for prefix in ("sk_live_", "sk_test_", "rk_live_", "rk_test_", "pk_live_", "pk_test_", "whsec_"):
+        if val.startswith(prefix):
+            return f"{prefix}*"
+    return "other_non_empty"
+
+
+def _is_within(child: Path, parent: Path) -> bool:
+    try:
+        return child.resolve().is_relative_to(parent.resolve())
+    except Exception:
+        return False
+
+
+class _HermeticJsonResponse:
+    def __init__(self, payload: Dict[str, Any], status: int = 200):
+        self._body = json.dumps(payload).encode("utf-8")
+        self.status = status
+
+    def read(self) -> bytes:
+        return self._body
+
+    def __enter__(self) -> "_HermeticJsonResponse":
+        return self
+
+    def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> bool:
+        return False
+
+
+def verify_stripe_cutover(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
+    """Run a fast hermetic Track B Stripe checkout + webhook provisioning dry-run.
+
+    Executes completely inside a TemporaryDirectory with a stubbed HTTP opener
+    and isolated Blackboard/data stores so zero network calls or writes to live
+    data/* or docs/portals/* occur, and never prints raw secret values.
+    """
+    t0 = time.perf_counter()
+
+    dotenv_values = _load_dotenv_values(repo_root)
+    orig_secret_key = _resolve_env_or_dotenv("STRIPE_SECRET_KEY", dotenv_values)
+    orig_api_key = _resolve_env_or_dotenv("STRIPE_API_KEY", dotenv_values)
+    orig_webhook_secret = _resolve_env_or_dotenv("STRIPE_WEBHOOK_SECRET", dotenv_values)
+    env_key_prefixes = {
+        "STRIPE_SECRET_KEY": _classify_stripe_key_prefix(orig_secret_key),
+        "STRIPE_API_KEY": _classify_stripe_key_prefix(orig_api_key),
+        "STRIPE_WEBHOOK_SECRET": _classify_stripe_key_prefix(orig_webhook_secret),
+    }
+    sk_prefixes = (env_key_prefixes["STRIPE_SECRET_KEY"], env_key_prefixes["STRIPE_API_KEY"])
+    if any(p.startswith(("sk_live_", "rk_live_")) for p in sk_prefixes):
+        stripe_key_mode = "live"
+    elif any(p.startswith(("sk_test_", "rk_test_")) for p in sk_prefixes):
+        stripe_key_mode = "test"
+    elif all(p == "unset" for p in sk_prefixes):
+        stripe_key_mode = "unset"
+    else:
+        stripe_key_mode = "other"
+
+    import orbit_security.blackboard as bb_mod
+    from orbit_security.agency_retainer import AgencyRetainerManager, RetainerTier
+    from orbit_security.deal_desk import RetainerDealDeskConcierge
+    from orbit_security.fleet import FleetRegistry
+    from orbit_security.stripe_checkout import create_checkout_session, get_price_id
+    from orbit_security.stripe_webhook import (
+        SlaCertificateGenerator,
+        StripeWebhookHandler,
+        SubscriberManager,
+        generate_stripe_signature,
+    )
+
+    orig_global_bb = bb_mod._GLOBAL_BLACKBOARD
+    orig_publish_event = bb_mod.publish_event
+    orig_env = {
+        key: os.environ.get(key)
+        for key in ("STRIPE_SECRET_KEY", "STRIPE_API_KEY", "ORBIT_BLACKBOARD_DB", "ORBIT_NOVA_BRAIN_ENABLED")
+    }
+
+    temp_ctx = tempfile.TemporaryDirectory(prefix="orbit_cutover_dryrun_")
+    try:
+        tmp_root = Path(temp_ctx.name)
+        bb_db_path = tmp_root / "blackboard.db"
+        temp_bb = bb_mod.Blackboard(db_path=bb_db_path, nova_brain_url="")
+        bb_mod._GLOBAL_BLACKBOARD = temp_bb
+
+        def _isolated_publish_event(
+            event_type: str,
+            payload: dict,
+            source: str = "orbit",
+            topic: str = "telemetry",
+        ) -> int:
+            return temp_bb.publish(event_type, payload, source=source, topic=topic)
+
+        bb_mod.publish_event = _isolated_publish_event
+        os.environ["ORBIT_BLACKBOARD_DB"] = str(bb_db_path)
+        os.environ["ORBIT_NOVA_BRAIN_ENABLED"] = "0"
+        # Use a fixed local dummy token so no real key ever enters synthetic headers.
+        os.environ["STRIPE_SECRET_KEY"] = "sk_test_orbit_cutover_dryrun_000000"
+        os.environ.pop("STRIPE_API_KEY", None)
+
+        captured_checkout_req: Dict[str, Any] = {}
+
+        def _fake_http_open(req: Any, timeout: int = 20) -> _HermeticJsonResponse:
+            headers = {str(k).lower(): str(v) for k, v in getattr(req, "headers", {}).items()}
+            auth_val = headers.get("authorization", "")
+            raw_data = getattr(req, "data", b"") or b""
+            captured_checkout_req["url"] = str(getattr(req, "full_url", ""))
+            captured_checkout_req["auth_bearer_prefix"] = auth_val[:14]
+            captured_checkout_req["form"] = urllib.parse.parse_qs(raw_data.decode("utf-8"))
+            captured_checkout_req["timeout"] = timeout
+            return _HermeticJsonResponse(
+                {
+                    "id": "cs_test_cutover_dryrun_001",
+                    "url": "https://checkout.stripe.com/c/pay/cs_test_cutover_dryrun_001",
+                }
+            )
+
+        checkout_res = create_checkout_session(
+            agency_id="cutover-dryrun-agency",
+            agency_name="Cutover Dryrun Agency",
+            tier=RetainerTier.SCALE,
+            contact_email="cutover@dryrun.example",
+            website="https://cutover-dryrun.example",
+            domain="cutover-dryrun.example",
+            client_reference_id="cutover_ref_001",
+            http_open=_fake_http_open,
+        )
+
+        expected_price_id = get_price_id(RetainerTier.SCALE)
+        form = captured_checkout_req.get("form", {})
+        checkout_session_fields_verified = (
+            checkout_res.get("id") == "cs_test_cutover_dryrun_001"
+            and checkout_res.get("url") == "https://checkout.stripe.com/c/pay/cs_test_cutover_dryrun_001"
+            and captured_checkout_req.get("url") == "https://api.stripe.com/v1/checkout/sessions"
+            and captured_checkout_req.get("auth_bearer_prefix") == "Bearer sk_test"
+            and form.get("mode") == ["subscription"]
+            and form.get("line_items[0][price]") == [expected_price_id]
+            and form.get("customer_email") == ["cutover@dryrun.example"]
+            and form.get("client_reference_id") == ["cutover_ref_001"]
+            and form.get("metadata[agency_id]") == ["cutover-dryrun-agency"]
+            and form.get("metadata[tier]") == [RetainerTier.SCALE.value]
+            and form.get("metadata[domain]") == ["cutover-dryrun.example"]
+        )
+
+        subscribers_file = tmp_root / "subscribers.json"
+        certs_dir = tmp_root / "certificates"
+        clients_file = tmp_root / "clients.json"
+        retainers_file = tmp_root / "agency_retainers.json"
+        portals_dir = tmp_root / "portals"
+        bundles_dir = tmp_root / "client_bundles"
+        sim_webhook_secret = "whsec_orbit_cutover_dryrun_local_only"
+
+        handler = StripeWebhookHandler(
+            webhook_secret=sim_webhook_secret,
+            subscriber_manager=SubscriberManager(subscribers_file=subscribers_file),
+            sla_generator=SlaCertificateGenerator(output_dir=certs_dir),
+            fleet_registry=FleetRegistry(data_path=clients_file),
+            retainer_manager=AgencyRetainerManager(data_path=retainers_file),
+            deal_desk=RetainerDealDeskConcierge(
+                workspace_root=tmp_root,
+                portals_dir=portals_dir,
+                bundles_dir=bundles_dir,
+            ),
+        )
+
+        event_payload = {
+            "id": "evt_cutover_dryrun_001",
+            "type": "checkout.session.completed",
+            "data": {
+                "object": {
+                    "id": "cs_test_cutover_dryrun_001",
+                    "customer": "cus_cutover_dryrun_001",
+                    "subscription": "sub_cutover_dryrun_001",
+                    "client_reference_id": "cutover_ref_001",
+                    "customer_details": {
+                        "email": "cutover@dryrun.example",
+                        "name": "Cutover Dryrun Agency",
+                    },
+                    "metadata": {
+                        "agency_id": "cutover-dryrun-agency",
+                        "agency_name": "Cutover Dryrun Agency",
+                        "tier": "Scale",
+                        "domain": "cutover-dryrun.example",
+                        "client_reference_id": "cutover_ref_001",
+                    },
+                    "amount_total": 29900,
+                    "currency": "usd",
+                    "payment_status": "paid",
+                }
+            },
+        }
+        payload_bytes = json.dumps(event_payload).encode("utf-8")
+        sig_header = generate_stripe_signature(payload_bytes, sim_webhook_secret)
+        webhook_result = handler.handle_webhook(payload_bytes, sig_header)
+
+        webhook_status = str(webhook_result.get("status", ""))
+        sub_raw = _load_json_safe(subscribers_file, [])
+        subscriber_provisioned = (
+            subscribers_file.is_file()
+            and isinstance(sub_raw, (list, dict))
+            and bool(webhook_result.get("subscriber"))
+            and ("cutover@dryrun.example" in json.dumps(sub_raw))
+        )
+
+        sla_path_str = webhook_result.get("sla_certificate_path")
+        sla_path = Path(sla_path_str) if sla_path_str else tmp_root / "__missing_sla__"
+        sla_pdf_valid = (
+            sla_path.is_file()
+            and _is_within(sla_path, tmp_root)
+            and sla_path.read_bytes().startswith(b"%PDF")
+        )
+
+        bundle_path_str = webhook_result.get("bundle_path")
+        bundle_path = Path(bundle_path_str) if bundle_path_str else tmp_root / "__missing_bundle__"
+        bundle_sha256 = str(webhook_result.get("bundle_sha256") or "")
+        bundle_zip_sha256_valid = False
+        if bundle_path.is_file() and _is_within(bundle_path, tmp_root) and len(bundle_sha256) == 64:
+            actual_sha256 = hashlib.sha256(bundle_path.read_bytes()).hexdigest()
+            if actual_sha256 == bundle_sha256 and zipfile.is_zipfile(bundle_path):
+                with zipfile.ZipFile(bundle_path, "r") as zf:
+                    bundle_zip_sha256_valid = len(zf.namelist()) > 0 and zf.testzip() is None
+
+        portal_path_str = webhook_result.get("portal_path")
+        portal_path = Path(portal_path_str) if portal_path_str else tmp_root / "__missing_portal__"
+        portal_html_generated = (
+            portal_path.is_file()
+            and _is_within(portal_path, tmp_root)
+            and "Cutover Dryrun Agency" in portal_path.read_text(encoding="utf-8", errors="ignore")
+        )
+
+        isolated_paths_verified = (
+            _is_within(subscribers_file, tmp_root)
+            and _is_within(clients_file, tmp_root)
+            and _is_within(retainers_file, tmp_root)
+            and _is_within(sla_path, tmp_root)
+            and _is_within(bundle_path, tmp_root)
+            and _is_within(portal_path, tmp_root)
+        )
+
+        ok = all(
+            [
+                checkout_session_fields_verified,
+                webhook_status == "PROVISIONED",
+                subscriber_provisioned,
+                sla_pdf_valid,
+                bundle_zip_sha256_valid,
+                portal_html_generated,
+                isolated_paths_verified,
+            ]
+        )
+        duration_ms = round((time.perf_counter() - t0) * 1000.0, 2)
+        return {
+            "ok": ok,
+            "duration_ms": duration_ms,
+            "stripe_key_mode": stripe_key_mode,
+            "env_key_prefixes": env_key_prefixes,
+            "checkout_session_fields_verified": checkout_session_fields_verified,
+            "webhook_status": webhook_status,
+            "subscriber_provisioned": subscriber_provisioned,
+            "sla_pdf_valid": sla_pdf_valid,
+            "bundle_zip_sha256_valid": bundle_zip_sha256_valid,
+            "portal_html_generated": portal_html_generated,
+            "isolated_paths_verified": isolated_paths_verified,
+            "live_data_untouched": True,
+        }
+    finally:
+        bb_mod._GLOBAL_BLACKBOARD = orig_global_bb
+        bb_mod.publish_event = orig_publish_event
+        for key, prev_val in orig_env.items():
+            if prev_val is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = prev_val
+        try:
+            temp_ctx.cleanup()
+        except OSError:
+            pass
+
+
+def run_readiness_audit(repo_root: Path = REPO_ROOT, verify_cutover: bool = False) -> Dict[str, Any]:
     """Run all read-only Orbit Security readiness checks and return structured metrics."""
     data_dir = repo_root / "data"
     kyc_status = os.getenv("ORBIT_KYC_STATUS", "PENDING_PHYSICAL_ID").strip() or "PENDING_PHYSICAL_ID"
 
     parity = _check_landing_docs_parity(repo_root)
-    stripe = _check_stripe_env()
+    stripe = _check_stripe_env(repo_root)
     subscribers = _check_subscribers(data_dir)
     clients = _check_clients(data_dir)
     catalog = _check_bounty_catalog(data_dir)
@@ -521,6 +858,12 @@ def run_readiness_audit(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
     if kyc_status != "VERIFIED":
         blockers.append(f"KYC_PAYOUT_{kyc_status}")
 
+    stripe_cutover_dry_run: Optional[Dict[str, Any]] = None
+    if verify_cutover:
+        stripe_cutover_dry_run = verify_stripe_cutover(repo_root=repo_root)
+        if not stripe_cutover_dry_run.get("ok"):
+            blockers.append("STRIPE_CUTOVER_DRY_RUN_FAILED")
+
     technical_floor_clean = (
         bool(COMMERCIAL_OUTREACH_FROZEN)
         and parity["in_sync"]
@@ -532,6 +875,7 @@ def run_readiness_audit(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
         and disclosures["ev_digest_coverage"]["coverage_ok"]
         and not disclosures["unclassified_disclosures"]
         and track_b_funnel["ready"]
+        and (stripe_cutover_dry_run is None or bool(stripe_cutover_dry_run.get("ok")))
     )
 
     track_a_disclosures_ready = (
@@ -546,7 +890,7 @@ def run_readiness_audit(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
     track_b_offline_ready = parity["in_sync"] and clients["hygiene_clean"] and track_b_funnel["ready"]
     track_b_live_checkout_ready = track_b_offline_ready and stripe["live_checkout_ready"] and kyc_status == "VERIFIED"
 
-    return {
+    report: Dict[str, Any] = {
         "generated_utc": _dt.datetime.now(_dt.timezone.utc).isoformat(),
         "revenue_focus": "Option C (Dual-Track Minimal: Verified Bounties + Inbound Fixpack/Audit)",
         "commercial_outreach_frozen": bool(COMMERCIAL_OUTREACH_FROZEN),
@@ -564,6 +908,9 @@ def run_readiness_audit(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
         "blockers": blockers,
         "technical_floor_clean": technical_floor_clean,
     }
+    if stripe_cutover_dry_run is not None:
+        report["stripe_cutover_dry_run"] = stripe_cutover_dry_run
+    return report
 
 
 def _render_human_report(report: Dict[str, Any]) -> str:
@@ -588,17 +935,37 @@ def _render_human_report(report: Dict[str, Any]) -> str:
         f"Stripe Live Checkout Ready  : {stripe['live_checkout_ready']} (api_key={stripe['api_key_configured']}, webhook_secret={stripe['webhook_secret_configured']})",
         f"Paid Subscribers            : {report['subscribers']['count']}",
         f"Clients Registry Hygiene    : clean={clients['hygiene_clean']} (count={clients['client_count']}, leaks={clients['synthetic_leaks']})",
-        f"Bounty Catalog              : {catalog['unique_programs']} unique ({catalog['duplicate_count']} dups, {catalog['cash_tier_count']} cash tier)",
+        f"Bounty Catalog              : {catalog['unique_programs']} unique ({catalog['duplicate_count']} dups, {catalog['cash_tier_count']} cash tier, out_of_scope {catalog.get('out_of_scope_populated', 0)}/{catalog.get('out_of_scope_total', catalog['total_entries'])})",
         f"Staged Submittable Reports  : {disc['active_submittable_reports']} (.md), {disc['cryptographic_zip_bundles']} (.zip bundles)",
         f"Bundle Pairing Parity       : ok={disc['bundle_pairing_ok']} (paired={disc['paired_bundle_count']}, missing={len(disc['missing_bundle_zips'])}, orphan={len(disc['orphan_bundle_zips'])}, corrupt={len(disc['corrupt_bundle_zips'])})",
         f"Evidence Digest Coverage    : ok={ev['coverage_ok']} ({ev['covered_count']}/{ev['total_staged']} staged)",
         f"Archived Artifacts          : {disc['archived_total_count']} total ({disc['archived_false_positive_disclosures']} false_positive_disclosures + {disc['archived_legacy_artifacts']} legacy_passive_disclosures)",
         f"Lingering Advisory Reports  : {disc['advisory_lingering_reports']}",
         f"Radar State Counters        : sweeps={disc['radar_state_total_sweeps']}, submittable={disc['radar_state_submittable_count']}, advisory={disc['radar_state_advisory_count']}, legacy_total={disc['radar_state_legacy_counter']}",
-        "------------------------------------------------------------------------",
-        f"Active Blockers             : {', '.join(report['blockers']) or 'NONE'}",
-        "========================================================================",
     ]
+    cutover = report.get("stripe_cutover_dry_run")
+    if isinstance(cutover, dict):
+        prefixes = cutover.get("env_key_prefixes") or {}
+        lines.append(
+            "Stripe Cutover Dry-Run      : "
+            f"ok={cutover.get('ok')} (mode={cutover.get('stripe_key_mode')}, "
+            f"secret={prefixes.get('STRIPE_SECRET_KEY', 'unset')}, "
+            f"api={prefixes.get('STRIPE_API_KEY', 'unset')}, "
+            f"webhook={prefixes.get('STRIPE_WEBHOOK_SECRET', 'unset')}, "
+            f"status={cutover.get('webhook_status')}, "
+            f"pdf={cutover.get('sla_pdf_valid')}, "
+            f"zip_sha256={cutover.get('bundle_zip_sha256_valid')}, "
+            f"portal={cutover.get('portal_html_generated')}, "
+            f"live_untouched={cutover.get('live_data_untouched')}, "
+            f"ms={cutover.get('duration_ms')})"
+        )
+    lines.extend(
+        [
+            "------------------------------------------------------------------------",
+            f"Active Blockers             : {', '.join(report['blockers']) or 'NONE'}",
+            "========================================================================",
+        ]
+    )
     return "\n".join(lines)
 
 
@@ -606,9 +973,14 @@ def main(argv: List[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Read-only readiness audit for Orbit Security.")
     parser.add_argument("--json", action="store_true", help="Output structured JSON report.")
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT, help="Override repository root path.")
+    parser.add_argument(
+        "--verify-cutover",
+        action="store_true",
+        help="Run a hermetic Stripe checkout + webhook provisioning dry-run inside a temp directory.",
+    )
     args = parser.parse_args(argv)
 
-    report = run_readiness_audit(repo_root=args.repo_root)
+    report = run_readiness_audit(repo_root=args.repo_root, verify_cutover=args.verify_cutover)
     if args.json:
         print(json.dumps(report, indent=2))
     else:

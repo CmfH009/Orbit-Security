@@ -43,6 +43,8 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+from dotenv import dotenv_values, load_dotenv
+
 from orbit_security._runtime_paths import is_pytest_active, resolve_isolated_data_path
 from orbit_security.agency_retainer import AgencyRetainerManager, RetainerTier
 from orbit_security.fleet import ClientTarget, FleetRegistry
@@ -50,10 +52,49 @@ from orbit_security.fleet import ClientTarget, FleetRegistry
 logger = logging.getLogger("orbit_security.stripe_webhook")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+DEFAULT_ENV_FILE = PROJECT_ROOT / ".env"
+if not is_pytest_active() and DEFAULT_ENV_FILE.is_file():
+    load_dotenv(DEFAULT_ENV_FILE)
+
 DEFAULT_SUBSCRIBERS_FILE = PROJECT_ROOT / "data" / "subscribers.json"
 DEFAULT_CERTIFICATES_DIR = PROJECT_ROOT / "data" / "certificates"
 DEFAULT_CLIENTS_FILE = PROJECT_ROOT / "data" / "clients.json"
 DEFAULT_STRIPE_TOLERANCE_SECONDS = int(os.environ.get("STRIPE_WEBHOOK_TOLERANCE", "600"))
+
+
+def _resolve_webhook_secret(
+    explicit_secret: Optional[str] = None,
+    *,
+    env_file: Optional[Path] = None,
+) -> Optional[str]:
+    """Resolves Stripe webhook secret from explicit arg, env var, or .env fallback.
+
+    Never reads the live ``PROJECT_ROOT / ".env"`` while executing under pytest
+    so unit tests that omit ``webhook_secret`` stay strictly isolated from
+    production signing keys unless a test supplies or patches a temp env file.
+    """
+    if explicit_secret:
+        return explicit_secret
+
+    env_secret = os.environ.get("STRIPE_WEBHOOK_SECRET")
+    if env_secret:
+        return env_secret
+
+    target_env = Path(env_file) if env_file is not None else DEFAULT_ENV_FILE
+    live_env_default = (PROJECT_ROOT / ".env").resolve()
+    try:
+        if is_pytest_active() and target_env.resolve() == live_env_default:
+            return None
+    except Exception:
+        if is_pytest_active() and env_file is None:
+            return None
+
+    if not target_env.is_file():
+        return None
+
+    values = dotenv_values(target_env)
+    secret_val = str(values.get("STRIPE_WEBHOOK_SECRET") or "").strip()
+    return secret_val or None
 
 
 # ============================================================================
@@ -479,7 +520,7 @@ class StripeWebhookHandler:
         onboarding_service: Optional[Any] = None,
         deal_desk: Optional[Any] = None,
     ):
-        self.webhook_secret = webhook_secret or os.environ.get("STRIPE_WEBHOOK_SECRET")
+        self.webhook_secret = _resolve_webhook_secret(webhook_secret)
         self.subscriber_mgr = subscriber_manager or SubscriberManager()
         self.sla_generator = sla_generator or SlaCertificateGenerator()
         self.fleet_registry = fleet_registry or FleetRegistry()

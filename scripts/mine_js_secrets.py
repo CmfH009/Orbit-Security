@@ -14,14 +14,22 @@ project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-import requests
 import urllib3
 
+from orbit_security.bounty_active_prober import (
+    classify_js_secret_fp_reason,
+    filter_and_deduplicate_js_secrets,
+)
 from orbit_security.bounty_radar import (
     BountyProgram,
     BountyScopeIngester,
     DEFAULT_BOUNTY_DATA_PATH,
 )
+from orbit_security.egress_guard import (
+    EgressViolationError,
+    create_guarded_requests_session,
+)
+from orbit_security.scanner import PublicHostOnlyRoE
 from orbit_security.tools.secret_harvester import SecretHarvester
 from scripts.mine_cors_endpoints import extract_script_urls, DEFAULT_TARGETS
 
@@ -70,12 +78,36 @@ def resolve_targets_from_programs(
     return targets
 
 
+def _write_json_lf(output_path: Path, data: List[Dict[str, Any]]) -> None:
+    """Persist JSON output strictly with Unix LF line endings."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = (json.dumps(data, indent=2) + "\n").replace("\r\n", "\n")
+    output_path.write_bytes(payload.encode("utf-8"))
+
+
+def refilter_staged_js_secrets(output_path: Path) -> List[Dict[str, Any]]:
+    """Re-apply JS secret FP filtering and (script_url, matched_value) deduplication to a staged JSON file."""
+    existing_findings: List[Dict[str, Any]] = []
+    if output_path.exists():
+        try:
+            with open(output_path, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+                if isinstance(loaded, list):
+                    existing_findings = loaded
+        except Exception:
+            existing_findings = []
+
+    filtered = filter_and_deduplicate_js_secrets(existing_findings)
+    _write_json_lf(output_path, filtered)
+    return filtered
+
+
 def harvest_target_secrets(
     targets: List[str],
     output_path: Path,
     max_scripts_per_target: int = 15,
 ) -> List[Dict[str, Any]]:
-    session = requests.Session()
+    session = create_guarded_requests_session(roe_engine=PublicHostOnlyRoE())
     session.headers.update({
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     })
@@ -88,6 +120,9 @@ def harvest_target_secrets(
             r = session.get(target, timeout=8, verify=False)
             if r.status_code >= 400:
                 continue
+        except EgressViolationError as e:
+            logger.warning(f"[!] RoE egress blocked {target}: {e}")
+            continue
         except Exception as e:
             logger.debug(f"[!] Error fetching {target}: {e}")
             continue
@@ -101,6 +136,17 @@ def harvest_target_secrets(
                 if js_resp.status_code == 200:
                     matches = harvester.scan_text(js_resp.text)
                     for m in matches:
+                        fp_reason = classify_js_secret_fp_reason(
+                            pattern_name=m.pattern_name,
+                            matched_value=m.matched_value,
+                            context_snippet=m.context_snippet,
+                            script_url=script_url,
+                        )
+                        if fp_reason:
+                            logger.debug(
+                                f"[skip:{fp_reason}] {target} -> {m.pattern_name}: {m.redacted_value}"
+                            )
+                            continue
                         finding = {
                             "target": target,
                             "script_url": script_url,
@@ -108,29 +154,26 @@ def harvest_target_secrets(
                         }
                         all_findings.append(finding)
                         logger.warning(f"[🔥 SECRET FOUND] {target} -> {m.pattern_name}: {m.redacted_value}")
+            except EgressViolationError as e:
+                logger.warning(f"[!] RoE egress blocked script {script_url}: {e}")
             except Exception as e:
                 logger.debug(f"Failed to fetch script {script_url}: {e}")
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
     existing_findings = []
     if output_path.exists():
         try:
             with open(output_path, "r", encoding="utf-8") as f:
-                existing_findings = json.load(f)
+                loaded = json.load(f)
+                if isinstance(loaded, list):
+                    existing_findings = loaded
         except Exception:
             existing_findings = []
 
-    # Deduplicate merged findings by unique (target, script_url, matched_value)
-    merged_map = {}
-    for item in existing_findings + all_findings:
-        key = (item.get("target"), item.get("script_url"), item.get("matched_value"))
-        merged_map[key] = item
+    # Filter both existing and new findings, then deduplicate by unique (script_url, matched_value)
+    merged_list = filter_and_deduplicate_js_secrets(existing_findings + all_findings)
+    _write_json_lf(output_path, merged_list)
 
-    merged_list = list(merged_map.values())
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(merged_list, f, indent=2)
-
-    logger.info(f"[✔] Secret harvesting complete. Staged {len(all_findings)} new ({len(merged_list)} cumulative) matches to {output_path}")
+    logger.info(f"[✔] Secret harvesting complete. Staged {len(all_findings)} new ({len(merged_list)} cumulative) actionable matches to {output_path}")
     return merged_list
 
 

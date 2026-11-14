@@ -5,6 +5,8 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
+import sqlite3
 import zipfile
 from pathlib import Path
 
@@ -301,3 +303,257 @@ def test_readiness_audit_counts_false_positive_archive_alongside_legacy(tmp_path
 
     rendered = mod._render_human_report(report)
     assert "2 false_positive_disclosures + 3 legacy_passive_disclosures" in rendered
+
+
+def test_readiness_audit_reports_out_of_scope_populated_count(tmp_path):
+    mod = _load_audit_module()
+    _seed_clean_repo(tmp_path, mod)
+
+    programs = []
+    for i in range(45):
+        entry = {
+            "program_id": f"prog-{i}",
+            "bounty_tier": "cash",
+            "state": "active",
+        }
+        if i < 12:
+            entry["out_of_scope"] = [f"https://oos-{i}.example.com"]
+        elif i == 12:
+            entry["out_of_scope"] = []
+        elif i == 13:
+            entry["out_of_scope"] = ["   "]
+        programs.append(entry)
+
+    (tmp_path / "data" / "bounty_programs.json").write_text(
+        json.dumps({"programs": programs}),
+        encoding="utf-8",
+    )
+    partial = mod.run_readiness_audit(repo_root=tmp_path)
+    assert partial["bounty_catalog"]["total_entries"] == 45
+    assert partial["bounty_catalog"]["out_of_scope_populated"] == 12
+    assert partial["bounty_catalog"]["out_of_scope_total"] == 45
+    assert "out_of_scope 12/45" in mod._render_human_report(partial)
+
+    for idx, entry in enumerate(programs):
+        entry["out_of_scope"] = [f"https://oos-{idx}.example.com"]
+    (tmp_path / "data" / "bounty_programs.json").write_text(
+        json.dumps({"programs": programs}),
+        encoding="utf-8",
+    )
+    full = mod.run_readiness_audit(repo_root=tmp_path)
+    assert full["bounty_catalog"]["out_of_scope_populated"] == 45
+    assert full["bounty_catalog"]["out_of_scope_total"] == 45
+    assert "out_of_scope 45/45" in mod._render_human_report(full)
+
+
+def test_verify_stripe_cutover_hermetic_and_redacts_secrets(tmp_path, monkeypatch, capsys):
+    mod = _load_audit_module()
+    _seed_clean_repo(tmp_path, mod)
+
+    secret_marker_sk = "sk_live_FAKE_DO_NOT_LEAK_999999"
+    secret_marker_wh = "whsec_FAKE_DO_NOT_LEAK_888888"
+    monkeypatch.setenv("STRIPE_SECRET_KEY", secret_marker_sk)
+    monkeypatch.delenv("STRIPE_API_KEY", raising=False)
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", secret_marker_wh)
+    monkeypatch.setenv("ORBIT_KYC_STATUS", "VERIFIED")
+
+    rc_json = mod.main(["--repo-root", str(tmp_path), "--verify-cutover", "--json"])
+    assert rc_json == 0
+    raw_json_out = capsys.readouterr().out
+    assert "FAKE_DO_NOT_LEAK" not in raw_json_out
+    assert os.environ.get("STRIPE_SECRET_KEY") == secret_marker_sk
+    assert os.environ.get("STRIPE_WEBHOOK_SECRET") == secret_marker_wh
+
+    payload = json.loads(raw_json_out)
+    assert payload["technical_floor_clean"] is True
+    assert payload["blockers"] == []
+    cutover = payload["stripe_cutover_dry_run"]
+    assert cutover["ok"] is True
+    assert cutover["duration_ms"] < 5000.0
+    assert cutover["stripe_key_mode"] == "live"
+    assert cutover["env_key_prefixes"] == {
+        "STRIPE_SECRET_KEY": "sk_live_*",
+        "STRIPE_API_KEY": "unset",
+        "STRIPE_WEBHOOK_SECRET": "whsec_*",
+    }
+    assert cutover["checkout_session_fields_verified"] is True
+    assert cutover["webhook_status"] == "PROVISIONED"
+    assert cutover["subscriber_provisioned"] is True
+    assert cutover["sla_pdf_valid"] is True
+    assert cutover["bundle_zip_sha256_valid"] is True
+    assert cutover["portal_html_generated"] is True
+    assert cutover["isolated_paths_verified"] is True
+    assert cutover["live_data_untouched"] is True
+
+    rc_human = mod.main(["--repo-root", str(tmp_path), "--verify-cutover"])
+    assert rc_human == 0
+    human_out = capsys.readouterr().out
+    assert "FAKE_DO_NOT_LEAK" not in human_out
+    assert "Stripe Cutover Dry-Run" in human_out
+    assert "ok=True" in human_out
+    assert "secret=sk_live_*" in human_out
+    assert "webhook=whsec_*" in human_out
+    assert "live_untouched=True" in human_out
+
+
+def test_verify_stripe_cutover_leaves_live_track_b_paths_untouched():
+    mod = _load_audit_module()
+    repo_root = mod.REPO_ROOT
+
+    def _snapshot_tree(root: Path):
+        if not root.exists():
+            return {}
+        return {
+            str(p.relative_to(repo_root)): (p.stat().st_size, p.stat().st_mtime_ns)
+            for p in sorted(root.rglob("*"))
+            if p.is_file()
+        }
+
+    def _read_max_event_id(db_path: Path) -> int:
+        if not db_path.exists():
+            return 0
+        conn = sqlite3.connect(f"{db_path.resolve().as_uri()}?mode=ro", uri=True, timeout=5.0)
+        try:
+            row = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='events'"
+            ).fetchone()
+            if row is None:
+                return 0
+            max_row = conn.execute("SELECT COALESCE(MAX(id), 0) FROM events").fetchone()
+            return int(max_row[0] or 0) if max_row else 0
+        finally:
+            conn.close()
+
+    def _read_new_non_hook_events(db_path: Path, after_id: int):
+        if not db_path.exists():
+            return []
+        conn = sqlite3.connect(f"{db_path.resolve().as_uri()}?mode=ro", uri=True, timeout=5.0)
+        try:
+            row = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='events'"
+            ).fetchone()
+            if row is None:
+                return []
+            rows = conn.execute(
+                "SELECT id, event_type, topic, source, payload FROM events WHERE id > ? ORDER BY id ASC",
+                (after_id,),
+            ).fetchall()
+            return [
+                {
+                    "id": r[0],
+                    "event_type": r[1],
+                    "topic": r[2],
+                    "source": r[3],
+                    "payload": r[4],
+                }
+                for r in rows
+                if str(r[3] or "") != "orbit_hook"
+                or ("cutover" in str(r[4] or "").lower() and str(r[3] or "") != "orbit_hook")
+            ]
+        finally:
+            conn.close()
+
+    tracked_files = [
+        repo_root / "data" / "subscribers.json",
+        repo_root / "data" / "clients.json",
+        repo_root / "data" / "agency_retainers.json",
+    ]
+    events_db = repo_root / "data" / "orbit_events.db"
+    before_max_event_id = _read_max_event_id(events_db)
+    before_files = {
+        str(p.relative_to(repo_root)): (p.stat().st_size, p.stat().st_mtime_ns) if p.exists() else None
+        for p in tracked_files
+    }
+    before_trees = {
+        "certificates": _snapshot_tree(repo_root / "data" / "certificates"),
+        "client_bundles": _snapshot_tree(repo_root / "data" / "client_bundles"),
+        "docs_portals": _snapshot_tree(repo_root / "docs" / "portals"),
+        "landing_portals": _snapshot_tree(repo_root / "landing" / "portals"),
+    }
+
+    res = mod.verify_stripe_cutover()
+    assert res["ok"] is True
+    assert res["live_data_untouched"] is True
+
+    after_files = {
+        str(p.relative_to(repo_root)): (p.stat().st_size, p.stat().st_mtime_ns) if p.exists() else None
+        for p in tracked_files
+    }
+    after_trees = {
+        "certificates": _snapshot_tree(repo_root / "data" / "certificates"),
+        "client_bundles": _snapshot_tree(repo_root / "data" / "client_bundles"),
+        "docs_portals": _snapshot_tree(repo_root / "docs" / "portals"),
+        "landing_portals": _snapshot_tree(repo_root / "landing" / "portals"),
+    }
+
+    assert after_files == before_files
+    assert after_trees == before_trees
+    assert _read_new_non_hook_events(events_db, before_max_event_id) == []
+    for artifact_dir in (repo_root / "data", repo_root / "docs", repo_root / "landing"):
+        if artifact_dir.exists():
+            assert not list(artifact_dir.rglob("*cutover-dryrun*"))
+
+
+def test_readiness_audit_dotenv_fallback_clears_stripe_blocker_hermetically(tmp_path, monkeypatch):
+    mod = _load_audit_module()
+    _seed_clean_repo(tmp_path, mod)
+
+    for key in (
+        "STRIPE_SECRET_KEY",
+        "STRIPE_API_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "STRIPE_PRICE_STARTER",
+        "STRIPE_PRICE_SCALE",
+        "STRIPE_PRICE_ENTERPRISE",
+        "ORBIT_KYC_STATUS",
+    ):
+        monkeypatch.delenv(key, raising=False)
+
+    without_dotenv = mod.run_readiness_audit(repo_root=tmp_path)
+    assert without_dotenv["stripe_config"]["live_checkout_ready"] is False
+    assert "STRIPE_KEYS_UNCONFIGURED" in without_dotenv["blockers"]
+
+    (tmp_path / ".env").write_text(
+        "\n".join(
+            [
+                "# synthetic local .env",
+                'STRIPE_API_KEY="rk_live_DOTENV_SECRET_DO_NOT_LEAK"',
+                "STRIPE_PRICE_STARTER=price_starter_dotenv",
+                "STRIPE_PRICE_SCALE=price_scale_dotenv # inline comment",
+                "STRIPE_PRICE_ENTERPRISE=price_enterprise_dotenv",
+                "STRIPE_WEBHOOK_SECRET='whsec_DOTENV_SECRET_DO_NOT_LEAK'",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with_dotenv = mod.run_readiness_audit(repo_root=tmp_path, verify_cutover=True)
+    assert "STRIPE_API_KEY" not in os.environ
+    assert "STRIPE_WEBHOOK_SECRET" not in os.environ
+    assert with_dotenv["stripe_config"]["api_key_configured"] is True
+    assert with_dotenv["stripe_config"]["webhook_secret_configured"] is True
+    assert with_dotenv["stripe_config"]["live_checkout_ready"] is True
+    assert all(with_dotenv["stripe_config"]["price_overrides_configured"].values())
+    assert "STRIPE_KEYS_UNCONFIGURED" not in with_dotenv["blockers"]
+    assert with_dotenv["blockers"] == ["KYC_PAYOUT_PENDING_PHYSICAL_ID"]
+    assert with_dotenv["track_b_live_checkout_ready"] is False
+
+    cutover = with_dotenv["stripe_cutover_dry_run"]
+    assert cutover["ok"] is True
+    assert cutover["stripe_key_mode"] == "live"
+    assert cutover["env_key_prefixes"] == {
+        "STRIPE_SECRET_KEY": "unset",
+        "STRIPE_API_KEY": "rk_live_*",
+        "STRIPE_WEBHOOK_SECRET": "whsec_*",
+    }
+    rendered = mod._render_human_report(with_dotenv)
+    assert "DOTENV_SECRET_DO_NOT_LEAK" not in json.dumps(with_dotenv)
+    assert "DOTENV_SECRET_DO_NOT_LEAK" not in rendered
+    assert "api=rk_live_*" in rendered
+    assert "webhook=whsec_*" in rendered
+
+    monkeypatch.setenv("ORBIT_KYC_STATUS", "VERIFIED")
+    verified_report = mod.run_readiness_audit(repo_root=tmp_path)
+    assert verified_report["blockers"] == []
+    assert verified_report["track_b_live_checkout_ready"] is True
