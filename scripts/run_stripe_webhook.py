@@ -142,15 +142,20 @@ def dispatch_test_event(
             temp_ctx.cleanup()
 
 
-def main():
+def build_parser() -> argparse.ArgumentParser:
+    """Build the CLI argument parser for the Orbit Stripe Webhook Sentinel."""
     parser = argparse.ArgumentParser(description="Orbit Stripe Webhook Sentinel")
     parser.add_argument("--port", type=int, default=8088, help="Port to listen on (default: 8088)")
-    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host interface (default: 0.0.0.0)")
+    parser.add_argument("--host", type=str, default="127.0.0.1", help="Host interface (default: 127.0.0.1)")
     parser.add_argument("--test-event", action="store_true", help="Simulate a hermetic dry-run checkout.session.completed event")
     parser.add_argument("--output-dir", type=Path, default=None, help="Optional isolated output directory for --test-event")
     parser.add_argument("--live", action="store_true", help="Write --test-event into live data/* directories (unsafe for dry runs)")
     parser.add_argument("--list-subscribers", action="store_true", help="List all active subscribers")
-    args = parser.parse_args()
+    return parser
+
+
+def main():
+    args = build_parser().parse_args()
 
     if args.list_subscribers:
         list_subscribers()

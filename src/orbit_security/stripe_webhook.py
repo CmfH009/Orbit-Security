@@ -1073,7 +1073,7 @@ class StripeWebhookRequestHandler(BaseHTTPRequestHandler):
         pass
 
 
-def run_webhook_server(host: str = "0.0.0.0", port: int = 8088):
+def run_webhook_server(host: str = "127.0.0.1", port: int = 8088):
     """Starts the standalone Stripe webhook HTTP server."""
     server_address = (host, port)
     httpd = HTTPServer(server_address, StripeWebhookRequestHandler)
@@ -1089,7 +1089,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Orbit Security Stripe Webhook Server")
     parser.add_argument("--port", type=int, default=8088, help="Port to listen on (default: 8088)")
-    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host interface (default: 0.0.0.0)")
+    parser.add_argument("--host", type=str, default="127.0.0.1", help="Host interface (default: 127.0.0.1)")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="[%(asctime)s] [%(levelname)s] %(message)s")
     run_webhook_server(host=args.host, port=args.port)

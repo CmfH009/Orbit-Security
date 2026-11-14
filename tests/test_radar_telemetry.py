@@ -884,5 +884,75 @@ class TestRadarLeadEnricherAndProposalStager:
             httpd.shutdown()
             httpd.server_close()
 
+    def test_tunnel_watchdog_verify_health_marks_offline_when_unreachable(self, tmp_path):
+        import http.server
+        from orbit_security.radar_telemetry import RadarTunnelWatchdog
+
+        state_file = tmp_path / "radar_tunnel_state.json"
+        status_box = {"code": 200, "body": b'{"status":"ok"}'}
+
+        class _HealthHandler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(status_box["code"])
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(status_box["body"])
+
+            def log_message(self, format, *args):
+                pass
+
+        httpd = http.server.HTTPServer(("127.0.0.1", 0), _HealthHandler)
+        port = httpd.server_address[1]
+        t = threading.Thread(target=httpd.serve_forever, daemon=True)
+        t.start()
+
+        try:
+            initial_ts = "2026-11-03T11:43:48.782731+00:00"
+            state_file.write_text(
+                json.dumps(
+                    {
+                        "tunnel_base_url": f"http://127.0.0.1:{port}",
+                        "telemetry_endpoint": f"http://127.0.0.1:{port}/api/orbit/radar/telemetry",
+                        "rotation_count": 4,
+                        "updated_at": initial_ts,
+                        "status": "active",
+                    },
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            watchdog = RadarTunnelWatchdog(state_file=state_file, repo_root=tmp_path)
+
+            # 1. Reachable HTTP 200 remains active
+            healthy = watchdog.verify_tunnel_health(timeout=2.0, persist=True)
+            assert healthy["status"] == "active"
+            assert healthy["stale"] is False
+            assert healthy["http_status"] == 200
+
+            # 2. HTTP 502 dead tunnel marks persisted state offline/stale and preserves last_active_at
+            status_box["code"] = 502
+            status_box["body"] = b"no tunnel"
+            dead = watchdog.verify_tunnel_health(timeout=2.0, persist=True)
+            assert dead["status"] == "offline"
+            assert dead["stale"] is True
+            assert dead["http_status"] == 502
+            assert "502" in (dead.get("last_error") or "")
+            assert dead.get("last_active_at") is not None
+
+            persisted = json.loads(state_file.read_text(encoding="utf-8"))
+            assert persisted["status"] == "offline"
+            assert persisted["stale"] is True
+            assert persisted["http_status"] == 502
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+
+        # 3. Connection refused on closed port also reports offline
+        refused = watchdog.verify_tunnel_health(timeout=1.0, persist=True)
+        assert refused["status"] == "offline"
+        assert refused["stale"] is True
+        assert refused["http_status"] is None
+        assert refused.get("last_error")
+
 
 

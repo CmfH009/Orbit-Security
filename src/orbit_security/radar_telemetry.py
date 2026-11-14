@@ -36,6 +36,7 @@ import tempfile
 import threading
 import time
 from typing import Any, Dict, List, Optional
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -1294,6 +1295,17 @@ class RadarTunnelWatchdog:
             "status": "uninitialized",
         }
 
+    def _write_state(self, state: Dict[str, Any]) -> None:
+        """Atomically persists tunnel state JSON to disk."""
+        tmp = self.state_file.with_suffix(".tmp")
+        try:
+            tmp.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+            tmp.replace(self.state_file)
+        except Exception:
+            if tmp.exists():
+                tmp.unlink()
+            raise
+
     def record_tunnel_rotation(
         self,
         tunnel_base_url: str,
@@ -1309,25 +1321,105 @@ class RadarTunnelWatchdog:
         if current.get("tunnel_base_url") != clean_base:
             rotations += 1
 
+        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
         endpoint = f"{clean_base}/api/orbit/radar/telemetry"
         state = {
             "tunnel_base_url": clean_base,
             "telemetry_endpoint": endpoint,
             "rotation_count": rotations,
-            "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "updated_at": now_iso,
+            "last_active_at": now_iso,
             "status": "active",
+            "stale": False,
         }
-        tmp = self.state_file.with_suffix(".tmp")
         try:
-            tmp.write_text(json.dumps(state, indent=2), encoding="utf-8")
-            tmp.replace(self.state_file)
+            self._write_state(state)
         except Exception:
-            if tmp.exists():
-                tmp.unlink()
+            pass
 
         if sync_assets:
             self.sync_tunnel_endpoint_in_assets(endpoint, state=state)
         return state
+
+    def verify_tunnel_health(
+        self,
+        timeout: float = 4.0,
+        persist: bool = True,
+    ) -> Dict[str, Any]:
+        """Probes the configured tunnel endpoint and updates state to offline/stale when unreachable."""
+        current = dict(self.get_state())
+        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        base_url = str(current.get("tunnel_base_url") or "").strip().rstrip("/")
+        telemetry_ep = str(current.get("telemetry_endpoint") or "").strip()
+
+        probe_url: Optional[str] = None
+        if base_url.startswith(("https://", "http://")):
+            probe_url = f"{base_url}/api/health"
+        elif telemetry_ep.startswith(("https://", "http://")):
+            probe_url = telemetry_ep
+
+        prior_last_active = current.get("last_active_at")
+        if not prior_last_active and current.get("status") == "active":
+            prior_last_active = current.get("updated_at")
+
+        if not probe_url:
+            updated = {
+                **current,
+                "status": "uninitialized" if current.get("status") == "uninitialized" else "offline",
+                "stale": True,
+                "updated_at": now_iso,
+                "last_checked_at": now_iso,
+                "last_active_at": prior_last_active,
+                "http_status": None,
+                "last_error": "No valid HTTP(S) tunnel URL configured",
+            }
+            if persist and self.state_file.exists():
+                self._write_state(updated)
+            return updated
+
+        http_status: Optional[int] = None
+        last_error: Optional[str] = None
+        reachable = False
+        try:
+            req = urllib.request.Request(
+                probe_url,
+                headers={"User-Agent": "OrbitTunnelWatchdog/1.0"},
+                method="GET",
+            )
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                http_status = int(getattr(resp, "status", 200) or 200)
+                reachable = 200 <= http_status < 400
+                if not reachable:
+                    last_error = f"HTTP {http_status}"
+        except urllib.error.HTTPError as exc:
+            http_status = int(exc.code)
+            err_body = ""
+            try:
+                err_body = exc.read(160).decode("utf-8", errors="replace").strip()
+            except Exception:
+                pass
+            last_error = f"HTTP {exc.code}: {err_body or exc.reason}"
+        except Exception as exc:
+            last_error = f"{type(exc).__name__}: {exc}"
+
+        updated = dict(current)
+        updated["updated_at"] = now_iso
+        updated["last_checked_at"] = now_iso
+        updated["http_status"] = http_status
+        if reachable:
+            updated["status"] = "active"
+            updated["stale"] = False
+            updated["last_active_at"] = now_iso
+            updated["last_error"] = None
+        else:
+            updated["status"] = "offline"
+            updated["stale"] = True
+            updated["last_active_at"] = prior_last_active
+            updated["last_error"] = last_error
+
+        if persist:
+            self._write_state(updated)
+        return updated
 
     def sync_tunnel_endpoint_in_assets(
         self, new_endpoint: str, state: Optional[Dict[str, Any]] = None
@@ -1766,9 +1858,16 @@ def main() -> int:
     parser.add_argument("--enrich", help="Run OSINT enrichment and retainer staging for a domain")
     parser.add_argument("--backfill", action="store_true", help="Enrich and stage proposals for all logged queries")
     parser.add_argument("--tunnel-status", action="store_true", help="Show active public HTTPS tunnel telemetry state")
+    parser.add_argument("--verify-tunnel", action="store_true", help="Probe configured tunnel health and update offline/stale state")
     parser.add_argument("--sync-tunnel", help="Record and sync a public HTTPS tunnel base URL or log file")
 
     args = parser.parse_args()
+
+    if args.verify_tunnel:
+        watchdog = RadarTunnelWatchdog()
+        state = watchdog.verify_tunnel_health(persist=True)
+        print(json.dumps({"ok": state.get("status") == "active", "tunnel": state}, indent=2))
+        return 0
 
     if args.tunnel_status:
         watchdog = RadarTunnelWatchdog()

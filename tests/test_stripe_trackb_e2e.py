@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import inspect
 import json
 import os
 import re
@@ -725,5 +726,32 @@ function createDomHarness(proto, hostname, search) {
         check=False,
     )
     assert proc.returncode == 0, f"Node signup harness failed:\nSTDOUT:{proc.stdout}\nSTDERR:{proc.stderr}"
+
+
+def test_run_stripe_webhook_defaults_to_loopback_host(monkeypatch):
+    """Ensure Stripe webhook runner and server bind to loopback 127.0.0.1 by default."""
+    assert inspect.signature(stripe_webhook.run_webhook_server).parameters["host"].default == "127.0.0.1"
+
+    script_path = REPO_ROOT / "scripts" / "run_stripe_webhook.py"
+    spec = importlib.util.spec_from_file_location("run_stripe_webhook_mod", script_path)
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["run_stripe_webhook_mod"] = mod
+    spec.loader.exec_module(mod)
+
+    args = mod.build_parser().parse_args([])
+    assert args.host == "127.0.0.1"
+    assert args.port == 8088
+
+    recorded: Dict[str, Any] = {}
+
+    def _fake_serve(host: str, port: int) -> None:
+        recorded["host"] = host
+        recorded["port"] = port
+
+    monkeypatch.setattr(mod, "run_webhook_server", _fake_serve)
+    monkeypatch.setattr(sys, "argv", ["run_stripe_webhook.py"])
+    mod.main()
+    assert recorded == {"host": "127.0.0.1", "port": 8088}
 
 
