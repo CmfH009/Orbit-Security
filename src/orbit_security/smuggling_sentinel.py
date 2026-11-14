@@ -23,8 +23,9 @@ import time
 from typing import Any, Dict, List, Optional, Tuple
 import urllib.parse
 
+from orbit_security.egress_guard import enforce_egress_or_raise
 from orbit_security.models import Severity
-from orbit_security.scanner import is_safe_host
+from orbit_security.scanner import PublicHostOnlyRoE, is_safe_host
 
 logger = logging.getLogger("orbit_security.smuggling_sentinel")
 
@@ -107,7 +108,9 @@ class HttpRequestSmugglingSentinel:
         status_code = 0
 
         try:
-            sock = socket.create_connection((host, port), timeout=timeout)
+            scheme = "https" if use_ssl else "http"
+            enforce_egress_or_raise(f"{scheme}://{host}:{port}", PublicHostOnlyRoE())
+            sock = socket.create_connection((host, port), timeout=timeout)  # roe-exempt: raw HTTP/1.1 smuggling desync probe gated by enforce_egress_or_raise
             sock.settimeout(timeout)
 
             if use_ssl:
@@ -346,9 +349,10 @@ class HttpRequestSmugglingSentinel:
 
         # Check ALPN negotiation for h2 support
         try:
+            enforce_egress_or_raise(f"https://{host}:443", PublicHostOnlyRoE())
             context = ssl.create_default_context()
             context.set_alpn_protocols(["h2", "http/1.1"])
-            with socket.create_connection((host, 443), timeout=timeout) as sock:
+            with socket.create_connection((host, 443), timeout=timeout) as sock:  # roe-exempt: raw ALPN h2 handshake probe gated by enforce_egress_or_raise
                 with context.wrap_socket(sock, server_hostname=host) as conn:
                     negotiated = conn.selected_alpn_protocol()
                     if negotiated != "h2":

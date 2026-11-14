@@ -19,7 +19,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from orbit_security.scanner import is_safe_host
+from orbit_security.egress_guard import enforce_egress_or_raise
+from orbit_security.scanner import PublicHostOnlyRoE, is_safe_host
 
 # Public APIs OSINT bridge (namespace package at repo root). Import is
 # defensive: the `orbit` namespace package is importable when the repo root
@@ -102,7 +103,8 @@ class CertificateTransparencyStreamer:
         context.verify_mode = ssl.CERT_NONE
 
         try:
-            with socket.create_connection((clean_host, port), timeout=timeout) as sock:
+            enforce_egress_or_raise(f"https://{clean_host}:{port}", PublicHostOnlyRoE())
+            with socket.create_connection((clean_host, port), timeout=timeout) as sock:  # roe-exempt: raw TLS SAN handshake gated by enforce_egress_or_raise
                 with context.wrap_socket(sock, server_hostname=clean_host) as ssock:
                     cert = ssock.getpeercert(binary_form=False)
                     if cert and "subjectAltName" in cert:

@@ -31,7 +31,12 @@ except ImportError:
 
     HAS_HTTPX = False
 
-from orbit_security.scanner import is_safe_host
+from orbit_security.egress_guard import (
+    EgressViolationError,
+    create_guarded_httpx_client,
+    enforce_egress_or_raise,
+)
+from orbit_security.scanner import PublicHostOnlyRoE, is_safe_host
 from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES
 from orbit_security.remediation import DnsRemediationGenerator
 from orbit_security.input_sanitizer import sanitize_domain, SecurityValidationError
@@ -230,12 +235,22 @@ def check_headers_and_exposures(domain: str) -> Dict[str, Any]:
 
     try:
         if HAS_HTTPX:
-            with httpx.Client(timeout=6.0, follow_redirects=True, verify=False) as client:
+            with create_guarded_httpx_client(
+                roe_engine=PublicHostOnlyRoE(),
+                timeout=6.0,
+                follow_redirects=True,
+                verify=False,
+            ) as client:
                 try:
                     resp = client.get(url)
                     report["status_code"] = resp.status_code
                     report["body_snippet"] = resp.text[:4096] if resp.text else ""
                     headers_dict = {k.lower(): v for k, v in resp.headers.items()}
+                except EgressViolationError as e:
+                    report["error"] = str(e)
+                    for h_name, h_desc in SECURITY_HEADERS:
+                        report["missing_headers"].append({"header": h_name, "description": h_desc})
+                    return report
                 except Exception as e:
                     report["error"] = str(e)
 
@@ -255,11 +270,15 @@ def check_headers_and_exposures(domain: str) -> Dict[str, Any]:
 
                             if signature in body:
                                 report["exposures"].append({"path": path, "status": 200, "verified": True})
+                    except EgressViolationError as e:
+                        report["error"] = str(e)
+                        break
                     except Exception:
                         pass
         else:
+            enforce_egress_or_raise(url, PublicHostOnlyRoE())
             req = urllib.request.Request(url, headers={"User-Agent": "Orbit-Recon/1.0"})
-            with urllib.request.urlopen(req, timeout=6.0) as resp:
+            with urllib.request.urlopen(req, timeout=6.0) as resp:  # roe-exempt: urllib fallback gated by enforce_egress_or_raise
                 report["status_code"] = resp.status
                 body_raw = resp.read(4096)
                 report["body_snippet"] = body_raw.decode("utf-8", errors="replace")
@@ -474,7 +493,6 @@ def run_recon(
     if export_fixpack:
         from pathlib import Path
         from orbit_security.client_bundle_exporter import ClientBundleExporter
-        from orbit_security.scanner import is_safe_host
 
         if not is_safe_host(domain):
             if not json_output:
@@ -672,7 +690,6 @@ def run_bulk_recon(
         if export_fixpack:
             from pathlib import Path
             from orbit_security.client_bundle_exporter import ClientBundleExporter
-            from orbit_security.scanner import is_safe_host
 
             if not is_safe_host(domain):
                 if not json_output:

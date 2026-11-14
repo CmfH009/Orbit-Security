@@ -785,8 +785,15 @@ class InboxAgent:
         newly_completed = []
 
         try:
-            import httpx
-            with httpx.Client(timeout=10.0) as client:
+            from orbit_security.egress_guard import create_guarded_httpx_client
+
+            class _StripeApiRoE:
+                """Allowlist RoE restricting Stripe session polling strictly to api.stripe.com."""
+
+                def is_target_permitted(self, target: str) -> bool:
+                    return target.strip().lower() == "api.stripe.com"
+
+            with create_guarded_httpx_client(roe_engine=_StripeApiRoE(), timeout=10.0) as client:
                 res = client.get(
                     "https://api.stripe.com/v1/checkout/sessions?limit=20",
                     headers={"Authorization": f"Bearer {stripe_key}"}

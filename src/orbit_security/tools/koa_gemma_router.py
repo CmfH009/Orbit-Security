@@ -11,12 +11,14 @@ intent routing on local Ollama (`localhost:11434`) at 0% cloud token cost:
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import json
 import logging
 import re
 import time
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
+from urllib.parse import urlsplit
 
 import httpx
 from pydantic import BaseModel, Field, field_validator
@@ -112,6 +114,23 @@ TIER0_PATTERNS: List[Tuple[re.Pattern, TaskType, str, str]] = [
 ]
 
 
+def _validate_local_ollama_url(ollama_url: str) -> str:
+    """Validate that the configured Ollama endpoint points to a local loopback host."""
+    clean = (ollama_url or "").strip().rstrip("/")
+    parsed = urlsplit(clean)
+    scheme = (parsed.scheme or "").lower()
+    host = (parsed.hostname or "").strip().strip("[]").lower()
+    is_loopback = host == "localhost"
+    if not is_loopback and host:
+        try:
+            is_loopback = ipaddress.ip_address(host).is_loopback
+        except ValueError:
+            is_loopback = False
+    if scheme not in ("http", "https") or not is_loopback:
+        raise ValueError(f"Ollama URL must target a local loopback host, got {ollama_url!r}")
+    return clean
+
+
 class KoaGemmaDecisionRouter:
     """High-speed local structured intent router.
     
@@ -125,7 +144,7 @@ class KoaGemmaDecisionRouter:
         enable_tier0_heuristics: bool = True,
         timeout_s: float = 0.8,
     ):
-        self.ollama_url = ollama_url.rstrip("/")
+        self.ollama_url = _validate_local_ollama_url(ollama_url)
         self.model_name = model_name
         self.enable_tier0_heuristics = enable_tier0_heuristics
         self.timeout_s = timeout_s
@@ -134,7 +153,7 @@ class KoaGemmaDecisionRouter:
 
     def _get_sync_client(self) -> httpx.Client:
         if self._sync_client is None or self._sync_client.is_closed:
-            self._sync_client = httpx.Client(
+            self._sync_client = httpx.Client(  # roe-exempt: local Ollama loopback inference endpoint
                 timeout=self.timeout_s,
                 limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
             )
@@ -142,7 +161,7 @@ class KoaGemmaDecisionRouter:
 
     async def _get_async_client(self) -> httpx.AsyncClient:
         if self._async_client is None or self._async_client.is_closed:
-            self._async_client = httpx.AsyncClient(
+            self._async_client = httpx.AsyncClient(  # roe-exempt: local Ollama loopback inference endpoint
                 timeout=self.timeout_s,
                 limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
             )

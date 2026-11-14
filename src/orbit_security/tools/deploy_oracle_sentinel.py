@@ -111,13 +111,15 @@ def verify_cockpit_shuttle_handshake(
     node_id: str = "oracle-cloud-arm64-1",
 ) -> Dict[str, Any]:
     """Verifies live EventShuttleSender -> Cockpit :9090/api/orbit/blackboard/shuttle replication."""
+    if not isinstance(port, int) or isinstance(port, bool) or not (1 <= port <= 65535):
+        raise ValueError(f"Invalid Cockpit loopback port: {port!r}")
     target_url = f"http://127.0.0.1:{port}/api/orbit/blackboard/shuttle"
     ephemeral_server = None
 
     # Check if Cockpit is already listening on :9090
     cockpit_live = False
     try:
-        with socket.create_connection(("127.0.0.1", port), timeout=1.0):
+        with socket.create_connection(("127.0.0.1", port), timeout=1.0):  # roe-exempt: hardcoded 127.0.0.1 Cockpit shuttle listener probe
             cockpit_live = True
     except OSError:
         cockpit_live = False

@@ -16,6 +16,12 @@ import re
 from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.parse import urlparse
 
+from orbit_security.egress_guard import (
+    EgressViolationError,
+    create_guarded_httpx_client,
+    enforce_egress_or_raise,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -324,10 +330,16 @@ class ADHXClient:
 
     def _http_get_json(self, url: str) -> Dict[str, Any]:
         """Perform HTTP GET request and parse JSON."""
+        from orbit_security.scanner import PublicHostOnlyRoE
+
         try:
             import httpx
             try:
-                with httpx.Client(timeout=self.timeout_sec, follow_redirects=True) as client:
+                with create_guarded_httpx_client(
+                    roe_engine=PublicHostOnlyRoE(),
+                    timeout=self.timeout_sec,
+                    follow_redirects=True,
+                ) as client:
                     headers = {"User-Agent": "OrbitSecurity-ADHX/1.0", "Accept": "application/json"}
                     resp = client.get(url, headers=headers)
                     if resp.status_code == 404:
@@ -335,6 +347,10 @@ class ADHXClient:
                     resp.raise_for_status()
                     return resp.json()
             except TweetNotFoundError:
+                raise
+            except EgressViolationError as e:
+                if e.code == "ROE_DNS_FAILED":
+                    raise ADHXError(f"Failed to fetch {url} via httpx: {e}") from e
                 raise
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 404:
@@ -346,12 +362,18 @@ class ADHXClient:
             # Fallback to urllib.request
             import urllib.request
             import urllib.error
+            try:
+                enforce_egress_or_raise(url, PublicHostOnlyRoE())
+            except EgressViolationError as e:
+                if e.code == "ROE_DNS_FAILED":
+                    raise ADHXError(f"Failed to fetch {url}: {e}") from e
+                raise
             req = urllib.request.Request(
                 url,
                 headers={"User-Agent": "OrbitSecurity-ADHX/1.0", "Accept": "application/json"}
             )
             try:
-                with urllib.request.urlopen(req, timeout=self.timeout_sec) as response:
+                with urllib.request.urlopen(req, timeout=self.timeout_sec) as response:  # roe-exempt: urllib fallback gated by enforce_egress_or_raise
                     return json.loads(response.read().decode("utf-8"))
             except urllib.error.HTTPError as e:
                 if e.code == 404:

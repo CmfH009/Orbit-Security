@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import collections
+import ipaddress
 import logging
 import os
 import socket
@@ -332,23 +333,45 @@ class LocalDNSCacheServer:
         logger.info("Local DNS Cache Resolver stopped.")
 
 
+def _is_loopback_host(host: str) -> bool:
+    """Return True only when host strictly designates the local loopback interface."""
+    clean = (host or "").strip().lower().strip("[]")
+    if clean in {"127.0.0.1", "::1", "localhost"}:
+        return True
+    try:
+        return ipaddress.ip_address(clean).is_loopback
+    except ValueError:
+        return False
+
+
 def is_dns_cache_running(
     host: str = DEFAULT_DNS_HOST,
     port: int = DEFAULT_DNS_PORT,
     timeout: float = 0.15,
 ) -> bool:
     """Verifies whether the local DNS cache resolver is actively responding on host:port."""
+    if not _is_loopback_host(host):
+        logger.debug("Refusing non-loopback DNS cache health probe for %r", host)
+        return False
+
+    family = socket.AF_INET6 if ":" in (host or "") else socket.AF_INET
+    sock = None
     try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock = socket.socket(family, socket.SOCK_DGRAM)  # roe-exempt: strictly loopback-only local DNS cache health probe
         sock.settimeout(timeout)
         # Construct lightweight DNS query for localhost
         q = dns.message.make_query("localhost", dns.rdatatype.A)
         sock.sendto(q.to_wire(), (host, port))
         data, _ = sock.recvfrom(512)
-        sock.close()
         return len(data) > 12
     except Exception:
         return False
+    finally:
+        if sock is not None:
+            try:
+                sock.close()
+            except Exception:
+                pass
 
 
 def get_orbit_async_resolver(

@@ -10,14 +10,22 @@ zero socket timeouts during 100-domain concurrent sweeps, and dynamic interface 
 
 from __future__ import annotations
 
+import ipaddress
 import itertools
 import logging
 import os
 import socket
+import urllib.parse
 import urllib.request
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import httpx
+
+from orbit_security.egress_guard import (
+    BlackboardProtocol,
+    RoEEngineProtocol,
+    create_guarded_async_httpx_client,
+)
 
 try:
     import psutil
@@ -43,10 +51,32 @@ IGNORE_KEYWORDS = (
 )
 
 
+def _is_loopback_host(host: str) -> bool:
+    """Return True when host resolves syntactically to a local loopback interface."""
+    clean = (host or "").strip().strip("[]").lower()
+    if clean == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(clean).is_loopback
+    except ValueError:
+        return False
+
+
 def is_balancing_proxy_running(
     proxy_url: str = DEFAULT_PROXY_URL, timeout: float = 0.5
 ) -> bool:
     """Checks if the Multi-Adapter Balancing Proxy (port 8989) is active and responsive."""
+    try:
+        parsed = urllib.parse.urlparse(proxy_url)
+        scheme = (parsed.scheme or "http").lower()
+        host = parsed.hostname or "127.0.0.1"
+        port = parsed.port or 8989
+    except Exception:
+        return False
+
+    if scheme not in ("http", "https") or not _is_loopback_host(host):
+        return False
+
     try:
         health_url = f"{proxy_url.rstrip('/')}/health"
         req = urllib.request.Request(
@@ -57,14 +87,7 @@ def is_balancing_proxy_running(
     except Exception:
         # Fall back to quick TCP socket connection check
         try:
-            parsed = urllib.parse.urlparse(proxy_url)
-            host = parsed.hostname or "127.0.0.1"
-            port = parsed.port or 8989
-        except Exception:
-            host = "127.0.0.1"
-            port = 8989
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:  # roe-exempt: verified loopback proxy health probe
                 s.settimeout(timeout)
                 s.connect((host, port))
                 return True
@@ -153,12 +176,35 @@ class MultiAdapterTransportPool:
         return next(self._cycle)  # type: ignore
 
 
+class _BondedPublicHostRoE:
+    """Default RoE adapter permitting public hosts while rejecting localhost/internal names."""
+
+    def is_target_permitted(self, target: str) -> bool:
+        clean = (target or "").strip().strip("[]").lower()
+        if not clean or clean == "localhost" or clean.endswith((".local", ".internal")):
+            return False
+        try:
+            ip_obj = ipaddress.ip_address(clean)
+            return not (
+                ip_obj.is_private
+                or ip_obj.is_loopback
+                or ip_obj.is_link_local
+                or ip_obj.is_reserved
+                or ip_obj.is_multicast
+                or ip_obj.is_unspecified
+            )
+        except ValueError:
+            return True
+
+
 def create_bonded_http_client(
     timeout: float = 8.0,
     verify_ssl: bool = True,
     use_proxy: Optional[bool] = None,
     event_hooks: Optional[Dict[str, List[Callable]]] = None,
     limits: Optional[httpx.Limits] = None,
+    roe_engine: Optional[RoEEngineProtocol] = None,
+    blackboard: Optional[BlackboardProtocol] = None,
 ) -> httpx.AsyncClient:
     """Creates a high-performance AsyncClient configured for multi-adapter bonding or proxy routing.
 
@@ -168,6 +214,8 @@ def create_bonded_http_client(
         use_proxy: Explicitly enable/disable proxy (:8989). If None, auto-detects if proxy is active.
         event_hooks: Optional httpx event hooks (e.g. SSRF protection).
         limits: Connection pool limits.
+        roe_engine: Optional Zero-Trust RoE engine; defaults to public-host SSRF protection.
+        blackboard: Optional telemetry blackboard for blocked egress audit events.
     """
     effective_limits = limits or httpx.Limits(
         max_keepalive_connections=50, max_connections=200, keepalive_expiry=30.0
@@ -179,34 +227,35 @@ def create_bonded_http_client(
     elif use_proxy is None:
         should_use_proxy = is_balancing_proxy_running(DEFAULT_PROXY_URL)
 
-    client_kwargs: Dict[str, Any] = {
-        "timeout": httpx.Timeout(timeout, connect=timeout * 0.75, read=timeout),
-        "follow_redirects": True,
+    extra_kwargs: Dict[str, Any] = {
         "verify": verify_ssl,
         "limits": effective_limits,
     }
 
-    if event_hooks:
-        client_kwargs["event_hooks"] = event_hooks
-
     if should_use_proxy:
-        client_kwargs["proxy"] = DEFAULT_PROXY_URL
-        return httpx.AsyncClient(**client_kwargs)
+        extra_kwargs["proxy"] = DEFAULT_PROXY_URL
+    else:
+        # Bind across discovered physical network adapters if multiple exist
+        adapters = get_physical_adapters()
+        if len(adapters) > 1:
+            primary_ip = adapters[0]["ip"]
+            extra_kwargs["transport"] = httpx.AsyncHTTPTransport(
+                verify=verify_ssl,
+                local_address=primary_ip,
+                limits=effective_limits,
+            )
 
-    # If proxy not used, bind across discovered physical network adapters if multiple exist
-    adapters = get_physical_adapters()
-    if len(adapters) > 1:
-        # Use primary physical adapter for transport or round-robin transport
-        primary_ip = adapters[0]["ip"]
-        transport = httpx.AsyncHTTPTransport(
-            verify=verify_ssl,
-            local_address=primary_ip,
-            limits=effective_limits,
-        )
-        client_kwargs["transport"] = transport
-        return httpx.AsyncClient(**client_kwargs)
-
-    return httpx.AsyncClient(**client_kwargs)
+    client = create_guarded_async_httpx_client(
+        roe_engine=roe_engine or _BondedPublicHostRoE(),
+        blackboard=blackboard,
+        timeout=httpx.Timeout(timeout, connect=timeout * 0.75, read=timeout),  # type: ignore[arg-type]
+        follow_redirects=True,
+        **extra_kwargs,
+    )
+    if event_hooks:
+        for hook_kind, hook_fns in event_hooks.items():
+            client.event_hooks.setdefault(hook_kind, []).extend(hook_fns)
+    return client
 
 
 class NetworkResiliencyGovernor:

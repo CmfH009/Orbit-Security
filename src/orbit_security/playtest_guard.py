@@ -329,9 +329,11 @@ class HeadlessPlaytestGuard:
 
     def verify_live_server_probes(self, port: int = 9090) -> Dict[str, Any]:
         """Probes live HTTP server if online."""
+        if not isinstance(port, int) or isinstance(port, bool) or not (1 <= port <= 65535):
+            raise ValueError(f"Invalid loopback probe port: {port!r}")
         base_url = f"http://127.0.0.1:{port}"
         # Check if port open
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:  # roe-exempt: hardcoded 127.0.0.1 Cockpit readiness probe
             s.settimeout(0.4)
             if s.connect_ex(("127.0.0.1", port)) != 0:
                 return {"ok": True, "server_online": False, "message": f"Port {port} offline (skipped live probes)"}

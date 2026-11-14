@@ -10,7 +10,34 @@ It also marks the boundary between this package and its sibling repository.
 from pathlib import Path
 import os
 import sys
+import threading
 import pytest
+
+
+_ORIG_THREAD_START = threading.Thread.start
+
+
+def _guarded_thread_start(self: threading.Thread) -> None:
+    """Prevent sibling A:/system/bin/run_menu.py from spawning an infinite background
+    telemetry poller inside pytest when cockpit server modules are imported."""
+    target = getattr(self, "_target", None)
+    if (
+        callable(target)
+        and getattr(target, "__name__", None) == "background_telemetry_scanner"
+        and getattr(target, "__module__", "") == "run_menu"
+    ):
+        return None
+    return _ORIG_THREAD_START(self)
+
+
+def pytest_configure(config) -> None:
+    if threading.Thread.start is not _guarded_thread_start:
+        threading.Thread.start = _guarded_thread_start  # type: ignore[method-assign]
+
+
+def pytest_unconfigure(config) -> None:
+    if threading.Thread.start is _guarded_thread_start:
+        threading.Thread.start = _ORIG_THREAD_START  # type: ignore[method-assign]
 
 @pytest.fixture(autouse=True)
 def _isolate_stripe_env(monkeypatch):

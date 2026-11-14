@@ -23,6 +23,11 @@ import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.parse import urlparse
 
+from orbit_security.egress_guard import (
+    create_guarded_httpx_client,
+    enforce_egress_or_raise,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -232,6 +237,12 @@ class XHProbe:
                 offline=offline,
             )
 
+        if not offline:
+            from orbit_security.scanner import PublicHostOnlyRoE
+
+            target_url = url if "://" in url else f"https://{url}"
+            enforce_egress_or_raise(target_url, PublicHostOnlyRoE())
+
         print_flag = "--print=HB" if offline else "--print=hb"
         cmd = [self.xh_path, "--pretty=none", "-I", "--no-check-status", print_flag]
 
@@ -303,11 +314,15 @@ class XHProbe:
                 except ValueError:
                     port = 443
 
+        from orbit_security.scanner import PublicHostOnlyRoE
+
+        enforce_egress_or_raise(f"https://{hostname}:{port}", PublicHostOnlyRoE())
+
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
 
-        with socket.create_connection((hostname, port), timeout=timeout_sec) as sock:
+        with socket.create_connection((hostname, port), timeout=timeout_sec) as sock:  # roe-exempt: raw TLS X.509 handshake gated by enforce_egress_or_raise
             with ctx.wrap_socket(sock, server_hostname=hostname) as ssock:
                 cert_bin = ssock.getpeercert(binary_form=True)
                 cert_dict = ssock.getpeercert() or {}
@@ -483,8 +498,15 @@ class XHProbe:
                 raw_output=raw_req,
             )
 
+        from orbit_security.scanner import PublicHostOnlyRoE
+
         start_time = time.perf_counter()
-        with httpx.Client(verify=verify_ssl, follow_redirects=follow_redirects, timeout=timeout_sec) as client:
+        with create_guarded_httpx_client(
+            roe_engine=PublicHostOnlyRoE(),
+            verify=verify_ssl,
+            follow_redirects=follow_redirects,
+            timeout=timeout_sec,
+        ) as client:
             resp = client.request(method, url, headers=headers)
         elapsed_ms = (time.perf_counter() - start_time) * 1000.0
 

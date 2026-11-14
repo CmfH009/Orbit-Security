@@ -21,7 +21,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-import httpx
+from orbit_security.egress_guard import create_guarded_httpx_client
 
 logger = logging.getLogger("orbit_security.gemini_multimodal")
 
@@ -192,7 +192,13 @@ class GoogleFilesApiAdapter:
             "file": (p.name, file_bytes, resolved_mime),
         }
 
-        with httpx.Client(timeout=self.timeout_s) as client:
+        class _GeminiFilesApiRoE:
+            """Allowlist RoE restricting uploads strictly to the official Gemini Files API."""
+
+            def is_target_permitted(self, target: str) -> bool:
+                return target.strip().lower() == "generativelanguage.googleapis.com"
+
+        with create_guarded_httpx_client(roe_engine=_GeminiFilesApiRoE(), timeout=self.timeout_s) as client:
             resp = client.post(
                 self.UPLOAD_ENDPOINT,
                 headers={"x-goog-api-key": self.api_key},
