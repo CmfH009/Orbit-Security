@@ -502,6 +502,50 @@ class BountyActiveProber:
             "signatures": signatures,
         }
 
+    def verify_browser_surface(
+        self,
+        url: str,
+        program: BountyProgram,
+        *,
+        verifier: Optional[Any] = None,
+        authenticated: bool = False,
+        redirect_hops: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """Runs RoE-gated SPA/DOM browser verification and emits ev_ artifact hashes to Blackboard."""
+        from orbit_security.exploit_sandbox import BrowserCompanionClient, OdysseusBrowserVerifier
+
+        if verifier is not None:
+            if isinstance(verifier, BrowserCompanionClient):
+                res = verifier.verify_authenticated_target(url, program=program, redirect_hops=redirect_hops)
+            else:
+                res = verifier.verify_spa_target(url, program=program, redirect_hops=redirect_hops)
+        elif authenticated:
+            client = BrowserCompanionClient(blackboard=self.blackboard)
+            res = client.verify_authenticated_target(url, program=program, redirect_hops=redirect_hops)
+        else:
+            spa = OdysseusBrowserVerifier(blackboard=self.blackboard)
+            res = spa.verify_spa_target(url, program=program, redirect_hops=redirect_hops)
+
+        if res.get("ok") and self.blackboard is not None:
+            try:
+                self.blackboard.publish(
+                    event_type="BROWSER_SANDBOX_EVIDENCE",
+                    payload={
+                        "program_id": program.program_id,
+                        "target_url": res.get("url", url),
+                        "detected_flaws": res.get("detected_flaws", []),
+                        "artifact_ids": res.get("artifact_ids", []),
+                        "screenshot_sha256": res.get("screenshot_sha256"),
+                        "har_sha256": res.get("har_sha256"),
+                    },
+                    source="bounty_active_prober",
+                    topic="bounty_radar",
+                )
+            except Exception as exc:
+                logger.debug("Failed to publish BROWSER_SANDBOX_EVIDENCE: %s", exc)
+
+        return res
+
 
 class BountyRollingWorker:
     """Autonomous rolling round-robin background worker for continuous bounty scanning."""
