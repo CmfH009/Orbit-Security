@@ -92,7 +92,14 @@ class TestBountyAttackGraph:
 
         assert "cname:acme.github.io" in graph.nodes
         assert "provider:github_pages" in graph.nodes
-        assert any(n["type"] == "VULNERABILITY" for n in graph.nodes.values())
+        vuln_nodes = [n for n in graph.nodes.values() if n["type"] == "VULNERABILITY"]
+        assert len(vuln_nodes) == 1
+        assert vuln_nodes[0]["severity"] == "HIGH"
+        assert vuln_nodes[0]["meta"]["severity"] == "HIGH"
+
+        # Updating an existing VULNERABILITY node should also keep top-level severity synced
+        graph.add_node(vuln_nodes[0]["id"], vuln_nodes[0]["label"], "VULNERABILITY", meta={"severity": "CRITICAL"})
+        assert graph.nodes[vuln_nodes[0]["id"]]["severity"] == "CRITICAL"
 
         centrality = graph.calculate_centrality()
         assert len(centrality) > 0

@@ -61,7 +61,10 @@ class BountyAttackGraph:
             self.nodes[clean_id]["type"] = node_type
             if meta:
                 self.nodes[clean_id]["meta"].update(meta)
-        return self.nodes[clean_id]
+        node = self.nodes[clean_id]
+        if node_type == "VULNERABILITY" and "severity" in node["meta"]:
+            node["severity"] = node["meta"]["severity"]
+        return node
 
     def add_edge(
         self,
