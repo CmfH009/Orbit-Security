@@ -590,6 +590,7 @@ class StripeWebhookHandler:
         client_name: str,
         contact_email: str,
         plan: str,
+        agency_id: str = "orbit-core",
     ) -> ClientTarget:
         """Registers client target into data/clients.json for 24/7 continuous monitoring."""
         client_id = f"client-{apex_domain.replace('.', '-')}"
@@ -599,7 +600,7 @@ class StripeWebhookHandler:
             apex_domain=apex_domain,
             subdomains=[apex_domain],
             contact_email=contact_email,
-            agency_id="orbit-core",
+            agency_id=agency_id or "orbit-core",
             retainer_plan=plan,
             status="active",
         )
@@ -746,6 +747,7 @@ class StripeWebhookHandler:
             client_name=customer_name,
             contact_email=customer_email,
             plan=plan,
+            agency_id=str(resolved_meta.get("agency_id") or "").strip() or "orbit-core",
         )
 
         # Step 4: Create/update the agency retainer and link the Stripe

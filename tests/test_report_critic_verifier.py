@@ -114,3 +114,57 @@ def test_publisher_falls_back_when_llm_hallucinates(tmp_path: Path):
     assert staged_file.exists()
     data = json.loads(staged_file.read_text(encoding="utf-8"))
     assert data["critic_verified"] is True
+
+
+def test_extract_cited_endpoints_handles_markdown_links_and_backticks():
+    md = (
+        "**Program Policy:** [https://hackerone.com/spotify](https://hackerone.com/spotify)  \n"
+        "Probe `https://cdn.byspotify.com/` and `https://gitlab.com/api/graphql` cleanly."
+    )
+    eps = extract_cited_endpoints(md)
+    assert all("](" not in ep for ep in eps), f"Markdown link delimiter leaked into endpoint: {eps}"
+    assert "/spotify" in eps
+    assert "/api/graphql" in eps
+
+
+def test_critic_verifier_grounds_bounty_flaws_and_ignores_policy_urls():
+    art = EmpiricalEvidenceArtifact(
+        artifact_id=compute_evidence_digest(
+            target="https://cdn.byspotify.com/",
+            status_code=200,
+            flaw_type="open_cloud_bucket",
+            evidence_snippet="Signature match: '<ListBucketResult'",
+            provider="Cloud Storage",
+        ),
+        target="https://cdn.byspotify.com/",
+        status_code=200,
+        flaw_type="open_cloud_bucket",
+        evidence_snippet="Signature match: '<ListBucketResult'",
+        provider="Cloud Storage",
+        endpoint_path="/",
+    )
+    report = (
+        "# [Cloud Storage] Open Public Bucket Directory Listing on cdn.byspotify.com\n"
+        "**Program Policy:** [https://hackerone.com/spotify](https://hackerone.com/spotify)\n"
+        "Observed `<ListBucketResult>` XML response (HTTP 200) on https://cdn.byspotify.com/.\n"
+    )
+    verdict = ReportCriticVerifier.verify_briefing_pitch(
+        pitch_text=report,
+        target_domain="cdn.byspotify.com",
+        core_finding="open_cloud_bucket",
+        artifacts=[art],
+        require_artifact_grounding=True,
+    )
+    assert verdict.passed is True, f"Expected valid grounded report to pass, got {verdict.reasons}"
+    assert verdict.verified_artifact_ids == [art.artifact_id]
+
+    # Hallucinated flaw category against open_cloud_bucket must fail Finding Alignment
+    hallucinated = ReportCriticVerifier.verify_briefing_pitch(
+        pitch_text="**Program Policy:** [https://hackerone.com/spotify](https://hackerone.com/spotify)\ncdn.byspotify.com has SQL injection.",
+        target_domain="cdn.byspotify.com",
+        core_finding="open_cloud_bucket",
+        artifacts=[art],
+        require_artifact_grounding=True,
+    )
+    assert hallucinated.passed is False
+    assert any("FINDING_MISALIGNMENT" in r for r in hallucinated.reasons)

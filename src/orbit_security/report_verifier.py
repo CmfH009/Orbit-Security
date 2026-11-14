@@ -175,19 +175,23 @@ def extract_empirical_artifacts_from_blackboard(
     return artifacts
 
 
-def extract_cited_endpoints(text: str) -> List[str]:
+def extract_cited_endpoints(text: str, ignore_hosts: Optional[Set[str]] = None) -> List[str]:
     """Extracts cited URL paths and endpoints from briefing text."""
-    urls = re.findall(r'https?://[^\s"\'<>\)]+', text)
+    urls = re.findall(r'https?://[^\s"\'<>\)\]\(`]+', text)
     paths: Set[str] = set()
+    ignored = {h.lower() for h in ignore_hosts} if ignore_hosts else set()
     for u in urls:
         parsed = urlsplit(u)
-        clean_p = parsed.path.rstrip(".,;!?:)'\"")
+        host = (parsed.hostname or "").lower()
+        if host and host in ignored:
+            continue
+        clean_p = parsed.path.rstrip(".,;!?:)'\"`]")
         if clean_p and clean_p != "/":
             paths.add(clean_p)
 
-    raw_paths = re.findall(r'(?:^|[\s"\'\(])(/[a-zA-Z0-9_\-\.\/]+)', text)
+    raw_paths = re.findall(r'(?:^|[\s"\'\(`])(/[a-zA-Z0-9_\-\.\/]+)', text)
     for p in raw_paths:
-        clean = p.rstrip(".,;!?:)'\"")
+        clean = p.rstrip(".,;!?:)'\"`]")
         if len(clean) > 1 and clean != "//":
             paths.add(clean)
 
@@ -239,13 +243,35 @@ class ReportCriticVerifier:
         "data exfiltration in progress",
     }
 
+    # Policy reference domains ignored as target endpoints unless they are the target_domain itself
+    POLICY_PLATFORM_HOSTS = {
+        "hackerone.com",
+        "www.hackerone.com",
+        "bugcrowd.com",
+        "www.bugcrowd.com",
+        "intigriti.com",
+        "app.intigriti.com",
+        "yeswehack.com",
+    }
+
     # Flaw-category compatibility mappings to detect hallucinated vulnerability claims
     FLAW_KEYWORDS = {
         "spf": ["spf", "permerror", "dns lookup", "sender policy", "rfc 7208"],
         "dmarc": ["dmarc", "email authentication", "spoofing", "p=none", "p=reject", "p=quarantine"],
+        "cloud_storage": [
+            "bucket", "storage", "listbucket", "nosuchbucket", "s3", "gcs", "blob", "acl", "takeover", "cname",
+        ],
         "cname": ["cname", "takeover", "subdomain", "dangling", "s3", "github pages", "unbounce"],
         "hsts": ["hsts", "strict-transport-security", "tls", "ssl", "transport security"],
         "cors": ["cors", "access-control-allow-origin", "origin", "cross-origin"],
+        "graphql": ["graphql", "__schema", "introspection", "querytype", "mutationtype"],
+        "smuggling": ["smuggling", "desync", "transfer-encoding", "content-length", "cl_te", "te_cl", "h2_downgrade"],
+        "oauth": ["oauth", "oidc", "redirect_uri", "jwks", "id_token", "client_secret"],
+        "sourcemap": ["sourcemap", "source map", ".js.map", "sourcemappingurl"],
+        "xss": ["xss", "cross-site scripting", "dom_xss", "innerhtml"],
+        "dependency_confusion": ["dependency", "namespace", "npm", "pypi"],
+        "ssrf": ["ssrf", "server-side request forgery", "metadata", "169.254.169.254"],
+        "idor": ["idor", "insecure direct object", "direct object reference"],
     }
 
     @classmethod

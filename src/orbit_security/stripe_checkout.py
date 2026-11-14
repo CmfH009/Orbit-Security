@@ -507,27 +507,79 @@ class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
             return
         self._send_text(200, html, "text/html")
 
-    def _serve_portal(self, agency_id: str):
-        if not re.match(r"^[a-zA-Z0-9_-]+$", agency_id):
-            self._send_text(400, "Invalid portal identifier", "text/plain")
+    def _serve_asset(self, rel_asset: str):
+        clean_rel = (rel_asset or "").lstrip("/")
+        if not clean_rel or ".." in clean_rel or "\\" in clean_rel:
+            self._send_text(400, "Invalid asset path", "text/plain")
             return
-        portal_path = (PORTALS_DIR / f"{agency_id}.html").resolve()
+        asset_path = (LANDING_ASSETS_DIR / clean_rel).resolve()
         try:
-            if not portal_path.is_relative_to(PORTALS_DIR.resolve()):
+            if not asset_path.is_relative_to(LANDING_ASSETS_DIR.resolve()):
                 self._send_text(403, "Access denied", "text/plain")
                 return
         except (ValueError, AttributeError):
             self._send_text(403, "Access denied", "text/plain")
             return
-        if portal_path.exists():
-            self._send_text(200, portal_path.read_text(encoding="utf-8"), "text/html")
-        else:
-            self._send_text(
-                404,
-                "<h1>Portal not ready</h1><p>Your white-label portal is being "
-                "generated after payment. Refresh shortly or contact support.</p>",
-                "text/html",
-            )
+        if not asset_path.is_file():
+            self._send_text(404, "Asset not found", "text/plain")
+            return
+        ext = asset_path.suffix.lower()
+        mime_map = {
+            ".css": "text/css; charset=utf-8",
+            ".js": "application/javascript; charset=utf-8",
+            ".svg": "image/svg+xml",
+            ".png": "image/png",
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".woff2": "font/woff2",
+            ".json": "application/json",
+        }
+        data = asset_path.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", mime_map.get(ext, "application/octet-stream"))
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _serve_portal(self, agency_id: str):
+        if not re.match(r"^[a-zA-Z0-9_-]+$", agency_id):
+            self._send_text(400, "Invalid portal identifier", "text/plain")
+            return
+        slug_candidates = []
+        for candidate in (
+            f"{agency_id}.html",
+            f"{agency_id.replace('-', '_')}.html",
+            f"{agency_id.replace('_', '-')}.html",
+        ):
+            if candidate not in slug_candidates:
+                slug_candidates.append(candidate)
+
+        search_dirs = [PORTALS_DIR]
+        default_docs_portals = (PROJECT_ROOT / "docs" / "portals").resolve()
+        if PORTALS_DIR.resolve() == default_docs_portals and LANDING_PORTALS_DIR.is_dir():
+            search_dirs.append(LANDING_PORTALS_DIR)
+
+        for base_dir in search_dirs:
+            resolved_base = base_dir.resolve()
+            for filename in slug_candidates:
+                portal_path = (base_dir / filename).resolve()
+                try:
+                    if not portal_path.is_relative_to(resolved_base):
+                        self._send_text(403, "Access denied", "text/plain")
+                        return
+                except (ValueError, AttributeError):
+                    self._send_text(403, "Access denied", "text/plain")
+                    return
+                if portal_path.exists():
+                    self._send_text(200, portal_path.read_text(encoding="utf-8"), "text/html")
+                    return
+
+        self._send_text(
+            404,
+            "<h1>Portal not ready</h1><p>Your white-label portal is being "
+            "generated after payment. Refresh shortly or contact support.</p>",
+            "text/html",
+        )
 
     def _send_text(self, status: int, body: str, content_type: str):
         data = body.encode("utf-8")
