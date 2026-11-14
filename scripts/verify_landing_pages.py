@@ -17,6 +17,7 @@ class PageValidator(HTMLParser):
         self.scripts = []
         self.images = []
         self.stylesheets = []
+        self.canonicals = []
         self.meta_csp = None
         self.has_viewport = False
         self.script_blocks = []
@@ -28,8 +29,11 @@ class PageValidator(HTMLParser):
         if tag == "a" and "href" in attr_dict:
             self.links.append(attr_dict["href"])
         elif tag == "link":
-            if attr_dict.get("rel") == "stylesheet" and "href" in attr_dict:
+            rel = attr_dict.get("rel", "")
+            if rel == "stylesheet" and "href" in attr_dict:
                 self.stylesheets.append(attr_dict["href"])
+            elif rel == "canonical" and "href" in attr_dict:
+                self.canonicals.append(attr_dict["href"])
         elif tag == "script":
             if "src" in attr_dict:
                 self.scripts.append(attr_dict["src"])
@@ -151,8 +155,25 @@ def verify_directory(dir_path, name):
     if "generateInstantPdfForDomain" in combined_js:
         print("[✓] In-browser client-side PDF compilation function verified.")
 
-    # 7b. Verify Track B self-serve funnel subpages if present
-    for subpage in ["signup.html", "audit.html", "fleet.html", "portals/index.html"]:
+    # 7b. Verify GitHub Pages marker & subpage funnel assets
+    nojekyll_path = os.path.join(dir_path, ".nojekyll")
+    if not os.path.exists(nojekyll_path):
+        errors.append("GitHub Pages .nojekyll marker missing!")
+    else:
+        print("[✓] GitHub Pages .nojekyll marker verified.")
+
+    subpages = [
+        "signup.html",
+        "audit.html",
+        "fleet.html",
+        "about.html",
+        "benchmark/index.html",
+        "ghostdns/index.html",
+        "stealthbridge/index.html",
+        "portals/index.html",
+        "portals/orbit-core.html",
+    ]
+    for subpage in subpages:
         sub_path = os.path.join(dir_path, subpage)
         if not os.path.exists(sub_path):
             continue
@@ -163,8 +184,14 @@ def verify_directory(dir_path, name):
         sub_parser.feed(sub_html)
         if not sub_parser.has_viewport:
             errors.append(f"Subpage {subpage} missing meta viewport tag!")
+        for canon in sub_parser.canonicals:
+            if not canon.startswith("https://cmfh009.github.io/Orbit-Security/"):
+                errors.append(f"Unexpected canonical URL in {subpage}: {canon}")
         for link in sub_parser.links:
-            if link.startswith(("#", "http", "mailto:", "javascript:", "/")):
+            if link.startswith(("#", "http", "mailto:", "javascript:")):
+                continue
+            if link.startswith("/"):
+                errors.append(f"Root-relative link breaks GitHub Pages subpath in {subpage}: {link}")
                 continue
             clean_target = link.split("#")[0].split("?")[0].strip()
             if not clean_target:
@@ -177,13 +204,32 @@ def verify_directory(dir_path, name):
             (sub_parser.images, "image/media"),
         ]:
             for asset in asset_list:
-                if asset.startswith(("http", "data:", "/")):
+                if asset.startswith(("http", "data:")):
+                    continue
+                if asset.startswith("/"):
+                    errors.append(f"Root-relative {label} breaks GitHub Pages subpath in {subpage}: {asset}")
                     continue
                 clean_asset = asset.split("?")[0].strip()
                 if not clean_asset:
                     continue
                 if not os.path.exists(os.path.join(sub_dir, clean_asset)):
                     errors.append(f"Broken {label} in {subpage}: {asset}")
+        if subpage == "signup.html":
+            required_signup_tokens = [
+                "/create-checkout-session",
+                "https://buy.stripe.com/8x29ASgAk3V15X2el6cs801",
+                "https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800",
+                "https://buy.stripe.com/5kQ14mbg0bnt716a4Qcs802",
+                "prefilled_email",
+                "client_reference_id",
+                "github.io",
+                "file:",
+            ]
+            for token in required_signup_tokens:
+                if token not in sub_html:
+                    errors.append(f"signup.html missing Stripe/static fallback token: {token}")
+            if not sub_parser.meta_csp or "https://buy.stripe.com" not in sub_parser.meta_csp:
+                errors.append("signup.html CSP missing https://buy.stripe.com allowance!")
         print(f"[✓] Track B subpage validated: {subpage}")
 
     # 8. Check legal pages existence

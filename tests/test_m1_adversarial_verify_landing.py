@@ -98,6 +98,33 @@ class TestVerifyLandingPagesEncodingStress(unittest.TestCase):
         self.assertNotIn(b"UnicodeEncodeError", stderr)
         self.assertIn(b"ALL EMPIRICAL VERIFICATIONS PASSED 100%", stdout)
 
+    def test_github_pages_parity_nojekyll_and_payment_link_fallbacks(self):
+        """Verify landing/ <-> docs/ byte parity, .nojekyll, canonical URLs, and Payment Links."""
+        import importlib.util
+
+        sync_path = REPO_ROOT / "scripts" / "sync_landing_to_docs.py"
+        spec = importlib.util.spec_from_file_location("sync_landing_to_docs_mod", sync_path)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        sync_mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(sync_mod)
+
+        report = sync_mod.compare(REPO_ROOT / "landing", REPO_ROOT / "docs")
+        self.assertEqual(report["mismatched"], [], f"Drift between landing/ and docs/: {report['mismatched']}")
+        self.assertGreaterEqual(len(report["identical"]), 96)
+
+        for tree in (REPO_ROOT / "landing", REPO_ROOT / "docs"):
+            self.assertTrue((tree / ".nojekyll").is_file(), f"Missing .nojekyll in {tree}")
+            signup_html = (tree / "signup.html").read_text(encoding="utf-8")
+            self.assertIn("/create-checkout-session", signup_html)
+            self.assertIn("https://buy.stripe.com/8x29ASgAk3V15X2el6cs801", signup_html)
+            self.assertIn("https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800", signup_html)
+            self.assertIn("https://buy.stripe.com/5kQ14mbg0bnt716a4Qcs802", signup_html)
+            self.assertIn("prefilled_email", signup_html)
+            self.assertIn("client_reference_id", signup_html)
+            audit_html = (tree / "audit.html").read_text(encoding="utf-8")
+            self.assertIn('href="https://cmfh009.github.io/Orbit-Security/audit.html"', audit_html)
+
 
 if __name__ == "__main__":
     unittest.main()

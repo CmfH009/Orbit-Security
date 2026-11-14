@@ -222,6 +222,7 @@
         <!-- Signup Form Container -->
         <div class="card-glass p-6 sm:p-8 rounded-2xl border border-slate-800">
             <form id="signupForm" action="/create-checkout-session" method="POST">
+                <input type="hidden" id="client_reference_id" name="client_reference_id" value="">
                 <div class="form-grid2 mb-6">
                     <div class="flex flex-col gap-1.5">
                         <label for="agency_id" class="text-xs font-mono font-bold uppercase text-slate-400">Agency Slug / ID</label>
@@ -315,7 +316,7 @@
 
                 <!-- Submit Button -->
                 <button type="submit" id="submitBtn" class="w-full min-h-[48px] py-4 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-sm uppercase tracking-wide transition-all shadow-lg shadow-emerald-500/20 pixel-btn flex items-center justify-center gap-2">
-                    <span>Activate Retainer with Stripe Checkout</span>
+                    <span id="submitBtnLabel">Activate Retainer with Stripe Checkout</span>
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                 </button>
             </form>
@@ -340,7 +341,55 @@
             'Enterprise': 'https://buy.stripe.com/5kQ14mbg0bnt716a4Qcs802'
         };
 
+        const STRIPE_LINKS_NORMALIZED = {
+            'starter': STRIPE_LINKS.Starter,
+            'growth': STRIPE_LINKS.Growth,
+            'scale': STRIPE_LINKS.Scale,
+            'pro': STRIPE_LINKS.Pro,
+            'enterprise': STRIPE_LINKS.Enterprise
+        };
+
         let selectedTierValue = 'Scale';
+
+        function resolveStripePaymentLink(tierName) {
+            const key = String(tierName || '').trim().toLowerCase();
+            return STRIPE_LINKS_NORMALIZED[key] || STRIPE_LINKS.Scale;
+        }
+
+        function getSelectedTierValue() {
+            if (typeof document !== 'undefined') {
+                const checked = document.querySelector('input[name="tier"]:checked');
+                if (checked && checked.value) {
+                    selectedTierValue = checked.value;
+                    return checked.value;
+                }
+            }
+            return selectedTierValue || 'Scale';
+        }
+
+        function buildStripePaymentLinkUrl(tierName, clientRefId, email) {
+            const url = new URL(resolveStripePaymentLink(tierName));
+            const cleanEmail = String(email || '').trim();
+            const cleanRef = String(clientRefId || '').trim();
+            if (cleanEmail) {
+                url.searchParams.set('prefilled_email', cleanEmail);
+            }
+            if (cleanRef) {
+                url.searchParams.set('client_reference_id', cleanRef);
+            }
+            return url.toString();
+        }
+
+        function isStaticHostEnvironment(loc) {
+            const target = loc || (typeof window !== 'undefined' ? window.location : null);
+            if (!target) return true;
+            const proto = String(target.protocol || '').toLowerCase();
+            const host = String(target.hostname || '').toLowerCase();
+            if (proto === 'file:') return true;
+            if (host === 'github.io' || host.endsWith('.github.io')) return true;
+            if (host === 'pages.dev' || host.endsWith('.pages.dev')) return true;
+            return false;
+        }
 
         function selectTier(tierName, index) {
             selectedTierValue = tierName;
@@ -352,9 +401,9 @@
                     t.classList.add('selected', 'border-emerald-500');
                 }
             });
-            if (radios[index]) {
-                radios[index].checked = true;
-            }
+            radios.forEach((r, i) => {
+                r.checked = i === index;
+            });
         }
 
         // URL Query Parameter Tier Selection & Self-Serve Prefill
@@ -413,8 +462,8 @@
         })();
 
         // Dual-mode gateway handler
-        const isStaticHost = window.location.protocol === 'https:' && (window.location.hostname.includes('github.io') || window.location.hostname.includes('pages.dev'));
-        if (isStaticHost) {
+        const isStaticHost = isStaticHostEnvironment(typeof window !== 'undefined' ? window.location : null);
+        if (isStaticHost && typeof document !== 'undefined') {
             const notice = document.getElementById('envNotice');
             if (notice) notice.classList.remove('hidden');
         }
@@ -427,7 +476,7 @@
                 .slice(0, 40) || 'agency';
             const seed = `${cleanSlug}:${(email || '').trim().toLowerCase()}`;
             try {
-                if (window.crypto && window.crypto.subtle && typeof TextEncoder !== 'undefined') {
+                if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle && typeof TextEncoder !== 'undefined') {
                     const buf = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(seed));
                     const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
                     return `${cleanSlug}-${hex.slice(0, 8)}`;
@@ -443,8 +492,10 @@
 
         function getOnboardingEndpoints() {
             const endpoints = [];
-            if (window.ORBIT_ONBOARDING_ENDPOINT) endpoints.push(window.ORBIT_ONBOARDING_ENDPOINT);
-            if (window.location && window.location.protocol && window.location.protocol.startsWith('http') && !window.location.hostname.endsWith('github.io') && !window.location.hostname.endsWith('pages.dev')) {
+            if (typeof window !== 'undefined' && window.ORBIT_ONBOARDING_ENDPOINT) {
+                endpoints.push(window.ORBIT_ONBOARDING_ENDPOINT);
+            }
+            if (typeof window !== 'undefined' && window.location && window.location.protocol && window.location.protocol.startsWith('http') && !isStaticHostEnvironment(window.location)) {
                 endpoints.push(`${window.location.origin}/api/orbit/onboarding`);
             }
             endpoints.push(
@@ -456,7 +507,8 @@
             return endpoints;
         }
 
-        async function dispatchAgencyOnboarding(formData) {
+        async function dispatchAgencyOnboarding(formData, opts) {
+            if (opts && opts.skipTelemetry) return;
             const jsonStr = JSON.stringify(formData);
             const endpoints = getOnboardingEndpoints();
             const requests = endpoints.map(url => {
@@ -485,48 +537,294 @@
             ]);
         }
 
-        document.getElementById('signupForm').addEventListener('submit', async function(e) {
-            const agencySlug = document.getElementById('agency_id').value.trim();
-            const email = document.getElementById('contact_email').value.trim();
+        function navigateToCheckout(url, navigatorFn) {
+            if (typeof navigatorFn === 'function') {
+                return navigatorFn(url);
+            }
+            if (typeof window !== 'undefined' && typeof window.__orbitNavigate === 'function') {
+                return window.__orbitNavigate(url);
+            }
+            window.location.href = url;
+            return url;
+        }
+
+        function buildFormEncodedPayload(form, formData) {
+            const params = new URLSearchParams();
+            if (form && typeof FormData !== 'undefined') {
+                try {
+                    const raw = new FormData(form);
+                    for (const [k, v] of raw.entries()) {
+                        params.set(k, String(v));
+                    }
+                } catch (_) {}
+            }
+            if (formData) {
+                const fields = [
+                    'client_reference_id',
+                    'agency_id',
+                    'agency_name',
+                    'contact_email',
+                    'website',
+                    'tier',
+                    'custom_domain',
+                    'support_email',
+                    'tagline',
+                    'primary_color',
+                    'accent_color'
+                ];
+                fields.forEach(key => {
+                    if (formData[key] !== undefined && formData[key] !== null) {
+                        params.set(key, String(formData[key]));
+                    }
+                });
+            }
+            return params.toString();
+        }
+
+        function isFallbackCheckoutStatus(res) {
+            if (!res) return true;
+            if (res.type === 'error') return true;
+            return res.status === 404 || res.status === 405 || res.status === 501;
+        }
+
+        async function submitSignupCheckout(e, options) {
+            if (e && typeof e.preventDefault === 'function') {
+                e.preventDefault();
+            }
+            const opts = options || {};
+            const form = opts.form || (typeof document !== 'undefined' ? document.getElementById('signupForm') : null);
+            const readField = (id, fallback) => {
+                if (opts.formValues && Object.prototype.hasOwnProperty.call(opts.formValues, id)) {
+                    return String(opts.formValues[id] || '').trim();
+                }
+                if (typeof document !== 'undefined') {
+                    const el = document.getElementById(id);
+                    if (el && typeof el.value === 'string') return el.value.trim();
+                }
+                return fallback || '';
+            };
+
+            const agencySlug = readField('agency_id', '');
+            const email = readField('contact_email', '');
+            const activeTier = (opts.formValues && opts.formValues.tier) || getSelectedTierValue();
             const clientRefId = await computeClientReferenceId(agencySlug, email);
+
+            if (typeof document !== 'undefined') {
+                const refInput = document.getElementById('client_reference_id');
+                if (refInput) refInput.value = clientRefId;
+            }
 
             const formData = {
                 event: 'AGENCY_ONBOARDING',
                 client_reference_id: clientRefId,
                 agency_id: agencySlug,
-                agency_name: document.getElementById('agency_name').value.trim(),
+                agency_name: readField('agency_name', ''),
                 contact_email: email,
-                website: document.getElementById('website').value.trim(),
-                tier: selectedTierValue,
-                custom_domain: document.getElementById('custom_domain').value.trim(),
-                support_email: document.getElementById('support_email').value.trim(),
-                tagline: document.getElementById('tagline').value.trim(),
-                primary_color: document.getElementById('primary_color').value,
-                accent_color: document.getElementById('accent_color').value,
+                website: readField('website', ''),
+                tier: activeTier,
+                custom_domain: readField('custom_domain', ''),
+                support_email: readField('support_email', ''),
+                tagline: readField('tagline', ''),
+                primary_color: readField('primary_color', '#0B132B'),
+                accent_color: readField('accent_color', '#10B981'),
                 saved_at: new Date().toISOString()
             };
 
             try {
-                localStorage.setItem('orbit_agency_onboarding', JSON.stringify(formData));
+                if (typeof localStorage !== 'undefined' && localStorage.setItem) {
+                    localStorage.setItem('orbit_agency_onboarding', JSON.stringify(formData));
+                }
             } catch (err) {}
 
-            if (isStaticHost) {
-                e.preventDefault();
-                await dispatchAgencyOnboarding(formData);
+            const submitBtn = typeof document !== 'undefined' ? document.getElementById('submitBtn') : null;
+            const submitLabel = typeof document !== 'undefined' ? document.getElementById('submitBtnLabel') : null;
+            const origLabel = submitLabel ? submitLabel.textContent : '';
+            if (submitBtn) submitBtn.disabled = true;
+            if (submitLabel) submitLabel.textContent = 'Connecting to Stripe Checkout...';
 
-                let targetUrl = STRIPE_LINKS[selectedTierValue] || STRIPE_LINKS['Scale'];
-                const params = new URLSearchParams();
-                if (clientRefId) params.set('client_reference_id', clientRefId);
-                if (email) params.set('prefilled_email', email);
-                const queryStr = params.toString();
-                if (queryStr) {
-                    targetUrl += (targetUrl.includes('?') ? '&' : '?') + queryStr;
+            const resetButton = () => {
+                if (submitBtn) submitBtn.disabled = false;
+                if (submitLabel && origLabel) submitLabel.textContent = origLabel;
+            };
+
+            const revealStaticNotice = () => {
+                if (typeof document !== 'undefined') {
+                    const notice = document.getElementById('envNotice');
+                    if (notice) notice.classList.remove('hidden');
                 }
-                window.location.href = targetUrl;
-            } else {
-                dispatchAgencyOnboarding(formData);
+            };
+
+            const loc = opts.location || (typeof window !== 'undefined' ? window.location : null);
+            const forceApiProbe = Boolean(opts.forceApiProbe);
+            if (!forceApiProbe && isStaticHostEnvironment(loc)) {
+                try {
+                    revealStaticNotice();
+                    await dispatchAgencyOnboarding(formData, opts);
+                    const targetUrl = buildStripePaymentLinkUrl(activeTier, clientRefId, email);
+                    navigateToCheckout(targetUrl, opts.navigate);
+                    return {
+                        mode: 'payment_link_static',
+                        url: targetUrl,
+                        client_reference_id: clientRefId,
+                        tier: activeTier
+                    };
+                } finally {
+                    resetButton();
+                }
             }
-        });
+
+            const fetchFn = opts.fetchFn || (typeof fetch === 'function' ? fetch : null);
+            const checkoutAction = (form && typeof form.getAttribute === 'function' && form.getAttribute('action')) || '/create-checkout-session';
+
+            if (!fetchFn) {
+                try {
+                    revealStaticNotice();
+                    await dispatchAgencyOnboarding(formData, opts);
+                    const targetUrl = buildStripePaymentLinkUrl(activeTier, clientRefId, email);
+                    navigateToCheckout(targetUrl, opts.navigate);
+                    return {
+                        mode: 'payment_link_static',
+                        url: targetUrl,
+                        client_reference_id: clientRefId,
+                        tier: activeTier
+                    };
+                } finally {
+                    resetButton();
+                }
+            }
+
+            const onboardingPromise = dispatchAgencyOnboarding(formData, opts);
+            let timerId = null;
+            try {
+                const fetchInit = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: buildFormEncodedPayload(form, formData),
+                    redirect: 'manual'
+                };
+                if (typeof AbortController !== 'undefined') {
+                    const controller = new AbortController();
+                    fetchInit.signal = controller.signal;
+                    timerId = setTimeout(() => controller.abort(), 5000);
+                }
+                const res = await fetchFn(checkoutAction, fetchInit);
+                if (timerId) clearTimeout(timerId);
+
+                if (isFallbackCheckoutStatus(res)) {
+                    await onboardingPromise;
+                    revealStaticNotice();
+                    const targetUrl = buildStripePaymentLinkUrl(activeTier, clientRefId, email);
+                    navigateToCheckout(targetUrl, opts.navigate);
+                    resetButton();
+                    return {
+                        mode: 'payment_link_fallback',
+                        status: res ? res.status : 0,
+                        url: targetUrl,
+                        client_reference_id: clientRefId,
+                        tier: activeTier
+                    };
+                }
+
+                const redirectLoc = res.headers && typeof res.headers.get === 'function' ? res.headers.get('Location') : null;
+                if (redirectLoc && ((res.status >= 300 && res.status < 400) || res.type === 'opaqueredirect')) {
+                    await onboardingPromise;
+                    navigateToCheckout(redirectLoc, opts.navigate);
+                    resetButton();
+                    return {
+                        mode: 'api_redirect',
+                        status: res.status,
+                        url: redirectLoc,
+                        client_reference_id: clientRefId,
+                        tier: activeTier
+                    };
+                }
+
+                if (res.ok) {
+                    const ct = (res.headers && typeof res.headers.get === 'function' ? res.headers.get('content-type') : '') || '';
+                    if (ct.toLowerCase().includes('application/json') && typeof res.json === 'function') {
+                        const payload = await res.json();
+                        const apiUrl = payload && (payload.url || payload.checkout_url);
+                        if (apiUrl) {
+                            await onboardingPromise;
+                            navigateToCheckout(apiUrl, opts.navigate);
+                            resetButton();
+                            return {
+                                mode: 'api_json',
+                                status: res.status,
+                                url: apiUrl,
+                                client_reference_id: clientRefId,
+                                tier: activeTier
+                            };
+                        }
+                    }
+                    if (res.url && /^https:\/\/(?:checkout|buy)\.stripe\.com\//i.test(res.url)) {
+                        await onboardingPromise;
+                        navigateToCheckout(res.url, opts.navigate);
+                        resetButton();
+                        return {
+                            mode: 'api_redirect',
+                            status: res.status,
+                            url: res.url,
+                            client_reference_id: clientRefId,
+                            tier: activeTier
+                        };
+                    }
+                }
+
+                // Live backend API returned opaqueredirect (302 without JS-readable Location), 400 validation, or 502 error:
+                // preserve native API checkout submission behavior.
+                await onboardingPromise;
+                if (typeof opts.nativeSubmit === 'function') {
+                    opts.nativeSubmit(form);
+                } else if (form && typeof HTMLFormElement !== 'undefined' && HTMLFormElement.prototype && typeof HTMLFormElement.prototype.submit === 'function') {
+                    HTMLFormElement.prototype.submit.call(form);
+                } else if (form && typeof form.submit === 'function') {
+                    form.submit();
+                }
+                resetButton();
+                return {
+                    mode: 'api_native_submit',
+                    status: res.status,
+                    opaqueredirect: res.type === 'opaqueredirect',
+                    client_reference_id: clientRefId,
+                    tier: activeTier
+                };
+            } catch (err) {
+                if (timerId) clearTimeout(timerId);
+                await onboardingPromise;
+                revealStaticNotice();
+                const targetUrl = buildStripePaymentLinkUrl(activeTier, clientRefId, email);
+                navigateToCheckout(targetUrl, opts.navigate);
+                resetButton();
+                return {
+                    mode: 'payment_link_network_fallback',
+                    error: err && err.message ? err.message : 'network_error',
+                    url: targetUrl,
+                    client_reference_id: clientRefId,
+                    tier: activeTier
+                };
+            }
+        }
+
+        if (typeof document !== 'undefined') {
+            const signupFormEl = document.getElementById('signupForm');
+            if (signupFormEl) {
+                signupFormEl.addEventListener('submit', submitSignupCheckout);
+            }
+        }
+
+        if (typeof window !== 'undefined') {
+            window.OrbitSignupCheckout = {
+                STRIPE_LINKS,
+                resolveStripePaymentLink,
+                getSelectedTierValue,
+                buildStripePaymentLinkUrl,
+                isStaticHostEnvironment,
+                isFallbackCheckoutStatus,
+                computeClientReferenceId,
+                submitSignupCheckout
+            };
+        }
     </script>
 </body>
 </html>

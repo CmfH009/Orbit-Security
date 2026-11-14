@@ -22,6 +22,10 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
+import re
+import shutil
+import subprocess
 import sys
 import tempfile
 import threading
@@ -475,4 +479,251 @@ def test_stripe_webhook_env_fallback_is_hermetic_under_pytest(tmp_path: Path, mo
         ).webhook_secret
         == "whsec_explicit_priority"
     )
+
+
+def test_signup_static_github_pages_and_checkout_api_fallback():
+    """Verify signup.html Payment Link fallback on github.io / file: / 404 / 405 / network errors."""
+    node_exe = shutil.which("node")
+    assert node_exe is not None, "Node.js is required to exercise signup.html checkout logic"
+
+    landing_signup = REPO_ROOT / "landing" / "signup.html"
+    docs_signup = REPO_ROOT / "docs" / "signup.html"
+    landing_bytes = landing_signup.read_bytes()
+    docs_bytes = docs_signup.read_bytes()
+    assert landing_bytes == docs_bytes, "landing/signup.html and docs/signup.html must be synced"
+
+    html = landing_bytes.decode("utf-8")
+    assert 'action="/create-checkout-session"' in html
+    assert "https://buy.stripe.com/8x29ASgAk3V15X2el6cs801" in html
+    assert "https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800" in html
+    assert "https://buy.stripe.com/5kQ14mbg0bnt716a4Qcs802" in html
+
+    scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, flags=re.DOTALL)
+    inline_js = next(s for s in scripts if "STRIPE_LINKS" in s)
+
+    harness = r"""
+const assert = require('assert');
+const vm = require('vm');
+const scriptSrc = process.env.ORBIT_SIGNUP_JS;
+
+function createDomHarness(proto, hostname, search) {
+    const storage = {};
+    const hiddenClasses = new Set(['hidden']);
+    const envNotice = {
+        classList: {
+            add: (c) => hiddenClasses.add(c),
+            remove: (c) => hiddenClasses.delete(c),
+            contains: (c) => hiddenClasses.has(c)
+        }
+    };
+    const submitBtn = { disabled: false };
+    const submitBtnLabel = { textContent: 'Activate Retainer with Stripe Checkout' };
+    const fields = {
+        agency_id: { value: 'northwind-web' },
+        agency_name: { value: 'Northwind Web' },
+        contact_email: { value: 'billing+ops@northwind.example' },
+        website: { value: 'https://northwind.example' },
+        custom_domain: { value: 'security.northwind.example' },
+        support_email: { value: 'sec@northwind.example' },
+        tagline: { value: 'Zero Drift Security' },
+        primary_color: { value: '#0B132B' },
+        accent_color: { value: '#10B981' },
+        client_reference_id: { value: '' }
+    };
+    const radios = [
+        { name: 'tier', value: 'Starter', checked: false },
+        { name: 'tier', value: 'Scale', checked: true },
+        { name: 'tier', value: 'Enterprise', checked: false }
+    ];
+    let submittedListener = null;
+    const signupForm = {
+        getAttribute: (name) => (name === 'action' ? '/create-checkout-session' : null),
+        addEventListener: (ev, fn) => { if (ev === 'submit') submittedListener = fn; },
+        submit: () => { throw new Error('unexpected direct form.submit'); }
+    };
+    const document = {
+        getElementById: (id) => {
+            if (id === 'signupForm') return signupForm;
+            if (id === 'envNotice') return envNotice;
+            if (id === 'submitBtn') return submitBtn;
+            if (id === 'submitBtnLabel') return submitBtnLabel;
+            return fields[id] || null;
+        },
+        querySelectorAll: (sel) => {
+            if (sel === '.tier-tile') return [
+                { classList: { remove: () => {}, add: () => {} } },
+                { classList: { remove: () => {}, add: () => {} } },
+                { classList: { remove: () => {}, add: () => {} } }
+            ];
+            if (sel === 'input[name="tier"]') return radios;
+            return [];
+        },
+        querySelector: (sel) => {
+            if (sel === 'input[name="tier"]:checked') return radios.find(r => r.checked) || null;
+            return null;
+        }
+    };
+    const location = {
+        protocol: proto,
+        hostname: hostname,
+        origin: proto === 'file:' ? 'null' : `${proto}//${hostname}`,
+        search: search || '',
+        href: ''
+    };
+    const windowObj = {
+        location,
+        crypto: require('crypto').webcrypto,
+        ORBIT_ONBOARDING_ENDPOINT: ''
+    };
+    const ctx = {
+        window: windowObj,
+        document,
+        URL,
+        URLSearchParams,
+        TextEncoder,
+        Uint8Array,
+        Promise,
+        setTimeout,
+        clearTimeout,
+        localStorage: {
+            setItem: (k, v) => { storage[k] = v; },
+            getItem: (k) => storage[k] || null
+        },
+        navigator: {},
+        HTMLFormElement: function FakeHtmlForm() {}
+    };
+    ctx.HTMLFormElement.prototype = { submit: () => {} };
+    vm.runInNewContext(scriptSrc, ctx);
+    return { ctx, windowObj, envNotice, fields, radios, submitBtn, submitBtnLabel, submittedListener };
+}
+
+(async () => {
+    // 1. cmfh009.github.io static host across Starter / Growth / Pro
+    const gh = createDomHarness('https:', 'cmfh009.github.io', '');
+    assert.strictEqual(gh.envNotice.classList.contains('hidden'), false, 'envNotice must unhide on github.io');
+    const api = gh.windowObj.OrbitSignupCheckout;
+    const expectedMap = [
+        { tier: 'Starter', base: 'https://buy.stripe.com/8x29ASgAk3V15X2el6cs801' },
+        { tier: 'Growth', base: 'https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800' },
+        { tier: 'Scale', base: 'https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800' },
+        { tier: 'Pro', base: 'https://buy.stripe.com/5kQ14mbg0bnt716a4Qcs802' },
+        { tier: 'Enterprise', base: 'https://buy.stripe.com/5kQ14mbg0bnt716a4Qcs802' }
+    ];
+    for (const row of expectedMap) {
+        let fetched = false;
+        let navigated = null;
+        const res = await api.submitSignupCheckout(
+            { preventDefault: () => {} },
+            {
+                skipTelemetry: true,
+                formValues: { tier: row.tier },
+                fetchFn: async () => { fetched = true; return { status: 405 }; },
+                navigate: (u) => { navigated = u; return u; }
+            }
+        );
+        assert.strictEqual(fetched, false, `github.io must not issue doomed POST for ${row.tier}`);
+        assert(navigated && navigated.startsWith(row.base), `expected ${row.base}, got ${navigated}`);
+        const parsed = new URL(navigated);
+        assert.strictEqual(parsed.searchParams.get('prefilled_email'), 'billing+ops@northwind.example');
+        assert(parsed.searchParams.get('client_reference_id').startsWith('northwind-web-'));
+        assert.strictEqual(res.client_reference_id, parsed.searchParams.get('client_reference_id'));
+        assert.strictEqual(gh.submitBtn.disabled, false);
+    }
+
+    // 2. file: protocol static host
+    const fileDom = createDomHarness('file:', '', '?tier=pro');
+    assert.strictEqual(fileDom.envNotice.classList.contains('hidden'), false, 'envNotice must unhide on file:');
+    let fileNav = null;
+    await fileDom.windowObj.OrbitSignupCheckout.submitSignupCheckout(
+        { preventDefault: () => {} },
+        { skipTelemetry: true, navigate: (u) => { fileNav = u; return u; } }
+    );
+    assert(fileNav.startsWith('https://buy.stripe.com/5kQ14mbg0bnt716a4Qcs802'));
+    assert.strictEqual(new URL(fileNav).searchParams.get('prefilled_email'), 'billing+ops@northwind.example');
+
+    // 3. Non-API static host (404 / 405 / 501 / network error) falls back with query params
+    for (const scenario of [
+        { name: '404', fn: async () => ({ status: 404, type: 'basic', ok: false }) },
+        { name: '405', fn: async () => ({ status: 405, type: 'basic', ok: false }) },
+        { name: '501', fn: async () => ({ status: 501, type: 'basic', ok: false }) },
+        { name: 'network', fn: async () => { throw new TypeError('Failed to fetch'); } }
+    ]) {
+        const st = createDomHarness('http:', '127.0.0.1', '?tier=starter');
+        let navUrl = null;
+        let nativeCount = 0;
+        const out = await st.windowObj.OrbitSignupCheckout.submitSignupCheckout(
+            { preventDefault: () => {} },
+            {
+                skipTelemetry: true,
+                fetchFn: scenario.fn,
+                nativeSubmit: () => { nativeCount += 1; },
+                navigate: (u) => { navUrl = u; return u; }
+            }
+        );
+        assert.strictEqual(nativeCount, 0, `${scenario.name} must fall back, not native submit`);
+        assert(navUrl && navUrl.startsWith('https://buy.stripe.com/8x29ASgAk3V15X2el6cs801'), `${scenario.name} wrong link: ${navUrl}`);
+        const u = new URL(navUrl);
+        assert.strictEqual(u.searchParams.get('prefilled_email'), 'billing+ops@northwind.example');
+        assert(u.searchParams.get('client_reference_id').startsWith('northwind-web-'));
+        assert(out.mode.startsWith('payment_link_'));
+    }
+
+    // 4. Live API backend preserves 302 opaqueredirect native submit, JSON url redirect, and 400 validation
+    const liveOpaque = createDomHarness('http:', '127.0.0.1', '?tier=growth');
+    let opaqueNativeCount = 0;
+    const opaqueRes = await liveOpaque.windowObj.OrbitSignupCheckout.submitSignupCheckout(
+        { preventDefault: () => {} },
+        {
+            skipTelemetry: true,
+            fetchFn: async () => ({ status: 0, type: 'opaqueredirect', ok: false }),
+            nativeSubmit: () => { opaqueNativeCount += 1; }
+        }
+    );
+    assert.strictEqual(opaqueNativeCount, 1);
+    assert.strictEqual(opaqueRes.mode, 'api_native_submit');
+    assert(liveOpaque.fields.client_reference_id.value.startsWith('northwind-web-'));
+
+    const liveJson = createDomHarness('http:', '127.0.0.1', '');
+    let jsonNav = null;
+    const jsonRes = await liveJson.windowObj.OrbitSignupCheckout.submitSignupCheckout(
+        { preventDefault: () => {} },
+        {
+            skipTelemetry: true,
+            fetchFn: async () => ({
+                ok: true,
+                status: 200,
+                headers: { get: (h) => (h.toLowerCase() === 'content-type' ? 'application/json' : null) },
+                json: async () => ({ url: 'https://checkout.stripe.com/c/pay/cs_test_live_api' })
+            }),
+            navigate: (u) => { jsonNav = u; return u; }
+        }
+    );
+    assert.strictEqual(jsonRes.mode, 'api_json');
+    assert.strictEqual(jsonNav, 'https://checkout.stripe.com/c/pay/cs_test_live_api');
+
+    const live400 = createDomHarness('http:', '127.0.0.1', '');
+    let errNativeCount = 0;
+    const errRes = await live400.windowObj.OrbitSignupCheckout.submitSignupCheckout(
+        { preventDefault: () => {} },
+        {
+            skipTelemetry: true,
+            fetchFn: async () => ({ status: 400, type: 'basic', ok: false }),
+            nativeSubmit: () => { errNativeCount += 1; }
+        }
+    );
+    assert.strictEqual(errRes.mode, 'api_native_submit');
+    assert.strictEqual(errNativeCount, 1);
+})();
+"""
+    env = {"ORBIT_SIGNUP_JS": inline_js}
+    proc = subprocess.run(
+        [node_exe, "-e", harness],
+        env={**os.environ, **env},
+        capture_output=True,
+        text=True,
+        cwd=str(REPO_ROOT),
+        check=False,
+    )
+    assert proc.returncode == 0, f"Node signup harness failed:\nSTDOUT:{proc.stdout}\nSTDERR:{proc.stderr}"
+
 
