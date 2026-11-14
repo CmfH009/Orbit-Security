@@ -1049,6 +1049,39 @@ def query_email_hygiene(
         except Exception:
             classifier = None
 
+    if classifier is None:
+        promo_re = re.compile(
+            r"\b(flash sale|%\s*off|limited time|promo|deals?@|discount|special offer)\b",
+            re.IGNORECASE,
+        )
+        for idx, msg in enumerate(coerced):
+            msg_id = str(_msg_field(msg, "id", f"msg-{idx}") or f"msg-{idx}")
+            is_starred = bool(_msg_field(msg, "is_starred", False))
+            is_read = bool(_msg_field(msg, "is_read", False))
+            is_in_inbox = bool(_msg_field(msg, "is_in_inbox", True))
+            subject = _clean_single_line(str(_msg_field(msg, "subject", "") or ""))
+            sender = str(_msg_field(msg, "sender", "") or "")
+            body_preview = str(_msg_field(msg, "body_text", "") or _msg_field(msg, "snippet", "") or "")[:500]
+            combined = f"{subject} {sender} {body_preview}"
+            dt = _parse_msg_datetime(_msg_field(msg, "date"))
+            age_days = ((ref_ts - dt.timestamp()) / 86400.0) if dt is not None else 0.0
+
+            has_unsub = bool(_msg_field(msg, "list_unsubscribe") or _msg_field(msg, "list_id"))
+            if has_unsub:
+                unsubscribed_count += 1
+
+            if is_starred:
+                continue
+
+            if not _FINANCIAL_OR_LEGAL_GUARD_RE.search(combined) and age_days >= 7.0 and promo_re.search(combined):
+                trashed_count += 1
+                triage_flagged_ids.add(msg_id)
+                continue
+
+            if is_read and is_in_inbox and age_days >= 30.0:
+                archived_count += 1
+                triage_flagged_ids.add(msg_id)
+
     received_24h = 0
     read_or_cleared_24h = 0
     auto_hygiene_candidates = 0

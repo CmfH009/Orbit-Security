@@ -450,7 +450,7 @@ class TestFalsePositiveAndSignalGates:
 
 class TestTrackAEgressCompliance:
     def test_owned_track_a_modules_have_zero_egress_violations(self):
-        src_dir = Path(r"A:\projects\orbit-security\src\orbit_security")
+        src_dir = Path(__file__).resolve().parent.parent / "src" / "orbit_security"
         owned = [
             src_dir / "bounty_radar.py",
             src_dir / "bounty_active_prober.py",
