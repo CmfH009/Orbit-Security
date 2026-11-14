@@ -101,12 +101,21 @@ class ClientBundleExporter:
         bundles_dir: Optional[Path] = None,
         retainer_manager: Optional[AgencyRetainerManager] = None,
     ):
-        self.workspace_root = Path(workspace_root) if workspace_root else DEFAULT_REPO_ROOT
-        self.bundles_dir = Path(bundles_dir) if bundles_dir else self.workspace_root / "data" / "client_bundles"
+        if workspace_root is None:
+            self.workspace_root = DEFAULT_REPO_ROOT
+            self.bundles_dir = resolve_isolated_data_path(
+                bundles_dir, self.workspace_root / "data" / "client_bundles"
+            )
+            self.retainer_manager = retainer_manager or AgencyRetainerManager()
+        else:
+            self.workspace_root = Path(workspace_root)
+            self.bundles_dir = (
+                Path(bundles_dir) if bundles_dir else self.workspace_root / "data" / "client_bundles"
+            )
+            self.retainer_manager = retainer_manager or AgencyRetainerManager(
+                data_path=self.workspace_root / "data" / "agency_retainers.json"
+            )
         self.bundles_dir.mkdir(parents=True, exist_ok=True)
-        self.retainer_manager = retainer_manager or AgencyRetainerManager(
-            data_path=self.workspace_root / "data" / "agency_retainers.json"
-        )
 
     def generate_html_report(
         self,
