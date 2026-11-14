@@ -110,7 +110,10 @@ class BountyRollingDaemon:
             logger.error(f"Program ID '{program_id}' not found in active catalog.")
             return None
 
-        poll_results = self.ct_daemon.poll_domains(target.in_scope)
+        try:
+            poll_results = self.ct_daemon.poll_domains(target.in_scope, program=target)
+        except TypeError:
+            poll_results = self.ct_daemon.poll_domains(target.in_scope)
         new_subdomains: List[str] = []
         takeover_findings: List[Dict[str, Any]] = []
         new_certificates = 0

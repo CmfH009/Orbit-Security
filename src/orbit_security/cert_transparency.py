@@ -14,16 +14,18 @@ Features:
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import json
 import logging
 import re
+import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 logger = logging.getLogger("orbit_security.cert_transparency")
 
@@ -297,6 +299,7 @@ class CtStreamDaemon:
         self.cname_probe_map = cname_probe_map or {}
         self.seen_cert_ids: Dict[str, Set[int]] = {}
         self.known_subdomains: Dict[str, Set[str]] = {}
+        self._state_lock = threading.Lock()
         self.load_watermark()
 
     def load_watermark(self):
@@ -331,61 +334,74 @@ class CtStreamDaemon:
         except Exception as ex:
             logger.debug(f"Failed to save CT watermark to {self.watermark_file}: {ex}")
 
-    def poll_domain(self, domain: str, force_refresh: bool = False) -> Dict[str, Any]:
+    def poll_domain(
+        self,
+        domain: str,
+        force_refresh: bool = False,
+        program: Optional[Any] = None,
+        batch_size: int = 100,
+    ) -> Dict[str, Any]:
         """Polls CT log feed for domain, computes delta against persistent watermark, and chains takeover checks."""
+        from orbit_security.bounty_radar import RulesOfEngagementEngine
+
         clean_domain = domain.strip().lower().lstrip("*.")
         certs = self.monitor.fetch_certificates(clean_domain, force_refresh=force_refresh, offline=self.offline)
 
-        seen_certs = self.seen_cert_ids.setdefault(clean_domain, set())
-        known_subs = self.known_subdomains.setdefault(clean_domain, set())
-
         new_certs: List[CertificateEntry] = []
         all_subdomains: Set[str] = set()
+        pending_events: List[Dict[str, Any]] = []
 
-        for cert in certs:
-            if cert.cert_id and cert.cert_id not in seen_certs:
-                new_certs.append(cert)
-                seen_certs.add(cert.cert_id)
-                if self.blackboard:
-                    try:
-                        self.blackboard.publish(
-                            event_type="CT_LOG_CERTIFICATE_DISCOVERED",
-                            payload={
+        with self._state_lock:
+            seen_certs = self.seen_cert_ids.setdefault(clean_domain, set())
+            known_subs = self.known_subdomains.setdefault(clean_domain, set())
+
+            for cert in certs:
+                if cert.cert_id and cert.cert_id not in seen_certs:
+                    new_certs.append(cert)
+                    seen_certs.add(cert.cert_id)
+                    if self.blackboard:
+                        pending_events.append({
+                            "event_type": "CT_LOG_CERTIFICATE_DISCOVERED",
+                            "payload": {
                                 "cert_id": cert.cert_id,
                                 "common_name": cert.common_name,
                                 "issuer": cert.issuer,
                                 "san_domains": cert.san_domains,
                                 "apex_domain": clean_domain,
                             },
-                            source="ct_stream_daemon",
-                            topic="threat_intel",
-                        )
-                    except Exception as ex:
-                        logger.debug(f"Failed to publish CT cert event: {ex}")
-            for san in cert.san_domains:
-                all_subdomains.add(san)
+                            "source": "ct_stream_daemon",
+                            "topic": "threat_intel",
+                        })
+                for san in cert.san_domains:
+                    all_subdomains.add(san)
 
-        new_subdomains = sorted(list(all_subdomains - known_subs))
-        known_subs.update(all_subdomains)
-        self.monitor.known_subdomains[clean_domain] = set(known_subs)
+            raw_new_subdomains = sorted(list(all_subdomains - known_subs))
+            known_subs.update(all_subdomains)
+            self.monitor.known_subdomains[clean_domain] = set(known_subs)
+
+        if program is not None:
+            new_subdomains = [
+                sub for sub in raw_new_subdomains
+                if RulesOfEngagementEngine.is_permitted(program, sub)
+            ]
+        else:
+            new_subdomains = raw_new_subdomains
 
         takeover_findings: List[Dict[str, Any]] = []
+        now_ts = time.time()
         for sub in new_subdomains:
             if self.blackboard:
-                try:
-                    self.blackboard.publish(
-                        event_type="CT_LOG_NEW_SUBDOMAIN",
-                        payload={
-                            "subdomain": sub,
-                            "apex_domain": clean_domain,
-                            "source_feed": "certificate_transparency",
-                            "discovered_at": time.time(),
-                        },
-                        source="ct_stream_daemon",
-                        topic="threat_intel",
-                    )
-                except Exception as ex:
-                    logger.debug(f"Failed to publish CT subdomain event: {ex}")
+                pending_events.append({
+                    "event_type": "CT_LOG_NEW_SUBDOMAIN",
+                    "payload": {
+                        "subdomain": sub,
+                        "apex_domain": clean_domain,
+                        "source_feed": "certificate_transparency",
+                        "discovered_at": now_ts,
+                    },
+                    "source": "ct_stream_daemon",
+                    "topic": "threat_intel",
+                })
 
             # Automatic CNAME takeover evaluation chain
             probe_info = self.cname_probe_map.get(sub)
@@ -404,29 +420,237 @@ class CtStreamDaemon:
                     if finding:
                         takeover_findings.append(asdict(finding))
 
-        self.save_watermark()
+        if self.blackboard and pending_events:
+            chunked_publish_events(
+                self.blackboard,
+                pending_events,
+                chunk_size=batch_size,
+                default_source="ct_stream_daemon",
+                default_topic="threat_intel",
+            )
+
+        with self._state_lock:
+            self.save_watermark()
+
+        permitted_all = (
+            [s for s in sorted(list(all_subdomains)) if RulesOfEngagementEngine.is_permitted(program, s)]
+            if program is not None
+            else sorted(list(all_subdomains))
+        )
 
         return {
             "domain": clean_domain,
             "total_certificates": len(certs),
             "new_certificates": len(new_certs),
-            "total_subdomains": len(all_subdomains),
+            "total_subdomains": len(permitted_all),
             "new_subdomains": new_subdomains,
             "takeover_findings": takeover_findings,
-            "subdomains": sorted(list(all_subdomains)),
+            "subdomains": permitted_all,
         }
 
-    def poll_domains(self, domains: List[str], force_refresh: bool = False) -> List[Dict[str, Any]]:
+    def poll_domains(
+        self,
+        domains: List[str],
+        force_refresh: bool = False,
+        program: Optional[Any] = None,
+        max_workers: int = 1,
+        batch_size: int = 100,
+    ) -> List[Dict[str, Any]]:
         """Polls a list of apex domains and returns CT delta results."""
-        results = []
+        clean_domains: List[str] = []
         seen_apex: Set[str] = set()
         for d in domains:
             clean = d.strip().lower().lstrip("*.")
             if not clean or clean in seen_apex:
                 continue
             seen_apex.add(clean)
-            results.append(self.poll_domain(clean, force_refresh=force_refresh))
-        return results
+            clean_domains.append(clean)
+
+        if max_workers > 1 and len(clean_domains) > 1:
+            workers = min(int(max_workers), len(clean_domains))
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                futures = [
+                    pool.submit(
+                        self.poll_domain,
+                        dom,
+                        force_refresh=force_refresh,
+                        program=program,
+                        batch_size=batch_size,
+                    )
+                    for dom in clean_domains
+                ]
+                return [fut.result() for fut in futures]
+
+        return [
+            self.poll_domain(
+                dom,
+                force_refresh=force_refresh,
+                program=program,
+                batch_size=batch_size,
+            )
+            for dom in clean_domains
+        ]
+
+
+def chunked_publish_events(
+    blackboard: Any,
+    events: List[Dict[str, Any]],
+    chunk_size: int = 100,
+    default_source: str = "ct_stream_daemon",
+    default_topic: str = "threat_intel",
+) -> List[int]:
+    """Publishes blackboard events in bounded chunks via publish_batch to curb SQLite WAL lock pressure."""
+    if blackboard is None or not events:
+        return []
+    size = max(1, int(chunk_size))
+    inserted_ids: List[int] = []
+    if hasattr(blackboard, "publish_batch"):
+        for start in range(0, len(events), size):
+            chunk = events[start:start + size]
+            try:
+                batch_ids = blackboard.publish_batch(
+                    chunk,
+                    default_source=default_source,
+                    default_topic=default_topic,
+                )
+                if isinstance(batch_ids, list):
+                    inserted_ids.extend(batch_ids)
+            except Exception as exc:
+                logger.debug("Chunked publish_batch failed cleanly: %s", exc)
+        return inserted_ids
+
+    if hasattr(blackboard, "publish"):
+        for ev in events:
+            try:
+                ev_id = blackboard.publish(
+                    event_type=str(ev.get("event_type") or "EVENT"),
+                    payload=ev.get("payload") or {},
+                    source=str(ev.get("source") or default_source),
+                    topic=str(ev.get("topic") or default_topic),
+                )
+                inserted_ids.append(ev_id)
+            except Exception as exc:
+                logger.debug("Fallback publish failed cleanly: %s", exc)
+    return inserted_ids
+
+
+class MicrogravitySubdomainDispatcher:
+    """RoE-filtered parallel CT and passive subdomain fan-out coordinator across enrolled programs.
+
+    Note: Sibling `microgravity/mg.exe` exposes an AI coding CLI (`agent`, `audit`, `chat`, `run`, `swarm`)
+    and does not provide a DNS/CT enumeration subcommand. Unless an external worker callable is supplied,
+    fan-out runs natively in pure Python with ThreadPoolExecutor concurrency and chunked WAL batch commits.
+    """
+
+    def __init__(
+        self,
+        ct_daemon: Optional[CtStreamDaemon] = None,
+        blackboard: Any = None,
+        max_workers: int = 4,
+        batch_size: int = 100,
+        external_worker: Optional[Callable[[Any], List[str]]] = None,
+    ):
+        self.blackboard = blackboard
+        self.ct_daemon = ct_daemon or CtStreamDaemon(blackboard=blackboard)
+        if blackboard is not None and self.ct_daemon.blackboard is None:
+            self.ct_daemon.blackboard = blackboard
+        self.max_workers = max(1, int(max_workers))
+        self.batch_size = max(1, int(batch_size))
+        self.external_worker = external_worker
+
+    def _scan_single_program(self, program: Any, force_refresh: bool = False) -> Dict[str, Any]:
+        from orbit_security.bounty_radar import RulesOfEngagementEngine
+
+        poll_results = self.ct_daemon.poll_domains(
+            list(getattr(program, "in_scope", []) or []),
+            force_refresh=force_refresh,
+            program=program,
+            max_workers=self.max_workers,
+            batch_size=self.batch_size,
+        )
+
+        program_subs: List[str] = []
+        seen_local: Set[str] = set()
+        for res in poll_results:
+            for sub in res.get("new_subdomains", []):
+                if sub not in seen_local and RulesOfEngagementEngine.is_permitted(program, sub):
+                    seen_local.add(sub)
+                    program_subs.append(sub)
+
+        if self.external_worker is not None:
+            extra_events: List[Dict[str, Any]] = []
+            for cand in self.external_worker(program) or []:
+                norm = str(cand).strip().lower().lstrip("*.")
+                if norm and norm not in seen_local and RulesOfEngagementEngine.is_permitted(program, norm):
+                    seen_local.add(norm)
+                    program_subs.append(norm)
+                    if self.blackboard is not None:
+                        extra_events.append({
+                            "event_type": "CT_LOG_NEW_SUBDOMAIN",
+                            "payload": {
+                                "subdomain": norm,
+                                "program_id": getattr(program, "program_id", ""),
+                                "source_feed": "external_worker",
+                                "discovered_at": time.time(),
+                            },
+                            "source": "microgravity_dispatcher",
+                            "topic": "threat_intel",
+                        })
+            if extra_events and self.blackboard is not None:
+                chunked_publish_events(
+                    self.blackboard,
+                    extra_events,
+                    chunk_size=self.batch_size,
+                    default_source="microgravity_dispatcher",
+                    default_topic="threat_intel",
+                )
+
+        return {
+            "program_id": getattr(program, "program_id", ""),
+            "domains_polled": len(poll_results),
+            "subdomains": program_subs,
+        }
+
+    def fan_out_programs(
+        self,
+        programs: List[Any],
+        force_refresh: bool = False,
+    ) -> Dict[str, Any]:
+        """Concurrently sweeps multiple bounty programs through RoE-filtered batched CT discovery."""
+        if not programs:
+            return {
+                "programs_scanned": 0,
+                "mg_cli_active": self.external_worker is not None,
+                "discovered_subdomains": [],
+                "program_results": [],
+            }
+
+        results: List[Dict[str, Any]] = []
+        if self.max_workers > 1 and len(programs) > 1:
+            workers = min(self.max_workers, len(programs))
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                futures = [
+                    pool.submit(self._scan_single_program, prog, force_refresh=force_refresh)
+                    for prog in programs
+                ]
+                results = [fut.result() for fut in futures]
+        else:
+            results = [self._scan_single_program(prog, force_refresh=force_refresh) for prog in programs]
+
+        deduped: List[str] = []
+        seen_global: Set[str] = set()
+        for item in results:
+            for sub in item.get("subdomains", []):
+                if sub not in seen_global:
+                    seen_global.add(sub)
+                    deduped.append(sub)
+
+        return {
+            "programs_scanned": len(results),
+            "mg_cli_active": self.external_worker is not None,
+            "discovered_subdomains": deduped,
+            "program_results": results,
+        }
 
 
 def fetch_certificates(
