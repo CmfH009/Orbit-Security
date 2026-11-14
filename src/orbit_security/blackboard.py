@@ -32,6 +32,45 @@ import threading
 import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set
+import urllib.request
+from urllib.parse import urlsplit
+
+HIGH_SIGNAL_NOVA_BRAIN_EVENTS = frozenset({
+    "ROE_REDIRECT_BLOCKED",
+    "ROE_BOGON_BLOCKED",
+    "BOUNTY_VULN_VERIFIED",
+    "REPORT_CRITIC_RECEIPT",
+    "REPORT_CRITIC_VERIFIED",
+})
+
+
+def is_high_signal_nova_event(
+    event_type: str,
+    source: str,
+    payload: Optional[Dict[str, Any]] = None,
+) -> bool:
+    """Returns True when an Orbit blackboard event should be recorded in Nova Brain episodic memory."""
+    ev_upper = str(event_type or "").strip().upper()
+    src_str = str(source or "").strip()
+    if ev_upper in HIGH_SIGNAL_NOVA_BRAIN_EVENTS:
+        return True
+    if src_str == "ReportCriticVerifier" or "REPORT_CRITIC" in ev_upper:
+        return True
+    if isinstance(payload, dict) and (
+        "verified_artifact_ids" in payload or "critic_receipt" in payload
+    ):
+        return True
+    return False
+
+
+def _is_loopback_ipc_url(url: Optional[str]) -> bool:
+    if not url:
+        return False
+    try:
+        host = (urlsplit(str(url)).hostname or "").strip().lower()
+        return host in {"127.0.0.1", "localhost", "::1"}
+    except Exception:
+        return False
 
 logger = logging.getLogger("orbit_security.blackboard")
 
@@ -130,11 +169,21 @@ EVENT_OPENCODE_REMEDIATION_VERIFIED = "OPENCODE_REMEDIATION_VERIFIED"
 class Blackboard:
     """Decoupled SQLite WAL Event Mesh for Orbit services."""
 
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Optional[Path] = None, nova_brain_url: Optional[str] = None):
         self.db_path = resolve_blackboard_path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._subscribers: Set[queue.Queue] = set()
         self._sub_lock = threading.Lock()
+        if nova_brain_url is not None:
+            self.nova_brain_url: Optional[str] = str(nova_brain_url).rstrip("/")
+        else:
+            env_url = os.environ.get("ORBIT_NOVA_BRAIN_URL")
+            if env_url:
+                self.nova_brain_url = str(env_url).rstrip("/")
+            elif not _running_under_pytest() and os.environ.get("ORBIT_NOVA_BRAIN_ENABLED", "1") != "0":
+                self.nova_brain_url = "http://127.0.0.1:8200"
+            else:
+                self.nova_brain_url = None
         self._init_db()
 
     @contextlib.contextmanager
@@ -207,6 +256,55 @@ class Blackboard:
         with self._sub_lock:
             self._subscribers.discard(q)
 
+    def _forward_to_nova_brain(self, event: Dict[str, Any]) -> bool:
+        """Forwards high-signal security events non-blockingly into Nova Brain /api/memory/store."""
+        if not self.nova_brain_url or not _is_loopback_ipc_url(self.nova_brain_url):
+            return False
+        ev_type = str(event.get("event_type") or "")
+        source = str(event.get("source") or "")
+        payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+        if not is_high_signal_nova_event(ev_type, source, payload):
+            return False
+
+        target_ref = (
+            payload.get("target_domain")
+            or payload.get("hostname")
+            or payload.get("target_url")
+            or payload.get("domain")
+            or "orbit"
+        )
+        detail_msg = payload.get("reason") or payload.get("flaw_type") or event.get("topic") or "security_event"
+        summary = f"[Orbit Security] {ev_type} on {target_ref} ({detail_msg})"
+        body = json.dumps(
+            {
+                "summary": summary,
+                "category": "SECURITY_EVENT",
+                "session_id": "orbit-security",
+                "details": {
+                    "event_id": event.get("id"),
+                    "event_type": ev_type,
+                    "source": source,
+                    "topic": event.get("topic"),
+                    "payload": payload,
+                },
+                "tags": ["orbit-security", ev_type.lower(), str(event.get("topic") or "security").lower()],
+            },
+            default=str,
+        ).encode("utf-8")
+        store_url = f"{self.nova_brain_url}/api/memory/store"
+        try:
+            req = urllib.request.Request(
+                store_url,
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=0.5) as resp:  # roe-exempt: local Nova Brain loopback IPC
+                return 200 <= getattr(resp, "status", 200) < 300
+        except Exception as exc:
+            logger.debug("Non-blocking Nova Brain forward skipped (%s): %s", store_url, exc)
+            return False
+
     def broadcast(self, event: Dict[str, Any]) -> None:
         """Thread-safe broadcast of an event dictionary to all active subscribers.
         Discards full or dead queues to prevent stalling publishers.
@@ -257,6 +355,7 @@ class Blackboard:
             "iso_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
         }
         self.broadcast(event_dict)
+        self._forward_to_nova_brain(event_dict)
         return ev_id
 
     @wal_retry()
@@ -306,6 +405,7 @@ class Blackboard:
                 "processed": False
             }
             self.broadcast(event_dict)
+            self._forward_to_nova_brain(event_dict)
 
         return inserted_ids
 

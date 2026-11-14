@@ -16,15 +16,56 @@ from dataclasses import asdict, dataclass, field
 import datetime
 import json
 import logging
+import os
 from pathlib import Path
 import subprocess
 import sys
 from typing import Any, Dict, List, Optional
+import urllib.request
+from urllib.parse import urlsplit
+
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    psutil = None  # type: ignore
+    HAS_PSUTIL = False
 
 logger = logging.getLogger("orbit_security.hypernote_briefing")
 
 DEFAULT_BRIEFINGS_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "briefings"
 DEFAULT_SUPERVISOR_STATE = Path("A:/system/state/orbit_daemon_state.json") if Path("A:/system/state").exists() else Path(r"C:\AgyHut\system\state\orbit_daemon_state.json")
+DEFAULT_NOVA_BRAIN_URL = "http://127.0.0.1:8200"
+
+
+def _is_loopback_url(url: str) -> bool:
+    try:
+        host = (urlsplit(url).hostname or "").strip().lower()
+        return host in {"127.0.0.1", "localhost", "::1"}
+    except Exception:
+        return False
+
+
+def _collect_psutil_hardware() -> Dict[str, Any]:
+    """Collects genuine OS memory and CPU telemetry without fabricated fallbacks."""
+    if not HAS_PSUTIL or psutil is None:
+        return {
+            "ram_available_mb": 0,
+            "ram_total_mb": 0,
+            "ram_percent": 0.0,
+            "cpu_percent": 0.0,
+            "memory_band": "unknown",
+        }
+    vm = psutil.virtual_memory()
+    ram_pct = round(float(vm.percent), 1)
+    band = "green" if ram_pct < 75.0 else ("yellow" if ram_pct < 90.0 else "red")
+    return {
+        "ram_available_mb": int(round(vm.available / (1024 * 1024))),
+        "ram_total_mb": int(round(vm.total / (1024 * 1024))),
+        "ram_percent": ram_pct,
+        "cpu_percent": round(float(psutil.cpu_percent(interval=None)), 1),
+        "memory_band": band,
+    }
 
 
 @dataclass
@@ -46,8 +87,26 @@ class BriefingMetadata:
 class BriefingSourceCollector:
     """Aggregates git logs, supervisor health, and security telemetry for briefing synthesis."""
 
-    def __init__(self, workspace_root: Optional[Path] = None):
+    def __init__(self, workspace_root: Optional[Path] = None, nova_brain_url: Optional[str] = None):
         self.workspace_root = workspace_root or Path(__file__).resolve().parent.parent.parent
+        raw_url = nova_brain_url or os.environ.get("ORBIT_NOVA_BRAIN_URL") or DEFAULT_NOVA_BRAIN_URL
+        self.nova_brain_url = str(raw_url).rstrip("/")
+
+    def _fetch_nova_brain_vitals(self, base_url: Optional[str] = None, timeout: float = 1.0) -> Optional[Dict[str, Any]]:
+        target_base = str(base_url or self.nova_brain_url).rstrip("/")
+        if not target_base or not _is_loopback_url(target_base):
+            return None
+        vitals_url = f"{target_base}/vitals"
+        try:
+            req = urllib.request.Request(vitals_url, headers={"Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=timeout) as resp:  # roe-exempt: local Nova Brain loopback IPC
+                if getattr(resp, "status", 200) == 200:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    if isinstance(data, dict):
+                        return data
+        except Exception as exc:
+            logger.debug("Nova Brain /vitals unreachable (%s): %s", vitals_url, exc)
+        return None
 
     def collect_git_commits(self, max_commits: int = 10, mock_commits: Optional[List[str]] = None) -> List[str]:
         """Gathers recent git commit messages from the repository."""
@@ -75,31 +134,74 @@ class BriefingSourceCollector:
             "a0429d4 - feat: dynamic fleet url parameters and auto-doh audit",
         ]
 
-    def collect_supervisor_health(self, state_file: Optional[Path] = None) -> Dict[str, Any]:
-        """Gathers system RAM, CPU limits, and active micro-daemons."""
+    def collect_supervisor_health(
+        self,
+        state_file: Optional[Path] = None,
+        nova_brain_url: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Gathers system RAM, CPU limits, and active micro-daemons.
+
+        Priority:
+          1. Live Nova Brain `/vitals` (loopback port 8200) + genuine OS `psutil` telemetry
+          2. Supervisor state JSON (`orbit_daemon_state.json`) + `psutil` telemetry
+          3. Pure OS `psutil` hardware telemetry (zero hardcoded fabricated numbers)
+        """
         path = Path(state_file or DEFAULT_SUPERVISOR_STATE)
+        file_state: Optional[Dict[str, Any]] = None
         if path.exists():
             try:
                 with open(path, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                    loaded = json.load(f)
+                    if isinstance(loaded, dict):
+                        file_state = loaded
             except Exception:
-                pass
+                file_state = None
 
-        # Fallback simulated state
+        hw = _collect_psutil_hardware()
+        vitals = self._fetch_nova_brain_vitals(base_url=nova_brain_url)
+
+        if vitals is not None:
+            services: Dict[str, Any] = dict((file_state or {}).get("services") or {})
+            services["Nova Brain IPC"] = {"active": True, "port": 8200}
+            gov_band = str(vitals.get("governor_state") or hw["memory_band"]).strip().lower()
+            if gov_band not in {"green", "yellow", "red", "critical"}:
+                gov_band = hw["memory_band"]
+            return {
+                "source": "nova_brain",
+                "supervisor_pid": (file_state or {}).get("supervisor_pid") or os.getpid(),
+                "memory_band": gov_band,
+                "ram_available_mb": hw["ram_available_mb"],
+                "ram_total_mb": hw["ram_total_mb"],
+                "ram_percent": hw["ram_percent"],
+                "cpu_percent": hw["cpu_percent"],
+                "bounty_radar": dict((file_state or {}).get("bounty_radar") or {"status": "STANDBY", "total_vulnerabilities_found": 0}),
+                "services": services,
+                "nova_brain": vitals,
+            }
+
+        if file_state is not None:
+            merged = dict(file_state)
+            merged.setdefault("supervisor_pid", os.getpid())
+            merged.setdefault("memory_band", hw["memory_band"])
+            merged.setdefault("ram_available_mb", hw["ram_available_mb"])
+            merged.setdefault("ram_total_mb", hw["ram_total_mb"])
+            merged.setdefault("ram_percent", hw["ram_percent"])
+            merged.setdefault("cpu_percent", hw["cpu_percent"])
+            merged.setdefault("bounty_radar", {"status": "STANDBY", "total_vulnerabilities_found": 0})
+            merged.setdefault("services", {})
+            merged["source"] = "state_file"
+            return merged
+
         return {
-            "supervisor_pid": 11056,
-            "memory_band": "green",
-            "ram_available_mb": 3673,
-            "ram_percent": 77.2,
-            "canary_probe": {"status": "HEALTHY"},
-            "bounty_radar": {"status": "SCHEDULED", "total_vulnerabilities_found": 0},
-            "services": {
-                "Ollama LLM Engine": {"active": True, "port": 11434},
-                "Inbox Supervisor": {"active": True, "port": 9010},
-                "Orbit DNS Cache Resolver": {"active": True, "port": 53},
-                "Orbit Security Sentinel": {"active": True, "port": None},
-                "Orbit Social Agent": {"active": True, "port": None},
-            },
+            "source": "psutil",
+            "supervisor_pid": os.getpid(),
+            "memory_band": hw["memory_band"],
+            "ram_available_mb": hw["ram_available_mb"],
+            "ram_total_mb": hw["ram_total_mb"],
+            "ram_percent": hw["ram_percent"],
+            "cpu_percent": hw["cpu_percent"],
+            "bounty_radar": {"status": "STANDBY", "total_vulnerabilities_found": 0},
+            "services": {},
         }
 
 
