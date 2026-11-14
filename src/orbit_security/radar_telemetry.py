@@ -1762,7 +1762,7 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
 RadarTelemetryHandler = RadarTelemetryHTTPHandler
 
 
-def run_server(port: Optional[int] = None, host: str = "0.0.0.0") -> None:
+def run_server(port: Optional[int] = None, host: str = "127.0.0.1") -> None:
     if port is None:
         port = int(os.environ.get("PORT", 9095))
     server_address = (host, port)
@@ -1853,7 +1853,7 @@ def main() -> int:
         default=int(os.environ.get("PORT", 9095)),
         help="Port for server (default: 9095 or $PORT)",
     )
-    parser.add_argument("--host", default="0.0.0.0", help="Host interface (default: 0.0.0.0)")
+    parser.add_argument("--host", default="127.0.0.1", help="Host interface (default: 127.0.0.1)")
     parser.add_argument("--probe", help="Emit manual test probe for specified domain")
     parser.add_argument("--enrich", help="Run OSINT enrichment and retainer staging for a domain")
     parser.add_argument("--backfill", action="store_true", help="Enrich and stage proposals for all logged queries")

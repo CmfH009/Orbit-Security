@@ -954,5 +954,14 @@ class TestRadarLeadEnricherAndProposalStager:
         assert refused["http_status"] is None
         assert refused.get("last_error")
 
+    def test_run_server_and_cli_default_to_loopback(self):
+        import inspect
+        import orbit_security.radar_telemetry as rt
+
+        sig = inspect.signature(rt.run_server)
+        assert sig.parameters["host"].default == "127.0.0.1"
+        assert "127.0.0.1" in (rt.main.__code__.co_consts or ())
+        assert "0.0.0.0" not in (rt.main.__code__.co_consts or ())
+
 
 

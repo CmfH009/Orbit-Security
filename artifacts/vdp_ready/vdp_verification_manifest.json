@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-11-14T20:15:41.992775+00:00",
+  "generated_utc": "2026-11-14T22:46:27.209235+00:00",
   "auto_submitted_to_hackerone": false,
   "staged_bundles": [
     {
@@ -26,12 +26,65 @@
           "required_compliance_tokens_present": true
         }
       },
-      "ollama_critic_bounded": "SKIPPED_CPU_TIMEOUT (TimeoutError)"
+      "ollama_critic_bounded": "SKIPPED_CPU_TIMEOUT (TimeoutError)",
+      "reverification_utc": "2026-11-14T22:41:26.370999+00:00",
+      "reverification_bundle_sha256": "4b77a3e66cc981cba8dd3e81de47fae079eabc5ebd5a01815f3836b2b91ed521",
+      "live_reverification": {
+        "dns_cname": "web.hulu.map.fastly.net.",
+        "edge_a_ips": [
+          "151.101.2.252",
+          "151.101.66.252",
+          "151.101.130.252",
+          "151.101.194.252"
+        ],
+        "http_status": 500,
+        "https_status": 500,
+        "http_signature": "Fastly error: unknown domain: test.hulu.com. Please check that this domain has been added to a service."
+      },
+      "submission_status": "PENDING_PORTAL_ONLY_NO_API",
+      "dispatch_attempts": [
+        {
+          "attempt_utc": "2026-11-14T22:41:26.370999+00:00",
+          "channel": "hackerone_api",
+          "target": "https://hackerone.com/disney",
+          "result": "NOT_CONFIGURED",
+          "detail": "HACKERONE_API_TOKEN and HACKERONE_API_USERNAME absent from .env, src/, and scripts/."
+        },
+        {
+          "attempt_utc": "2026-11-14T22:41:26.370999+00:00",
+          "channel": "security_txt_and_dns_psirt",
+          "targets_checked": [
+            "https://hulu.com/.well-known/security.txt",
+            "https://hulu.com/security.txt",
+            "https://www.hulu.com/.well-known/security.txt",
+            "https://www.hulu.com/security.txt",
+            "https://disney.com/.well-known/security.txt",
+            "https://disney.com/security.txt",
+            "https://thewaltdisneycompany.com/.well-known/security.txt",
+            "https://thewaltdisneycompany.com/security.txt"
+          ],
+          "dns_soa_rname": [
+            "disney.com: corp.dns.domains.disney.com.",
+            "hulu.com: dnsadmin.hulu.com.",
+            "thewaltdisneycompany.com: awsdns-hostmaster.amazon.com."
+          ],
+          "result": "NONE_FOUND",
+          "detail": "All 8 security.txt URLs returned HTTP 404; DNS TXT records contained no PSIRT/VDP disclosure contact."
+        },
+        {
+          "attempt_utc": "2026-11-14T22:41:26.370999+00:00",
+          "channel": "desktop_browser_session",
+          "result": "NO_AUTHENTICATED_SESSION",
+          "detail": "Active Chrome taskbar window shows YouTube only; Taskbar Browser Sovereignty prohibits spawning duplicate Chrome windows or chrome-devtools-mcp."
+        }
+      ],
+      "blocker": "PENDING_PORTAL_ONLY_NO_API: https://hackerone.com/disney requires authenticated HackerOne web portal submission; no HACKERONE_API_TOKEN/USERNAME in .env, no security.txt or public PSIRT email found, and no authenticated HackerOne session.",
+      "report_sha256": "186b07e2c5b98484e243567f0d1000b84d8c3a19b9fd614237ef128c855574f1"
     },
     {
       "file": "A:\\projects\\orbit-security\\artifacts\\vdp_ready\\mondelez_vdp_shop_hukitchen_com.md",
       "filename": "mondelez_vdp_shop_hukitchen_com.md",
-      "sha256": "72bc4aae96a7dec93695d040e70c0be47ade35732be7e4f547cdcbbbe34a13a1",
+      "sha256": "b86323f0ee0c1f3e883a3ef8c5f295e328e7035a4e6d0ae4674765b006075543",
       "target_host": "shop.hukitchen.com",
       "program": "https://hackerone.com/mondelez",
       "probe_captured_utc": "2026-11-14T20:09:06.930204+00:00",
@@ -52,7 +105,58 @@
           "required_compliance_tokens_present": true
         }
       },
-      "ollama_critic_bounded": "SKIPPED_CPU_TIMEOUT (TimeoutError)"
+      "ollama_critic_bounded": "SKIPPED_CPU_TIMEOUT (TimeoutError)",
+      "reverification_utc": "2026-11-14T22:41:26.370999+00:00",
+      "reverification_bundle_sha256": "4b77a3e66cc981cba8dd3e81de47fae079eabc5ebd5a01815f3836b2b91ed521",
+      "compliance_identity_updated": "Carson | Founder, Orbit Security (carsonmail009@gmail.com)",
+      "live_reverification": {
+        "dns_cname": "5c35d9eda65344a590aea0ebb93fb0b6.unbouncepages.com.",
+        "edge_a_ips": [
+          "172.64.153.235",
+          "104.18.34.21"
+        ],
+        "http_status": 404,
+        "https_status": 404,
+        "http_signature": "The requested URL was not found on this server."
+      },
+      "submission_status": "PENDING_PORTAL_ONLY_NO_API",
+      "dispatch_attempts": [
+        {
+          "attempt_utc": "2026-11-14T22:41:26.370999+00:00",
+          "channel": "hackerone_api",
+          "target": "https://hackerone.com/mondelez",
+          "result": "NOT_CONFIGURED",
+          "detail": "HACKERONE_API_TOKEN and HACKERONE_API_USERNAME absent from .env, src/, and scripts/."
+        },
+        {
+          "attempt_utc": "2026-11-14T22:41:26.370999+00:00",
+          "channel": "security_txt_and_dns_psirt",
+          "targets_checked": [
+            "https://hukitchen.com/.well-known/security.txt",
+            "https://hukitchen.com/security.txt",
+            "https://www.hukitchen.com/.well-known/security.txt",
+            "https://mondelezinternational.com/.well-known/security.txt",
+            "https://mondelezinternational.com/security.txt",
+            "https://mondelez.com/.well-known/security.txt",
+            "https://mondelez.com/security.txt"
+          ],
+          "dns_soa_rname": [
+            "hukitchen.com: dns.jomax.net.",
+            "mondelez.com: hostmaster.cscdns.net.",
+            "mondelezinternational.com: hostmaster.cscdns.net."
+          ],
+          "result": "NONE_FOUND",
+          "detail": "hukitchen.com & mondelezinternational.com returned HTTP 404; mondelez.com redirected to marketing HTML homepage; zero PSIRT/VDP contacts in DNS TXT."
+        },
+        {
+          "attempt_utc": "2026-11-14T22:41:26.370999+00:00",
+          "channel": "desktop_browser_session",
+          "result": "NO_AUTHENTICATED_SESSION",
+          "detail": "Active Chrome taskbar window shows YouTube only; Taskbar Browser Sovereignty prohibits spawning duplicate Chrome windows or chrome-devtools-mcp."
+        }
+      ],
+      "blocker": "PENDING_PORTAL_ONLY_NO_API: https://hackerone.com/mondelez requires authenticated HackerOne web portal submission; no HACKERONE_API_TOKEN/USERNAME in .env, no security.txt or public PSIRT email found, and no authenticated HackerOne session.",
+      "report_sha256": "b86323f0ee0c1f3e883a3ef8c5f295e328e7035a4e6d0ae4674765b006075543"
     },
     {
       "file": "A:\\projects\\orbit-security\\artifacts\\vdp_ready\\whirlpool_vdp_www_mea_whirlpool_com.md",
@@ -78,7 +182,37 @@
           "required_compliance_tokens_present": true
         }
       },
-      "ollama_critic_bounded": "SKIPPED_CPU_TIMEOUT (TimeoutError)"
+      "ollama_critic_bounded": "SKIPPED_CPU_TIMEOUT (TimeoutError)",
+      "reverification_utc": "2026-11-14T22:41:26.370999+00:00",
+      "reverification_bundle_sha256": "4b77a3e66cc981cba8dd3e81de47fae079eabc5ebd5a01815f3836b2b91ed521",
+      "live_reverification": {
+        "dns_cname": "du1taozq07ehy.cloudfront.net.",
+        "edge_a_ips": [
+          "13.225.61.123",
+          "13.225.61.104",
+          "13.225.61.68",
+          "13.225.61.17"
+        ],
+        "http_status": 403,
+        "http_signature": "Server: CloudFront; X-Cache: Error from cloudfront; ERROR: The request could not be satisfied",
+        "https_tls": "SSLV3_ALERT_HANDSHAKE_FAILURE",
+        "apex_whirlpool_com_a": [
+          "54.175.185.69"
+        ]
+      },
+      "submission_status": "DISPATCHED_EMAIL",
+      "dispatch_record": {
+        "status": "DISPATCHED_EMAIL",
+        "channel": "smtp_gmail",
+        "sender": "carsonmail009@gmail.com",
+        "recipient": "product_security@whirlpool.com",
+        "subject": "[VDP Report] Subdomain Takeover / Dangling CloudFront DNS on www.mea.whirlpool.com (CWE-350 / CWE-940)",
+        "dispatched_utc": "2026-11-14T22:44:53.365540+00:00",
+        "report_sha256": "5d15853afba26a0317446e1ef22d7ecda188209cb05a8949edf09ff90a979c46",
+        "email_draft_file": "artifacts/vdp_ready/whirlpool_vdp_www_mea_whirlpool_com_email.txt",
+        "email_draft_sha256": "99d1ac60634c17e8b1ff87e0e5d4f107ebaa9d71a6979ebb0bbf57ce40d7042d",
+        "dispatched_body_sha256": "2f744a2c0e9e0ffb97bd4f91acaf4060486bbf883c807df094af77656837ab40"
+      }
     }
   ],
   "suppressed_targets": [
@@ -393,5 +527,32 @@
         ]
       }
     ]
+  },
+  "wave_4_vdp_dispatch_summary": {
+    "updated_utc": "2026-11-14T22:46:27.209235+00:00",
+    "reverification_bundle_sha256": "4b77a3e66cc981cba8dd3e81de47fae079eabc5ebd5a01815f3836b2b91ed521",
+    "targets": {
+      "www.mea.whirlpool.com": {
+        "status": "DISPATCHED_EMAIL",
+        "channel": "smtp_gmail",
+        "recipient": "product_security@whirlpool.com",
+        "subject": "[VDP Report] Subdomain Takeover / Dangling CloudFront DNS on www.mea.whirlpool.com (CWE-350 / CWE-940)",
+        "dispatched_utc": "2026-11-14T22:44:53.365540+00:00",
+        "report_sha256": "5d15853afba26a0317446e1ef22d7ecda188209cb05a8949edf09ff90a979c46",
+        "email_draft_sha256": "99d1ac60634c17e8b1ff87e0e5d4f107ebaa9d71a6979ebb0bbf57ce40d7042d"
+      },
+      "test.hulu.com": {
+        "status": "PENDING_PORTAL_ONLY_NO_API",
+        "channel": "https://hackerone.com/disney",
+        "checked_utc": "2026-11-14T22:41:26.370999+00:00",
+        "report_sha256": "186b07e2c5b98484e243567f0d1000b84d8c3a19b9fd614237ef128c855574f1"
+      },
+      "shop.hukitchen.com": {
+        "status": "PENDING_PORTAL_ONLY_NO_API",
+        "channel": "https://hackerone.com/mondelez",
+        "checked_utc": "2026-11-14T22:41:26.370999+00:00",
+        "report_sha256": "b86323f0ee0c1f3e883a3ef8c5f295e328e7035a4e6d0ae4674765b006075543"
+      }
+    }
   }
 }

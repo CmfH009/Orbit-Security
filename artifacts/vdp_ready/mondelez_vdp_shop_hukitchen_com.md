@@ -13,8 +13,8 @@
 > [!IMPORTANT]
 > **Required Mondelēz Program Compliance Metadata:**
 > Any active verification HTTP traffic sent to Mondelēz-owned targets during reproduction MUST include your HackerOne identification header:
-> `X-Mondelez-VDP: HackerOne-<username>`
-> Replace `<username>` with your actual HackerOne handle before running any manual verification commands or pasting into HackerOne.
+> `X-Mondelez-VDP: HackerOne-Carson | Founder, Orbit Security (carsonmail009@gmail.com)`
+> Submitter compliance identity populated: `Carson | Founder, Orbit Security (carsonmail009@gmail.com)`.
 
 > [!WARNING]
 > **Critic & HackerOne Signal-Protection Advisory (Read Before Submitting):**
@@ -49,8 +49,8 @@ dig A shop.hukitchen.com
 ### 2. Passive HTTP / HTTPS Signature Verification (With Required Compliance Header)
 
 ```bash
-curl -i -H "X-Mondelez-VDP: HackerOne-<username>" http://shop.hukitchen.com/
-curl -i -H "X-Mondelez-VDP: HackerOne-<username>" https://shop.hukitchen.com/
+curl -i -H "X-Mondelez-VDP: HackerOne-Carson | Founder, Orbit Security (carsonmail009@gmail.com)" http://shop.hukitchen.com/
+curl -i -H "X-Mondelez-VDP: HackerOne-Carson | Founder, Orbit Security (carsonmail009@gmail.com)" https://shop.hukitchen.com/
 ```
 
 **Observed HTTP Response (`http://shop.hukitchen.com/` at `Sat, 14 Nov 2026 20:09:10 GMT`):**

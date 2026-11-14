@@ -2,6 +2,11 @@
   "tunnel_base_url": "https://orbit-security-api-911438991206.us-central1.run.app",
   "telemetry_endpoint": "https://orbit-security-api-911438991206.us-central1.run.app/api/orbit/radar/telemetry",
   "rotation_count": 5,
-  "updated_at": "2026-11-07T00:48:00Z",
-  "status": "active"
+  "updated_at": "2026-11-14T22:49:30.851924+00:00",
+  "status": "offline",
+  "last_checked_at": "2026-11-14T22:49:30.851924+00:00",
+  "http_status": 404,
+  "stale": true,
+  "last_active_at": "2026-11-07T00:48:00Z",
+  "last_error": "HTTP 404: Not Found"
 }

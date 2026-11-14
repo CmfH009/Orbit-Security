@@ -1,15 +1,15 @@
 To: product_security@whirlpool.com
 From: Carson | Founder, Orbit Security <carsonmail009@gmail.com>
-Subject: Security Advisory: Orphaned AWS CloudFront CNAME on www.mea.whirlpool.com (CWE-350)
+Subject: [VDP Report] Subdomain Takeover / Dangling CloudFront DNS on www.mea.whirlpool.com (CWE-350 / CWE-940)
 
 Hello Whirlpool Product Security team,
 
 During passive DNS and perimeter hygiene monitoring, we observed a dangling AWS CloudFront CNAME configuration affecting the subdomain www.mea.whirlpool.com. We are sharing these details directly with your security team under non-destructive responsible disclosure.
 
-Summary of Verified Findings (Captured 2026-11-14T20:09:09Z)
+Summary of Verified Findings (Live Re-Verification 2026-11-14T22:41:38Z)
 - Affected Subdomain: www.mea.whirlpool.com
 - DNS CNAME Record: www.mea.whirlpool.com. 300 IN CNAME du1taozq07ehy.cloudfront.net.
-- Edge IP Addresses: 99.84.105.32, 99.84.105.35, 99.84.105.75, 99.84.105.82
+- Edge IP Addresses: 13.225.61.123, 13.225.61.104, 13.225.61.68, 13.225.61.17
 - HTTP Response (http://www.mea.whirlpool.com/): HTTP/1.1 403 Forbidden (Server: CloudFront, X-Cache: Error from cloudfront - "ERROR: The request could not be satisfied")
 - HTTPS Response (https://www.mea.whirlpool.com/): Fails TLS negotiation (SSL: SSLV3_ALERT_HANDSHAKE_FAILURE)
 - Clarification: The apex domain whirlpool.com resolves separately (A 54.175.185.69 behind Akamai) and is unaffected by this CNAME.
@@ -26,7 +26,7 @@ Recommended Remediation
 1. If the MEA regional portal has been retired or migrated, delete the stale CNAME record (du1taozq07ehy.cloudfront.net.) for www.mea.whirlpool.com from authoritative DNS.
 2. If the subdomain remains active, re-attach an authorized CloudFront distribution and valid ACM TLS certificate for www.mea.whirlpool.com.
 
-Please let us know if you need the full Markdown verification log or SHA-256 evidence digest.
+Please let us know if you need the full Markdown verification log (SHA-256: 5d15853afba26a0317446e1ef22d7ecda188209cb05a8949edf09ff90a979c46) or raw DoH/HTTP evidence bundle.
 
 Best regards,
 Carson Haynes
