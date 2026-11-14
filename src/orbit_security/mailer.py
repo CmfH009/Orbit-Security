@@ -2,6 +2,7 @@ import email
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr
 import os
 import smtplib
 from typing import Optional
@@ -40,7 +41,7 @@ class EmailDispatcher:
         message_id: Optional[str] = None,
     ) -> MIMEMultipart:
         msg = MIMEMultipart()
-        sender_header = f"{self.sender_name} <{self.smtp_user}>" if self.smtp_user else self.sender_name
+        sender_header = formataddr((self.sender_name or "", self.smtp_user)) if self.smtp_user else self.sender_name
         msg["From"] = sender_header
         msg["To"] = recipient_email
         msg["Subject"] = subject

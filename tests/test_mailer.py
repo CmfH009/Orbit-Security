@@ -1,3 +1,4 @@
+import email
 import os
 import tempfile
 from unittest.mock import MagicMock, patch
@@ -106,4 +107,26 @@ def test_send_raw_eml_mocked():
             mock_instance.starttls.assert_called_once()
             mock_instance.login.assert_called_once_with("user@gmail.com", "app-password")
             mock_instance.send_message.assert_called_once()
+
+
+def test_build_message_quotes_comma_in_sender_name():
+    from email import policy
+    from email.message import EmailMessage
+
+    dispatcher = EmailDispatcher(
+        smtp_host="smtp.example.com",
+        smtp_port=587,
+        smtp_user="carsonmail009@gmail.com",
+        smtp_password="testpassword",
+        sender_name="Carson | Founder, Orbit Security",
+    )
+    msg = dispatcher.build_message(
+        recipient_email="hello@crema.us",
+        subject="Audit",
+        body_text="Hello",
+    )
+    parsed = email.message_from_bytes(msg.as_bytes(), policy=policy.default)
+    assert len(parsed["From"].addresses) == 1
+    assert parsed["From"].addresses[0].addr_spec == "carsonmail009@gmail.com"
+    assert parsed["From"].addresses[0].display_name == "Carson | Founder, Orbit Security"
 

@@ -236,3 +236,48 @@ def test_pilot_audit_report_generation_with_pdf(tmp_path):
 
     md_content = ReportGenerator.generate_markdown(audit)
     assert "Retainer & Infrastructure Care Plan Recommendations" in md_content
+    assert "perimetral" not in md_content.lower()
+
+
+@pytest.mark.asyncio
+async def test_dmarc_sp_none_not_misclassified_as_p_none(scanner):
+    """p=quarantine; sp=none must not trigger a p=none false positive via substring matching."""
+
+    class MockAnswer:
+        strings = [b"v=DMARC1; p=quarantine; sp=none; rua=mailto:dmarc@example.org"]
+
+    async def mock_resolve(name, rdtype):
+        return [MockAnswer()]
+
+    scanner.resolver.resolve = mock_resolve
+    assert await scanner.audit_dmarc("example.org") is None
+
+    with patch("orbit_security.scanner.get_orbit_async_resolver") as mock_res:
+        resolver_inst = MagicMock()
+        resolver_inst.resolve = mock_resolve
+        mock_res.return_value = resolver_inst
+        assert await scanner.audit_bulk_sender_compliance("example.org") is None
+
+
+@pytest.mark.asyncio
+async def test_versionless_x_powered_by_not_flagged_as_version_disclosure(scanner):
+    """Headers like X-Powered-By: Next.js with no version digits must not flag version disclosure."""
+    mock_client = AsyncMock()
+    mock_resp = MagicMock()
+    mock_resp.headers = {
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "Content-Security-Policy": "default-src 'self'",
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Server": "cloudflare",
+        "X-Powered-By": "Next.js",
+    }
+    mock_client.get = AsyncMock(return_value=mock_resp)
+
+    with patch("orbit_security.scanner.async_is_safe_host", return_value=True):
+        findings = await scanner.audit_security_headers("https://nextjs-site.example", client=mock_client)
+
+    assert not any("Version Disclosure" in f.title for f in findings)

@@ -45,7 +45,7 @@ class ReportGenerator:
         ]
 
         if not audit.findings:
-            lines.append("✅ **No critical perimetral vulnerabilities or security regressions detected.**")
+            lines.append("✅ **No critical perimeter vulnerabilities or security regressions detected.**")
         else:
             for i, f in enumerate(audit.findings, start=1):
                 badge = {
@@ -349,7 +349,7 @@ class ReportGenerator:
 
         care_plan_intro = Paragraph(
             f"As part of managed web operations with <b>{b.agency_name}</b>, we recommend enrolling in the "
-            "Continuous Security & Infrastructure Care Plan ($1,500/mo retainer) covering:",
+            "Continuous Security & Infrastructure Care Plan covering:",
             body_style
         )
         story.append(care_plan_intro)

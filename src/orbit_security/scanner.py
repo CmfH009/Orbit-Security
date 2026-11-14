@@ -324,7 +324,7 @@ class OrbitSecurityScanner:
                     evidence="No v=DMARC1 TXT record found.",
                 )
 
-            if "p=none" in dmarc_record:
+            if re.search(r"(?:^|[;\s])p\s*=\s*none\b", dmarc_record, re.IGNORECASE):
                 return Finding(
                     title="DMARC Policy in Inactive Monitoring Mode (p=none)",
                     severity=Severity.MEDIUM,
@@ -590,7 +590,7 @@ class OrbitSecurityScanner:
             return None
         except (dns.exception.Timeout, asyncio.TimeoutError):
             return None
-        except Exception as e:
+        except Exception:
             return Finding(
                 title="Missing DNS CAA Policy (RFC 8659)",
                 severity=Severity.INFO,
@@ -601,7 +601,7 @@ class OrbitSecurityScanner:
                 ),
                 remediation=f"Publish a DNS CAA record for `{domain}` restricting issuance to approved Certificate Authorities.",
                 target=target,
-                evidence=f"No CAA records found in DNS zone ({e}).",
+                evidence="No CAA records found in DNS zone.",
             )
 
     async def audit_security_txt(
@@ -1062,7 +1062,7 @@ class OrbitSecurityScanner:
             disclosures = []
             if server_hdr and any(c.isdigit() for c in server_hdr):
                 disclosures.append(f"Server: {server_hdr}")
-            if powered_by:
+            if powered_by and any(c.isdigit() for c in powered_by):
                 disclosures.append(f"X-Powered-By: {powered_by}")
 
             if disclosures:
@@ -1383,7 +1383,9 @@ class OrbitSecurityScanner:
                 evidence="No DMARC record returned via DNS resolution."
             )
 
-        if "p=none" in dmarc_record.lower() and "sp=reject" not in dmarc_record.lower():
+        if re.search(r"(?:^|[;\s])p\s*=\s*none\b", dmarc_record, re.IGNORECASE) and not re.search(
+            r"(?:^|[;\s])sp\s*=\s*reject\b", dmarc_record, re.IGNORECASE
+        ):
             return Finding(
                 title="Google & Yahoo 2024 Bulk Sender Risk: Unenforced DMARC Policy (p=none)",
                 severity=Severity.LOW,
@@ -1577,9 +1579,9 @@ class OrbitSecurityScanner:
                 script_findings = await self.audit_third_party_scripts(base_url, client=shared_client)
                 result.findings.extend(script_findings)
 
-                # Audit Google & Yahoo bulk sender compliance
+                # Audit Google & Yahoo bulk sender compliance (avoid double-penalizing _dmarc when audit_dmarc already flagged it)
                 bulk_finding = await self.audit_bulk_sender_compliance(domain)
-                if bulk_finding:
+                if bulk_finding and not dmarc_finding:
                     result.findings.append(bulk_finding)
 
                 # Run SSL check on apex in worker thread to prevent event loop blocking
