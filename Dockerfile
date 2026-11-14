@@ -2,7 +2,7 @@
 # ==========================================
 # STAGE 1: Build with full toolchain (ephemeral)
 # ==========================================
-FROM python:3.13-slim AS builder
+FROM python:3.15-slim AS builder
 
 WORKDIR /app
 
@@ -20,7 +20,7 @@ RUN pip install --no-cache-dir uv && \
 # ==========================================
 # STAGE 2: Hardened non-root runtime (UID 65532)
 # ==========================================
-FROM python:3.13-slim
+FROM python:3.15-slim
 
 # Security: Explicit non-root user (UID 65532)
 USER 65532:65532
