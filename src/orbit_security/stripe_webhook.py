@@ -177,7 +177,7 @@ class SlaCertificateGenerator:
     """Synthesizes high-assurance cryptographic SLA certificates in PDF format."""
 
     def __init__(self, output_dir: Optional[Path] = None):
-        self.output_dir = Path(output_dir or DEFAULT_CERTIFICATES_DIR)
+        self.output_dir = resolve_isolated_data_path(output_dir, DEFAULT_CERTIFICATES_DIR)
 
     def generate_certificate(
         self,
@@ -357,7 +357,7 @@ class SubscriberManager:
     """Manages active subscriber records and SLA linkages in data/subscribers.json."""
 
     def __init__(self, subscribers_file: Optional[Path] = None):
-        self.subscribers_file = Path(subscribers_file or DEFAULT_SUBSCRIBERS_FILE)
+        self.subscribers_file = resolve_isolated_data_path(subscribers_file, DEFAULT_SUBSCRIBERS_FILE)
 
     def list_subscribers(self) -> List[Dict[str, Any]]:
         """Loads subscriber list from disk."""
