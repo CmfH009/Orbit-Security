@@ -169,11 +169,17 @@ EVENT_OPENCODE_REMEDIATION_VERIFIED = "OPENCODE_REMEDIATION_VERIFIED"
 class Blackboard:
     """Decoupled SQLite WAL Event Mesh for Orbit services."""
 
-    def __init__(self, db_path: Optional[Path] = None, nova_brain_url: Optional[str] = None):
+    def __init__(
+        self,
+        db_path: Optional[Path] = None,
+        nova_brain_url: Optional[str] = None,
+        topology_bridge: Optional[Any] = None,
+    ):
         self.db_path = resolve_blackboard_path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._subscribers: Set[queue.Queue] = set()
         self._sub_lock = threading.Lock()
+        self.topology_bridge = topology_bridge
         if nova_brain_url is not None:
             self.nova_brain_url: Optional[str] = str(nova_brain_url).rstrip("/")
         else:
@@ -356,6 +362,11 @@ class Blackboard:
         }
         self.broadcast(event_dict)
         self._forward_to_nova_brain(event_dict)
+        if self.topology_bridge is not None:
+            try:
+                self.topology_bridge.enqueue_event(event_dict)
+            except Exception:
+                pass
         return ev_id
 
     @wal_retry()
@@ -406,6 +417,11 @@ class Blackboard:
             }
             self.broadcast(event_dict)
             self._forward_to_nova_brain(event_dict)
+            if self.topology_bridge is not None:
+                try:
+                    self.topology_bridge.enqueue_event(event_dict)
+                except Exception:
+                    pass
 
         return inserted_ids
 
