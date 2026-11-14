@@ -40,6 +40,7 @@ dependencies = [
     "psutil>=5.9.0",
     "pyperclip>=1.8.2",
     "requests>=2.31.0",
+    "numpy>=2.0.0",  # Imported at module level by src/orbit_security/tools/embedding_search.py
 ]
 
 [project.urls]

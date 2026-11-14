@@ -48,7 +48,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install -e .
-          python -m pip install dnspython httpx pydantic pytest pytest-asyncio pyyaml pip-audit duckdb reportlab
+          # numpy is required at import time by orbit_security.tools.embedding_search
+          # (eagerly imported by orbit_security.tools.__init__).
+          python -m pip install dnspython httpx pydantic pytest pytest-asyncio pyyaml pip-audit duckdb reportlab numpy
 
       - name: "Anti-CVE Shield: Supply Chain & Dependency Audit"
         run: |
@@ -65,7 +67,7 @@ jobs:
           echo "Synthesizing 52 curated SaaS takeover & DNS PermError Nuclei templates..."
           PYTHONPATH=src python -m orbit_security.nuclei_generator
           echo "Generated templates:"
-          ls -la data/nuclei_templates/ | head -n 15
+          ls -la data/nuclei_templates/ | sed -n '1,15p'
 
       - name: "Refresh Compacted CISA KEV + EPSS Radar Feed & Cloud/Email/TLS Sentinels"
         run: |

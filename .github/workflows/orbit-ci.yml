@@ -33,12 +33,13 @@ jobs:
           # Older pip releases do not understand --group, hence the fallback.
           python -m pip install --group dev || python -m pip install "pytest>=9.1.1" "pytest-asyncio>=1.4.0" "pyyaml>=6.0.3" "beautifulsoup4>=4.12.0"
           # Runtime imports exercised by the suite that are imported at module
-          # level but are Windows/network specific:
+          # level (including Windows/network/vector-search dependencies):
           #   edge-tts -> src/orbit_security/voice_model.py
           #   pywin32  -> src/orbit_security/desktop_x_bridge.py (Windows clipboard)
-          # Both are now declared in pyproject.toml; installed explicitly here
-          # as belt-and-braces so CI never depends on the lock resolving them.
-          python -m pip install edge-tts pywin32 pillow duckdb requests beautifulsoup4
+          #   numpy    -> src/orbit_security/tools/embedding_search.py (re-exported via tools/__init__.py)
+          # Installed explicitly here as belt-and-braces so CI never depends on
+          # optional/local environment packages.
+          python -m pip install edge-tts pywin32 pillow duckdb requests beautifulsoup4 numpy
 
       - name: Install ffmpeg
         shell: bash
