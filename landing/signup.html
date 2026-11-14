@@ -357,7 +357,7 @@
             }
         }
 
-        // URL Query Parameter Tier Selection
+        // URL Query Parameter Tier Selection & Self-Serve Prefill
         (function checkUrlTier() {
             try {
                 const params = new URLSearchParams(window.location.search);
@@ -368,6 +368,46 @@
                     selectTier('Scale', 1);
                 } else if (tierParam === 'pro' || tierParam === 'enterprise') {
                     selectTier('Enterprise', 2);
+                }
+
+                const emailParam = (params.get('email') || '').trim();
+                if (emailParam) {
+                    const emailEl = document.getElementById('contact_email');
+                    const supportEl = document.getElementById('support_email');
+                    if (emailEl) emailEl.value = emailParam;
+                    if (supportEl && supportEl.value === 'ops@eastsideco.com') {
+                        supportEl.value = emailParam;
+                    }
+                }
+
+                const domainRaw = (params.get('domain') || '').trim();
+                const agencyParam = (params.get('agency') || '').trim();
+                const cleanDomain = domainRaw.replace(/^https?:\/\//i, '').replace(/\/.*$/, '').trim();
+                if (cleanDomain) {
+                    const siteEl = document.getElementById('website');
+                    const customDomainEl = document.getElementById('custom_domain');
+                    if (siteEl) siteEl.value = `https://${cleanDomain}`;
+                    if (customDomainEl && !customDomainEl.value) {
+                        customDomainEl.value = `security.${cleanDomain}`;
+                    }
+                    const derivedSlug = cleanDomain.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                    const idEl = document.getElementById('agency_id');
+                    const nameEl = document.getElementById('agency_name');
+                    if (idEl && idEl.value === 'eastside-co' && derivedSlug) {
+                        idEl.value = derivedSlug;
+                    }
+                    if (nameEl && nameEl.value === 'Eastside Co' && !agencyParam) {
+                        nameEl.value = cleanDomain;
+                    }
+                }
+                if (agencyParam) {
+                    const nameEl = document.getElementById('agency_name');
+                    const idEl = document.getElementById('agency_id');
+                    const derivedSlug = agencyParam.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                    if (nameEl) nameEl.value = agencyParam;
+                    if (idEl && idEl.value === 'eastside-co' && derivedSlug) {
+                        idEl.value = derivedSlug;
+                    }
                 }
             } catch (err) {}
         })();

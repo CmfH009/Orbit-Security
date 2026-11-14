@@ -338,7 +338,12 @@ class ReportCriticVerifier:
                 extract_empirical_artifacts_from_blackboard(blackboard, target_domain)
             )
 
-        cited_endpoints = extract_cited_endpoints(pitch_text)
+        ignore_hosts = {
+            h
+            for h in cls.POLICY_PLATFORM_HOSTS
+            if clean_domain != h and not clean_domain.endswith("." + h)
+        }
+        cited_endpoints = extract_cited_endpoints(pitch_text, ignore_hosts=ignore_hosts)
         cited_status_codes = extract_cited_status_codes(pitch_text)
 
         should_ground = require_artifact_grounding or bool(verified_artifacts)
