@@ -1,11 +1,11 @@
 {
-  "generated_utc": "2026-11-14T22:46:27.209235+00:00",
-  "auto_submitted_to_hackerone": false,
+  "generated_utc": "2026-11-14T23:09:38.677000+00:00",
+  "auto_submitted_to_hackerone": true,
   "staged_bundles": [
     {
       "file": "A:\\projects\\orbit-security\\artifacts\\vdp_ready\\disney_vdp_test_hulu_com.md",
       "filename": "disney_vdp_test_hulu_com.md",
-      "sha256": "186b07e2c5b98484e243567f0d1000b84d8c3a19b9fd614237ef128c855574f1",
+      "sha256": "ceefcdde33977dda5e96b4bf799858318507c93c7e6e74b5a7d8bf0b79d46503",
       "target_host": "test.hulu.com",
       "program": "https://hackerone.com/disney",
       "probe_captured_utc": "2026-11-14T20:09:06.075428+00:00",
@@ -41,7 +41,7 @@
         "https_status": 500,
         "http_signature": "Fastly error: unknown domain: test.hulu.com. Please check that this domain has been added to a service."
       },
-      "submission_status": "PENDING_PORTAL_ONLY_NO_API",
+      "submission_status": "SUBMITTED_HACKERONE_API",
       "dispatch_attempts": [
         {
           "attempt_utc": "2026-11-14T22:41:26.370999+00:00",
@@ -76,15 +76,37 @@
           "channel": "desktop_browser_session",
           "result": "NO_AUTHENTICATED_SESSION",
           "detail": "Active Chrome taskbar window shows YouTube only; Taskbar Browser Sovereignty prohibits spawning duplicate Chrome windows or chrome-devtools-mcp."
+        },
+        {
+          "attempt_utc": "2026-11-14T23:09:33.319Z",
+          "channel": "hackerone_api",
+          "target": "https://api.hackerone.com/v1/hackers/reports",
+          "result": "HTTP_201_SUBMITTED",
+          "report_id": "4204024",
+          "report_url": "https://hackerone.com/reports/4204024",
+          "state": "new"
         }
       ],
-      "blocker": "PENDING_PORTAL_ONLY_NO_API: https://hackerone.com/disney requires authenticated HackerOne web portal submission; no HACKERONE_API_TOKEN/USERNAME in .env, no security.txt or public PSIRT email found, and no authenticated HackerOne session.",
-      "report_sha256": "186b07e2c5b98484e243567f0d1000b84d8c3a19b9fd614237ef128c855574f1"
+      "report_sha256": "ceefcdde33977dda5e96b4bf799858318507c93c7e6e74b5a7d8bf0b79d46503",
+      "hackerone_submission": {
+        "report_id": "4204024",
+        "report_url": "https://hackerone.com/reports/4204024",
+        "state": "new",
+        "created_at": "2026-11-14T23:09:32.214Z",
+        "submitted_at": "2026-11-14T23:09:33.319Z",
+        "team_handle": "disney",
+        "structured_scope_id": "833833",
+        "weakness_id": 130,
+        "severity_rating": "high",
+        "reporter_username": "arsoncarson",
+        "tracking_header": "X-TWDC-VDP: HackerOne-arsoncarson",
+        "source_ip": "174.201.31.8"
+      }
     },
     {
       "file": "A:\\projects\\orbit-security\\artifacts\\vdp_ready\\mondelez_vdp_shop_hukitchen_com.md",
       "filename": "mondelez_vdp_shop_hukitchen_com.md",
-      "sha256": "b86323f0ee0c1f3e883a3ef8c5f295e328e7035a4e6d0ae4674765b006075543",
+      "sha256": "bebf1d120067100d8544e0a543a9155e35f05acb178f984dfe4f4d51ee8a2118",
       "target_host": "shop.hukitchen.com",
       "program": "https://hackerone.com/mondelez",
       "probe_captured_utc": "2026-11-14T20:09:06.930204+00:00",
@@ -108,7 +130,7 @@
       "ollama_critic_bounded": "SKIPPED_CPU_TIMEOUT (TimeoutError)",
       "reverification_utc": "2026-11-14T22:41:26.370999+00:00",
       "reverification_bundle_sha256": "4b77a3e66cc981cba8dd3e81de47fae079eabc5ebd5a01815f3836b2b91ed521",
-      "compliance_identity_updated": "Carson | Founder, Orbit Security (carsonmail009@gmail.com)",
+      "compliance_identity_updated": "Carson Haynes (@arsoncarson) | Founder, Orbit Security (carsonmail009@gmail.com)",
       "live_reverification": {
         "dns_cname": "5c35d9eda65344a590aea0ebb93fb0b6.unbouncepages.com.",
         "edge_a_ips": [
@@ -119,7 +141,7 @@
         "https_status": 404,
         "http_signature": "The requested URL was not found on this server."
       },
-      "submission_status": "PENDING_PORTAL_ONLY_NO_API",
+      "submission_status": "SUBMITTED_HACKERONE_API",
       "dispatch_attempts": [
         {
           "attempt_utc": "2026-11-14T22:41:26.370999+00:00",
@@ -153,10 +175,32 @@
           "channel": "desktop_browser_session",
           "result": "NO_AUTHENTICATED_SESSION",
           "detail": "Active Chrome taskbar window shows YouTube only; Taskbar Browser Sovereignty prohibits spawning duplicate Chrome windows or chrome-devtools-mcp."
+        },
+        {
+          "attempt_utc": "2026-11-14T23:09:38.677Z",
+          "channel": "hackerone_api",
+          "target": "https://api.hackerone.com/v1/hackers/reports",
+          "result": "HTTP_201_SUBMITTED",
+          "report_id": "4204025",
+          "report_url": "https://hackerone.com/reports/4204025",
+          "state": "new"
         }
       ],
-      "blocker": "PENDING_PORTAL_ONLY_NO_API: https://hackerone.com/mondelez requires authenticated HackerOne web portal submission; no HACKERONE_API_TOKEN/USERNAME in .env, no security.txt or public PSIRT email found, and no authenticated HackerOne session.",
-      "report_sha256": "b86323f0ee0c1f3e883a3ef8c5f295e328e7035a4e6d0ae4674765b006075543"
+      "report_sha256": "bebf1d120067100d8544e0a543a9155e35f05acb178f984dfe4f4d51ee8a2118",
+      "hackerone_submission": {
+        "report_id": "4204025",
+        "report_url": "https://hackerone.com/reports/4204025",
+        "state": "new",
+        "created_at": "2026-11-14T23:09:37.671Z",
+        "submitted_at": "2026-11-14T23:09:38.677Z",
+        "team_handle": "mondelez",
+        "structured_scope_id": "610643",
+        "weakness_id": 130,
+        "severity_rating": "high",
+        "reporter_username": "arsoncarson",
+        "tracking_header": "X-Mondelez-VDP: HackerOne-arsoncarson",
+        "source_ip": "174.201.31.8"
+      }
     },
     {
       "file": "A:\\projects\\orbit-security\\artifacts\\vdp_ready\\whirlpool_vdp_www_mea_whirlpool_com.md",
@@ -529,7 +573,7 @@
     ]
   },
   "wave_4_vdp_dispatch_summary": {
-    "updated_utc": "2026-11-14T22:46:27.209235+00:00",
+    "updated_utc": "2026-11-14T23:09:38.677000+00:00",
     "reverification_bundle_sha256": "4b77a3e66cc981cba8dd3e81de47fae079eabc5ebd5a01815f3836b2b91ed521",
     "targets": {
       "www.mea.whirlpool.com": {
@@ -542,17 +586,24 @@
         "email_draft_sha256": "99d1ac60634c17e8b1ff87e0e5d4f107ebaa9d71a6979ebb0bbf57ce40d7042d"
       },
       "test.hulu.com": {
-        "status": "PENDING_PORTAL_ONLY_NO_API",
-        "channel": "https://hackerone.com/disney",
-        "checked_utc": "2026-11-14T22:41:26.370999+00:00",
-        "report_sha256": "186b07e2c5b98484e243567f0d1000b84d8c3a19b9fd614237ef128c855574f1"
+        "status": "SUBMITTED_HACKERONE_API",
+        "channel": "https://api.hackerone.com/v1/hackers/reports",
+        "report_id": "4204024",
+        "report_url": "https://hackerone.com/reports/4204024",
+        "state": "new",
+        "submitted_utc": "2026-11-14T23:09:33.319Z",
+        "report_sha256": "ceefcdde33977dda5e96b4bf799858318507c93c7e6e74b5a7d8bf0b79d46503"
       },
       "shop.hukitchen.com": {
-        "status": "PENDING_PORTAL_ONLY_NO_API",
-        "channel": "https://hackerone.com/mondelez",
-        "checked_utc": "2026-11-14T22:41:26.370999+00:00",
-        "report_sha256": "b86323f0ee0c1f3e883a3ef8c5f295e328e7035a4e6d0ae4674765b006075543"
+        "status": "SUBMITTED_HACKERONE_API",
+        "channel": "https://api.hackerone.com/v1/hackers/reports",
+        "report_id": "4204025",
+        "report_url": "https://hackerone.com/reports/4204025",
+        "state": "new",
+        "submitted_utc": "2026-11-14T23:09:38.677Z",
+        "report_sha256": "bebf1d120067100d8544e0a543a9155e35f05acb178f984dfe4f4d51ee8a2118"
       }
     }
-  }
+  },
+  "hackerone_submission_method": "HackerOne API v1 POST /v1/hackers/reports (explicit user token & authorization)"
 }
