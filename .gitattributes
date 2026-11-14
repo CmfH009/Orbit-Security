@@ -2,6 +2,7 @@
 # default on checkout. This stops CRLF churn from producing diffs that look
 # like real changes.
 * text=auto
+data/*.json text eol=lf
 
 # Never let git treat a binary as text.
 #

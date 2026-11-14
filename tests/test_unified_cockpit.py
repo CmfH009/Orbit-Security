@@ -26,19 +26,60 @@ def test_query_system_telemetry_returns_valid_structure():
     assert isinstance(telemetry["open_ports"], list)
 
 
-def test_query_projects_radar_discovers_repositories():
-    radar = query_projects_radar()
+def test_query_projects_radar_discovers_repositories(tmp_path):
+    import subprocess
+
+    projects_root = tmp_path / "projects"
+    repo_dir = projects_root / "orbit-security"
+    repo_dir.mkdir(parents=True)
+    inbox_root = tmp_path / "inbox"
+    (inbox_root / "expansion_queue").mkdir(parents=True)
+
+    (repo_dir / "ROADMAP.md").write_text("# Roadmap\n", encoding="utf-8")
+    subprocess.run(["git", "init", str(repo_dir)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(
+        ["git", "-C", str(repo_dir), "checkout", "-B", "main"],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    subprocess.run(["git", "-C", str(repo_dir), "add", "ROADMAP.md"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repo_dir),
+            "-c",
+            "user.name=Orbit CI",
+            "-c",
+            "user.email=ci@orbit.local",
+            "commit",
+            "-m",
+            "feat: initial roadmap",
+        ],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    radar = query_projects_radar(
+        projects_root=str(projects_root),
+        workspace_root="",
+        inbox_root=str(inbox_root),
+    )
     assert isinstance(radar, dict)
     assert "total_projects" in radar
     assert radar["total_projects"] > 0
     assert "projects" in radar
     assert "recently_active" in radar
+    assert len(radar["recently_active"]) == 1
     # Verify project item structure
     first = radar["projects"][0]
-    assert "name" in first
-    assert "branch" in first
-    assert "last_commit" in first
-    assert "roadmap" in first
+    assert first["name"] == "orbit-security"
+    assert first["branch"] == "main"
+    assert first["last_commit"]
+    assert first["roadmap"] == "ROADMAP.md"
+    assert first["repo_kind"] == "standalone"
 
 
 def test_query_calendar_and_tasks_handles_unconfigured(monkeypatch):

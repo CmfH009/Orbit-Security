@@ -111,10 +111,64 @@ def test_query_geo_panel_telemetry_surfaces_summary_and_delta(tmp_path):
     assert "Panel Run-over-Run Delta" in geo["summary_markdown"]
 
 
-def test_query_option_c_readiness_surfaces_track_a_and_track_b():
+def test_query_option_c_readiness_surfaces_track_a_and_track_b(tmp_path):
+    import hashlib
+    import shutil
+    import zipfile
+    from pathlib import Path
     from scripts.daily_briefing import query_option_c_readiness
+    from scripts.orbit_readiness_audit import TRACK_B_REQUIRED_MODULES, TRACK_B_REQUIRED_SCRIPTS
 
-    res = query_option_c_readiness()
+    repo_root = Path(__file__).resolve().parent.parent
+    (tmp_path / "data" / "disclosures").mkdir(parents=True)
+    (tmp_path / "data" / "hackerone_staging").mkdir(parents=True)
+
+    for rel_json in ("data/bounty_programs.json", "data/agency_retainers.json"):
+        src = repo_root / rel_json
+        dst = tmp_path / rel_json
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+
+    for tree in ("landing", "docs"):
+        tree_root = repo_root / tree
+        for html_file in tree_root.rglob("*.html"):
+            rel = html_file.relative_to(tree_root)
+            dst = tmp_path / tree / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(html_file, dst)
+
+    for rel_py in (*TRACK_B_REQUIRED_SCRIPTS, *TRACK_B_REQUIRED_MODULES):
+        src = repo_root / rel_py
+        dst = tmp_path / rel_py
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+
+    stem = "spotify_open_cloud_bucket_cdn_byspotify_com"
+    md_bytes = b"# Synthetic Track A Disclosure\n\nEvidence Digest: ev_0123456789ab\n"
+    (tmp_path / "data" / "disclosures" / f"{stem}.md").write_bytes(md_bytes)
+    manifest = json.dumps({"file_hashes_sha256": {"report.md": hashlib.sha256(md_bytes).hexdigest()}})
+    with zipfile.ZipFile(tmp_path / "data" / "disclosures" / f"{stem}_bundle.zip", "w") as zf:
+        zf.writestr("report.md", md_bytes)
+        zf.writestr("manifest_sha256.json", manifest)
+
+    (tmp_path / "data" / "hackerone_staging" / "VAULT_LAUNCH_QUEUE.json").write_text(
+        json.dumps(
+            {
+                "consolidated_dossiers": 1,
+                "launch_queue": [
+                    {
+                        "program": "Spotify",
+                        "tier": "TIER_1_READY",
+                        "hosts": ["cdn.byspotify.com"],
+                        "evidence_digests": ["ev_0123456789ab"],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    res = query_option_c_readiness(repo_root=tmp_path)
     assert res["commercial_outreach_frozen"] is True
     assert res["unique_programs"] >= 45
     assert res["staged_reports"] >= 1
@@ -123,10 +177,31 @@ def test_query_option_c_readiness_surfaces_track_a_and_track_b():
     assert any("Spotify" in item for item in res["tier_1_items"])
 
 
-def test_query_campaign_outreach_sorts_newest_first():
+def test_query_campaign_outreach_sorts_newest_first(tmp_path):
     from scripts.daily_briefing import query_campaign_outreach
 
-    res = query_campaign_outreach()
+    (tmp_path / "data").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "data" / "dispatched_campaigns.json").write_text(
+        json.dumps(
+            {
+                "northstar-web.example.com": {
+                    "agency_name": "Northstar Web",
+                    "dispatched_at": "2026-11-10",
+                },
+                "apex-studio.example.com": {
+                    "agency_name": "Apex Studio",
+                    "dispatched_at": "2026-11-13",
+                },
+                "cascade-digital.example.com": {
+                    "agency_name": "Cascade Digital",
+                    "dispatched_at": "2026-11-12",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    res = query_campaign_outreach(repo_root=tmp_path)
     assert res["frozen"] is True
     assert res["dispatched_count"] > 0
     recent = res["recent_dispatched"]

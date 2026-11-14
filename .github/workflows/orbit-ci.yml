@@ -50,6 +50,9 @@ jobs:
           choco install ffmpeg --no-progress -y --limit-output
           ffmpeg -version | head -n 1
 
+      - name: Bootstrap CI fixtures (non-OPSEC placeholders)
+        run: python scripts/bootstrap_ci_fixtures.py
+
       - name: Run pytest
         env:
           PYTHONIOENCODING: utf-8

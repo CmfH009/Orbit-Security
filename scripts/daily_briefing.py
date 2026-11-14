@@ -301,16 +301,20 @@ def query_inbox_pipeline() -> Dict[str, Any]:
         return {"total_threads": 0, "escalations": 0, "inquiries": 0}
 
 
-def query_campaign_outreach() -> Dict[str, Any]:
+def query_campaign_outreach(
+    repo_root: Optional[Path] = None,
+    dispatched_file: Optional[Path] = None,
+    out_root: Optional[Path] = None,
+) -> Dict[str, Any]:
     """Inspects dispatched_campaigns.json (sorted newest-first) and outbound freeze status."""
-    dispatched_file = os.path.join(os.path.dirname(__file__), "..", "data", "dispatched_campaigns.json")
-    out_root = os.path.join(os.path.dirname(__file__), "..", "outbound_campaigns")
+    root = Path(repo_root) if repo_root else _REPO_ROOT
+    d_file = Path(dispatched_file) if dispatched_file else (root / "data" / "dispatched_campaigns.json")
+    o_root = Path(out_root) if out_root else (root / "outbound_campaigns")
     dispatched_count = 0
     recent = []
-    if os.path.exists(dispatched_file):
+    if d_file.is_file():
         try:
-            with open(dispatched_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            data = json.loads(d_file.read_text(encoding="utf-8"))
             dispatched_count = len(data)
             sorted_entries = sorted(
                 data.items(),
@@ -324,9 +328,9 @@ def query_campaign_outreach() -> Dict[str, Any]:
             pass
 
     staged_count = 0
-    if os.path.exists(out_root):
+    if o_root.is_dir():
         try:
-            staged_count = len([d for d in os.listdir(out_root) if os.path.isdir(os.path.join(out_root, d))])
+            staged_count = len([d for d in o_root.iterdir() if d.is_dir()])
         except Exception:
             pass
 
