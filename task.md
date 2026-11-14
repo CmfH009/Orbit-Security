@@ -44,3 +44,11 @@
   - Added `EgressGuardASTVisitor` flagging raw `requests`, `httpx`, `aiohttp`, `socket`, `urllib.request` primitives
   - Added CLI flag `--check-egress` and exempts `egress_guard.py` plus `# roe-exempt:` pragmas
   - 100% AST hygiene verified across all 105 source modules and 175 test files with 0 omissions
+
+## Layer 6 — v1.2.0 Groundwork & Dual-Track Revenue Focus (2026-11-13)
+- [x] Hermetic test persistence isolation (`_runtime_paths.py`, `fleet.py`, `agency_retainer.py`, `bounty_radar.py`) + purged synthetic test leaks from `data/clients.json`
+- [x] Signal-over-noise bounty gate (`is_bounty_submittable`, `SUBMITTABLE_BOUNTY_FLAW_TYPES`, `ADVISORY_ONLY_FLAW_TYPES`) + archived `311` legacy passive `mail_spoofing` / `cors_wildcard_origin` artifacts to `data/archive/legacy_passive_disclosures/`
+- [x] Restored `data/bounty_programs.json` to `45` unique verified programs (`0` duplicate IDs) + added duplicate-ID regression test
+- [x] Added read-only `scripts/orbit_readiness_audit.py` + `tests/test_orbit_readiness_audit.py` tracking `PENDING_PHYSICAL_ID` KYC blocker, Stripe readiness, and disclosure signal counts
+- [x] Re-baselined `ROADMAP.md` to `v1.2.0` (Option C: Dual-Track Minimal; cold email/podcasts/social/non-revenue bridges frozen until Gate 2 first `$`)
+- [ ] **Gate 2 (`BLOCKED: PENDING_PHYSICAL_ID` in mail):** Complete physical ID KYC for Stripe + HackerOne/Bugcrowd, configure live `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`, submit verified high-signal bounty bundles, and close first real `$`

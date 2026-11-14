@@ -416,6 +416,16 @@ class BountyActiveProber:
             })
             state["recent_findings"] = recent[-50:]  # Keep last 50
             state["total_vulnerabilities_found"] = state.get("total_vulnerabilities_found", 0) + 1
+            from orbit_security.bounty_radar import is_bounty_submittable
+            is_sub, _ = is_bounty_submittable(
+                finding.flaw_type,
+                severity=finding.severity,
+                program=program,
+            )
+            if is_sub:
+                state["total_submittable_findings"] = state.get("total_submittable_findings", 0) + 1
+            else:
+                state["total_advisory_observations"] = state.get("total_advisory_observations", 0) + 1
             state["last_sweep_utc"] = datetime.now(timezone.utc).isoformat()
 
             with open(self.state_file, "w", encoding="utf-8") as f:

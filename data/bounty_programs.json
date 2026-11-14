@@ -1083,6 +1083,126 @@
       "state": "active",
       "last_scanned": null,
       "created_at": "2026-11-03T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "cloudflare",
+      "name": "Cloudflare",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/cloudflare",
+      "in_scope": [
+        "*.cloudflare.com",
+        "*.cloudflarepartners.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 30000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-13T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "stripe",
+      "name": "Stripe",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/stripe",
+      "in_scope": [
+        "*.stripe.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 25000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-13T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "twilio",
+      "name": "Twilio",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/twilio",
+      "in_scope": [
+        "www.twilio.com",
+        "api.twilio.com",
+        "*.sip.*.twilio.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 10000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-13T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "grammarly",
+      "name": "Grammarly (Superhuman)",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/superhuman",
+      "in_scope": [
+        "*.grammarly.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 100000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-13T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "snapchat",
+      "name": "Snapchat",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/snapchat",
+      "in_scope": [
+        "app.snapchat.com",
+        "accounts.snapchat.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 15000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-13T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "linkedin",
+      "name": "LinkedIn",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/linkedin",
+      "in_scope": [
+        "www.linkedin.com",
+        "api.linkedin.com",
+        "business.linkedin.com"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 15000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-13T18:00:00.000000+00:00"
+    },
+    {
+      "program_id": "mozilla",
+      "name": "Mozilla",
+      "platform": "hackerone",
+      "policy_url": "https://hackerone.com/mozilla",
+      "in_scope": [
+        "www.mozilla.org",
+        "www.firefox.com",
+        "vpn.mozilla.org"
+      ],
+      "out_of_scope": [],
+      "excluded_vulnerabilities": [],
+      "bounty_tier": "cash",
+      "max_bounty": 10000,
+      "state": "active",
+      "last_scanned": null,
+      "created_at": "2026-11-13T18:00:00.000000+00:00"
     }
   ]
 }

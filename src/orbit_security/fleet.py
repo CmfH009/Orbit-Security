@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
+from orbit_security._runtime_paths import resolve_isolated_data_path
 from orbit_security.blackboard import TOPIC_TELEMETRY, Blackboard, get_blackboard
 from orbit_security.models import AgencyBranding, DomainAuditResult, Finding, Severity
 from orbit_security.reporter import ReportGenerator
@@ -42,7 +43,7 @@ class ClientTarget:
 
 class FleetRegistry:
     def __init__(self, data_path: Optional[Path] = None):
-        self.data_path = Path(data_path or DEFAULT_FLEET_DATA_PATH)
+        self.data_path = resolve_isolated_data_path(data_path, DEFAULT_FLEET_DATA_PATH)
         self.clients: Dict[str, ClientTarget] = {}
         self.load()
 

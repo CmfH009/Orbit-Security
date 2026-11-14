@@ -201,6 +201,90 @@ def is_target_permitted(
     return is_target_in_scope(target, in_scope)
 
 
+SUBMITTABLE_BOUNTY_FLAW_TYPES: Set[str] = {
+    "subdomain_takeover",
+    "cloud_storage_takeover",
+    "client_subdomain_takeover",
+    "open_cloud_bucket",
+    "cors_arbitrary_origin_with_credentials",
+    "cors_null_origin_with_credentials",
+    "dom_xss_sink",
+    "sourcemap_exposure",
+    "graphql_introspection",
+    "http_request_smuggling_cl_te",
+    "http_request_smuggling_te_cl",
+    "http_request_smuggling_h2_downgrade",
+    "oauth_redirect_uri_hijack",
+    "rce",
+    "ssrf",
+    "idor",
+}
+
+ADVISORY_ONLY_FLAW_TYPES: Set[str] = {
+    "mail_spoofing",
+    "email_spoofing",
+    "missing_dmarc",
+    "dmarc",
+    "spf",
+    "permissive_spf",
+    "missing_hsts",
+    "expiring_certificate",
+    "cors_wildcard",
+    "cors_wildcard_origin",
+}
+
+
+def is_bounty_submittable(
+    flaw_type: str,
+    *,
+    severity: Any = None,
+    program: Optional[BountyProgram] = None,
+    bounty_viability: str = "HIGH_CONFIDENCE",
+) -> Tuple[bool, str]:
+    """Separates exploitable HackerOne/Bugcrowd submission candidates from passive advisory noise."""
+    flaw_norm = str(flaw_type or "").lower().replace("-", "_").strip()
+    viab_norm = str(bounty_viability or "").upper().strip()
+
+    if viab_norm == "INFORMATIONAL_LOW":
+        return False, "INFORMATIONAL_LOW"
+
+    if program is not None and not is_vulnerability_in_scope(program, flaw_norm, viab_norm):
+        return False, "EXCLUDED_BY_PROGRAM_POLICY"
+
+    if flaw_norm in ADVISORY_ONLY_FLAW_TYPES:
+        return False, f"ADVISORY_HYGIENE_ONLY:{flaw_norm}"
+
+    sev_val = str(getattr(severity, "value", severity) or "").upper().strip()
+    if sev_val in ("INFO", "INFORMATIONAL"):
+        return False, "INFORMATIONAL_SEVERITY"
+
+    if flaw_norm in SUBMITTABLE_BOUNTY_FLAW_TYPES or sev_val in ("CRITICAL", "HIGH"):
+        return True, "SUBMITTABLE"
+
+    return False, f"UNVERIFIED_LOW_SIGNAL:{flaw_norm}"
+
+
+def _tally_submittable_findings(
+    findings: List[Any],
+    program_lookup: Optional[Dict[str, BountyProgram]] = None,
+) -> Tuple[int, int]:
+    """Returns (submittable_count, advisory_count) across a list of findings."""
+    sub_count = 0
+    adv_count = 0
+    for f in findings:
+        flaw = str(getattr(f, "flaw_type", None) or (f.get("flaw_type") if isinstance(f, dict) else "") or "")
+        sev = getattr(f, "severity", None) if not isinstance(f, dict) else f.get("severity")
+        viab = str(getattr(f, "bounty_viability", None) or (f.get("bounty_viability") if isinstance(f, dict) else None) or "HIGH_CONFIDENCE")
+        pid = str(getattr(f, "program_id", None) or (f.get("program_id") if isinstance(f, dict) else "") or "")
+        prog = program_lookup.get(pid) if program_lookup else None
+        ok, _ = is_bounty_submittable(flaw, severity=sev, program=prog, bounty_viability=viab)
+        if ok:
+            sub_count += 1
+        else:
+            adv_count += 1
+    return sub_count, adv_count
+
+
 class RulesOfEngagementEngine:
     """Central Zero-Trust Rules of Engagement (RoE) validation engine.
 
@@ -297,7 +381,13 @@ class BountyScopeIngester:
     """Ingests public bug bounty program scopes from HackerOne, Bugcrowd, or JSON exports."""
 
     def __init__(self, data_path: Optional[Path] = None):
-        self.data_path = Path(data_path or DEFAULT_BOUNTY_DATA_PATH)
+        from orbit_security._runtime_paths import resolve_isolated_data_path
+
+        self.data_path = resolve_isolated_data_path(
+            data_path,
+            DEFAULT_BOUNTY_DATA_PATH,
+            seed_from_default=True,
+        )
         self.programs: Dict[str, BountyProgram] = {}
         self.load()
 
@@ -3544,7 +3634,13 @@ class BountyRadarSupervisor:
             total_findings.extend(vulns)
 
             for v in vulns:
-                if save_disclosures and getattr(v, "bounty_viability", "HIGH_CONFIDENCE") != "INFORMATIONAL_LOW":
+                ok_sub, _ = is_bounty_submittable(
+                    v.flaw_type,
+                    severity=v.severity,
+                    program=prog,
+                    bounty_viability=getattr(v, "bounty_viability", "HIGH_CONFIDENCE"),
+                )
+                if save_disclosures and ok_sub:
                     p = HackerOneDisclosureGenerator.save_disclosure(v, prog, output_dir=output_dir)
                     if p is not None:
                         disclosed_files.append(str(p))
@@ -3573,9 +3669,15 @@ class BountyRadarSupervisor:
                         logger.warning(f"Failed to dispatch bounty alert for {v.target_domain}: {alert_err}")
 
         # Update state
+        sub_count, adv_count = _tally_submittable_findings(
+            total_findings,
+            program_lookup={p.program_id: p for p in programs},
+        )
         self.state["last_sweep_utc"] = now_utc.isoformat()
         self.state["total_sweeps"] = self.state.get("total_sweeps", 0) + 1
         self.state["total_vulnerabilities_found"] = self.state.get("total_vulnerabilities_found", 0) + len(total_findings)
+        self.state["total_submittable_findings"] = self.state.get("total_submittable_findings", 0) + sub_count
+        self.state["total_advisory_observations"] = self.state.get("total_advisory_observations", 0) + adv_count
         self.state["programs_scanned"] = [p.program_id for p in programs]
         self.state["recent_findings"] = [asdict(v) for v in total_findings[-10:]]
         self._save_state()
@@ -3791,7 +3893,13 @@ class BountyRadar(BountyRadarSupervisor):
             }
 
             for v in vulns:
-                if save_disclosures and getattr(v, "bounty_viability", "HIGH_CONFIDENCE") != "INFORMATIONAL_LOW":
+                ok_sub, _ = is_bounty_submittable(
+                    v.flaw_type,
+                    severity=v.severity,
+                    program=prog,
+                    bounty_viability=getattr(v, "bounty_viability", "HIGH_CONFIDENCE"),
+                )
+                if save_disclosures and ok_sub:
                     p = HackerOneDisclosureGenerator.save_disclosure(v, prog, output_dir=output_dir)
                     if p is not None:
                         disclosed_files.append(str(p))
@@ -3829,8 +3937,14 @@ class BountyRadar(BountyRadarSupervisor):
             "end": end_time.isoformat(),
             "duration_seconds": (end_time - start_time).total_seconds(),
         }
+        sub_count, adv_count = _tally_submittable_findings(
+            total_findings,
+            program_lookup={p.program_id: p for p in programs},
+        )
         self.state["total_sweeps"] = self.state.get("total_sweeps", 0) + 1
         self.state["total_vulnerabilities_found"] = self.state.get("total_vulnerabilities_found", 0) + len(total_findings)
+        self.state["total_submittable_findings"] = self.state.get("total_submittable_findings", 0) + sub_count
+        self.state["total_advisory_observations"] = self.state.get("total_advisory_observations", 0) + adv_count
         self.state["programs_scanned"] = scanned_programs
         self.state["programs_scanned_count"] = len(scanned_programs)
         self.state["watermarks"] = watermarks

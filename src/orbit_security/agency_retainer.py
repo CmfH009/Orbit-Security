@@ -162,7 +162,9 @@ class AgencyRetainerManager:
     """Manages multi-tenant agency retainers and client domain perimeters."""
 
     def __init__(self, data_path: Optional[Path] = None):
-        self.data_path = Path(data_path or DEFAULT_RETAINERS_DATA_PATH)
+        from orbit_security._runtime_paths import resolve_isolated_data_path
+
+        self.data_path = resolve_isolated_data_path(data_path, DEFAULT_RETAINERS_DATA_PATH)
         self.agencies: Dict[str, AgencyRetainer] = {}
         self.load()
 
