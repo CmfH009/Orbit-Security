@@ -331,6 +331,68 @@ class TestFalsePositiveAndSignalGates:
         assert wild[0].severity == "LOW"
         assert wild[0].score <= 4.0
 
+        cors_mock = {
+            CorsMisconfigurationSentinel.TEST_ORIGIN: {
+                "access-control-allow-origin": CorsMisconfigurationSentinel.TEST_ORIGIN,
+                "access-control-allow-credentials": "true",
+            }
+        }
+        with patch.object(
+            prober.xh_probe,
+            "probe",
+            return_value=ProbeResult(
+                url="https://empty.acme.com",
+                status_code=200,
+                headers={"Content-Length": "0"},
+                body="",
+                security_audit=SecurityHeaderAudit(
+                    grade="B",
+                    score=80,
+                    present_headers={"strict-transport-security": "max-age=31536000"},
+                    missing_headers=[],
+                    recommendations=[],
+                ),
+            ),
+        ):
+            empty_findings = prober.probe_host_active(
+                "empty.acme.com",
+                offline=False,
+                mock_cloud_body="",
+                mock_graphql_paths={},
+                mock_cors_responses=cors_mock,
+            )
+        assert not [f for f in empty_findings if f.flaw_type == "cors_arbitrary_origin_with_credentials"]
+
+        with patch.object(
+            prober.xh_probe,
+            "probe",
+            return_value=ProbeResult(
+                url="https://html.acme.com",
+                status_code=200,
+                headers={"Content-Type": "text/html; charset=utf-8"},
+                body="<html><body>Public Landing</body></html>",
+                security_audit=SecurityHeaderAudit(
+                    grade="B",
+                    score=80,
+                    present_headers={"strict-transport-security": "max-age=31536000"},
+                    missing_headers=[],
+                    recommendations=[],
+                ),
+            ),
+        ):
+            html_findings = prober.probe_host_active(
+                "html.acme.com",
+                offline=False,
+                mock_cloud_body="",
+                mock_graphql_paths={},
+                mock_cors_responses=cors_mock,
+            )
+        html_cors = [f for f in html_findings if f.flaw_type == "cors_arbitrary_origin_with_credentials"]
+        assert len(html_cors) == 1
+        assert html_cors[0].severity == "MEDIUM"
+        assert html_cors[0].score == 5.4
+        assert "[PUBLIC_HTML_ONLY:" in html_cors[0].evidence
+
         # verify_and_package_finding must NOT write advisory-only flaws to disclosures_dir
         hsts_finding = ActiveProbeFinding(
             program_id="acme",
