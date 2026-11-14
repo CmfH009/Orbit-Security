@@ -1,0 +1,397 @@
+{
+  "generated_utc": "2026-11-14T20:15:41.992775+00:00",
+  "auto_submitted_to_hackerone": false,
+  "staged_bundles": [
+    {
+      "file": "A:\\projects\\orbit-security\\artifacts\\vdp_ready\\disney_vdp_test_hulu_com.md",
+      "filename": "disney_vdp_test_hulu_com.md",
+      "sha256": "186b07e2c5b98484e243567f0d1000b84d8c3a19b9fd614237ef128c855574f1",
+      "target_host": "test.hulu.com",
+      "program": "https://hackerone.com/disney",
+      "probe_captured_utc": "2026-11-14T20:09:06.075428+00:00",
+      "probe_evidence_sha256": "92679d6fdf4c1fe1799cf3dba5e407b12643374a9777a92150de3f6920077536",
+      "copilot_verdict": "ACCEPTED_STANDARD",
+      "copilot_confidence": 0.88,
+      "deterministic_critic": {
+        "verdict": "PASS",
+        "checks": {
+          "target_host_present": true,
+          "evidence_sha256_matches_probe": true,
+          "captured_utc_matches_probe": true,
+          "all_cnames_verified": true,
+          "all_a_ips_verified": true,
+          "http_statuses_verified": true,
+          "non_destructive_notice_present": true,
+          "no_auto_submit_flag_present": true,
+          "required_compliance_tokens_present": true
+        }
+      },
+      "ollama_critic_bounded": "SKIPPED_CPU_TIMEOUT (TimeoutError)"
+    },
+    {
+      "file": "A:\\projects\\orbit-security\\artifacts\\vdp_ready\\mondelez_vdp_shop_hukitchen_com.md",
+      "filename": "mondelez_vdp_shop_hukitchen_com.md",
+      "sha256": "72bc4aae96a7dec93695d040e70c0be47ade35732be7e4f547cdcbbbe34a13a1",
+      "target_host": "shop.hukitchen.com",
+      "program": "https://hackerone.com/mondelez",
+      "probe_captured_utc": "2026-11-14T20:09:06.930204+00:00",
+      "probe_evidence_sha256": "4d639214ddc495a87d37b7e316fd30be0e526924e77e2ddd03014e0837f3af13",
+      "copilot_verdict": "ACCEPTED_STANDARD",
+      "copilot_confidence": 0.88,
+      "deterministic_critic": {
+        "verdict": "PASS",
+        "checks": {
+          "target_host_present": true,
+          "evidence_sha256_matches_probe": true,
+          "captured_utc_matches_probe": true,
+          "all_cnames_verified": true,
+          "all_a_ips_verified": true,
+          "http_statuses_verified": true,
+          "non_destructive_notice_present": true,
+          "no_auto_submit_flag_present": true,
+          "required_compliance_tokens_present": true
+        }
+      },
+      "ollama_critic_bounded": "SKIPPED_CPU_TIMEOUT (TimeoutError)"
+    },
+    {
+      "file": "A:\\projects\\orbit-security\\artifacts\\vdp_ready\\whirlpool_vdp_www_mea_whirlpool_com.md",
+      "filename": "whirlpool_vdp_www_mea_whirlpool_com.md",
+      "sha256": "5d15853afba26a0317446e1ef22d7ecda188209cb05a8949edf09ff90a979c46",
+      "target_host": "www.mea.whirlpool.com",
+      "program": "mailto:product_security@whirlpool.com",
+      "probe_captured_utc": "2026-11-14T20:09:09.651641+00:00",
+      "probe_evidence_sha256": "1a4737d23f06daea97d26a20547ec72237845f105c86174cef488cf6d884a495",
+      "copilot_verdict": "ACCEPTED_STANDARD",
+      "copilot_confidence": 0.88,
+      "deterministic_critic": {
+        "verdict": "PASS",
+        "checks": {
+          "target_host_present": true,
+          "evidence_sha256_matches_probe": true,
+          "captured_utc_matches_probe": true,
+          "all_cnames_verified": true,
+          "all_a_ips_verified": true,
+          "http_statuses_verified": true,
+          "non_destructive_notice_present": true,
+          "no_auto_submit_flag_present": true,
+          "required_compliance_tokens_present": true
+        }
+      },
+      "ollama_critic_bounded": "SKIPPED_CPU_TIMEOUT (TimeoutError)"
+    }
+  ],
+  "suppressed_targets": [
+    {
+      "target": "status.mil",
+      "program": "https://hackerone.com/deptofdefense",
+      "reason": "Live Cloudflare DoH returned RCODE=3 (NXDOMAIN) for CNAME/A/TXT and getaddrinfo failed; historical report deptofdefense_mail_spoofing_status_mil_2026-10-04T09-01-18.md is DNS-only and archived.",
+      "probe_captured_utc": "2026-11-14T20:09:10.459433+00:00",
+      "probe_evidence_sha256": "5687baec7062d45f9496fa816b5f58e0ba592a744f19812390cdebfe90cc0033"
+    }
+  ],
+  "target_corrections": [
+    {
+      "requested_target": "whirlpool.com",
+      "verified_apex_state": "A 54.175.185.69 -> HTTPS 403 AkamaiGHost Access Denied (no orphaned CloudFront CNAME on apex)",
+      "actual_orphaned_cloudfront_subdomain": "www.mea.whirlpool.com -> CNAME du1taozq07ehy.cloudfront.net.",
+      "source_on_disk": "data/generated_audits/elogic-commerce/whirlpool.com_audit.md"
+    }
+  ],
+  "quarantine_verification": {
+    "archived_informational_total_md": 2980,
+    "archived_informational_mail_spoofing_md": 2886,
+    "archived_informational_cors_wildcard_md": 94,
+    "out_of_scope_archive_total_files": 98,
+    "false_positive_disclosures_total": 7,
+    "kyc_gated_active_disclosures_md": 19,
+    "kyc_gated_programs_in_vault": [
+      "Spotify (TIER_1_READY)",
+      "MercadoLibre (TIER_2_NEEDS_AUTH_PROOF)",
+      "Xiaomi (TIER_2_NEEDS_AUTH_PROOF)",
+      "Superbet (TIER_2_NEEDS_AUTH_PROOF)",
+      "Playtika (TIER_2_NEEDS_AUTH_PROOF)"
+    ]
+  },
+  "workstream_2_outreach_audit": {
+    "cohort_4_already_dispatched": [
+      {
+        "agency_domain": "10up.com",
+        "agency_name": "10up",
+        "contact_email": "sales@10up.com",
+        "status": "SENT",
+        "dispatched_at": "2026-09-26 15:53:20",
+        "bundle_complete": true,
+        "pdf_attachments": [
+          "politico_com_security_audit.pdf"
+        ]
+      },
+      {
+        "agency_domain": "humanmade.com",
+        "agency_name": "Human Made",
+        "contact_email": "hello@humanmade.com",
+        "status": "SENT",
+        "dispatched_at": "2026-10-22 03:20:34",
+        "bundle_complete": true,
+        "pdf_attachments": [
+          "recipetineats_com_security_audit.pdf"
+        ]
+      },
+      {
+        "agency_domain": "kota.co.uk",
+        "agency_name": "KOTA",
+        "contact_email": "hello@kota.co.uk",
+        "status": "SENT",
+        "dispatched_at": "2026-09-26 15:53:53",
+        "bundle_complete": true,
+        "pdf_attachments": [
+          "nutopia_com_security_audit.pdf"
+        ]
+      },
+      {
+        "agency_domain": "illustrate.digital",
+        "agency_name": "Illustrate Digital",
+        "contact_email": "hello@illustrate.digital",
+        "status": "SENT",
+        "dispatched_at": "2026-09-26 15:54:17",
+        "bundle_complete": true,
+        "pdf_attachments": [
+          "footanstey_com_security_audit.pdf"
+        ]
+      },
+      {
+        "agency_domain": "ctidigital.com",
+        "agency_name": "CTI Digital",
+        "contact_email": "hello@ctidigital.com",
+        "status": "SENT",
+        "dispatched_at": "2026-09-26 15:54:35",
+        "bundle_complete": true,
+        "pdf_attachments": [
+          "thedonkeysanctuary_org_uk_security_audit.pdf"
+        ]
+      },
+      {
+        "agency_domain": "propeller.co.uk",
+        "agency_name": "Propeller",
+        "contact_email": "info@propeller.co.uk",
+        "status": "SENT",
+        "dispatched_at": "2026-09-26 15:54:55",
+        "bundle_complete": true,
+        "pdf_attachments": [
+          "cotswoldsdistillery_com_security_audit.pdf"
+        ]
+      },
+      {
+        "agency_domain": "neverbland.com",
+        "agency_name": "NEVERBLAND",
+        "contact_email": "hello@neverbland.com",
+        "status": "SENT",
+        "dispatched_at": "2026-09-26 15:55:17",
+        "bundle_complete": true,
+        "pdf_attachments": [
+          "mothdrinks_com_security_audit.pdf"
+        ]
+      },
+      {
+        "agency_domain": "alley.com",
+        "agency_name": "Alley Interactive",
+        "contact_email": "info@alley.com",
+        "status": "SENT",
+        "dispatched_at": "2026-10-22 03:22:14",
+        "bundle_complete": true,
+        "pdf_attachments": [
+          "suntimes_com_security_audit.pdf"
+        ]
+      },
+      {
+        "agency_domain": "tri.be",
+        "agency_name": "Modern Tribe",
+        "contact_email": "hello@tri.be",
+        "status": "SENT",
+        "dispatched_at": "2026-09-26 15:55:58",
+        "bundle_complete": true,
+        "pdf_attachments": [
+          "littleleague_org_security_audit.pdf"
+        ]
+      },
+      {
+        "agency_domain": "rtcamp.com",
+        "agency_name": "rtCamp",
+        "contact_email": "hello@rtcamp.com",
+        "status": "SENT",
+        "dispatched_at": "2026-10-22 03:20:59",
+        "bundle_complete": true,
+        "pdf_attachments": [
+          "readylogistics_com_security_audit.pdf"
+        ]
+      },
+      {
+        "agency_domain": "impressiondigital.com",
+        "agency_name": "Impression",
+        "contact_email": "hello@impressiondigital.com",
+        "status": "SENT",
+        "dispatched_at": "2026-09-26 15:56:29",
+        "bundle_complete": true,
+        "pdf_attachments": [
+          "abigailahern_com_security_audit.pdf"
+        ]
+      }
+    ],
+    "cohort_11_staged_preflight": [
+      {
+        "agency_domain": "8thlight.com",
+        "contact_email": "contact@8thlight.com",
+        "client_anchor": "groupon.com",
+        "score": 100,
+        "grade": "A+",
+        "ab_variant": "holdout",
+        "is_holdout": true,
+        "in_dispatched_campaigns": false,
+        "pages_link_ok": true,
+        "critic_flags": [
+          "HOLDOUT_CONTROL_DO_NOT_SEND",
+          "NO_PDF_ATTACHMENT",
+          "FROM_ORBITSECURITY_IO_MISMATCH_GMAIL"
+        ]
+      },
+      {
+        "agency_domain": "atomicobject.com",
+        "contact_email": "contact@atomicobject.com",
+        "client_anchor": "stellantis.com",
+        "score": 90,
+        "grade": "A",
+        "ab_variant": "variant_a",
+        "is_holdout": false,
+        "in_dispatched_campaigns": false,
+        "pages_link_ok": true,
+        "critic_flags": [
+          "NO_PDF_ATTACHMENT",
+          "FROM_ORBITSECURITY_IO_MISMATCH_GMAIL"
+        ]
+      },
+      {
+        "agency_domain": "headway.io",
+        "contact_email": "ahoy@headway.io",
+        "client_anchor": "fleetrx.com",
+        "score": 80,
+        "grade": "B",
+        "ab_variant": "holdout",
+        "is_holdout": true,
+        "in_dispatched_campaigns": false,
+        "pages_link_ok": true,
+        "critic_flags": [
+          "HOLDOUT_CONTROL_DO_NOT_SEND",
+          "NO_PDF_ATTACHMENT",
+          "FROM_ORBITSECURITY_IO_MISMATCH_GMAIL"
+        ]
+      },
+      {
+        "agency_domain": "launchpadlab.com",
+        "contact_email": "contact@launchpadlab.com",
+        "client_anchor": "empower.com",
+        "score": 80,
+        "grade": "B",
+        "ab_variant": "variant_b",
+        "is_holdout": false,
+        "in_dispatched_campaigns": false,
+        "pages_link_ok": true,
+        "critic_flags": [
+          "NO_PDF_ATTACHMENT",
+          "FROM_ORBITSECURITY_IO_MISMATCH_GMAIL"
+        ]
+      },
+      {
+        "agency_domain": "crema.us",
+        "contact_email": "hello@crema.us",
+        "client_anchor": "freightview.com",
+        "score": 80,
+        "grade": "B",
+        "ab_variant": "variant_b",
+        "is_holdout": false,
+        "in_dispatched_campaigns": false,
+        "pages_link_ok": true,
+        "critic_flags": [
+          "NO_PDF_ATTACHMENT",
+          "FROM_ORBITSECURITY_IO_MISMATCH_GMAIL"
+        ]
+      },
+      {
+        "agency_domain": "nerdery.com",
+        "contact_email": "info@nerdery.com",
+        "client_anchor": "purina.com",
+        "score": 90,
+        "grade": "A",
+        "ab_variant": "variant_a",
+        "is_holdout": false,
+        "in_dispatched_campaigns": false,
+        "pages_link_ok": true,
+        "critic_flags": [
+          "NO_PDF_ATTACHMENT",
+          "FROM_ORBITSECURITY_IO_MISMATCH_GMAIL"
+        ]
+      },
+      {
+        "agency_domain": "txidigital.com",
+        "contact_email": "info@txidigital.com",
+        "client_anchor": "tyson.com",
+        "score": 90,
+        "grade": "A",
+        "ab_variant": "variant_a",
+        "is_holdout": false,
+        "in_dispatched_campaigns": false,
+        "pages_link_ok": true,
+        "critic_flags": [
+          "NO_PDF_ATTACHMENT",
+          "FROM_ORBITSECURITY_IO_MISMATCH_GMAIL"
+        ]
+      },
+      {
+        "agency_domain": "revelry.co",
+        "contact_email": "hello@revelry.co",
+        "client_anchor": "kickserv.com",
+        "score": 100,
+        "grade": "A+",
+        "ab_variant": "variant_b",
+        "is_holdout": false,
+        "in_dispatched_campaigns": false,
+        "pages_link_ok": true,
+        "critic_flags": [
+          "NO_PDF_ATTACHMENT",
+          "FROM_ORBITSECURITY_IO_MISMATCH_GMAIL"
+        ]
+      },
+      {
+        "agency_domain": "nebulab.com",
+        "contact_email": "hello@nebulab.com",
+        "client_anchor": "kenshoo.com",
+        "score": 70,
+        "grade": "C",
+        "ab_variant": "variant_a",
+        "is_holdout": false,
+        "in_dispatched_campaigns": false,
+        "pages_link_ok": true,
+        "critic_flags": [
+          "NO_PDF_ATTACHMENT",
+          "FROM_ORBITSECURITY_IO_MISMATCH_GMAIL"
+        ]
+      },
+      {
+        "agency_domain": "subvisual.com",
+        "contact_email": "contact@subvisual.com",
+        "client_anchor": "uport.me",
+        "score": 90,
+        "grade": "A",
+        "ab_variant": "holdout",
+        "is_holdout": true,
+        "in_dispatched_campaigns": false,
+        "pages_link_ok": true,
+        "critic_flags": [
+          "HOLDOUT_CONTROL_DO_NOT_SEND",
+          "NO_PDF_ATTACHMENT",
+          "FROM_ORBITSECURITY_IO_MISMATCH_GMAIL",
+          "ANCHOR_UPORT_ME_HTTPS_URLERROR"
+        ]
+      }
+    ]
+  }
+}

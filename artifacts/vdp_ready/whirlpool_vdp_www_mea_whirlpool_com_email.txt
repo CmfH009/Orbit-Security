@@ -1,0 +1,35 @@
+To: product_security@whirlpool.com
+From: Carson | Founder, Orbit Security <carsonmail009@gmail.com>
+Subject: Security Advisory: Orphaned AWS CloudFront CNAME on www.mea.whirlpool.com (CWE-350)
+
+Hello Whirlpool Product Security team,
+
+During passive DNS and perimeter hygiene monitoring, we observed a dangling AWS CloudFront CNAME configuration affecting the subdomain www.mea.whirlpool.com. We are sharing these details directly with your security team under non-destructive responsible disclosure.
+
+Summary of Verified Findings (Captured 2026-11-14T20:09:09Z)
+- Affected Subdomain: www.mea.whirlpool.com
+- DNS CNAME Record: www.mea.whirlpool.com. 300 IN CNAME du1taozq07ehy.cloudfront.net.
+- Edge IP Addresses: 99.84.105.32, 99.84.105.35, 99.84.105.75, 99.84.105.82
+- HTTP Response (http://www.mea.whirlpool.com/): HTTP/1.1 403 Forbidden (Server: CloudFront, X-Cache: Error from cloudfront - "ERROR: The request could not be satisfied")
+- HTTPS Response (https://www.mea.whirlpool.com/): Fails TLS negotiation (SSL: SSLV3_ALERT_HANDSHAKE_FAILURE)
+- Clarification: The apex domain whirlpool.com resolves separately (A 54.175.185.69 behind Akamai) and is unaffected by this CNAME.
+
+Non-Destructive Reproduction Commands
+  dig +short CNAME www.mea.whirlpool.com
+  curl -i http://www.mea.whirlpool.com/
+  curl -iv https://www.mea.whirlpool.com/
+
+Note on Scope & Testing Boundaries
+Per responsible disclosure guidelines, no attempt was made to register www.mea.whirlpool.com on AWS CloudFront, request certificates, or modify any DNS or CDN configuration.
+
+Recommended Remediation
+1. If the MEA regional portal has been retired or migrated, delete the stale CNAME record (du1taozq07ehy.cloudfront.net.) for www.mea.whirlpool.com from authoritative DNS.
+2. If the subdomain remains active, re-attach an authorized CloudFront distribution and valid ACM TLS certificate for www.mea.whirlpool.com.
+
+Please let us know if you need the full Markdown verification log or SHA-256 evidence digest.
+
+Best regards,
+Carson Haynes
+Founder, Orbit Security
+carsonmail009@gmail.com
+https://cmfh009.github.io/Orbit-Security/
