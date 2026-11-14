@@ -4302,6 +4302,74 @@ Best regards,
             return (radar && radar.value.trim()) || (custom && custom.value.trim()) || (portal && portal.value.trim()) || localStorage.getItem('orbit_agency_name') || 'Apex Digital Studio';
         }
 
+        let activeAttributionAgency = '';
+        let agencyExplicitlyCleared = false;
+
+        function getEnteredAgencyName() {
+            const radar = document.getElementById('radarAgencyName');
+            const custom = document.getElementById('customAgencyName');
+            const portal = document.getElementById('portalAgencyNameInput');
+            let saved = '';
+            try {
+                saved = (typeof localStorage !== 'undefined' && localStorage.getItem('orbit_agency_name')) || '';
+            } catch (e) {}
+            return ((radar && radar.value && radar.value.trim())
+                || (custom && custom.value && custom.value.trim())
+                || (portal && portal.value && portal.value.trim())
+                || saved.trim());
+        }
+
+        function updateHrefQueryParam(rawHref, key, encodedValue) {
+            const hashIdx = rawHref.indexOf('#');
+            const hash = hashIdx >= 0 ? rawHref.slice(hashIdx) : '';
+            const withoutHash = hashIdx >= 0 ? rawHref.slice(0, hashIdx) : rawHref;
+            const qIdx = withoutHash.indexOf('?');
+            const base = qIdx >= 0 ? withoutHash.slice(0, qIdx) : withoutHash;
+            const queryStr = qIdx >= 0 ? withoutHash.slice(qIdx + 1) : '';
+            const kept = queryStr
+                ? queryStr.split('&').filter(part => {
+                    if (!part) return false;
+                    const eqIdx = part.indexOf('=');
+                    const paramKey = eqIdx >= 0 ? part.slice(0, eqIdx) : part;
+                    return paramKey !== key;
+                })
+                : [];
+            if (encodedValue !== null && encodedValue !== '') {
+                kept.push(`${key}=${encodedValue}`);
+            }
+            return kept.length > 0 ? `${base}?${kept.join('&')}${hash}` : `${base}${hash}`;
+        }
+
+        function decorateStripeAndSignupLinks(agencyName) {
+            const trimmed = String(agencyName || '').trim();
+            activeAttributionAgency = trimmed;
+            if (trimmed.length > 0) {
+                agencyExplicitlyCleared = false;
+            }
+            const agencySlug = trimmed
+                ? (trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'agency').slice(0, 64)
+                : '';
+            const encodedSlug = agencySlug ? encodeURIComponent(agencySlug) : null;
+            const encodedAgency = trimmed ? encodeURIComponent(trimmed) : null;
+            if (typeof document === 'undefined' || typeof document.querySelectorAll !== 'function') return;
+
+            document.querySelectorAll('a[href^="https://buy.stripe.com/"]').forEach(link => {
+                const rawHref = (typeof link.getAttribute === 'function' ? link.getAttribute('href') : '') || link.href || '';
+                if (!rawHref) return;
+                const nextHref = updateHrefQueryParam(rawHref, 'client_reference_id', encodedSlug);
+                if (typeof link.setAttribute === 'function') link.setAttribute('href', nextHref);
+                link.href = nextHref;
+            });
+
+            document.querySelectorAll('a[href^="signup.html"]').forEach(link => {
+                const rawHref = (typeof link.getAttribute === 'function' ? link.getAttribute('href') : '') || link.href || '';
+                if (!rawHref) return;
+                const nextHref = updateHrefQueryParam(rawHref, 'agency', encodedAgency);
+                if (typeof link.setAttribute === 'function') link.setAttribute('href', nextHref);
+                link.href = nextHref;
+            });
+        }
+
         function syncAgencyName(sourceValue) {
             const name = (sourceValue || '').trim();
             const radar = document.getElementById('radarAgencyName');
@@ -4320,10 +4388,14 @@ Best regards,
                 mockupUrl.textContent = `security.${slug || 'apex'}.example.com`;
             }
             if (name) {
+                agencyExplicitlyCleared = false;
                 try {
                     localStorage.setItem('orbit_agency_name', name);
                 } catch (e) {}
+            } else {
+                agencyExplicitlyCleared = true;
             }
+            decorateStripeAndSignupLinks(name);
             switchPitchTemplate(currentPitchKey);
             document.querySelectorAll('.flipbook-agency-name').forEach(el => {
                 el.textContent = name || 'Apex Digital Studio';
@@ -4435,8 +4507,13 @@ ${body}`;
             if (costEl) costEl.textContent = '$' + orbitCost + '/mo (' + tierName + ')';
             if (annualEl) annualEl.innerHTML = '+$' + netAnnual.toLocaleString() + '<span class="text-xs font-normal text-slate-300">/yr</span>';
             if (badgeEl) badgeEl.textContent = roiPct.toLocaleString() + '% ROI';
-            if (ctaEl) ctaEl.href = checkoutUrl;
+            if (ctaEl) {
+                ctaEl.href = checkoutUrl;
+                if (typeof ctaEl.setAttribute === 'function') ctaEl.setAttribute('href', checkoutUrl);
+            }
             if (ctaTextEl) ctaTextEl.textContent = 'Deploy Recommended ' + tierName + ' Plan ($' + orbitCost + '/mo)';
+            const agencyForLinks = agencyExplicitlyCleared ? '' : (getEnteredAgencyName() || activeAttributionAgency);
+            decorateStripeAndSignupLinks(agencyForLinks);
         }
 
         // 4. In-Browser PDF Flipbook Modal
