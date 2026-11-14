@@ -469,3 +469,141 @@ class TestTrackAEgressCompliance:
         with patch("socket.create_connection", side_effect=AssertionError("Must block before socket connect")):
             assert sweeper.is_ssl_cert_bound_to_domain("127.0.0.1") is False
             assert sweeper.is_ssl_cert_bound_to_domain("localhost") is False
+
+
+class TestRound3DisclosureVaultReadiness:
+    """Read-only empirical checks on staged disclosures, false-positive archives, and program exclusions."""
+
+    REPO_ROOT = Path(__file__).resolve().parent.parent
+
+    def test_disclosures_vault_paired_19_and_tier3_archived(self):
+        disc_dir = self.REPO_ROOT / "data" / "disclosures"
+        fp_archive_dir = self.REPO_ROOT / "data" / "archive" / "false_positive_disclosures"
+
+        mds = sorted(p.name for p in disc_dir.glob("*.md"))
+        zips = sorted(p.name for p in disc_dir.glob("*_bundle.zip"))
+        bdirs = sorted(p.name for p in disc_dir.iterdir() if p.is_dir() and p.name.endswith("_bundle"))
+        dup_dirs = [p.name for p in disc_dir.iterdir() if p.is_dir() and "(1)" in p.name]
+
+        assert len(mds) == 19
+        assert len(zips) == 19
+        assert len(bdirs) == 19
+        assert dup_dirs == []
+        assert [m[:-3] for m in mds] == [z[:-11] for z in zips] == [b[:-7] for b in bdirs]
+
+        archived_tier3_stems = [
+            "uber_cors_arbitrary_origin_with_credentials_fpbi8c1t_ubereats_com",
+            "uber_cors_arbitrary_origin_with_credentials_fpfcpn2u_ubereats_com",
+            "gitlab_cloud_storage_takeover_assets_gitlab_com",
+            "khealth_cloud_storage_takeover_cdn_khealth-test_com",
+            "gitlab_graphql_introspection_gitlab_com",
+            "shopify_graphql_introspection_media_myshopify_com",
+            "expediagroup_bbp_graphql_introspection_www_hotwire_com",
+        ]
+        assert fp_archive_dir.is_dir()
+        for stem in archived_tier3_stems:
+            assert (fp_archive_dir / f"{stem}.md").is_file()
+            assert (fp_archive_dir / f"{stem}_bundle.zip").is_file()
+            assert (fp_archive_dir / f"{stem}_bundle").is_dir()
+            assert not (disc_dir / f"{stem}.md").exists()
+        assert (
+            fp_archive_dir / "xiaomi_cors_arbitrary_origin_with_credentials_mijiayoupin_com_bundle (1)"
+        ).is_dir()
+
+    def test_staged_19_bundles_have_deterministic_ev_digests_sha256_and_pass_critic(self):
+        disc_dir = self.REPO_ROOT / "data" / "disclosures"
+        bdirs = sorted(p for p in disc_dir.iterdir() if p.is_dir() and p.name.endswith("_bundle"))
+        assert len(bdirs) == 19
+
+        for bdir in bdirs:
+            stem = bdir.name[: -len("_bundle")]
+            standalone_md = (disc_dir / f"{stem}.md").read_text(encoding="utf-8")
+            h1_md = (bdir / "hackerone_report.md").read_text(encoding="utf-8")
+            bc_md = (bdir / "bugcrowd_report.md").read_text(encoding="utf-8")
+            tech_txt = (bdir / "technical_evidence.txt").read_text(encoding="utf-8")
+            meta = json.loads((bdir / "metadata.json").read_text(encoding="utf-8"))
+            manifest = json.loads((bdir / "manifest_sha256.json").read_text(encoding="utf-8"))
+
+            assert standalone_md == h1_md
+            ev_id = meta.get("evidence_artifact_id", "")
+            assert re.match(r"^ev_[0-9a-f]{12}$", ev_id), f"Missing ev_ digest in {stem}/metadata.json"
+            assert manifest.get("evidence_artifact_id") == ev_id
+
+            raw_evidence = tech_txt.split("OBSERVED RAW EVIDENCE:\n", 1)[1].split(
+                "\n\nREMEDIATION GUIDANCE:", 1
+            )[0]
+            expected_ev = compute_evidence_digest(
+                target=meta["target_domain"],
+                status_code=None,
+                flaw_type=meta["flaw_type"],
+                evidence_snippet=raw_evidence,
+                provider=meta.get("provider") or "",
+            )
+            assert ev_id == expected_ev
+
+            for content in (standalone_md, h1_md, bc_md, tech_txt):
+                assert ev_id in content
+                assert "evil.com" not in content.lower()
+                assert "# Output: None" not in content
+
+            if stem == "spotify_open_cloud_bucket_cdn_byspotify_com":
+                assert meta["severity"] == "MEDIUM"
+                assert meta["cvss_score"] == 5.3
+                assert meta["bounty_viability"] == "HIGH_CONFIDENCE"
+                assert "Podsights Seed - Interview Version.pdf" in standalone_md
+                assert "advisor/advisor-onboarding-demo.mp4" in standalone_md
+                ep = "/interviews/Podsights%20Seed%20-%20Interview%20Version.pdf"
+            else:
+                assert meta["flaw_type"] == "cors_arbitrary_origin_with_credentials"
+                assert meta["severity"] == "MEDIUM"
+                assert meta["cvss_score"] == 5.4
+                assert meta["bounty_viability"] == "CONDITIONAL"
+                assert "[PUBLIC_HTML_ONLY:" in standalone_md
+                assert "Origin: https://untrusted-adversary.com" in standalone_md
+                ep = "/"
+
+            zip_path = disc_dir / f"{bdir.name}.zip"
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                assert zf.testzip() is None
+                for member, expected_sha in manifest["file_hashes_sha256"].items():
+                    assert hashlib.sha256(zf.read(member)).hexdigest() == expected_sha
+                    assert hashlib.sha256((bdir / member).read_bytes()).hexdigest() == expected_sha
+
+            art = EmpiricalEvidenceArtifact(
+                artifact_id=ev_id,
+                target=meta["target_domain"],
+                status_code=200,
+                flaw_type=meta["flaw_type"],
+                evidence_snippet=raw_evidence,
+                provider=meta.get("provider") or "",
+                endpoint_path=ep,
+            )
+            for txt in (standalone_md, bc_md):
+                verdict = ReportCriticVerifier.verify_briefing_pitch(
+                    pitch_text=txt,
+                    target_domain=meta["target_domain"],
+                    core_finding=meta["flaw_type"],
+                    artifacts=[art],
+                    require_artifact_grounding=True,
+                )
+                assert verdict.passed is True, f"{stem} failed ReportCriticVerifier: {verdict.reasons}"
+                assert ev_id in verdict.verified_artifact_ids
+
+    def test_all_45_bounty_programs_populate_excluded_vulnerabilities(self):
+        catalog_path = self.REPO_ROOT / "data" / "bounty_programs.json"
+        programs = json.loads(catalog_path.read_text(encoding="utf-8")).get("programs", [])
+        assert len(programs) == 45
+        expected_baseline = {
+            "mail_spoofing",
+            "missing_dmarc",
+            "spf",
+            "missing_hsts",
+            "cors_wildcard_origin",
+            "clickjacking",
+            "rate_limiting",
+        }
+        for prog in programs:
+            excl = set(prog.get("excluded_vulnerabilities", []))
+            assert expected_baseline.issubset(excl), (
+                f"Program {prog.get('program_id')} missing baseline exclusions: {expected_baseline - excl}"
+            )

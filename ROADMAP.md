@@ -16,11 +16,13 @@ Earlier roadmap revisions (`v1.1.0`, `2026-11-06`) ran an outbound cold email ex
 ### Current Ground Truth (`scripts/orbit_readiness_audit.py`)
 - **Paid Subscribers (`data/subscribers.json`):** `0`
 - **Client Registry (`data/clients.json`):** `1` real entry (`client-velvetcraft-com`); synthetic test leaks (`c1`, `t.com`) purged and guarded via `src/orbit_security/_runtime_paths.py`.
-- **Landing <-> Docs Parity (`scripts/sync_landing_to_docs.py --check`):** `96/96` shared files byte-identical (`0` drift).
+- **Landing <-> Docs Parity (`scripts/sync_landing_to_docs.py --check`):** `96/96` shared files byte-identical (`0` drift); `scripts/verify_landing_pages.py` passing (`audit.html`, `signup.html`, `fleet.html`, `portals/index.html` validated).
 - **Stripe Live Keys:** `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` not yet configured in runtime environment.
 - **KYC / Payout Blocker:** `ORBIT_KYC_STATUS = PENDING_PHYSICAL_ID` — awaiting delivery of hard-copy government ID in the mail before Stripe payout activation and HackerOne/Bugcrowd KYC-gated payouts can clear.
-- **Bounty Catalog (`data/bounty_programs.json`):** `45` unique programs (`0` duplicates, `44` cash-tier programs).
-- **Disclosure Queue (`data/disclosures/`):** `26` high-signal `.md` reports + `26` cryptographic `.zip` evidence bundles staged; `311` legacy passive `mail_spoofing` / `cors_wildcard_origin` artifacts moved cleanly to `data/archive/legacy_passive_disclosures/`.
+- **Bounty Catalog (`data/bounty_programs.json`):** `45` unique programs (`0` duplicates, `44` cash-tier programs), with `45/45` populated with `excluded_vulnerabilities` baseline out-of-scope categories.
+- **Disclosure Queue (`data/disclosures/`):** `19` staged `.md` reports + `19` paired cryptographic `.zip` evidence bundles (`19/19` carrying deterministic `ev_<12-char-hex>` digests and valid SHA-256 manifests: `1` Tier-1 Spotify open bucket ready on KYC ID arrival + `18` Tier-2 `CONDITIONAL` CORS candidates); `7` Tier-3 false positives (+ duplicate `(1)` dir) archived to `data/archive/false_positive_disclosures/` alongside `311` legacy passive `mail_spoofing` / `cors_wildcard_origin` artifacts in `data/archive/legacy_passive_disclosures/` (`318` archived items total).
+- **Track B Funnel Readiness (`ready=True`):** Hermetic E2E dry-run verified in `tests/test_stripe_trackb_e2e.py` (`audit.html` local Fixpack export & CTA prefill -> `signup.html` -> `stripe_checkout.py` -> signed `stripe_webhook.py` -> isolated SLA PDF, Fixpack ZIP, and hyphen/underscore `/portal/<agency_id>` delivery).
+- **AST Sentinel & Suite Health:** `107/107` source modules passing `ast_sentinel.py --check` (`0` issues) and `ast_sentinel.py --check-egress` (`0` `ROE-EGRESS-001` violations); full-suite `pytest -q` healthy (`1,917 passed, 12 skipped, 0 failed` post-`conftest.py` `background_telemetry_scanner` daemon-thread isolation).
 
 ---
 
@@ -36,10 +38,10 @@ Until Orbit Security collects its first verified dollar, **100% of engineering c
   - `http_request_smuggling_cl_te`, `http_request_smuggling_te_cl`, `http_request_smuggling_h2_downgrade`
   - `oauth_redirect_uri_hijack`, `rce`, `ssrf`, `idor`
 - Passive hygiene observations (`mail_spoofing`, `missing_dmarc`, `spf`, `missing_hsts`, `expiring_certificate`, `cors_wildcard_origin`) are tracked separately under `total_advisory_observations` and **never** pollute disclosure queues.
-- Pre-ID execution focuses on validating and tightening PoCs + `ReportCriticVerifier` cryptographic bundles on the staged `26` candidates so submissions go out immediately once physical ID arrives.
+- Pre-ID execution focuses on `19` staged candidates (`1` Tier-1 Spotify open bucket ready upon KYC ID arrival + `18` Tier-2 `CONDITIONAL` CORS bundles requiring authenticated session/PII PoC verification), all grounded with `ev_<12-char-hex>` digests and SHA-256 `ReportCriticVerifier` manifests, while `7` Tier-3 false positives remain archived under `data/archive/false_positive_disclosures/`.
 
 ### Track B — Inbound Self-Serve Security Audit -> Stripe Checkout -> Fixpack / Portal Delivery
-- Single crisp inbound funnel through `landing/` -> `docs/` (`https://purav...` / GitHub Pages), `stripe_checkout.py`, `stripe_webhook.py`, `agency_retainer.py`, and fixpack/portal delivery.
+- Single crisp inbound funnel through `landing/` -> `docs/` (`96/96` byte-identical, `verify_landing_pages.py` passing), `audit.html` (DOM XSS-hardened with client-side Fixpack download & CTA prefill into `signup.html`), `stripe_checkout.py` (tier alias normalization, validation, `/portal/<agency_id>` multi-slug resolution), `stripe_webhook.py`, `agency_retainer.py`, `client_bundle_exporter.py`, and hermetic `scripts/run_stripe_webhook.py --test-event` / `tests/test_stripe_trackb_e2e.py` verification.
 - Zero cold outreach; improvements focus on conversion clarity, checkout webhook reliability, and automated report/fixpack generation.
 
 ---
@@ -47,15 +49,16 @@ Until Orbit Security collects its first verified dollar, **100% of engineering c
 ## 2. Sequenced Execution Gates (Phase 0 -> Phase 4 Re-baselined)
 
 - **Gate 1 — Clean Technical & Data Floor (`DONE — 2026-11-13`)**
-  - Hermetic test persistence isolation (`_runtime_paths.py`) preventing pytest from mutating `data/clients.json`, `data/bounty_programs.json`, or fleet registries.
-  - Strict signal-over-noise disclosure gate (`is_bounty_submittable`) & archival of `311` passive noise artifacts.
-  - Program catalog restored to `45` unique verified scopes (`0` duplicate IDs).
-  - Read-only `scripts/orbit_readiness_audit.py` providing exact truth in one command.
+  - Hermetic test persistence isolation (`_runtime_paths.py`, `fleet.py`, `agency_retainer.py`, `bounty_radar.py`, `stripe_webhook.py`, `client_bundle_exporter.py`, `conftest.py` daemon-thread isolation) keeping live `data/` and `docs/` untouched during tests (`1,917 passed, 12 skipped, 0 failed`).
+  - Strict signal-over-noise disclosure gate (`is_bounty_submittable`), `7` Tier-3 false-positive + `311` legacy passive archival, and `19/19` staged bundles upgraded with `ev_<12-char-hex>` digests + SHA-256 manifests.
+  - Program catalog restored to `45` unique verified scopes (`0` duplicate IDs, `45/45` `excluded_vulnerabilities` populated).
+  - Zero-Trust egress & AST hygiene verified (`107/107` modules passing `ast_sentinel.py --check` with `0` issues and `--check-egress` with `0` violations).
+  - Track B E2E dry-run readiness (`ready=True`, `96/96` `landing/` <-> `docs/` parity), OpenRig `backlog_pump.py` / `deepcoder_orchestrator.py` Option C alignment, and read-only `scripts/orbit_readiness_audit.py` verification.
 - **Gate 2 — Physical ID Receipt, KYC Clearance & First `$` Validation (`CURRENT / BLOCKED ON MAIL`)**
   1. Receive hard-copy government ID (`ORBIT_KYC_STATUS -> VERIFIED`).
   2. Complete HackerOne / Bugcrowd KYC and Stripe identity + bank payout verification; configure `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
-  3. While waiting on mail: manually & empirically validate the top staged findings in `data/disclosures/` (e.g., `cors_arbitrary_origin_with_credentials`, `graphql_introspection`) with reproducible PoC steps and zero false positives.
-  4. Submit verified high-signal reports and validate one end-to-end test/live inbound Stripe Fixpack purchase.
+  3. While waiting on mail: capture authenticated session/PII proof for Tier-2 `CONDITIONAL` CORS candidates before promotion; keep Tier-1 Spotify bundle submission-ready.
+  4. Submit verified high-signal reports and validate live end-to-end inbound Stripe Fixpack purchase (<5 min key drop-in).
   5. **Exit Criteria:** First real `$1+` earned (confirmed bounty triage/payout or inbound Stripe settlement).
 - **Gate 3 — Disciplined Repeatable Revenue (`LOCKED UNTIL GATE 2 PASSES`)**
   - Scale scanning frequency and exploit verifiers on highest-converting Track A program scopes.
@@ -78,10 +81,10 @@ To stop splitting focus across non-revenue surfaces, the following remain **froz
 
 ## 4. Next 14 Days Action Plan (Pending Physical ID)
 
-1. Run `.venv\Scripts\python.exe scripts/orbit_readiness_audit.py` before/after work sessions to verify clean state and blocker status.
-2. Audit top `5–10` staged `.md` / `.zip` bundles in `data/disclosures/` (`cors_arbitrary_origin_with_credentials`, `graphql_introspection`) to verify live reproduction and impact statement quality.
-3. Dry-run inbound Stripe webhook + checkout smoke flow locally with `STRIPE_WEBHOOK_SECRET` test keys so live key drop-in after ID delivery takes <5 minutes.
-4. The day the physical ID arrives: complete HackerOne/Bugcrowd + Stripe KYC, flip `ORBIT_KYC_STATUS=VERIFIED`, submit top verified bounty packets, and publish/verify live checkout.
+1. Run `.venv\Scripts\python.exe scripts/orbit_readiness_audit.py` before/after work sessions to verify clean state (`19/19` `ev_` coverage, `Track B ready=True`) and blocker status.
+2. Collect authenticated session/PII proof for Tier-2 `CONDITIONAL` CORS candidates in `data/disclosures/` (never promoting unverified public-HTML CORS).
+3. Keep Track B dry-run test suite (`tests/test_stripe_trackb_e2e.py`) and `sync_landing_to_docs.py --check` green so live Stripe key drop-in after ID delivery takes <5 minutes.
+4. The day the physical ID arrives: complete HackerOne/Bugcrowd + Stripe KYC, flip `ORBIT_KYC_STATUS=VERIFIED`, submit Tier-1 Spotify + verified packets, and publish/verify live checkout.
 
 ---
 

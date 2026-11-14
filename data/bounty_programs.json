@@ -15,7 +15,15 @@
       "out_of_scope": [
         "community.shopify.com"
       ],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 50000,
       "state": "active",
@@ -32,7 +40,15 @@
         "*.about.gitlab.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 35000,
       "state": "active",
@@ -49,7 +65,15 @@
         "*.starbucksreserve.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
@@ -66,7 +90,15 @@
         "*.aol.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 25000,
       "state": "active",
@@ -83,7 +115,15 @@
         "*.braintreegateway.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 30000,
       "state": "active",
@@ -101,7 +141,15 @@
         "*.uberinternal.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 50000,
       "state": "active",
@@ -118,7 +166,15 @@
         "*.githubassets.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 30000,
       "state": "active",
@@ -135,7 +191,15 @@
         "*.unrealengine.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 30000,
       "state": "active",
@@ -152,7 +216,15 @@
         "*.cbws.io"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 50000,
       "state": "active",
@@ -170,7 +242,15 @@
         "*.valvesoftware.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 20000,
       "state": "active",
@@ -186,7 +266,15 @@
         "*.hyatt.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 15000,
       "state": "active",
@@ -206,7 +294,15 @@
         "*.defense.gov"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "points",
       "max_bounty": 0,
       "state": "active",
@@ -225,7 +321,15 @@
         "*.tumblr.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 25000,
       "state": "active",
@@ -243,7 +347,15 @@
         "*.2k.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 20000,
       "state": "active",
@@ -260,7 +372,15 @@
         "*.slack-msgs.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 15000,
       "state": "active",
@@ -318,7 +438,15 @@
         "*.zmifi.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
@@ -409,7 +537,15 @@
         "technology.skybettingandgaming.com",
         "www.betfair.com.co"
       ],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
@@ -469,7 +605,15 @@
         "sendgrid.elastic.co",
         "track.email.elastic.co"
       ],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
@@ -537,7 +681,15 @@
         "www.wotif.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
@@ -583,7 +735,15 @@
         "amazongames.com",
         "learning.logistics.amazon.com"
       ],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
@@ -664,7 +824,15 @@
         "*.kangu.tech",
         "wow-int.mercadolibre.com"
       ],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
@@ -719,7 +887,15 @@
         "test-gw.epic.superbet.ro",
         "test.epic.superbet.ro"
       ],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
@@ -749,7 +925,15 @@
         "gnocchi-www.buffalo-ggn.net"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
@@ -798,7 +982,15 @@
         "success.zomato.com",
         "www.zomatobook.com"
       ],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
@@ -829,7 +1021,15 @@
         "*.playground.travix.com",
         "*.stg.travix.com"
       ],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
@@ -859,7 +1059,15 @@
         "salesforce.khealth.com",
         "www.kpharmacyllc.com"
       ],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
@@ -892,7 +1100,15 @@
         "everynoise.com",
         "example.com"
       ],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
@@ -910,7 +1126,15 @@
         "*.trello.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 25000,
       "state": "active",
@@ -927,7 +1151,15 @@
         "*.dropboxapi.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 32768,
       "state": "active",
@@ -944,7 +1176,15 @@
         "*.twitter.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 20000,
       "state": "active",
@@ -960,7 +1200,15 @@
         "*.airbnb.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 15000,
       "state": "active",
@@ -977,7 +1225,15 @@
         "*.bytedance.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 25000,
       "state": "active",
@@ -993,7 +1249,15 @@
         "*.roblox.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 25000,
       "state": "active",
@@ -1010,7 +1274,15 @@
         "*.nintendo.net"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 20000,
       "state": "active",
@@ -1027,7 +1299,15 @@
         "*.sony.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 50000,
       "state": "active",
@@ -1043,7 +1323,15 @@
         "*.yelp.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 15000,
       "state": "active",
@@ -1060,7 +1348,15 @@
         "*.redditmedia.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 20000,
       "state": "active",
@@ -1077,7 +1373,15 @@
         "*.cash.app"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 30000,
       "state": "active",
@@ -1094,7 +1398,15 @@
         "*.cloudflarepartners.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 30000,
       "state": "active",
@@ -1110,7 +1422,15 @@
         "*.stripe.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 25000,
       "state": "active",
@@ -1128,7 +1448,15 @@
         "*.sip.*.twilio.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",
@@ -1144,7 +1472,15 @@
         "*.grammarly.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 100000,
       "state": "active",
@@ -1161,7 +1497,15 @@
         "accounts.snapchat.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 15000,
       "state": "active",
@@ -1179,7 +1523,15 @@
         "business.linkedin.com"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 15000,
       "state": "active",
@@ -1197,7 +1549,15 @@
         "vpn.mozilla.org"
       ],
       "out_of_scope": [],
-      "excluded_vulnerabilities": [],
+      "excluded_vulnerabilities": [
+        "mail_spoofing",
+        "missing_dmarc",
+        "spf",
+        "missing_hsts",
+        "cors_wildcard_origin",
+        "clickjacking",
+        "rate_limiting"
+      ],
       "bounty_tier": "cash",
       "max_bounty": 10000,
       "state": "active",

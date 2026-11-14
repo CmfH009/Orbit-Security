@@ -19,7 +19,12 @@ def _load_audit_module():
     return mod
 
 
-def _write_disclosure_pair(disc_dir: Path, stem: str, md_body: str = "# PoC") -> Path:
+def _write_disclosure_pair(
+    disc_dir: Path,
+    stem: str,
+    md_body: str = "# PoC\n\nEvidence Digest: ev_a1b2c3d4e5f6\n",
+    meta_digest: str | None = "ev_a1b2c3d4e5f6",
+) -> Path:
     (disc_dir / f"{stem}.md").write_text(md_body, encoding="utf-8")
     zip_path = disc_dir / f"{stem}_bundle.zip"
     report_bytes = md_body.encode("utf-8")
@@ -30,6 +35,11 @@ def _write_disclosure_pair(disc_dir: Path, stem: str, md_body: str = "# PoC") ->
             "hackerone_report.md": hashlib.sha256(report_bytes).hexdigest(),
         },
     }
+    if meta_digest is not None:
+        bundle_dir = disc_dir / f"{stem}_bundle"
+        bundle_dir.mkdir(parents=True, exist_ok=True)
+        meta_obj = {"bundle_name": f"{stem}_bundle", "evidence_digest": meta_digest}
+        (bundle_dir / "metadata.json").write_text(json.dumps(meta_obj), encoding="utf-8")
     with zipfile.ZipFile(zip_path, "w") as zf:
         zf.writestr("hackerone_report.md", report_bytes)
         zf.writestr("manifest_sha256.json", json.dumps(manifest))
@@ -101,6 +111,8 @@ def test_readiness_audit_reports_clean_floor_and_pending_id(tmp_path, monkeypatc
     assert report["disclosures_and_radar"]["active_submittable_reports"] == 1
     assert report["disclosures_and_radar"]["paired_bundle_count"] == 1
     assert report["disclosures_and_radar"]["bundle_pairing_ok"] is True
+    assert report["disclosures_and_radar"]["ev_digest_coverage"]["coverage_ok"] is True
+    assert report["disclosures_and_radar"]["ev_digest_coverage"]["covered_count"] == 1
     assert report["disclosures_and_radar"]["advisory_lingering_reports"] == 0
     assert report["track_b_funnel"]["ready"] is True
 
@@ -225,3 +237,67 @@ def test_readiness_audit_cli_json_and_verified_gate(tmp_path, monkeypatch, capsy
     assert captured["track_b_offline_ready"] is True
     assert captured["track_b_live_checkout_ready"] is True
     assert captured["blockers"] == []
+
+
+def test_readiness_audit_flags_missing_ev_digest_in_md_and_metadata(tmp_path):
+    mod = _load_audit_module()
+    _seed_clean_repo(tmp_path, mod)
+    disc_dir = tmp_path / "data" / "disclosures"
+
+    # Replace clean fixture with a report missing ev_ digest in .md (even if metadata has it)
+    _write_disclosure_pair(
+        disc_dir,
+        "uber_subdomain_takeover_dev_uber_com",
+        md_body="# PoC without digest\n",
+        meta_digest="ev_a1b2c3d4e5f6",
+    )
+    report_missing_md = mod.run_readiness_audit(repo_root=tmp_path)
+    ev_md = report_missing_md["disclosures_and_radar"]["ev_digest_coverage"]
+    assert ev_md["coverage_ok"] is False
+    assert ev_md["covered_count"] == 0
+    assert ev_md["missing_ev_digests"] == ["uber_subdomain_takeover_dev_uber_com.md"]
+    assert "MISSING_EV_DIGESTS" in report_missing_md["blockers"]
+    assert report_missing_md["technical_floor_clean"] is False
+    assert report_missing_md["track_a_disclosures_ready"] is False
+
+    # Valid .md digest, but metadata.json lacks ev_ digest
+    _write_disclosure_pair(
+        disc_dir,
+        "uber_subdomain_takeover_dev_uber_com",
+        md_body="# PoC\n\nEvidence Digest: ev_1234567890ab\n",
+        meta_digest="",
+    )
+    report_missing_meta = mod.run_readiness_audit(repo_root=tmp_path)
+    ev_meta = report_missing_meta["disclosures_and_radar"]["ev_digest_coverage"]
+    assert ev_meta["coverage_ok"] is False
+    assert ev_meta["md_covered_count"] == 1
+    assert ev_meta["metadata_checked_count"] == 1
+    assert ev_meta["metadata_covered_count"] == 0
+    assert "MISSING_EV_DIGESTS" in report_missing_meta["blockers"]
+
+
+def test_readiness_audit_counts_false_positive_archive_alongside_legacy(tmp_path):
+    mod = _load_audit_module()
+    _seed_clean_repo(tmp_path, mod)
+
+    legacy_dir = tmp_path / "data" / "archive" / "legacy_passive_disclosures"
+    for i in range(3):
+        (legacy_dir / f"legacy_{i}.md").write_text("# Legacy\n", encoding="utf-8")
+
+    fp_dir = tmp_path / "data" / "archive" / "false_positive_disclosures"
+    fp_dir.mkdir(parents=True, exist_ok=True)
+    for stem in ("uber_cors_fp1", "gitlab_graphql_fp2"):
+        (fp_dir / f"{stem}.md").write_text("# False positive\n", encoding="utf-8")
+        (fp_dir / f"{stem}_bundle.zip").write_bytes(b"zip")
+        (fp_dir / f"{stem}_bundle").mkdir()
+    (fp_dir / "duplicate_bundle (1)").mkdir()
+
+    report = mod.run_readiness_audit(repo_root=tmp_path)
+    disc = report["disclosures_and_radar"]
+    assert disc["archived_legacy_artifacts"] == 3
+    assert disc["archived_false_positive_disclosures"] == 2
+    assert disc["archived_false_positive_items"] == 7
+    assert disc["archived_total_count"] == 5
+
+    rendered = mod._render_human_report(report)
+    assert "2 false_positive_disclosures + 3 legacy_passive_disclosures" in rendered

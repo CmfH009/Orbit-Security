@@ -10,10 +10,13 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 import sys
 import zipfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+EV_DIGEST_RE = re.compile(r"\bev_[0-9a-f]{12}\b")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SRC_DIR = REPO_ROOT / "src"
@@ -228,6 +231,42 @@ def _canonical_zip_stem(filename: str) -> str:
     return filename[:-4]
 
 
+def _check_disclosure_ev_digest(
+    disc_dir: Path,
+    md_name: str,
+    zip_path: Optional[Path],
+) -> Tuple[bool, bool, Optional[bool]]:
+    """Verify staged .md and associated metadata.json carry an ev_<12-char-hex> digest."""
+    md_path = disc_dir / md_name
+    try:
+        md_text = md_path.read_text(encoding="utf-8", errors="replace")
+        md_has_ev = bool(EV_DIGEST_RE.search(md_text))
+    except Exception:
+        md_has_ev = False
+
+    stem = md_name[:-3]
+    meta_path = disc_dir / f"{stem}_bundle" / "metadata.json"
+    meta_text: Optional[str] = None
+    if meta_path.is_file():
+        try:
+            meta_text = meta_path.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            meta_text = ""
+    elif zip_path is not None and zip_path.is_file():
+        try:
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                if "metadata.json" in zf.namelist():
+                    meta_text = zf.read("metadata.json").decode("utf-8", errors="replace")
+        except Exception:
+            meta_text = ""
+
+    if meta_text is None:
+        return md_has_ev, md_has_ev, None
+
+    meta_has_ev = bool(EV_DIGEST_RE.search(meta_text))
+    return (md_has_ev and meta_has_ev), md_has_ev, meta_has_ev
+
+
 def _check_disclosures(data_dir: Path) -> Dict[str, Any]:
     disc_dir = data_dir / "disclosures"
     submittable_md: List[str] = []
@@ -295,10 +334,43 @@ def _check_disclosures(data_dir: Path) -> Dict[str, Any]:
         and len(duplicate_bundle_zips) == 0
     )
 
+    ev_covered_count = 0
+    ev_md_covered_count = 0
+    ev_meta_checked_count = 0
+    ev_meta_covered_count = 0
+    missing_ev_digests: List[str] = []
+    for stem, md_name in sorted(md_by_stem.items()):
+        first_zip = zip_by_stem[stem][0] if stem in zip_by_stem else None
+        covered, md_has_ev, meta_has_ev = _check_disclosure_ev_digest(disc_dir, md_name, first_zip)
+        if md_has_ev:
+            ev_md_covered_count += 1
+        if meta_has_ev is not None:
+            ev_meta_checked_count += 1
+            if meta_has_ev:
+                ev_meta_covered_count += 1
+        if covered:
+            ev_covered_count += 1
+        else:
+            missing_ev_digests.append(md_name)
+
+    ev_digest_coverage = {
+        "total_staged": len(md_by_stem),
+        "covered_count": ev_covered_count,
+        "md_covered_count": ev_md_covered_count,
+        "metadata_checked_count": ev_meta_checked_count,
+        "metadata_covered_count": ev_meta_covered_count,
+        "coverage_ok": len(missing_ev_digests) == 0,
+        "missing_ev_digests": missing_ev_digests,
+    }
+
     state = _load_json_safe(data_dir / "bounty_radar_state.json", {})
     receipts = _load_json_safe(disc_dir / "live_verification_receipts.json", {})
     archive_dir = data_dir / "archive" / "legacy_passive_disclosures"
     archived_count = len(list(archive_dir.iterdir())) if archive_dir.is_dir() else 0
+    fp_dir = data_dir / "archive" / "false_positive_disclosures"
+    fp_entries = list(fp_dir.iterdir()) if fp_dir.is_dir() else []
+    fp_disclosures = sum(1 for x in fp_entries if x.is_file() and x.suffix.lower() == ".md")
+    archived_total_count = archived_count + fp_disclosures
 
     return {
         "active_submittable_reports": len(submittable_md),
@@ -312,6 +384,7 @@ def _check_disclosures(data_dir: Path) -> Dict[str, Any]:
         "corrupt_bundle_zips": corrupt_zips,
         "duplicate_bundle_zips": duplicate_bundle_zips,
         "bundle_pairing_ok": bundle_pairing_ok,
+        "ev_digest_coverage": ev_digest_coverage,
         "live_verification_receipts_total": int(receipts.get("total_high_signal", 0) or 0)
         if isinstance(receipts, dict)
         else 0,
@@ -319,6 +392,9 @@ def _check_disclosures(data_dir: Path) -> Dict[str, Any]:
         if isinstance(receipts, dict)
         else 0,
         "archived_legacy_artifacts": archived_count,
+        "archived_false_positive_disclosures": fp_disclosures,
+        "archived_false_positive_items": len(fp_entries),
+        "archived_total_count": archived_total_count,
         "radar_state_total_sweeps": int(state.get("total_sweeps", 0) or 0),
         "radar_state_submittable_count": int(state.get("total_submittable_findings", 0) or 0),
         "radar_state_advisory_count": int(state.get("total_advisory_observations", 0) or 0),
@@ -434,6 +510,8 @@ def run_readiness_audit(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
         blockers.append("UNARCHIVED_ADVISORY_DISCLOSURES")
     if not disclosures["bundle_pairing_ok"]:
         blockers.append("DISCLOSURE_BUNDLE_PARITY_MISMATCH")
+    if not disclosures["ev_digest_coverage"]["coverage_ok"]:
+        blockers.append("MISSING_EV_DIGESTS")
     if disclosures["unclassified_disclosures"]:
         blockers.append("UNCLASSIFIED_DISCLOSURES")
     if not track_b_funnel["ready"]:
@@ -451,6 +529,7 @@ def run_readiness_audit(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
         and catalog["unique_programs"] >= 45
         and disclosures["advisory_lingering_reports"] == 0
         and disclosures["bundle_pairing_ok"]
+        and disclosures["ev_digest_coverage"]["coverage_ok"]
         and not disclosures["unclassified_disclosures"]
         and track_b_funnel["ready"]
     )
@@ -460,6 +539,7 @@ def run_readiness_audit(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
         and catalog["unique_programs"] >= 45
         and disclosures["advisory_lingering_reports"] == 0
         and disclosures["bundle_pairing_ok"]
+        and disclosures["ev_digest_coverage"]["coverage_ok"]
         and not disclosures["unclassified_disclosures"]
         and disclosures["active_submittable_reports"] > 0
     )
@@ -492,6 +572,7 @@ def _render_human_report(report: Dict[str, Any]) -> str:
     clients = report["clients_hygiene"]
     catalog = report["bounty_catalog"]
     disc = report["disclosures_and_radar"]
+    ev = disc["ev_digest_coverage"]
     tb = report["track_b_funnel"]
     lines = [
         "========================================================================",
@@ -510,7 +591,8 @@ def _render_human_report(report: Dict[str, Any]) -> str:
         f"Bounty Catalog              : {catalog['unique_programs']} unique ({catalog['duplicate_count']} dups, {catalog['cash_tier_count']} cash tier)",
         f"Staged Submittable Reports  : {disc['active_submittable_reports']} (.md), {disc['cryptographic_zip_bundles']} (.zip bundles)",
         f"Bundle Pairing Parity       : ok={disc['bundle_pairing_ok']} (paired={disc['paired_bundle_count']}, missing={len(disc['missing_bundle_zips'])}, orphan={len(disc['orphan_bundle_zips'])}, corrupt={len(disc['corrupt_bundle_zips'])})",
-        f"Archived Passive Artifacts  : {disc['archived_legacy_artifacts']} items",
+        f"Evidence Digest Coverage    : ok={ev['coverage_ok']} ({ev['covered_count']}/{ev['total_staged']} staged)",
+        f"Archived Artifacts          : {disc['archived_total_count']} total ({disc['archived_false_positive_disclosures']} false_positive_disclosures + {disc['archived_legacy_artifacts']} legacy_passive_disclosures)",
         f"Lingering Advisory Reports  : {disc['advisory_lingering_reports']}",
         f"Radar State Counters        : sweeps={disc['radar_state_total_sweeps']}, submittable={disc['radar_state_submittable_count']}, advisory={disc['radar_state_advisory_count']}, legacy_total={disc['radar_state_legacy_counter']}",
         "------------------------------------------------------------------------",
