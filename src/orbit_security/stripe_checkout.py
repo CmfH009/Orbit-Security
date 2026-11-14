@@ -293,6 +293,31 @@ def cancel_subscription(
 
 SIGNUP_HTML_PATH = PROJECT_ROOT / "landing" / "signup.html"
 PORTALS_DIR = PROJECT_ROOT / "docs" / "portals"
+LANDING_PORTALS_DIR = PROJECT_ROOT / "landing" / "portals"
+LANDING_ASSETS_DIR = PROJECT_ROOT / "landing" / "assets"
+
+_TIER_ALIASES: Dict[str, RetainerTier] = {
+    "starter": RetainerTier.STARTER,
+    "monitoring": RetainerTier.STARTER,
+    "scale": RetainerTier.SCALE,
+    "growth": RetainerTier.SCALE,
+    "remediation": RetainerTier.SCALE,
+    "enterprise": RetainerTier.ENTERPRISE,
+    "pro": RetainerTier.ENTERPRISE,
+}
+
+
+def _resolve_retainer_tier(raw_tier: str) -> RetainerTier:
+    """Resolve user-facing or canonical tier names to RetainerTier."""
+    normalized = (raw_tier or "").strip()
+    if not normalized:
+        return RetainerTier.SCALE
+    if normalized.lower() in _TIER_ALIASES:
+        return _TIER_ALIASES[normalized.lower()]
+    try:
+        return RetainerTier(normalized)
+    except ValueError:
+        return RetainerTier.SCALE
 
 
 class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
@@ -300,8 +325,10 @@ class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):  # noqa: N802 - http.server override naming
         path = self.path.split("?", 1)[0]
-        if path in ("/", "/signup"):
+        if path in ("/", "/signup", "/signup.html"):
             self._serve_signup_page()
+        elif path.startswith("/assets/"):
+            self._serve_asset(path[len("/assets/"):])
         elif path.startswith("/portal/"):
             agency_id = path[len("/portal/"):]
             self._serve_portal(agency_id)
@@ -334,9 +361,14 @@ class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
             self._send_text(404, "Not found", "text/plain")
 
     def _read_form(self) -> Dict[str, str]:
-        """Read and parse a URL-encoded form body into a dict of str values."""
+        """Read and parse a URL-encoded or JSON request body into a dict of str values."""
         length = int(self.headers.get("Content-Length", 0))
         raw = self.rfile.read(length)
+        content_type = (self.headers.get("Content-Type") or "").lower()
+        if "application/json" in content_type and raw.strip():
+            payload = json.loads(raw.decode("utf-8"))
+            if isinstance(payload, dict):
+                return {str(k): ("" if v is None else str(v)) for k, v in payload.items()}
         form = urllib.parse.parse_qs(raw.decode("utf-8"))
         return {k: (v[0] if v else "") for k, v in form.items()}
 
@@ -347,24 +379,33 @@ class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
             def get(name: str) -> str:
                 return form.get(name, "").strip()
 
+            contact_email = get("contact_email")
+            if not contact_email:
+                self._send_text(
+                    400,
+                    "<h1>Missing required field</h1><p>contact_email is required.</p>"
+                    "<p><a href='/signup'>Back to Onboarding</a></p>",
+                    "text/html",
+                )
+                return
+
             agency_id = get("agency_id") or get("agency_name") or "new-agency"
             agency_name = get("agency_name") or agency_id
-            try:
-                tier = RetainerTier(get("tier") or "Scale")
-            except ValueError:
-                tier = RetainerTier.SCALE
+            tier = _resolve_retainer_tier(get("tier"))
 
             session = create_checkout_session(
                 agency_id=agency_id,
                 agency_name=agency_name,
                 tier=tier,
-                contact_email=get("contact_email"),
+                contact_email=contact_email,
                 website=get("website") or "https://example.com",
-                support_email=get("support_email") or "ops@example.com",
+                support_email=get("support_email") or contact_email or "ops@example.com",
                 primary_color=get("primary_color") or "#0F172A",
                 accent_color=get("accent_color") or "#3B82F6",
                 tagline=get("tagline") or "Managed Web & Security Operations",
                 custom_domain=get("custom_domain") or None,
+                domain=get("domain") or None,
+                client_reference_id=get("client_reference_id") or None,
             )
             checkout_url = session.get("url")
             if not checkout_url:

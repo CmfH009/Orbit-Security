@@ -523,6 +523,13 @@ class StripeWebhookHandler:
                     portals_dir=base_tmp / "portals",
                     bundles_dir=base_tmp / "client_bundles",
                 )
+            elif is_pytest_active():
+                base_tmp = resolve_isolated_data_path(None, DEFAULT_CERTIFICATES_DIR).parent
+                self.deal_desk = RetainerDealDeskConcierge(
+                    workspace_root=base_tmp,
+                    portals_dir=base_tmp / "portals",
+                    bundles_dir=base_tmp / "client_bundles",
+                )
             else:
                 self.deal_desk = RetainerDealDeskConcierge()
             return self.deal_desk
