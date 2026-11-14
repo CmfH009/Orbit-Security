@@ -488,7 +488,7 @@
         toBadge.className = "text-xs px-2 py-0.5 rounded font-mono bg-rose-950 text-rose-400 border border-rose-800/40";
         toIcon.textContent = "🔴";
         toExp.textContent = `Found ${takeovers.length} CNAME pointer(s) pointing to third-party SaaS services! Potential dangling takeover vulnerability.`;
-        toRaw.innerHTML = takeovers.map(t => `<div class="text-rose-400 font-bold">⚠️ ${t.sub} &rarr; ${t.target} (${t.saas})</div>`).join("");
+        toRaw.innerHTML = takeovers.map(t => `<div class="text-rose-400 font-bold">⚠️ ${escapeHtml(t.sub)} &rarr; ${escapeHtml(t.target)} (${escapeHtml(t.saas)})</div>`).join("");
       } else {
         toBadge.textContent = "IMMUNE";
         toBadge.className = "text-xs px-2 py-0.5 rounded font-mono bg-emerald-950 text-emerald-400 border border-emerald-800/40";
@@ -521,6 +521,13 @@
       gradeBadge.textContent = grade;
       gradeBadge.className = `text-4xl font-extrabold px-3 py-1 rounded-lg border ${gradeClass}`;
 
+      const signupCta = document.getElementById("auditSignupCta");
+      if (signupCta) {
+        const recommendedTier = score < 70 ? "growth" : "starter";
+        signupCta.href = `signup.html?domain=${encodeURIComponent(domain)}&tier=${recommendedTier}`;
+      }
+      window._lastAuditSnapshot = { domain, score, grade, spfRecord, dmarcRecord, takeovers };
+
       document.getElementById("resultsCard").classList.remove("hidden");
       document.getElementById("resultsCard").scrollIntoView({ behavior: "smooth" });
 
@@ -546,13 +553,13 @@ Rules:
       if (typeof puter !== "undefined" && puter.ai) {
         try {
           const resp = await puter.ai.chat(prompt, { model: "claude-3-5-sonnet" });
-          aiContainer.innerHTML = resp.message.content.replace(/\n/g, "<br>");
+          aiContainer.innerHTML = escapeHtml(resp.message.content).replace(/\n/g, "<br>");
           return;
         } catch (err) {
           console.warn("Puter AI primary call failed, trying open-source fallback:", err);
           try {
             const respFallback = await puter.ai.chat(prompt);
-            aiContainer.innerHTML = respFallback.message.content.replace(/\n/g, "<br>");
+            aiContainer.innerHTML = escapeHtml(respFallback.message.content).replace(/\n/g, "<br>");
             return;
           } catch (e2) {
             console.warn("Puter AI unavailable, using deterministic synthesizer:", e2);
@@ -561,25 +568,97 @@ Rules:
       }
 
       // Deterministic Local Fallback (0% cloud dependency)
+      const safeDomainHtml = escapeHtml(domain);
       let summary = "";
       if (score >= 90) {
         summary = `• Posture: Strong baseline configuration. Domain demonstrates active perimeter hygiene.<br>• Immunity: DMARC and SPF align with current RFC-8484 and RFC-7489 standards.<br>• Maintenance: Conduct quarterly CNAME audits to prevent future SaaS provider abandonment.`;
       } else if (!dmarc) {
-        summary = `• Vulnerability: Missing DMARC record leaves domain unprotected against direct spoofing and CEO fraud inboxes.<br>• Exploit Path: Attackers can forge communications appearing from @${domain} that bypass consumer email filters.<br>• Remediation: Stage and deploy 'v=DMARC1; p=reject; rua=mailto:dmarc@${domain}' alongside SPF flattening.`;
+        summary = `• Vulnerability: Missing DMARC record leaves domain unprotected against direct spoofing and CEO fraud inboxes.<br>• Exploit Path: Attackers can forge communications appearing from @${safeDomainHtml} that bypass consumer email filters.<br>• Remediation: Stage and deploy 'v=DMARC1; p=reject; rua=mailto:dmarc@${safeDomainHtml}' alongside SPF flattening.`;
       } else {
         summary = `• Remediation: Upgrade DMARC policy from 'p=none' to 'p=quarantine' or 'p=reject' to enforce dropping of unaligned mail.<br>• Hygiene: Remove any dangling DNS records pointing to deactivated SaaS vendors.<br>• Fixpack: Deploy our automated Terraform fixpack to remediate DNS posture.`;
       }
       aiContainer.innerHTML = summary;
     }
 
-    // Lead capture form
+    function buildSelfServeFixpack(snapshot, contactEmail) {
+      const domain = (snapshot && snapshot.domain) || "example.com";
+      const spfLine = (!snapshot || !snapshot.spfRecord)
+        ? `${domain}. 300 IN TXT "v=spf1 -all" ; Replace or include authorized senders before enforcing -all`
+        : `; Existing SPF: ${snapshot.spfRecord}`;
+      const dmarcLine = `_dmarc.${domain}. 300 IN TXT "v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s; rua=mailto:${contactEmail}; fo=1"`;
+      const cnameRemovals = (snapshot && Array.isArray(snapshot.takeovers) && snapshot.takeovers.length)
+        ? snapshot.takeovers.map(t => `; REMOVE DANGLING CNAME: ${t.sub} -> ${t.target} (${t.saas})`).join("\n")
+        : "; No dangling CNAME takeovers detected across probed SaaS signatures.";
+
+      return [
+        `# Orbit Security Remediation Fixpack (${domain})`,
+        `# Generated: ${new Date().toISOString()}`,
+        `# Contact: ${contactEmail}`,
+        `# Baseline Score: ${snapshot ? snapshot.score : "N/A"}/100 (Grade: ${snapshot ? snapshot.grade : "N/A"})`,
+        "",
+        "## 1. BIND 9 / DNS Zone Records",
+        spfLine,
+        dmarcLine,
+        cnameRemovals,
+        "",
+        "## 2. Terraform Starter (Cloudflare DNS)",
+        `resource "cloudflare_record" "orbit_dmarc" {`,
+        `  zone_id = var.cloudflare_zone_id`,
+        `  name    = "_dmarc"`,
+        `  type    = "TXT"`,
+        `  value   = "v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s; rua=mailto:${contactEmail}; fo=1"`,
+        `  ttl     = 300`,
+        `}`,
+        "",
+        "## 3. RFC-9116 /.well-known/security.txt",
+        `Contact: mailto:${contactEmail}`,
+        `Preferred-Languages: en`,
+        `Canonical: https://${domain}/.well-known/security.txt`,
+      ].join("\n");
+    }
+
+    // Lead capture -> Local Fixpack download + Track B onboarding handoff
     document.getElementById("leadForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const email = document.getElementById("leadEmail").value.trim();
-      const domain = document.getElementById("resultDomain").textContent;
+      const snapshot = window._lastAuditSnapshot || {
+        domain: document.getElementById("resultDomain").textContent.trim() || "example.com",
+        score: 0,
+        grade: "N/A",
+        spfRecord: null,
+        dmarcRecord: null,
+        takeovers: [],
+      };
       if (!email) return;
 
-      console.log(`[ORBIT LEAD CAPTURED] Email: ${email} | Target Domain: ${domain}`);
+      const safeSlug = snapshot.domain.toLowerCase().replace(/[^a-z0-9.-]+/g, "-");
+      const filename = `${safeSlug}-orbit-fixpack.txt`;
+      const fixpackBody = buildSelfServeFixpack(snapshot, email);
+
+      try {
+        const blob = new Blob([fixpackBody], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (err) {
+        console.warn("Fixpack browser download fallback:", err);
+      }
+
+      const signupCta = document.getElementById("auditSignupCta");
+      if (signupCta) {
+        const recommendedTier = snapshot.score < 70 ? "growth" : "starter";
+        signupCta.href = `signup.html?domain=${encodeURIComponent(snapshot.domain)}&email=${encodeURIComponent(email)}&tier=${recommendedTier}`;
+      }
+
+      const msgEl = document.getElementById("leadConfirmationMsg");
+      if (msgEl) {
+        msgEl.textContent = `✓ Downloaded ${filename} (DNS zone, Terraform, & security.txt). Use the button below to activate continuous monitoring.`;
+      }
       document.getElementById("leadForm").classList.add("hidden");
       document.getElementById("leadConfirmation").classList.remove("hidden");
     });

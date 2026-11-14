@@ -129,7 +129,9 @@ def verify_directory(dir_path, name):
     for img in parser.images:
         if img.startswith("http") or img.startswith("data:"):
             continue
-        clean_img = img.split("?")[0]
+        clean_img = img.split("?")[0].strip()
+        if not clean_img:
+            continue
         target_path = os.path.join(dir_path, clean_img)
         if not os.path.exists(target_path):
             errors.append(f"Broken image/media link: {img} -> {target_path} not found")
@@ -148,6 +150,41 @@ def verify_directory(dir_path, name):
 
     if "generateInstantPdfForDomain" in combined_js:
         print("[✓] In-browser client-side PDF compilation function verified.")
+
+    # 7b. Verify Track B self-serve funnel subpages if present
+    for subpage in ["signup.html", "audit.html", "fleet.html", "portals/index.html"]:
+        sub_path = os.path.join(dir_path, subpage)
+        if not os.path.exists(sub_path):
+            continue
+        sub_dir = os.path.dirname(sub_path)
+        with open(sub_path, "r", encoding="utf-8") as sf:
+            sub_html = sf.read()
+        sub_parser = PageValidator(sub_dir)
+        sub_parser.feed(sub_html)
+        if not sub_parser.has_viewport:
+            errors.append(f"Subpage {subpage} missing meta viewport tag!")
+        for link in sub_parser.links:
+            if link.startswith(("#", "http", "mailto:", "javascript:", "/")):
+                continue
+            clean_target = link.split("#")[0].split("?")[0].strip()
+            if not clean_target:
+                continue
+            if not os.path.exists(os.path.join(sub_dir, clean_target)):
+                errors.append(f"Broken relative link in {subpage}: {link}")
+        for asset_list, label in [
+            (sub_parser.stylesheets, "stylesheet"),
+            (sub_parser.scripts, "script"),
+            (sub_parser.images, "image/media"),
+        ]:
+            for asset in asset_list:
+                if asset.startswith(("http", "data:", "/")):
+                    continue
+                clean_asset = asset.split("?")[0].strip()
+                if not clean_asset:
+                    continue
+                if not os.path.exists(os.path.join(sub_dir, clean_asset)):
+                    errors.append(f"Broken {label} in {subpage}: {asset}")
+        print(f"[✓] Track B subpage validated: {subpage}")
 
     # 8. Check legal pages existence
     for legal in ["privacy.html", "terms.html", "disclaimer.html", "refunds.html"]:
