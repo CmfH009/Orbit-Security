@@ -16,7 +16,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from orbit_security.agency_teardown_publisher import AgencyTeardownCampaign, AgencyTeardownPublisher
-from orbit_security.report_verifier import CriticVerificationResult, ReportCriticVerifier
+from orbit_security.report_verifier import (
+    CriticVerificationResult,
+    EmpiricalEvidenceArtifact,
+    ReportCriticVerifier,
+    compute_evidence_digest,
+    extract_cited_endpoints,
+)
 
 
 def test_critic_verifier_passes_grounded_pitch():
