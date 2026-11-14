@@ -405,7 +405,7 @@ class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
                 tagline=get("tagline") or "Managed Web & Security Operations",
                 custom_domain=get("custom_domain") or None,
                 domain=get("domain") or None,
-                client_reference_id=get("client_reference_id") or None,
+                client_reference_id=get("client_reference_id") or agency_id,
             )
             checkout_url = session.get("url")
             if not checkout_url:

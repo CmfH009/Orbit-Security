@@ -45,6 +45,7 @@ from orbit_security.bounty_radar import (
     DEFAULT_RADAR_STATE_PATH,
     DEFAULT_DISCLOSURES_DIR,
     HIGH_FREQUENCY_PREFIXES,
+    is_bounty_submittable,
     is_vulnerability_in_scope,
 )
 from orbit_security.cloud_sentinels import (
@@ -138,17 +139,17 @@ class BountyActiveProber:
                         raw_probe=probe_dict
                     ))
 
-                # 2. CORS Wildcard Origin Check
+                # 2. CORS Wildcard Origin Check (informational / non-credentialed)
                 cors = norm_headers.get("access-control-allow-origin", "").strip()
                 if cors == "*":
                     findings.append(ActiveProbeFinding(
                         program_id="generic",
                         target_domain=host,
                         flaw_type="cors_wildcard",
-                        severity="HIGH",
-                        score=7.5,
+                        severity="LOW",
+                        score=3.7,
                         evidence="Access-Control-Allow-Origin: * detected",
-                        remediation="Restrict Access-Control-Allow-Origin to authenticated origins",
+                        remediation="Restrict Access-Control-Allow-Origin to trusted origins if sensitive data is returned",
                         raw_probe=probe_dict
                     ))
 
@@ -191,19 +192,23 @@ class BountyActiveProber:
                 blackboard=eff_bb,
             )
             if bucket_res and bucket_res.get("vulnerable"):
-                sev = getattr(bucket_res.get("severity"), "value", bucket_res.get("severity", "HIGH"))
-                findings.append(ActiveProbeFinding(
-                    program_id="generic",
-                    target_domain=host,
-                    flaw_type=str(bucket_res.get("flaw_type", "cloud_storage_takeover")),
-                    severity=str(sev).upper(),
-                    score=float(bucket_res.get("cvss_score", 8.6)),
-                    cname_target=bucket_res.get("cname_target"),
-                    provider=bucket_res.get("provider"),
-                    evidence=str(bucket_res.get("evidence", "")),
-                    remediation=str(bucket_res.get("remediation", "")),
-                    raw_probe=probe_dict,
-                ))
+                flaw = str(bucket_res.get("flaw_type", "cloud_storage_takeover"))
+                if flaw == "cloud_storage_takeover" and not bucket_res.get("cname_target"):
+                    logger.debug("Suppressed cloud_storage_takeover on %s: no dangling cloud CNAME verified", host)
+                else:
+                    sev = getattr(bucket_res.get("severity"), "value", bucket_res.get("severity", "HIGH"))
+                    findings.append(ActiveProbeFinding(
+                        program_id="generic",
+                        target_domain=host,
+                        flaw_type=flaw,
+                        severity=str(sev).upper(),
+                        score=float(bucket_res.get("cvss_score", 8.6)),
+                        cname_target=bucket_res.get("cname_target"),
+                        provider=bucket_res.get("provider"),
+                        evidence=str(bucket_res.get("evidence", "")),
+                        remediation=str(bucket_res.get("remediation", "")),
+                        raw_probe=probe_dict,
+                    ))
         except Exception as e:
             logger.debug(f"Cloud bucket sentinel on {host} encountered: {e}")
 
@@ -244,18 +249,35 @@ class BountyActiveProber:
             if cors_res and cors_res.get("vulnerable"):
                 flaw = str(cors_res.get("flaw_type", ""))
                 if flaw in ("cors_arbitrary_origin_with_credentials", "cors_null_origin_with_credentials"):
-                    sev = getattr(cors_res.get("severity"), "value", cors_res.get("severity", "HIGH"))
-                    findings.append(ActiveProbeFinding(
-                        program_id="generic",
-                        target_domain=host,
-                        flaw_type=flaw,
-                        severity=str(sev).upper(),
-                        score=float(cors_res.get("cvss_score", 8.1)),
-                        provider=cors_res.get("provider", "API Gateway CORS"),
-                        evidence=str(cors_res.get("evidence", "")),
-                        remediation=str(cors_res.get("remediation", "")),
-                        raw_probe=probe_dict,
-                    ))
+                    empty_resp = (
+                        https_reachable
+                        and ((not probe_body or not probe_body.strip()) or norm_headers.get("content-length") == "0")
+                    )
+                    if empty_resp:
+                        logger.debug("Suppressed %s on %s: empty HTTP response body", flaw, host)
+                    else:
+                        ct = norm_headers.get("content-type", "").lower()
+                        is_public_html = ("text/html" in ct) and ("application/json" not in ct)
+                        sev = "MEDIUM" if is_public_html else str(
+                            getattr(cors_res.get("severity"), "value", cors_res.get("severity", "HIGH"))
+                        ).upper()
+                        score = 5.4 if is_public_html else float(cors_res.get("cvss_score", 8.1))
+                        ev_str = str(cors_res.get("evidence", ""))
+                        if is_public_html:
+                            ev_str = (
+                                f"{ev_str} [PUBLIC_HTML_ONLY: verify authenticated JSON/API endpoint proof]"
+                            ).strip()
+                        findings.append(ActiveProbeFinding(
+                            program_id="generic",
+                            target_domain=host,
+                            flaw_type=flaw,
+                            severity=sev,
+                            score=score,
+                            provider=cors_res.get("provider", "API Gateway CORS"),
+                            evidence=ev_str,
+                            remediation=str(cors_res.get("remediation", "")),
+                            raw_probe=probe_dict,
+                        ))
         except Exception as e:
             logger.debug(f"CORS sentinel on {host} encountered: {e}")
 
@@ -315,6 +337,20 @@ class BountyActiveProber:
         min_confidence: float = 0.85
     ) -> Optional[Dict[str, Any]]:
         """Executes sandbox verification gate and dual packages confirmed findings."""
+        is_sub, sub_reason = is_bounty_submittable(
+            finding.flaw_type,
+            severity=finding.severity,
+            program=program,
+        )
+        if not is_sub:
+            logger.info(
+                "Skipping disclosure packaging for %s (%s): %s",
+                finding.target_domain,
+                finding.flaw_type,
+                sub_reason,
+            )
+            return None
+
         # 1. Execute Sandbox Auto-Verification
         verification: SandboxVerificationReport = self.sandbox.verify_vulnerability(
             finding

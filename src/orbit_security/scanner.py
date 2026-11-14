@@ -15,6 +15,11 @@ import httpx
 logger = logging.getLogger(__name__)
 
 from orbit_security.models import AgencyBranding, DomainAuditResult, Finding, Severity
+from orbit_security.egress_guard import (
+    EgressViolationError,
+    create_guarded_async_httpx_client,
+    enforce_egress_or_raise,
+)
 from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES
 from orbit_security.dns_cache import get_orbit_async_resolver
 from orbit_security.network_bonding import create_bonded_http_client
@@ -84,7 +89,7 @@ async def is_parked_or_reserved_domain(
 
     should_close = False
     if client is None:
-        client = httpx.AsyncClient(timeout=6.0)
+        client = create_guarded_async_httpx_client(roe_engine=PublicHostOnlyRoE(), timeout=6.0)
         should_close = True
 
     try:
@@ -163,6 +168,13 @@ def is_safe_host(hostname: str) -> bool:
         return True
     except Exception:
         return False
+
+
+class PublicHostOnlyRoE:
+    """Zero-Trust RoE adapter restricting non-program utility probes to safe public hosts."""
+
+    def is_target_permitted(self, target: str) -> bool:
+        return is_safe_host(target)
 
 
 async def async_is_safe_host(hostname: str) -> bool:
@@ -1401,8 +1413,9 @@ class OrbitSecurityScanner:
             )
 
         try:
+            enforce_egress_or_raise(f"https://{domain}:{port}", PublicHostOnlyRoE())
             context = ssl.create_default_context()
-            with socket.create_connection((domain, port), timeout=self.timeout) as sock:
+            with socket.create_connection((domain, port), timeout=self.timeout) as sock:  # roe-exempt: raw TLS X.509 handshake gated by enforce_egress_or_raise
                 with context.wrap_socket(sock, server_hostname=domain) as ssock:
                     cert = ssock.getpeercert()
                     not_after_str = cert["notAfter"]

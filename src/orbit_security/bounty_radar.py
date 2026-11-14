@@ -1407,9 +1407,15 @@ class BountyTakeoverSweeper:
         """
         import socket
         import ssl
+        from orbit_security.egress_guard import EgressViolationError, enforce_egress_or_raise
+        from orbit_security.scanner import PublicHostOnlyRoE, is_safe_host
+
         try:
+            if not is_safe_host(domain):
+                return False
+            enforce_egress_or_raise(f"https://{domain}:443", PublicHostOnlyRoE())
             ctx = ssl.create_default_context()
-            with socket.create_connection((domain, 443), timeout=3.0) as sock:
+            with socket.create_connection((domain, 443), timeout=3.0) as sock:  # roe-exempt: raw TLS X.509 handshake gated by enforce_egress_or_raise
                 with ctx.wrap_socket(sock, server_hostname=domain) as ssock:
                     cert = ssock.getpeercert()
                     sans = [name for typ, name in cert.get("subjectAltName", []) if typ == "DNS"]
@@ -1418,9 +1424,21 @@ class BountyTakeoverSweeper:
                             return True
                         if san.startswith("*.") and domain.lower().endswith(san[2:].lower()):
                             return True
-        except Exception:
+        except (EgressViolationError, Exception):
             pass
         return False
+
+    def _resolve_cname(self, domain: str) -> Optional[str]:
+        """Resolve canonical CNAME target for domain, returning None on NXDOMAIN/failure."""
+        try:
+            answers = self.resolver.resolve(domain, "CNAME")
+            for rdata in answers:
+                target = str(getattr(rdata, "target", rdata)).strip().rstrip(".")
+                if target:
+                    return target
+        except Exception:
+            pass
+        return None
 
     def check_subdomain_takeover(
         self,
@@ -1656,6 +1674,87 @@ class BountyTakeoverSweeper:
                 continue
         return ""
 
+    @staticmethod
+    def _qualify_graphql_finding(
+        gql_res: Dict[str, Any],
+        gql_mock: Optional[Dict[str, Any]] = None,
+    ) -> Tuple[str, str]:
+        """Determine bounty viability for GraphQL introspection based on schema sensitivity."""
+        evidence = str(gql_res.get("evidence", ""))
+        sensitive_markers = ("mutation", "admin", "user", "token", "secret", "payment", "billing", "internal", "password")
+        has_sensitive = bool(gql_res.get("has_sensitive_schema"))
+        if not has_sensitive and isinstance(gql_mock, dict):
+            for resp in gql_mock.values():
+                if not isinstance(resp, dict):
+                    continue
+                schema = resp.get("data", {}).get("__schema", {})
+                if isinstance(schema, dict):
+                    if schema.get("mutationType"):
+                        has_sensitive = True
+                        break
+                    types = schema.get("types") or []
+                    for t in types:
+                        t_name = str(t.get("name", "") if isinstance(t, dict) else t).lower()
+                        if t_name and not t_name.startswith("__") and any(m in t_name for m in sensitive_markers):
+                            has_sensitive = True
+                            break
+                if has_sensitive:
+                    break
+        if has_sensitive:
+            return "HIGH_CONFIDENCE", evidence
+        return (
+            "CONDITIONAL",
+            f"{evidence} [CONDITIONAL: queryType-only probe; verify non-public mutations or sensitive/admin schema exposure before H1 submission]".strip(),
+        )
+
+    @staticmethod
+    def _qualify_cors_finding(
+        cors_res: Dict[str, Any],
+        mock_body: Optional[str] = None,
+        cors_mock: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Filter empty-body CORS telemetry and downgrade public HTML-only root reflection."""
+        hdrs: Dict[str, Any] = {}
+        if isinstance(cors_mock, dict):
+            for entry in cors_mock.values():
+                if isinstance(entry, dict):
+                    for k, v in entry.items():
+                        hdrs[str(k).lower()] = v
+                    break
+
+        content_type = str(cors_res.get("content_type") or hdrs.get("content-type") or "").lower()
+        raw_len = cors_res.get("body_len")
+        if raw_len is None and "content-length" in hdrs:
+            raw_len = hdrs.get("content-length")
+
+        body_text: Optional[str] = mock_body
+        if body_text is None and "body" in cors_res:
+            body_text = str(cors_res["body"])
+        elif body_text is None and "body" in hdrs:
+            body_text = str(hdrs["body"])
+
+        if (body_text is not None and not body_text.strip()) or (raw_len is not None and str(raw_len).strip() == "0"):
+            return None
+
+        looks_html = ("text/html" in content_type) or (
+            body_text is not None
+            and ("<html" in body_text.lower() or "<!doctype html" in body_text.lower())
+            and "application/json" not in content_type
+        )
+        if looks_html and "application/json" not in content_type:
+            qualified = dict(cors_res)
+            qualified["severity"] = Severity.MEDIUM
+            qualified["cvss_score"] = 5.4
+            qualified["cvss_vector"] = "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N"
+            qualified["bounty_viability"] = "CONDITIONAL"
+            base_ev = str(cors_res.get("evidence", "")).strip()
+            qualified["evidence"] = (
+                f"{base_ev} [PUBLIC_HTML_ONLY: verify authenticated JSON/API endpoint exposing user data or CSRF tokens before H1 submission]"
+            ).strip()
+            return qualified
+
+        return cors_res
+
     def sweep_program(
         self,
         program: BountyProgram,
@@ -1690,6 +1789,7 @@ class BountyTakeoverSweeper:
             use_archive_harvest=use_archive_harvest,
         )
         vulns: List[BountyVulnerability] = []
+        has_mock_cnames = mock_cnames is not None
         mock_cnames = mock_cnames or {}
         mock_bodies = mock_bodies or {}
         mock_spfs = mock_spfs or {}
@@ -1704,40 +1804,48 @@ class BountyTakeoverSweeper:
 
             # 1. Cloud Storage Bucket Takeover Check (if enabled)
             if audit_cloud_buckets and self.is_vulnerability_in_scope(program, "cloud_storage_takeover"):
+                effective_cn = mock_cn if has_mock_cnames else self._resolve_cname(target)
                 bucket_res = self.audit_cloud_storage_bucket(
-                    target, cname_target=mock_cn, mock_body=mock_bd
+                    target, cname_target=effective_cn, mock_body=mock_bd
                 )
                 if bucket_res and bucket_res.get("vulnerable"):
                     flaw = bucket_res.get("flaw_type", "cloud_storage_takeover")
-                    viab = bucket_res.get("bounty_viability", "HIGH_CONFIDENCE")
-                    if self.is_vulnerability_in_scope(program, flaw, viab):
-                        evidence = bucket_res.get("evidence", "")
-                        sev = bucket_res.get("severity", Severity.HIGH)
-                        if mock_bd and ("<ListBucketResult" in mock_bd or "<ListAllMyBucketsResult" in mock_bd):
-                            evaluator = BucketListingEvaluator()
-                            eval_res = evaluator.inspect_xml_keys(mock_bd)
-                            if eval_res["is_sensitive"]:
-                                evidence += f" Sensitive keys discovered: {', '.join(eval_res['matched_files'][:5])}."
-                                if eval_res["severity"] == "High":
-                                    sev = Severity.HIGH
-                        vuln = BountyVulnerability(
-                            program_id=program.program_id,
-                            program_name=program.name,
-                            platform=program.platform,
-                            target_domain=target,
-                            cname_target=mock_cn,
-                            flaw_type=flaw,
-                            provider=bucket_res.get("provider", "Cloud Storage"),
-                            severity=sev,
-                            cvss_score=bucket_res.get("cvss_score", 8.6),
-                            cvss_vector=bucket_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:N/I:H/A:N"),
-                            evidence=evidence,
-                            cwe_id=bucket_res.get("cwe_id", "CWE-284: Improper Access Control"),
-                            remediation=bucket_res.get("remediation", ""),
-                            bounty_viability=viab,
+                    resolved_cn = bucket_res.get("cname_target") or effective_cn
+                    if flaw == "cloud_storage_takeover" and not resolved_cn:
+                        logger.debug(
+                            "Suppressed cloud_storage_takeover on %s: no dangling cloud CNAME verified",
+                            target,
                         )
-                        vulns.append(vuln)
-                        continue
+                    else:
+                        viab = bucket_res.get("bounty_viability", "HIGH_CONFIDENCE")
+                        if self.is_vulnerability_in_scope(program, flaw, viab):
+                            evidence = bucket_res.get("evidence", "")
+                            sev = bucket_res.get("severity", Severity.HIGH)
+                            if mock_bd and ("<ListBucketResult" in mock_bd or "<ListAllMyBucketsResult" in mock_bd):
+                                evaluator = BucketListingEvaluator()
+                                eval_res = evaluator.inspect_xml_keys(mock_bd)
+                                if eval_res["is_sensitive"]:
+                                    evidence += f" Sensitive keys discovered: {', '.join(eval_res['matched_files'][:5])}."
+                                    if eval_res["severity"] == "High":
+                                        sev = Severity.HIGH
+                            vuln = BountyVulnerability(
+                                program_id=program.program_id,
+                                program_name=program.name,
+                                platform=program.platform,
+                                target_domain=target,
+                                cname_target=resolved_cn,
+                                flaw_type=flaw,
+                                provider=bucket_res.get("provider", "Cloud Storage"),
+                                severity=sev,
+                                cvss_score=bucket_res.get("cvss_score", 8.6),
+                                cvss_vector=bucket_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:N/I:H/A:N"),
+                                evidence=evidence,
+                                cwe_id=bucket_res.get("cwe_id", "CWE-284: Improper Access Control"),
+                                remediation=bucket_res.get("remediation", ""),
+                                bounty_viability=viab,
+                            )
+                            vulns.append(vuln)
+                            continue
 
             # 2. Subdomain Takeover Check (SaaS services)
             if self.is_vulnerability_in_scope(program, "subdomain_takeover"):
@@ -1774,7 +1882,7 @@ class BountyTakeoverSweeper:
                 gql_res = self.audit_graphql_introspection(target, mock_paths=gql_mock)
                 if gql_res and gql_res.get("vulnerable"):
                     flaw = "graphql_introspection"
-                    viab = "HIGH_CONFIDENCE"
+                    viab, gql_ev = self._qualify_graphql_finding(gql_res, gql_mock=gql_mock)
                     if self.is_vulnerability_in_scope(program, flaw, viab):
                         vuln = BountyVulnerability(
                             program_id=program.program_id,
@@ -1786,7 +1894,7 @@ class BountyTakeoverSweeper:
                             severity=gql_res.get("severity", Severity.MEDIUM),
                             cvss_score=gql_res.get("cvss_score", 5.3),
                             cvss_vector=gql_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"),
-                            evidence=gql_res.get("evidence", ""),
+                            evidence=gql_ev,
                             cwe_id=gql_res.get("cwe_id", "CWE-200: Exposure of Sensitive Information to an Unauthorized Actor"),
                             remediation=gql_res.get("remediation", ""),
                             bounty_viability=viab,
@@ -1798,25 +1906,27 @@ class BountyTakeoverSweeper:
                 cors_mock = mock_cors_responses.get(target) if mock_cors_responses else None
                 cors_res = self.audit_cors_misconfiguration(target, mock_responses=cors_mock)
                 if cors_res and cors_res.get("vulnerable"):
-                    flaw = cors_res.get("flaw_type", "cors_misconfiguration")
-                    viab = cors_res.get("bounty_viability", "HIGH_CONFIDENCE")
-                    if self.is_vulnerability_in_scope(program, flaw, viab):
-                        vuln = BountyVulnerability(
-                            program_id=program.program_id,
-                            program_name=program.name,
-                            platform=program.platform,
-                            target_domain=target,
-                            flaw_type=flaw,
-                            provider="API Gateway CORS",
-                            severity=cors_res.get("severity", Severity.HIGH),
-                            cvss_score=cors_res.get("cvss_score", 8.1),
-                            cvss_vector=cors_res.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N"),
-                            evidence=cors_res.get("evidence", ""),
-                            cwe_id=cors_res.get("cwe_id", "CWE-942: Permissive Cross-domain Policy with Untrusted Domains"),
-                            remediation=cors_res.get("remediation", ""),
-                            bounty_viability=viab,
-                        )
-                        vulns.append(vuln)
+                    qualified_cors = self._qualify_cors_finding(cors_res, mock_body=mock_bd, cors_mock=cors_mock)
+                    if qualified_cors is not None:
+                        flaw = qualified_cors.get("flaw_type", "cors_misconfiguration")
+                        viab = qualified_cors.get("bounty_viability", "HIGH_CONFIDENCE")
+                        if self.is_vulnerability_in_scope(program, flaw, viab):
+                            vuln = BountyVulnerability(
+                                program_id=program.program_id,
+                                program_name=program.name,
+                                platform=program.platform,
+                                target_domain=target,
+                                flaw_type=flaw,
+                                provider="API Gateway CORS",
+                                severity=qualified_cors.get("severity", Severity.HIGH),
+                                cvss_score=qualified_cors.get("cvss_score", 8.1),
+                                cvss_vector=qualified_cors.get("cvss_vector", "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N"),
+                                evidence=qualified_cors.get("evidence", ""),
+                                cwe_id=qualified_cors.get("cwe_id", "CWE-942: Permissive Cross-domain Policy with Untrusted Domains"),
+                                remediation=qualified_cors.get("remediation", ""),
+                                bounty_viability=viab,
+                            )
+                            vulns.append(vuln)
 
             # 5. HTTP Request Smuggling Check
             if audit_smuggling:
@@ -2372,6 +2482,28 @@ def _format_h1_subdomain_takeover(vuln: BountyVulnerability) -> Tuple[str, str, 
     return title, impact_desc, poc_steps
 
 
+def _extract_cors_origin(vuln: BountyVulnerability) -> str:
+    """Return the exact Origin header value verified in evidence for CORS PoC consistency."""
+    if vuln.flaw_type == "cors_null_origin_with_credentials":
+        return "null"
+    ev = vuln.evidence or ""
+    match = re.search(r"Origin\s+'(https?://[^']+)'", ev) or re.search(
+        r"Access-Control-Allow-Origin:\s*(https?://[^\s;'\"]+)", ev
+    )
+    return match.group(1) if match else "https://evil.com"
+
+
+def _extract_evidence_endpoint_path(vuln: BountyVulnerability, default: str = "/") -> str:
+    """Extract target endpoint path cited in vuln.evidence, falling back to default."""
+    ev = vuln.evidence or ""
+    host = re.escape((vuln.target_domain or "").strip())
+    if host:
+        match = re.search(rf"https?://{host}(/[^\s'\"`\)\]]*)", ev, re.IGNORECASE)
+        if match and match.group(1):
+            return match.group(1).rstrip(".,;:")
+    return default
+
+
 def _format_h1_cors(vuln: BountyVulnerability) -> Tuple[str, str, str]:
     if vuln.flaw_type == "cors_wildcard_origin":
         sub_type = "Permissive Wildcard Access-Control-Allow-Origin"
@@ -2382,9 +2514,14 @@ def _format_h1_cors(vuln: BountyVulnerability) -> Tuple[str, str, str]:
     else:
         sub_type = "Insecure Cross-Origin Resource Sharing Policy"
 
+    tested_origin = _extract_cors_origin(vuln)
+    ep_path = _extract_evidence_endpoint_path(vuln, default="/")
+    expected_acao = "*" if vuln.flaw_type == "cors_wildcard_origin" else tested_origin
+    creds_line = "" if vuln.flaw_type == "cors_wildcard_origin" else "\n   Access-Control-Allow-Credentials: true"
+
     title = f"[CORS Misconfiguration] {sub_type} on {vuln.target_domain}"
     impact_desc = (
-        f"The endpoint on `{vuln.target_domain}` implements an insecure Cross-Origin Resource Sharing (CORS) policy.\n"
+        f"The endpoint `{ep_path}` on `{vuln.target_domain}` implements an insecure Cross-Origin Resource Sharing (CORS) policy.\n"
         f"When an authenticated user visits an attacker-controlled website:\n"
         f"1. The malicious website can issue background cross-origin requests to `{vuln.target_domain}`.\n"
         f"2. The browser grants the untrusted site read access to sensitive response bodies due to permissive origin allowance.\n"
@@ -2393,12 +2530,11 @@ def _format_h1_cors(vuln: BountyVulnerability) -> Tuple[str, str, str]:
     poc_steps = (
         f"1. Send an HTTP request with an untrusted Origin header to `{vuln.target_domain}`:\n"
         f"   ```bash\n"
-        f"   curl -i -s -H \"Origin: https://evil.com\" https://{vuln.target_domain}/\n"
+        f"   curl -i -s -H \"Origin: {tested_origin}\" https://{vuln.target_domain}{ep_path}\n"
         f"   ```\n"
         f"2. Inspect the HTTP response headers for reflected origin and credentials allowance:\n"
         f"   ```http\n"
-        f"   Access-Control-Allow-Origin: https://evil.com\n"
-        f"   Access-Control-Allow-Credentials: true\n"
+        f"   Access-Control-Allow-Origin: {expected_acao}{creds_line}\n"
         f"   ```\n"
         f"3. Observe evidence: `{vuln.evidence}`"
     )
@@ -2406,9 +2542,10 @@ def _format_h1_cors(vuln: BountyVulnerability) -> Tuple[str, str, str]:
 
 
 def _format_h1_graphql(vuln: BountyVulnerability) -> Tuple[str, str, str]:
+    ep_path = _extract_evidence_endpoint_path(vuln, default="/graphql")
     title = f"[Information Disclosure] Public GraphQL Schema Introspection on {vuln.target_domain}"
     impact_desc = (
-        f"Full GraphQL schema introspection is enabled on `{vuln.target_domain}` for unauthorized external clients.\n"
+        f"Full GraphQL schema introspection is enabled on `{vuln.target_domain}` (`{ep_path}`) for unauthorized external clients.\n"
         f"This leaks the entire backend data architecture, including:\n"
         f"1. All available queries, mutations, subscriptions, and internal service fields.\n"
         f"2. Undocumented administrative interfaces and sensitive entity relationship graphs.\n"
@@ -2417,7 +2554,7 @@ def _format_h1_graphql(vuln: BountyVulnerability) -> Tuple[str, str, str]:
     poc_steps = (
         f"1. Send an HTTP POST request containing a GraphQL introspection query to `{vuln.target_domain}`:\n"
         f"   ```bash\n"
-        f"   curl -i -s -X POST https://{vuln.target_domain}/graphql \\\n"
+        f"   curl -i -s -X POST https://{vuln.target_domain}{ep_path} \\\n"
         f"     -H \"Content-Type: application/json\" \\\n"
         f"     -d '{{\"query\":\"{{ __schema {{ queryType {{ name }} mutationType {{ name }} types {{ name }} }} }}\"}}'\n"
         f"   ```\n"
@@ -2444,6 +2581,7 @@ def _format_h1_cloud_storage(vuln: BountyVulnerability) -> Tuple[str, str, str]:
             f"3. Observe evidence: `{vuln.evidence}`"
         )
     else:
+        cname_display = vuln.cname_target or "(no CNAME target recorded -- verify dangling DNS record before reporting)"
         title = f"[Cloud Storage Takeover] Unclaimed Storage Bucket on {vuln.target_domain}"
         impact_desc = (
             f"The domain `{vuln.target_domain}` points to an unallocated or deleted cloud storage bucket "
@@ -2455,7 +2593,7 @@ def _format_h1_cloud_storage(vuln: BountyVulnerability) -> Tuple[str, str, str]:
             f"1. Query the DNS CNAME record for `{vuln.target_domain}`:\n"
             f"   ```bash\n"
             f"   dig {vuln.target_domain} CNAME +short\n"
-            f"   # Output: {vuln.cname_target}\n"
+            f"   # Output: {cname_display}\n"
             f"   ```\n"
             f"2. Query the HTTP endpoint and observe the unallocated storage response (`NoSuchBucket` / `BlobNotFound`):\n"
             f"   ```bash\n"
@@ -2727,13 +2865,15 @@ def _format_bc_subdomain_takeover(vuln: BountyVulnerability, target: str) -> Tup
 
 
 def _format_bc_cors(vuln: BountyVulnerability, target: str) -> Tuple[str, str, str, str, str]:
+    tested_origin = _extract_cors_origin(vuln)
+    ep_path = _extract_evidence_endpoint_path(vuln, default="/")
     v_type = "Application Security Misconfiguration > Cross-Origin Resource Sharing (CORS)"
     title = f"CORS Policy Misconfiguration on {target}"
     desc = (
         f"The domain `{target}` exposes an insecure Cross-Origin Resource Sharing configuration that trusts untrusted origins."
     )
     poc = (
-        f"1. Issue cross-origin probe: `curl -i -s -H \"Origin: https://evil.com\" https://{target}/`\n"
+        f"1. Issue cross-origin probe: `curl -i -s -H \"Origin: {tested_origin}\" https://{target}{ep_path}`\n"
         f"2. Inspect response headers for Access-Control-Allow-Origin\n"
         f"3. Observed evidence: `{vuln.evidence}`"
     )
@@ -2744,13 +2884,14 @@ def _format_bc_cors(vuln: BountyVulnerability, target: str) -> Tuple[str, str, s
 
 
 def _format_bc_graphql(vuln: BountyVulnerability, target: str) -> Tuple[str, str, str, str, str]:
+    ep_path = _extract_evidence_endpoint_path(vuln, default="/graphql")
     v_type = "Information Disclosure > Exposed GraphQL Schema Introspection"
     title = f"Exposed GraphQL Schema Introspection on {target}"
     desc = (
         f"The GraphQL API on `{target}` has schema introspection publicly enabled for unauthenticated clients."
     )
     poc = (
-        f"1. Send introspection query: `curl -i -s -X POST https://{target}/graphql -H \"Content-Type: application/json\" "
+        f"1. Send introspection query: `curl -i -s -X POST https://{target}{ep_path} -H \"Content-Type: application/json\" "
         f"-d '{{\"query\":\"{{ __schema {{ types {{ name }} }} }}\"}}'`\n"
         f"2. Inspect JSON response\n"
         f"3. Observed evidence: `{vuln.evidence}`"
@@ -3341,6 +3482,16 @@ Orbit Security Coordinated Disclosure Team
         (bundle_dir / "security_txt_advisory.txt").write_text(email_content, encoding="utf-8")
         (bundle_dir / "pgp_disclosure_draft.pgp.txt").write_text(pgp_content, encoding="utf-8")
 
+        from orbit_security.report_verifier import compute_evidence_digest
+
+        evidence_artifact_id = compute_evidence_digest(
+            target=vuln.target_domain,
+            status_code=None,
+            flaw_type=vuln.flaw_type,
+            evidence_snippet=vuln.evidence,
+            provider=vuln.provider or "",
+        )
+
         # 2. Write raw technical proof file
         sev_val = vuln.severity.value if hasattr(vuln.severity, "value") else str(vuln.severity)
         evidence_content = (
@@ -3351,6 +3502,7 @@ Orbit Security Coordinated Disclosure Team
             f"SEVERITY: {sev_val}\n"
             f"CVSS v3.1: {vuln.cvss_score} ({vuln.cvss_vector})\n"
             f"CWE: {vuln.cwe_id}\n"
+            f"EVIDENCE ARTIFACT ID: {evidence_artifact_id}\n"
             f"TIMESTAMP UTC: {vuln.timestamp}\n"
             f"\nOBSERVED RAW EVIDENCE:\n"
             f"{vuln.evidence}\n"
@@ -3373,6 +3525,7 @@ Orbit Security Coordinated Disclosure Team
             "cvss_vector": vuln.cvss_vector,
             "cwe_id": vuln.cwe_id,
             "bounty_viability": vuln.bounty_viability,
+            "evidence_artifact_id": evidence_artifact_id,
             "timestamp": vuln.timestamp,
         }
         (bundle_dir / "metadata.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
@@ -3390,6 +3543,7 @@ Orbit Security Coordinated Disclosure Team
             "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "target": vuln.target_domain,
             "flaw_type": vuln.flaw_type,
+            "evidence_artifact_id": evidence_artifact_id,
             "file_hashes_sha256": manifest,
         }
         manifest_file = bundle_dir / "manifest_sha256.json"
@@ -3409,6 +3563,7 @@ Orbit Security Coordinated Disclosure Team
             "zip_path": zip_path,
             "zip_sha256": zip_hash,
             "manifest": manifest,
+            "evidence_artifact_id": evidence_artifact_id,
             "total_files": len(manifest) + 1,  # including manifest_sha256.json
         }
 

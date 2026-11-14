@@ -137,7 +137,7 @@ class GemmaTriageCopilot:
                 suggested_action="Trigger active probe to capture raw DNS dig or HTTP header proof.",
             )
 
-        # 4. Viability Rule Checks
+        # 4. Viability & Signal Quality Gate Checks
         if vuln.bounty_viability == "INFORMATIONAL_LOW" and program.bounty_tier == "cash":
             return TriageDecision(
                 verdict="REJECTED_LOW_SIGNAL",
@@ -146,6 +146,46 @@ class GemmaTriageCopilot:
                 reasoning="Finding is rated INFORMATIONAL_LOW on a cash bounty program. Likely closed as N/A or Informative.",
                 suggested_action="Log to local telemetry but suppress automated report dispatch.",
             )
+
+        if vuln.flaw_type == "cloud_storage_takeover" and not (vuln.cname_target or "").strip():
+            return TriageDecision(
+                verdict="REJECTED_LOW_SIGNAL",
+                confidence_score=0.92,
+                policy_compliance=True,
+                reasoning=(
+                    "Cloud storage takeover flagged without a verified dangling DNS CNAME target "
+                    "(high likelihood of proxy/CDN NoSuchBucket false positive)."
+                ),
+                suggested_action="Verify DNS CNAME points to an unclaimed third-party storage endpoint before staging.",
+            )
+
+        if not (use_ai and mock_ai_verdict):
+            if vuln.flaw_type.startswith("cors_") and (
+                vuln.bounty_viability == "CONDITIONAL"
+                or "PUBLIC_HTML_ONLY" in evidence
+                or "UNVERIFIED_PUBLIC_HTML" in evidence
+            ):
+                return TriageDecision(
+                    verdict="NEEDS_MORE_INFO",
+                    confidence_score=0.72,
+                    policy_compliance=True,
+                    reasoning=(
+                        "CORS credentialed reflection was observed only on public HTML or unverified root routes; "
+                        "authenticated API/PII exposure is not yet proven."
+                    ),
+                    suggested_action="Verify arbitrary origin reflection with credentials on an authenticated JSON/API endpoint exposing PII or CSRF tokens.",
+                )
+
+            if vuln.flaw_type == "graphql_introspection" and vuln.bounty_viability == "CONDITIONAL":
+                return TriageDecision(
+                    verdict="NEEDS_MORE_INFO",
+                    confidence_score=0.70,
+                    policy_compliance=True,
+                    reasoning=(
+                        "GraphQL introspection enabled without proof of sensitive non-public mutations or internal admin/PII schema exposure."
+                    ),
+                    suggested_action="Verify sensitive/private types or mutations and confirm GraphQL introspection is not documented/excluded before H1 submission.",
+                )
 
         # 5. Local Gemma 4 AI Critic / Sentinel Verification
         if use_ai:
