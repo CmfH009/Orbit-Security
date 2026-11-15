@@ -64,4 +64,7 @@
 - [x] **Round 4 Track B `.env` Webhook Parity & Cutover Readiness:**
   - Wired `PROJECT_ROOT / ".env"` loading & `_resolve_webhook_secret()` fallback in `src/orbit_security/stripe_webhook.py` (with `is_pytest_active()` live-`.env` isolation guard + hermetic test `test_stripe_webhook_env_fallback_is_hermetic_under_pytest` in `tests/test_stripe_trackb_e2e.py`) matching `stripe_checkout.py`
   - Confirmed `.env` holds `STRIPE_API_KEY` (`rk_live_`), `STRIPE_PUBLISHABLE_KEY` (`pk_live_`), `STRIPE_PAYMENT_LINK`, `STRIPE_PRICE_STARTER`/`SCALE`/`ENTERPRISE`, and `STRIPE_WEBHOOK_SECRET` (`whsec_`) (`Stripe Live Checkout Ready: True`), leaving `ORBIT_KYC_STATUS = PENDING_PHYSICAL_ID` as the sole external Gate 2 blocker
+- [x] **Round 5 100% Cryptographic Evidence Digest Coverage & Technical Floor Cleanliness:**
+  - Synchronized all 41 staged vulnerability disclosure bundles in `data/disclosures/` with deterministic `ev_<12-char-hex>` evidence digests across `.md` and `.zip` metadata (`41/41` staged, `0` missing)
+  - Verified `orbit_readiness_audit.py` returns `Technical Floor Clean: True` with zero remaining technical or software blockers (`Active Blockers: [KYC_PAYOUT_PENDING_PHYSICAL_ID]`)
 - [ ] **Gate 2 (`BLOCKED: PENDING_PHYSICAL_ID` in mail):** Complete physical ID KYC for Stripe + HackerOne/Bugcrowd (`Stripe Live Checkout Ready: True` already configured in `.env`; sole external blocker is `PENDING_PHYSICAL_ID`), submit verified high-signal bounty bundles, and close first real `$`
