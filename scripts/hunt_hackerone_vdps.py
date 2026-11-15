@@ -52,12 +52,21 @@ from orbit_security.scanner import is_safe_host  # noqa: E402
 from orbit_security.vdp_high_signal_detectors import (  # noqa: E402
     EXTENDED_SENSITIVE_PATHS,
     check_extended_sensitive_exposures,
+    compress_vdp_payload_anchors,
     evaluate_cloud_reference_response,
     evaluate_cors_response,
     extract_cloud_urls_from_text,
     extract_same_origin_script_urls,
     scan_text_for_high_confidence_secrets,
 )
+
+try:
+    from nova_brain.memory.memorilla import LoopPreventionSentinel
+except ImportError:
+    for _nb_path in (Path("A:/projects/nova-brain/src"), Path("C:/AgyHut/projects/nova-brain/src")):
+        if _nb_path.exists() and str(_nb_path) not in sys.path:
+            sys.path.insert(0, str(_nb_path))
+    from nova_brain.memory.memorilla import LoopPreventionSentinel
 from orbit_security.vdp_recon_sources import (  # noqa: E402
     discover_multi_source_subdomains,
     extract_explicit_scope_hosts,
@@ -646,14 +655,60 @@ def resolve_dns_doh(host: str, record_type: str = "CNAME", timeout: int = 5) -> 
 
 
 class _SafeVdpRedirectHandler(urllib.request.HTTPRedirectHandler):
-    """Guards redirect execution by validating target hostnames against is_safe_host."""
+    """Guards redirect execution by validating target hostnames against is_safe_host
+    and eliminating circular 302 redirect loops with LoopPreventionSentinel."""
+
+    def __init__(self, history_window: int = 8, repetition_threshold: int = 3):
+        super().__init__()
+        self.sentinel = LoopPreventionSentinel(
+            history_window=history_window,
+            repetition_threshold=repetition_threshold,
+        )
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         new_parsed = urllib.parse.urlparse(newurl)
         new_host = (new_parsed.hostname or "").strip().lower()
         if not new_host or not is_safe_host(new_host):
             return None
+        # Break cyclical 302 redirect loops (A -> B -> A -> B or A -> A)
+        if self.sentinel.record_action(newurl):
+            return None
         return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def resolve_dns_cname_chain_guarded(
+    host: str,
+    doh_lookup_fn: Optional[Any] = None,
+    max_hops: int = 10,
+) -> Tuple[List[str], bool]:
+    """Resolve recursive CNAME chain with LoopPreventionSentinel eliminating redundant cyclical hops."""
+    lookup = doh_lookup_fn or resolve_dns_doh
+    sentinel = LoopPreventionSentinel(history_window=8, repetition_threshold=2)
+    current = host.strip().lower()
+    chain: List[str] = [current]
+    loop_detected = False
+
+    for _ in range(max_hops):
+        ans = lookup(current, record_type="CNAME")
+        records = ans.get("Answer", [])
+        cname_target = None
+        for r in records:
+            if isinstance(r, dict) and r.get("data"):
+                cname_target = str(r["data"]).rstrip(".").strip().lower()
+                break
+        if not cname_target:
+            break
+
+        # Check for loop in CNAME chain
+        if sentinel.record_action(cname_target):
+            loop_detected = True
+            chain.append(cname_target)
+            break
+
+        chain.append(cname_target)
+        current = cname_target
+
+    return chain, loop_detected
 
 
 def fetch_http_sample(
@@ -1053,6 +1108,15 @@ def screen_host_non_destructively(
                     headers=program.compliance_headers,
                     max_bytes=65536,
                 )
+                if js_bundle_body and len(js_bundle_body.encode("utf-8")) >= 50000:
+                    compress_vdp_payload_anchors(
+                        js_bundle_body,
+                        content_type="application/javascript",
+                        url=js_bundle_url,
+                    )
+
+        if body and len(body.encode("utf-8")) >= 50000:
+            compress_vdp_payload_anchors(body, content_type="text/html", url=probe_url)
 
         secret_hit = scan_text_for_high_confidence_secrets(probe_url, http_status, body)
         secret_status = http_status

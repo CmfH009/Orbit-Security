@@ -11,8 +11,18 @@ import html as html_lib
 import ipaddress
 import json
 import re
+import sys
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 import urllib.parse
+
+try:
+    from nova_brain.memory.memorilla import MemorillaCompressor, MemoryAnchor
+except ImportError:
+    for _nb_path in (Path("A:/projects/nova-brain/src"), Path("C:/AgyHut/projects/nova-brain/src")):
+        if _nb_path.exists() and str(_nb_path) not in sys.path:
+            sys.path.insert(0, str(_nb_path))
+    from nova_brain.memory.memorilla import MemorillaCompressor, MemoryAnchor
 
 EXTENDED_SENSITIVE_PATHS: Tuple[str, ...] = (
     "/.git/config",
@@ -743,3 +753,95 @@ def extract_same_origin_script_urls(base_url: str, html_body: str, limit: int = 
         if len(results) >= limit:
             break
     return results
+
+
+_VDP_ENDPOINT_RE = re.compile(
+    r"""(?:["'`])(/(?:api|oauth|graphql|v[0-9]+|auth|admin|actuator|debug|internal|users|pay)[a-zA-Z0-9_/.-]*)(?:["'`])""",
+    re.IGNORECASE,
+)
+_VDP_CORS_INDICATOR_RE = re.compile(
+    r"""(?i)(?:access-control-allow-origin|credentials\s*:\s*['"]include['"]|allow-credentials|withcredentials)""",
+)
+
+
+def compress_vdp_payload_anchors(
+    body: str,
+    *,
+    content_type: str = "",
+    url: str = "",
+    budget: int = 16,
+) -> List[MemoryAnchor]:
+    """Compress 50KB+ minified JS and multi-page HTML into up to 16 high-signal endpoint and CORS anchors.
+    
+    Uses Stanford MemorillaCompressor to distill noisy payloads into bounded soft memory vectors.
+    """
+    if not body or not isinstance(body, str):
+        return []
+
+    compressor = MemorillaCompressor(soft_token_budget=budget)
+    candidates: List[Dict[str, Any]] = []
+
+    # 1. Extract endpoint candidates
+    seen_endpoints: Set[str] = set()
+    for match in _VDP_ENDPOINT_RE.finditer(body):
+        ep = match.group(1).strip()
+        if ep in seen_endpoints:
+            continue
+        seen_endpoints.add(ep)
+        # Capture ~120 char window around endpoint
+        start = max(0, match.start() - 30)
+        end = min(len(body), match.end() + 70)
+        snippet = re.sub(r"\s+", " ", body[start:end]).strip()
+        candidates.append({
+            "role": "endpoint",
+            "content": f"{ep}: {snippet}",
+            "salience": 0.88,
+            "tags": ["endpoint", "api"],
+        })
+
+    # 2. Extract CORS candidates
+    seen_cors: Set[str] = set()
+    for match in _VDP_CORS_INDICATOR_RE.finditer(body):
+        cors_token = match.group(0).strip()
+        start = max(0, match.start() - 30)
+        end = min(len(body), match.end() + 70)
+        snippet = re.sub(r"\s+", " ", body[start:end]).strip()
+        if snippet in seen_cors:
+            continue
+        seen_cors.add(snippet)
+        candidates.append({
+            "role": "cors",
+            "content": f"CORS_{cors_token}: {snippet}",
+            "salience": 0.92,
+            "tags": ["cors", "security"],
+        })
+
+    # 3. Extract cloud URLs
+    cloud_refs = extract_cloud_urls_from_text(body)
+    for ref in cloud_refs:
+        c_url = ref.get("url") or ref.get("probe_url") or ""
+        b_name = ref.get("bucket_name") or "cloud_storage"
+        candidates.append({
+            "role": "cloud",
+            "content": f"CloudBucket_{b_name}: {c_url}",
+            "salience": 0.90,
+            "tags": ["cloud", "storage"],
+        })
+
+    # 4. Extract script URLs if HTML
+    if "html" in content_type.lower() or _HTML_LOOKALIKE_RE.match(body):
+        script_urls = extract_same_origin_script_urls(url or "https://target.corp/", body, limit=8)
+        for s_url in script_urls:
+            candidates.append({
+                "role": "script",
+                "content": f"ScriptBundle: {s_url}",
+                "salience": 0.75,
+                "tags": ["script", "asset"],
+            })
+
+    if candidates:
+        anchors = compressor.compress_turns(candidates, query=url, top_k=budget)
+    else:
+        anchors = compressor.compress_document(body, title="VDP_Payload", chunk_lines=25)[:budget]
+
+    return anchors[:budget]
