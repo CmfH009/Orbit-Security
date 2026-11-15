@@ -135,3 +135,41 @@ def test_resolve_dns_cname_chain_breaks_circular_cname_loop():
     assert loop_detected is True, "Expected circular CNAME loop to be detected"
     # Chain must stop once oscillation is detected rather than burning 10 hops
     assert len(chain) <= 4
+
+
+def test_screen_host_handles_circular_cname_loop_cleanly():
+    """Verify screen_host_non_destructively resolves CNAME via guarded chain and handles cycles safely."""
+    from hunt_hackerone_vdps import screen_host_non_destructively, VdpProgram
+    from unittest.mock import patch
+
+    mock_responses = {
+        "sub.target.corp": [{"data": "cname1.target.corp."}],
+        "cname1.target.corp": [{"data": "cname2.target.corp."}],
+        "cname2.target.corp": [{"data": "cname1.target.corp."}],
+    }
+
+    def mock_lookup(host, record_type="CNAME", timeout=5):
+        clean_host = host.rstrip(".").lower()
+        if record_type == "CNAME":
+            ans = mock_responses.get(clean_host, [])
+            return {"Status": 0 if ans else 3, "Answer": ans}
+        return {"Status": 0, "Answer": [{"data": "1.2.3.4"}]}
+
+    prog = VdpProgram(
+        handle="testprog",
+        name="Test Program",
+        offers_bounties=False,
+        submission_state="open",
+        i_must_verify_identity_to_submit=False,
+        structured_scopes=[{"id": "1", "asset_identifier": "target.corp", "asset_type": "URL"}],
+        weaknesses=[],
+        compliance_headers={},
+    )
+
+    with patch("hunt_hackerone_vdps.resolve_dns_doh", side_effect=mock_lookup), \
+         patch("hunt_hackerone_vdps.fetch_http_sample", return_value=(200, {}, "<html>Safe page</html>")):
+        # Must execute without infinite recursion or crashing
+        finding = screen_host_non_destructively(prog, "sub.target.corp")
+        # Should not falsely claim a dangling takeover on an internal circular CNAME loop
+        assert finding is None or finding.finding_type != "dangling_dns_takeover"
+

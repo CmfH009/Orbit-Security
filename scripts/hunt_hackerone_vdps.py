@@ -949,23 +949,18 @@ def screen_host_non_destructively(
     takeover_detector = detector or PassiveTakeoverDetector()
     now_utc = datetime.now(timezone.utc).isoformat()
 
-    cname_resp = resolve_dns_doh(host, "CNAME")
-    cnames = [
-        str(ans.get("data") or "").rstrip(".")
-        for ans in (cname_resp.get("Answer") or [])
-        if ans.get("type") == 5 and ans.get("data")
-    ]
+    cname_chain, cname_loop = resolve_dns_cname_chain_guarded(host)
+    cname_target = cname_chain[-1] if len(cname_chain) > 1 and not cname_loop else None
     a_resp = resolve_dns_doh(host, "A")
     a_records = [
         str(ans.get("data") or "")
         for ans in (a_resp.get("Answer") or [])
         if ans.get("type") == 1 and ans.get("data")
     ]
-    cname_target = cnames[-1] if cnames else None
 
     # Skip internal same-domain aliases
     cname_is_nxdomain = False
-    if cname_target:
+    if cname_target and not cname_loop:
         target_a = resolve_dns_doh(cname_target, "A")
         cname_is_nxdomain = target_a.get("Status") == 3
 
@@ -1099,6 +1094,7 @@ def screen_host_non_destructively(
             and bool(body)
             and ("<script" in body_low or "<html" in body_low or "<!doctype" in body_low)
         )
+        payload_anchors: List[Any] = []
         if is_html_root:
             script_urls = extract_same_origin_script_urls(probe_url, body, limit=1)
             if script_urls:
@@ -1109,14 +1105,18 @@ def screen_host_non_destructively(
                     max_bytes=65536,
                 )
                 if js_bundle_body and len(js_bundle_body.encode("utf-8")) >= 50000:
-                    compress_vdp_payload_anchors(
-                        js_bundle_body,
-                        content_type="application/javascript",
-                        url=js_bundle_url,
+                    payload_anchors.extend(
+                        compress_vdp_payload_anchors(
+                            js_bundle_body,
+                            content_type="application/javascript",
+                            url=js_bundle_url,
+                        )
                     )
 
         if body and len(body.encode("utf-8")) >= 50000:
-            compress_vdp_payload_anchors(body, content_type="text/html", url=probe_url)
+            payload_anchors.extend(
+                compress_vdp_payload_anchors(body, content_type="text/html", url=probe_url)
+            )
 
         secret_hit = scan_text_for_high_confidence_secrets(probe_url, http_status, body)
         secret_status = http_status
@@ -1227,10 +1227,14 @@ def screen_host_non_destructively(
                 },
             )
 
-        # 6. High-signal credentialed CORS reflection on JSON or api* hosts
+        # 6. High-signal credentialed CORS reflection on JSON, api* hosts, or payloads with CORS anchors
         trimmed_root = (body or "").lstrip()
         looks_like_json = trimmed_root.startswith(("{", "["))
-        if http_status == 200 and (looks_like_json or "api" in host.lower()):
+        has_cors_anchor = any(
+            (getattr(a, "concept", "").startswith("CORS_") or "cors" in getattr(a, "tags", []))
+            for a in payload_anchors
+        )
+        if http_status == 200 and (looks_like_json or "api" in host.lower() or has_cors_anchor):
             cors_origin = "https://untrusted-adversary.example"
             cors_req_headers = {**program.compliance_headers, "Origin": cors_origin}
             cors_status, cors_resp_headers, cors_body = fetch_http_sample(
