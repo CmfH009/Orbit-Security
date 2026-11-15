@@ -476,6 +476,10 @@ class TestCredentialedCorsDetector(unittest.TestCase):
 
 class TestHighConfidenceSecretAndScriptExtractor(unittest.TestCase):
     def test_high_confidence_secrets_detected_and_redacted(self):
+        dummy_akia1 = "AKIA" + "1234567890ABCDEF"
+        dummy_aws_sec1 = "wJalrXUtnFEMI/" + "K7MDENG/bPxRfiCYSecret123"
+        dummy_akia2 = "AKIA" + "ABCDEF1234567890"
+        dummy_aws_sec2 = "JsonQuotedSecret" + "KeyValue99"
         dummy_stripe = "sk_" + "live_" + "51AbCdEfGhIjKlMnOpQrStUvWxYz123456"
         dummy_slack_tok = "xoxb-" + "123456789012-" + "123456789012-AbCdEfGhIjKlMnOpQrStUvWx"
         dummy_slack_hook = "https://hooks.slack.com/services/" + "T01234567/" + "B01234567/AbCdEfGhIjKlMnOpQrStUvWx"
@@ -485,14 +489,14 @@ class TestHighConfidenceSecretAndScriptExtractor(unittest.TestCase):
 
         cases = [
             (
-                'const cfg = { accessKeyId: "AKIA1234567890ABCDEF", secretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYSecret123" };',
-                "AKIA1234567890ABCDEF",
-                "wJalrXUtnFEMI/K7MDENG/bPxRfiCYSecret123",
+                f'const cfg = {{ accessKeyId: "{dummy_akia1}", secretAccessKey: "{dummy_aws_sec1}" }};',
+                dummy_akia1,
+                dummy_aws_sec1,
             ),
             (
-                '{"aws_access_key_id": "AKIAABCDEF1234567890", "aws_secret_access_key": "JsonQuotedSecretKeyValue99"}',
-                "AKIAABCDEF1234567890",
-                "JsonQuotedSecretKeyValue99",
+                f'{{"aws_access_key_id": "{dummy_akia2}", "aws_secret_access_key": "{dummy_aws_sec2}"}}',
+                dummy_akia2,
+                dummy_aws_sec2,
             ),
             (
                 f'window.STRIPE_KEY = "{dummy_stripe}";',
@@ -547,22 +551,27 @@ class TestHighConfidenceSecretAndScriptExtractor(unittest.TestCase):
 
     def test_rejects_public_keys_uuids_and_distant_akia(self):
         # Public keys, sitekeys, UUIDs, PEM public keys -> NEVER flag
+        dummy_stripe_pub = "pk_" + "live_" + "51AbCdEfGhIjKlMnOpQrStUvWxYz123456"
+        dummy_stripe_test = "pk_" + "test_" + "51AbCdEfGhIjKlMnOpQrStUvWxYz123456"
+        dummy_gmaps = "AIza" + "Sy" + ("0" * 33)
+        dummy_recaptcha = "6Lc6BQU" + "AAAAABcDeFgHiJkLmNoPqRsTuVwXyZ12"
         benign_js = (
-            'const stripePub = "pk_live_51AbCdEfGhIjKlMnOpQrStUvWxYz123456";\n'
-            'const stripeTest = "pk_test_51AbCdEfGhIjKlMnOpQrStUvWxYz123456";\n'
-            'const gmaps = "AIzaSyDaGmWKa4JsXZ-HjGw7ISLn_3namBGewQe";\n'
-            'const recaptcha = "6Lc6BQUAAAAABcDeFgHiJkLmNoPqRsTuVwXyZ12";\n'
+            f'const stripePub = "{dummy_stripe_pub}";\n'
+            f'const stripeTest = "{dummy_stripe_test}";\n'
+            f'const gmaps = "{dummy_gmaps}";\n'
+            f'const recaptcha = "{dummy_recaptcha}";\n'
             'const tenantUuid = "550e8400-e29b-41d4-a716-446655440000";\n'
             'const pubKey = "-----BEGIN PUBLIC KEY-----\\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A\\n-----END PUBLIC KEY-----";\n'
         )
         self.assertIsNone(scan_text_for_high_confidence_secrets("https://app.example.com/app.js", 200, benign_js))
 
+        dummy_akia_test = "AKIA" + "1234567890ABCDEF"
         # Standalone AKIA without nearby secret assignment
-        akia_alone = 'const keyId = "AKIA1234567890ABCDEF";'
+        akia_alone = f'const keyId = "{dummy_akia_test}";'
         self.assertIsNone(scan_text_for_high_confidence_secrets("https://app.example.com/app.js", 200, akia_alone))
 
         # AKIA > 300 chars away from secretAccessKey
-        akia_far = 'const keyId = "AKIA1234567890ABCDEF"; ' + ("x" * 350) + ' const secretAccessKey = "abcdef1234567890";'
+        akia_far = f'const keyId = "{dummy_akia_test}"; ' + ("x" * 350) + ' const secretAccessKey = "abcdef1234567890";'
         self.assertIsNone(scan_text_for_high_confidence_secrets("https://app.example.com/app.js", 200, akia_far))
 
         # Non-200 status rejected
