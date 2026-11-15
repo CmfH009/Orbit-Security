@@ -63,7 +63,7 @@ def verify_post() -> bool:
     print(f"Word Count: {word_count} words")
     print(f"16:9 Banner Asset: {BANNER_ASSET_PATH.name} ({banner_size_kb} KB) [{'PASS' if banner_exists else 'FAIL'}]")
     print(f"Destination Feed: https://www.linkedin.com/feed/")
-    print(f"Profile: https://www.linkedin.com/in/carson-haynes-1902b743a/")
+    print(f"Profile: https://www.linkedin.com/in/arsoncarson/")
     print("=" * 65)
     return is_valid_len and banner_exists
 
