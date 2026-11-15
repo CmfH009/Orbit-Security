@@ -702,6 +702,15 @@ def main():
     poc_parser.add_argument("--provider", default="Unknown", help="SaaS provider name (e.g. Shopify, GitHub Pages, AWS S3)")
     poc_parser.add_argument("--json", action="store_true", help="Output raw JSON proof")
 
+    sherlock_parser = subparsers.add_parser(
+        "sherlock-osint", help="Run authorized executive/brand handle OSINT via local Sherlock CLI"
+    )
+    sherlock_parser.add_argument("usernames", nargs="+", help="Authorized handle(s) or brand name(s)")
+    sherlock_parser.add_argument("--site", action="append", dest="sites", default=[], help="Restrict scan to site(s)")
+    sherlock_parser.add_argument("--timeout", type=int, default=15, help="Per-request socket timeout (seconds)")
+    sherlock_parser.add_argument("--local", action="store_true", help="Use bundled Sherlock manifest")
+    sherlock_parser.add_argument("--json", action="store_true", help="Output raw JSON report")
+
     args = parser.parse_args()
 
     # Direct or root-level fix pack export invocation (when not running scan)
@@ -1090,6 +1099,37 @@ def main():
         table.add_row("Safe Harbor", f"[dim]{poc['safe_harbor_notice']}[/dim]")
         console.print(table)
         return 0
+    elif args.command == "sherlock-osint":
+        import json as _json
+        from orbit_security.sherlock_osint import run_sherlock_osint
+
+        res = run_sherlock_osint(
+            args.usernames,
+            sites=args.sites or None,
+            timeout=args.timeout,
+            local_only=args.local,
+        )
+        payload = res.to_dict()
+        if args.json:
+            print(_json.dumps(payload, indent=2))
+            return 0 if res.available else 1
+
+        table = Table(title="Sherlock OSINT Authorized Handle Footprint", border_style="cyan")
+        table.add_column("Handle", style="bold white")
+        table.add_column("Site", style="cyan")
+        table.add_column("Profile URL", style="green")
+        table.add_column("HTTP", style="dim")
+        for item in payload["findings"]:
+            table.add_row(
+                item["username"],
+                item["site"],
+                item["url_user"],
+                str(item.get("http_status") or "-"),
+            )
+        console.print(table)
+        if payload["errors"]:
+            console.print(f"[yellow]Warnings: {payload['errors']}[/yellow]")
+        return 0 if res.available else 1
 
 
 def main_recon():

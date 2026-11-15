@@ -18,7 +18,9 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import hashlib
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -52,6 +54,20 @@ EXPOSED_KEY_MD_RE = re.compile(
     re.MULTILINE,
 )
 UNTRUSTED_POC_ORIGIN = "https://untrusted-adversary.com"
+SENSITIVE_CORS_KEYWORDS = (
+    "email",
+    "user_id",
+    "userid",
+    "username",
+    "phone",
+    "address",
+    "token",
+    "balance",
+    "order",
+    "session",
+    "csrf",
+    "account",
+)
 
 CVSS_PROFILES: Dict[str, Dict[str, Any]] = {
     "OPEN_BUCKET_LISTING": {
@@ -460,20 +476,120 @@ def render_remediation_dossier(
     return "\n".join(lines)
 
 
+def _load_auth_cookies_map(auth_cookies: Optional[Any]) -> Dict[str, str]:
+    """Load optional per-host/program session cookies from a dict, JSON path, or inline string."""
+    raw = auth_cookies if auth_cookies is not None else os.environ.get("ORBIT_CORS_AUTH_COOKIES")
+    if not raw:
+        return {}
+    if isinstance(raw, dict):
+        return {str(k).strip().lower(): str(v).strip() for k, v in raw.items() if str(v).strip()}
+    if isinstance(raw, Path):
+        data = json.loads(raw.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            return {str(k).strip().lower(): str(v).strip() for k, v in data.items() if str(v).strip()}
+        return {}
+    text = str(raw).strip()
+    if not text:
+        return {}
+    maybe_path = Path(text)
+    if maybe_path.is_file():
+        data = json.loads(maybe_path.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            return {str(k).strip().lower(): str(v).strip() for k, v in data.items() if str(v).strip()}
+        return {}
+    if text.startswith("{"):
+        data = json.loads(text)
+        if isinstance(data, dict):
+            return {str(k).strip().lower(): str(v).strip() for k, v in data.items() if str(v).strip()}
+        return {}
+    return {"*": text}
+
+
+def _resolve_bundle_auth(
+    bundle: Dict[str, Any],
+    group: Dict[str, Any],
+    cookie_map: Dict[str, str],
+    default_auth_header: Optional[str],
+) -> Tuple[str, str]:
+    host = str(bundle.get("host", "")).strip().lower()
+    prog_id = str(group.get("program_id", "")).strip().lower()
+    prog_name = str(group.get("program", "")).strip().lower()
+
+    cookie = (
+        str(bundle.get("auth_cookie", "")).strip()
+        or cookie_map.get(host, "")
+        or cookie_map.get(prog_id, "")
+        or cookie_map.get(prog_name, "")
+        or cookie_map.get("*", "")
+        or cookie_map.get("default", "")
+    )
+    auth_hdr = (
+        str(bundle.get("auth_header", "")).strip()
+        or (default_auth_header.strip() if default_auth_header else "")
+        or os.environ.get("ORBIT_CORS_AUTH_HEADER", "").strip()
+    )
+    return cookie, auth_hdr
+
+
+def _analyze_cors_poc_response(
+    resp: Any,
+    *,
+    status_code: int,
+    lower_headers: Dict[str, str],
+    auth_cookie_sent: bool,
+    auth_header_sent: bool,
+) -> Dict[str, Any]:
+    acao = lower_headers.get("access-control-allow-origin", "")
+    acac = lower_headers.get("access-control-allow-credentials", "")
+    content_type = lower_headers.get("content-type", "")
+    body_text = str(getattr(resp, "text", "") or "")
+    body_lower = body_text.lower()
+    sensitive_indicators = [kw for kw in SENSITIVE_CORS_KEYWORDS if kw in body_lower]
+    cors_reflected = status_code == 200 and acao == UNTRUSTED_POC_ORIGIN and acac.lower() == "true"
+    authenticated_replay = auth_cookie_sent or auth_header_sent
+    is_json_or_api = "json" in content_type.lower()
+    exploitable_auth_cors = bool(
+        cors_reflected and authenticated_replay and (is_json_or_api or sensitive_indicators)
+    )
+    body_bytes = body_text.encode("utf-8", errors="replace")
+    return {
+        "auth_mode": (
+            "authenticated_cookie_replay"
+            if auth_cookie_sent
+            else ("authenticated_header_replay" if auth_header_sent else "unauthenticated_baseline")
+        ),
+        "auth_cookie_sent": auth_cookie_sent,
+        "auth_header_sent": auth_header_sent,
+        "origin_tested": UNTRUSTED_POC_ORIGIN,
+        "acao": acao or None,
+        "acac": acac or None,
+        "content_type": content_type or None,
+        "body_bytes": len(body_bytes),
+        "body_sha256_prefix": hashlib.sha256(body_bytes).hexdigest()[:16],
+        "sensitive_indicators": sensitive_indicators,
+        "cors_reflected": cors_reflected,
+        "exploitable_auth_cors": exploitable_auth_cors,
+    }
+
+
 def verify_live_targets(
     groups: List[Dict[str, Any]],
     *,
     timeout: float = 10.0,
     roe_engine: Optional[Any] = None,
+    auth_cookies: Optional[Any] = None,
+    auth_header: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Runs read-only RoE-guarded HTTP GET verification against launch queue targets."""
+    """Runs read-only RoE-guarded HTTP GET verification and Tier-2 CORS PoC replay."""
     roe = roe_engine if roe_engine is not None else PublicHostOnlyRoE()
+    cookie_map = _load_auth_cookies_map(auth_cookies)
     results: List[Dict[str, Any]] = []
 
     with create_guarded_httpx_client(roe_engine=roe, timeout=timeout) as client:
         for grp in groups:
             program = grp["program"]
             verdict = grp["verdict"]
+            is_cors = verdict in {"REFLECTED_PUBLIC_HTML", "AUTHENTICATED_CORS_SENSITIVE"}
             bundles = grp.get("bundles") or [
                 {"host": h, "url": u, "evidence_artifact_id": ""}
                 for h, u in zip(grp.get("hosts", []), grp.get("urls", []))
@@ -483,13 +599,23 @@ def verify_live_targets(
                 url = str(bundle.get("url", "")).strip() or f"https://{host}/"
                 ev_id = str(bundle.get("evidence_artifact_id", "")).strip()
                 headers = {"User-Agent": "OrbitSecurity-PreSubmitCheck/1.0"}
-                if verdict in {"REFLECTED_PUBLIC_HTML", "AUTHENTICATED_CORS_SENSITIVE"}:
+                auth_cookie_sent = False
+                auth_header_sent = False
+                if is_cors:
                     headers["Origin"] = UNTRUSTED_POC_ORIGIN
+                    cookie_val, auth_val = _resolve_bundle_auth(bundle, grp, cookie_map, auth_header)
+                    if cookie_val:
+                        headers["Cookie"] = cookie_val
+                        auth_cookie_sent = True
+                    if auth_val:
+                        headers["Authorization"] = auth_val
+                        auth_header_sent = True
 
                 try:
                     resp = client.get(url, headers=headers)
                     status_code = int(getattr(resp, "status_code", 0) or 0)
                     lower_headers = {str(k).lower(): str(v) for k, v in dict(resp.headers).items()}
+                    cors_poc: Optional[Dict[str, Any]] = None
                     if verdict == "OPEN_BUCKET_LISTING":
                         body_text = str(getattr(resp, "text", "") or "")
                         confirmed = status_code == 200 and "<ListBucketResult" in body_text
@@ -499,31 +625,39 @@ def verify_live_targets(
                             else f"HTTP {status_code} without ListBucketResult XML"
                         )
                     else:
-                        acao = lower_headers.get("access-control-allow-origin", "")
-                        acac = lower_headers.get("access-control-allow-credentials", "")
-                        confirmed = (
-                            status_code == 200
-                            and acao == UNTRUSTED_POC_ORIGIN
-                            and acac.lower() == "true"
+                        cors_poc = _analyze_cors_poc_response(
+                            resp,
+                            status_code=status_code,
+                            lower_headers=lower_headers,
+                            auth_cookie_sent=auth_cookie_sent,
+                            auth_header_sent=auth_header_sent,
                         )
-                        detail = (
-                            f"Reflected {UNTRUSTED_POC_ORIGIN} with ACAC=true"
-                            if confirmed
-                            else f"HTTP {status_code}; ACAO={acao or 'none'}; ACAC={acac or 'none'}"
-                        )
+                        acao = cors_poc["acao"] or ""
+                        acac = cors_poc["acac"] or ""
+                        confirmed = bool(cors_poc["cors_reflected"])
+                        if cors_poc["exploitable_auth_cors"]:
+                            detail = (
+                                f"Authenticated CORS PoC confirmed ({cors_poc['auth_mode']}); "
+                                f"indicators={','.join(cors_poc['sensitive_indicators']) or 'json'}"
+                            )
+                        elif confirmed:
+                            detail = f"Reflected {UNTRUSTED_POC_ORIGIN} with ACAC=true ({cors_poc['auth_mode']})"
+                        else:
+                            detail = f"HTTP {status_code}; ACAO={acao or 'none'}; ACAC={acac or 'none'}"
 
-                    results.append(
-                        {
-                            "program": program,
-                            "host": host,
-                            "url": url,
-                            "evidence_artifact_id": ev_id,
-                            "status_code": status_code,
-                            "status": "CONFIRMED_LIVE" if confirmed else "CHANGED_OR_MITIGATED",
-                            "verified_live": confirmed,
-                            "detail": detail,
-                        }
-                    )
+                    entry: Dict[str, Any] = {
+                        "program": program,
+                        "host": host,
+                        "url": url,
+                        "evidence_artifact_id": ev_id,
+                        "status_code": status_code,
+                        "status": "CONFIRMED_LIVE" if confirmed else "CHANGED_OR_MITIGATED",
+                        "verified_live": confirmed,
+                        "detail": detail,
+                    }
+                    if cors_poc is not None:
+                        entry["cors_poc_replay"] = cors_poc
+                    results.append(entry)
                 except EgressViolationError as exc:
                     results.append(
                         {
@@ -551,6 +685,7 @@ def verify_live_targets(
                         }
                     )
 
+    cors_items = [r for r in results if "cors_poc_replay" in r]
     return {
         "mode": "live_verified",
         "checked_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -558,6 +693,18 @@ def verify_live_targets(
         "confirmed_live_count": sum(1 for r in results if r["verified_live"]),
         "roe_blocked_count": sum(1 for r in results if r["status"] == "ROE_BLOCKED"),
         "error_count": sum(1 for r in results if r["status"] == "ERROR"),
+        "cors_poc_summary": {
+            "cors_bundles_checked": len(cors_items),
+            "cors_reflected_count": sum(1 for r in cors_items if r["cors_poc_replay"]["cors_reflected"]),
+            "authenticated_replays_count": sum(
+                1
+                for r in cors_items
+                if r["cors_poc_replay"]["auth_cookie_sent"] or r["cors_poc_replay"]["auth_header_sent"]
+            ),
+            "exploitable_auth_cors_count": sum(
+                1 for r in cors_items if r["cors_poc_replay"]["exploitable_auth_cors"]
+            ),
+        },
         "results": results,
     }
 
@@ -571,6 +718,9 @@ def build_vault_manifest(
     archive_fp_dir: Optional[Path] = DEFAULT_ARCHIVE_FP_DIR,
     verify_live: bool = False,
     live_timeout: float = 10.0,
+    auth_cookies: Optional[Any] = None,
+    auth_header: Optional[str] = None,
+    roe_engine: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Compiles staged disclosures (or a verification matrix) into launch queues and readiness reports."""
     archived_fp_count = 0
@@ -616,7 +766,13 @@ def build_vault_manifest(
     live_verification: Optional[Dict[str, Any]] = None
     live_by_host: Optional[Dict[str, Dict[str, Any]]] = None
     if verify_live:
-        live_verification = verify_live_targets(groups, timeout=live_timeout)
+        live_verification = verify_live_targets(
+            groups,
+            timeout=live_timeout,
+            roe_engine=roe_engine,
+            auth_cookies=auth_cookies,
+            auth_header=auth_header,
+        )
         live_by_host = {r["host"]: r for r in live_verification["results"]}
 
     manifest: Dict[str, Any] = {
@@ -648,7 +804,15 @@ def build_vault_manifest(
         for grp in groups:
             safe_prog = re.sub(r"[^a-z0-9_]+", "_", grp["program"].lower()).strip("_") or "program"
             safe_verdict = re.sub(r"[^a-z0-9_]+", "_", grp["verdict"].lower()).strip("_") or "finding"
-            slug = f"{safe_prog}_{safe_verdict}.md"
+            base_slug = f"{safe_prog}_{safe_verdict}"
+            slug = f"{base_slug}.md"
+            if slug in written_slugs:
+                prog_id = re.sub(r"[^a-z0-9_]+", "_", str(grp.get("program_id", "")).lower()).strip("_")
+                slug = f"{base_slug}_{prog_id}.md" if prog_id else f"{base_slug}_2.md"
+                counter = 2
+                while slug in written_slugs:
+                    slug = f"{base_slug}_{counter}.md"
+                    counter += 1
             written_slugs.add(slug)
             dossier_text = render_remediation_dossier(grp, live_results_by_host=live_by_host)
             (consolidated_dir / slug).write_text(dossier_text, encoding="utf-8")
@@ -661,6 +825,22 @@ def build_vault_manifest(
             json.dumps(manifest, indent=2) + "\n",
             encoding="utf-8",
         )
+        if live_verification is not None:
+            cors_replay_items = [
+                r for r in live_verification.get("results", []) if "cors_poc_replay" in r
+            ]
+            (output_dir / "CORS_POC_REPLAY_REPORT.json").write_text(
+                json.dumps(
+                    {
+                        "generated_utc": manifest["generated_utc"],
+                        "summary": live_verification.get("cors_poc_summary", {}),
+                        "results": cors_replay_items,
+                    },
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
 
         report_lines = [
             "# Orbit Security — Pre-KYC Submission Vault Readiness Report",
@@ -752,6 +932,18 @@ def main(argv: Optional[List[str]] = None) -> int:
         default=10.0,
         help="Per-request timeout in seconds for --verify-live",
     )
+    parser.add_argument(
+        "--auth-cookies",
+        type=str,
+        default=None,
+        help="Session cookie string or JSON file mapping host/program_id to Cookie header for Tier-2 CORS PoC replay",
+    )
+    parser.add_argument(
+        "--auth-header",
+        type=str,
+        default=None,
+        help="Optional Authorization header (e.g. Bearer token) for Tier-2 CORS PoC replay",
+    )
     args = parser.parse_args(argv)
 
     manifest = build_vault_manifest(
@@ -761,6 +953,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         disclosures_dir=args.disclosures_dir,
         verify_live=args.verify_live,
         live_timeout=args.timeout,
+        auth_cookies=args.auth_cookies,
+        auth_header=args.auth_header,
     )
     print(
         f"[Vault Compiler:{manifest['verification_mode']}] Evaluated {manifest['total_raw_candidates']} bundles "

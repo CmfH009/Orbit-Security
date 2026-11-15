@@ -14,13 +14,16 @@ from __future__ import annotations
 import asyncio
 from dataclasses import asdict, dataclass, field
 import datetime
+import hashlib
 import json
 import logging
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 from typing import Any, Dict, List, Optional
+import urllib.parse
 import urllib.request
 from urllib.parse import urlsplit
 
@@ -350,3 +353,414 @@ class HyperNoteBriefingEngine:
             json.dump(asdict(meta), f, indent=2)
 
         return meta
+
+    def ingest_master_briefing(
+        self,
+        master_briefing: Dict[str, Any],
+        hyperdb: Optional[Any] = None,
+        matrix: Optional[Any] = None,
+        hyperdb_path: Optional[Path] = None,
+        matrix_db_path: Optional[Path] = None,
+    ) -> Dict[str, Any]:
+        """Unwrap tracking URLs and persist briefing tools, deadlines, and alerts into HyperDB and CognitiveMatrix."""
+        return ingest_briefing_to_stores(
+            master_briefing=master_briefing,
+            hyperdb=hyperdb,
+            matrix=matrix,
+            hyperdb_path=hyperdb_path,
+            matrix_db_path=matrix_db_path,
+        )
+
+
+def _ensure_ecosystem_paths() -> None:
+    """Ensure local hypernote and raven_matrix packages are importable cleanly."""
+    candidates = [
+        Path("A:/projects/hypernote"),
+        Path(r"C:\AgyHut\projects\hypernote"),
+        Path("A:/system"),
+        Path(r"C:\AgyHut\system"),
+    ]
+    for p in candidates:
+        s = str(p)
+        if p.exists() and s not in sys.path:
+            sys.path.insert(0, s)
+
+
+def _get_hypernote_helpers():
+    _ensure_ecosystem_paths()
+    from hypernote.providers.local_engine import (
+        classify_hardware_fit,
+        extract_description_links,
+        unwrap_redirect_url,
+    )
+    return unwrap_redirect_url, extract_description_links, classify_hardware_fit
+
+
+def unwrap_tracking_url(url: str) -> str:
+    """Unwrap substack.com, google.com/url, and youtube.com/redirect tracking URLs syntactically."""
+    unwrap_redirect_url, _, _ = _get_hypernote_helpers()
+    return unwrap_redirect_url(url)
+
+
+_DATE_TOKEN_RE = re.compile(
+    r"\b((?:20\d{2}-\d{1,2}-\d{1,2})|"
+    r"(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{1,2}(?:,?\s+20\d{2})?))\b",
+    re.IGNORECASE,
+)
+_ALERT_LINE_RE = re.compile(
+    r"(monthly\s+spend\s+cap|spend\s+cap|project\s+paused|account\s+suspended|"
+    r"3rd-?party\s+proxy|quota\s+exceeded|billing\s+alert|explicit\s+cache\s+400)",
+    re.IGNORECASE,
+)
+_DEPRECATION_LINE_RE = re.compile(
+    r"(deprecat|retir(?:e|ing|ement|es)|closes\b|closing\b|shutting\s+down|sunsetting|"
+    r"end\s+of\s+life|ends\s+free|promo\s+pricing|drops\s+sonnet|export\s+(?:your\s+)?(?:custom\s+)?)",
+    re.IGNORECASE,
+)
+
+
+def extract_briefing_artifacts(master_briefing: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract unwrapped URLs, AI tools with hardware fit tags, deadlines, and alerts."""
+    unwrap_redirect_url, extract_description_links, classify_hardware_fit = _get_hypernote_helpers()
+
+    subject = str(master_briefing.get("subject") or "Combined Daily Master Briefing").strip()
+    date_val = str(master_briefing.get("date") or "").strip()
+    sections = master_briefing.get("sections") or {}
+    highlights = [str(h).strip() for h in (master_briefing.get("highlights") or []) if str(h).strip()]
+    body_text = str(master_briefing.get("body_text") or "")
+
+    raw_urls = list(master_briefing.get("extracted_urls") or [])
+    blob = "\n".join([body_text, *highlights])
+    raw_urls.extend(re.findall(r"https?://[^\s<>\"'\)\]]+", blob))
+
+    unwrapped_urls: List[str] = []
+    seen_urls = set()
+    for u in raw_urls:
+        clean = unwrap_redirect_url(str(u))
+        if clean and clean not in seen_urls:
+            seen_urls.add(clean)
+            unwrapped_urls.append(clean)
+
+    link_index = extract_description_links("\n".join(unwrapped_urls))
+
+    tool_candidates: List[str] = []
+    for sec_key in ("ai_news", "youtube_digest"):
+        tool_candidates.extend(str(x).strip() for x in (sections.get(sec_key) or []) if str(x).strip())
+    if not tool_candidates:
+        for h in highlights:
+            if not _ALERT_LINE_RE.search(h) and not _DEPRECATION_LINE_RE.search(h):
+                tool_candidates.append(h)
+
+    tools: List[Dict[str, Any]] = []
+    seen_tools = set()
+    for item in tool_candidates:
+        k = item.lower()
+        if k in seen_tools:
+            continue
+        seen_tools.add(k)
+        fit = classify_hardware_fit(item)
+        tools.append({"text": item, "hardware_fit": fit["tag"], "reason": fit["reason"]})
+
+    deadlines: List[Dict[str, str]] = []
+    seen_deadlines = set()
+    dep_lines = list(sections.get("deprecations") or [])
+    for line in [*dep_lines, *highlights, *(body_text.splitlines() if body_text else [])]:
+        ln = str(line).strip().lstrip("-*• ").strip()
+        if not ln:
+            continue
+        if ln in dep_lines or _DEPRECATION_LINE_RE.search(ln):
+            m = _DATE_TOKEN_RE.search(ln)
+            if m or ln in dep_lines:
+                k = ln.lower()
+                if k not in seen_deadlines:
+                    seen_deadlines.add(k)
+                    deadlines.append(
+                        {
+                            "date": m.group(1) if m else (date_val[:10] or "upcoming"),
+                            "text": ln[:350],
+                        }
+                    )
+
+    alerts: List[str] = []
+    seen_alerts = set()
+    alert_pool = [
+        *(sections.get("personal_delta") or []),
+        *(sections.get("alerts") or []),
+        *dep_lines,
+        *highlights,
+        *(body_text.splitlines() if body_text else []),
+    ]
+    for line in alert_pool:
+        ln = str(line).strip().lstrip("-*• ").strip()
+        if ln and _ALERT_LINE_RE.search(ln):
+            k = ln.lower()
+            if k not in seen_alerts:
+                seen_alerts.add(k)
+                alerts.append(ln[:350])
+
+    return {
+        "subject": subject,
+        "date": date_val,
+        "unwrapped_urls": unwrapped_urls,
+        "links": link_index,
+        "tools": tools,
+        "deadlines": deadlines,
+        "alerts": alerts,
+    }
+
+
+_MATRIX_SCHEMA_BOOTSTRAP = """
+CREATE TABLE IF NOT EXISTS core_memory (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE TABLE IF NOT EXISTS invariants (
+    id TEXT PRIMARY KEY,
+    key TEXT UNIQUE NOT NULL,
+    domain TEXT NOT NULL DEFAULT 'general',
+    rule TEXT NOT NULL,
+    tags TEXT NOT NULL DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'verified',
+    is_permanent INTEGER NOT NULL DEFAULT 1,
+    source TEXT NOT NULL DEFAULT 'system',
+    proof_hash TEXT,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    verified_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE TABLE IF NOT EXISTS pitfalls (
+    id TEXT PRIMARY KEY,
+    key TEXT UNIQUE NOT NULL,
+    domain TEXT NOT NULL DEFAULT 'general',
+    description TEXT NOT NULL,
+    remedy TEXT NOT NULL,
+    tags TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE TABLE IF NOT EXISTS episodic_log (
+    id TEXT PRIMARY KEY,
+    project TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    details TEXT NOT NULL,
+    tags TEXT NOT NULL DEFAULT '[]',
+    significance REAL NOT NULL DEFAULT 0.50,
+    recall_count INTEGER NOT NULL DEFAULT 1,
+    last_accessed TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts USING fts5(
+    id UNINDEXED,
+    category UNINDEXED,
+    title,
+    body,
+    tags,
+    tokenize='porter unicode61'
+);
+CREATE TRIGGER IF NOT EXISTS trg_invariants_delete AFTER DELETE ON invariants BEGIN
+    DELETE FROM memory_fts WHERE id = old.id AND category = 'invariant';
+END;
+CREATE TRIGGER IF NOT EXISTS trg_pitfalls_delete AFTER DELETE ON pitfalls BEGIN
+    DELETE FROM memory_fts WHERE id = old.id AND category = 'pitfall';
+END;
+CREATE TRIGGER IF NOT EXISTS trg_episodes_delete AFTER DELETE ON episodic_log BEGIN
+    DELETE FROM memory_fts WHERE id = old.id AND category = 'episode';
+END;
+CREATE TRIGGER IF NOT EXISTS trg_invariants_insert AFTER INSERT ON invariants BEGIN
+    INSERT INTO memory_fts(id, category, title, body, tags)
+    VALUES (new.id, 'invariant', new.key, new.rule, new.tags);
+END;
+CREATE TRIGGER IF NOT EXISTS trg_pitfalls_insert AFTER INSERT ON pitfalls BEGIN
+    INSERT INTO memory_fts(id, category, title, body, tags)
+    VALUES (new.id, 'pitfall', new.key, new.description || ' Remedy: ' || new.remedy, new.tags);
+END;
+CREATE TRIGGER IF NOT EXISTS trg_episodes_insert AFTER INSERT ON episodic_log BEGIN
+    INSERT INTO memory_fts(id, category, title, body, tags)
+    VALUES (new.id, 'episode', '[' || new.project || '] ' || new.summary, new.details, new.tags);
+END;
+"""
+
+
+def _ensure_matrix_schema(mx_obj: Any) -> None:
+    """Ensure CognitiveMatrix schema exists on newly created custom DB paths."""
+    conn = mx_obj.get_conn()
+    has_pitfalls = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='pitfalls'"
+    ).fetchone()
+    if not has_pitfalls:
+        conn.executescript(_MATRIX_SCHEMA_BOOTSTRAP)
+        conn.commit()
+
+
+def _slug_key(prefix: str, text: str) -> str:
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
+    return f"{prefix}_{digest}"
+
+
+def ingest_briefing_to_stores(
+    master_briefing: Dict[str, Any],
+    hyperdb: Optional[Any] = None,
+    matrix: Optional[Any] = None,
+    hyperdb_path: Optional[Path] = None,
+    matrix_db_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """Ingest extracted briefing tools/deadlines into HyperDB and alerts/deprecations into CognitiveMatrix."""
+    if not isinstance(master_briefing, dict) or not master_briefing.get("found"):
+        return {
+            "status": "skipped",
+            "reason": "no_master_briefing",
+            "hyperdb_written": 0,
+            "matrix_written": 0,
+            "errors": [],
+        }
+
+    _ensure_ecosystem_paths()
+    artifacts = extract_briefing_artifacts(master_briefing)
+    subject = artifacts["subject"]
+    date_val = artifacts["date"] or datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
+    source_id = _slug_key("briefing", f"{subject}|{date_val}")
+    errors: List[str] = []
+    hyperdb_written = 0
+    matrix_written = 0
+
+    own_hyperdb = False
+    db_obj = hyperdb
+    try:
+        if db_obj is None:
+            from hypernote.core.db import HyperDB
+
+            db_obj = HyperDB(db_path=str(hyperdb_path)) if hyperdb_path else HyperDB()
+            own_hyperdb = True
+
+        content_parts = [
+            f"Subject: {subject}",
+            f"Date: {date_val}",
+        ]
+        if artifacts["tools"]:
+            content_parts.append(
+                "AI Tools & Research:\n"
+                + "\n".join(f"- [{t['hardware_fit']}] {t['text']}" for t in artifacts["tools"])
+            )
+        if artifacts["deadlines"]:
+            content_parts.append(
+                "Deprecation Deadlines:\n"
+                + "\n".join(f"- ({d['date']}) {d['text']}" for d in artifacts["deadlines"])
+            )
+        if artifacts["alerts"]:
+            content_parts.append("Account & Billing Alerts:\n" + "\n".join(f"- {a}" for a in artifacts["alerts"]))
+        if artifacts["unwrapped_urls"]:
+            content_parts.append("Unwrapped Links:\n" + "\n".join(f"- {u}" for u in artifacts["unwrapped_urls"]))
+
+        full_content = "\n\n".join(content_parts)
+        chunks = [full_content[i : i + 800] for i in range(0, len(full_content), 800)] or [subject]
+        db_obj.insert_source(source_id, subject, "master_briefing", f"briefing://{date_val}", full_content, chunks)
+        hyperdb_written += 1
+
+        for tool in artifacts["tools"][:40]:
+            db_obj.insert_entity(
+                tool["hardware_fit"],
+                "HardwareFit",
+                source_id,
+                tool["text"][:200],
+            )
+            hyperdb_written += 1
+
+        links = artifacts["links"]
+        for gh_url in links.get("github", []):
+            parts = [p for p in urlsplit(gh_url).path.split("/") if p]
+            name = "/".join(parts[:2]) if len(parts) >= 2 else gh_url
+            db_obj.insert_entity(name, "GitHubRepo", source_id, gh_url)
+            hyperdb_written += 1
+        for hf_url in links.get("huggingface", []):
+            parts = [p for p in urlsplit(hf_url).path.split("/") if p]
+            name = "/".join(parts[:2]) if len(parts) >= 2 else hf_url
+            db_obj.insert_entity(name, "HuggingFaceModel", source_id, hf_url)
+            hyperdb_written += 1
+        for ax_url in links.get("arxiv", []):
+            parts = [p for p in urlsplit(ax_url).path.split("/") if p]
+            name = f"arXiv:{parts[-1]}" if parts else ax_url
+            db_obj.insert_entity(name, "ResearchPaper", source_id, ax_url)
+            hyperdb_written += 1
+        for tool_url in links.get("tools", []):
+            host = urlsplit(tool_url).netloc or tool_url
+            db_obj.insert_entity(host, "ToolLink", source_id, tool_url)
+            hyperdb_written += 1
+
+        for dl in artifacts["deadlines"]:
+            db_obj.insert_timeline_event(dl["date"], dl["text"], source_id, confidence=0.95)
+            hyperdb_written += 1
+    except Exception as exc:
+        logger.warning("HyperDB briefing ingestion failed: %s", exc)
+        errors.append(f"hyperdb: {exc}")
+    finally:
+        if own_hyperdb and db_obj is not None:
+            try:
+                db_obj.close()
+            except Exception:
+                pass
+
+    own_matrix = False
+    mx_obj = matrix
+    try:
+        if mx_obj is None:
+            from raven_matrix.engine import CognitiveMatrix
+
+            if matrix_db_path is not None:
+                mx_obj = CognitiveMatrix(db_path=Path(matrix_db_path), json_mirror_path=None, attach_graph=False)
+            else:
+                mx_obj = CognitiveMatrix()
+            own_matrix = True
+        _ensure_matrix_schema(mx_obj)
+
+        for alert_text in artifacts["alerts"]:
+            key = _slug_key("ai_alert", alert_text.lower())
+            mx_obj.remember_pitfall(
+                key=key,
+                description=alert_text,
+                remedy="Review provider billing/spend caps or proxy rules and update Orbit routers.",
+                domain="ai_alerts",
+                tags=["ai_billing_alert", "briefing"],
+            )
+            matrix_written += 1
+
+        for dl in artifacts["deadlines"]:
+            key = _slug_key("ai_dep", f"{dl['date']}|{dl['text'].lower()}")
+            mx_obj.remember_invariant(
+                key=key,
+                rule=f"[{dl['date']}] {dl['text']}",
+                domain="ai_deprecations",
+                tags=["ai_deprecation", "deadline", "briefing"],
+                is_permanent=False,
+            )
+            matrix_written += 1
+
+        mx_obj.log_episode(
+            project="ai_news_intake",
+            summary=f"Ingested {subject}",
+            details=(
+                f"Tools={len(artifacts['tools'])}, Deadlines={len(artifacts['deadlines'])}, "
+                f"Alerts={len(artifacts['alerts'])}, URLs={len(artifacts['unwrapped_urls'])}"
+            ),
+            tags=["master_briefing", "hypernote", "cognitive_matrix"],
+        )
+        matrix_written += 1
+    except Exception as exc:
+        logger.warning("CognitiveMatrix briefing ingestion failed: %s", exc)
+        errors.append(f"matrix: {exc}")
+    finally:
+        if own_matrix and mx_obj is not None:
+            try:
+                mx_obj.close()
+            except Exception:
+                pass
+
+    return {
+        "status": "ingested" if not errors else "partial",
+        "source_id": source_id,
+        "hyperdb_written": hyperdb_written,
+        "matrix_written": matrix_written,
+        "unwrapped_urls": artifacts["unwrapped_urls"],
+        "tools_count": len(artifacts["tools"]),
+        "deadlines_count": len(artifacts["deadlines"]),
+        "alerts_count": len(artifacts["alerts"]),
+        "errors": errors,
+    }

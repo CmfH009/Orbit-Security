@@ -74,6 +74,83 @@ except ImportError:
         query_intel_and_world_news = None
         query_email_hygiene = None
 
+try:
+    from orbit_security.inbox_guardrail import PromptInjectionSanitizer
+except ImportError:
+    PromptInjectionSanitizer = None
+
+
+def _sanitize_inbound_text(value: Any, max_chars: int = 4000) -> str:
+    """Screens untrusted inbound text through PromptInjectionSanitizer."""
+    if value is None:
+        return ""
+    raw = str(value)
+    if PromptInjectionSanitizer is not None:
+        return PromptInjectionSanitizer.sanitize(raw, max_chars=max_chars)
+    return raw[:max_chars].strip()
+
+
+def sanitize_intel_news(intel_news: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Sanitizes HN and Google News RSS feed payloads before Markdown/TTS exposure."""
+    if not isinstance(intel_news, dict):
+        return {}
+    cleaned = dict(intel_news)
+    for list_key in ("ai_innovations", "tech_and_security", "world_news"):
+        items = cleaned.get(list_key)
+        if isinstance(items, list):
+            cleaned[list_key] = [_sanitize_inbound_text(item, max_chars=1000) for item in items if item is not None]
+    for str_key in ("ai_takeaway", "world_takeaway"):
+        if cleaned.get(str_key) is not None:
+            cleaned[str_key] = _sanitize_inbound_text(cleaned[str_key], max_chars=1000)
+    return cleaned
+
+
+def sanitize_master_briefing(master_briefing: Any) -> Any:
+    """Sanitizes extracted IMAP Combined Daily Master Briefing fields."""
+    if not isinstance(master_briefing, dict):
+        return master_briefing
+    cleaned = dict(master_briefing)
+    if cleaned.get("subject") is not None:
+        cleaned["subject"] = _sanitize_inbound_text(cleaned["subject"], max_chars=500)
+    if cleaned.get("body_text") is not None:
+        cleaned["body_text"] = _sanitize_inbound_text(cleaned["body_text"], max_chars=4000)
+    if isinstance(cleaned.get("highlights"), list):
+        cleaned["highlights"] = [_sanitize_inbound_text(h, max_chars=500) for h in cleaned["highlights"]]
+    if isinstance(cleaned.get("sections"), dict):
+        sec_clean: Dict[str, Any] = {}
+        for sec_k, sec_vals in cleaned["sections"].items():
+            if isinstance(sec_vals, list):
+                sec_clean[sec_k] = [_sanitize_inbound_text(v, max_chars=500) for v in sec_vals]
+            else:
+                sec_clean[sec_k] = sec_vals
+        cleaned["sections"] = sec_clean
+    return cleaned
+
+
+def sanitize_email_data(email_data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Sanitizes IMAP-derived lists and nested master_briefing payloads."""
+    if not isinstance(email_data, dict):
+        return {}
+    cleaned = dict(email_data)
+    for list_key in (
+        "unread_list",
+        "urgent_list",
+        "awaiting_external_reply",
+        "historical_alerts_sample",
+        "ci_alerts",
+        "deal_threads",
+    ):
+        items = cleaned.get(list_key)
+        if isinstance(items, list):
+            cleaned[list_key] = [_sanitize_inbound_text(item, max_chars=600) for item in items]
+    if isinstance(cleaned.get("email_hygiene"), dict):
+        hyg = dict(cleaned["email_hygiene"])
+        if "master_briefing" in hyg:
+            hyg["master_briefing"] = sanitize_master_briefing(hyg["master_briefing"])
+        cleaned["email_hygiene"] = hyg
+    return cleaned
+
+
 load_dotenv()
 
 
@@ -548,12 +625,12 @@ def triage_email_messages(
     }
 
     ci_alerts = [
-        _clean_subject(w.subject)
+        _sanitize_inbound_text(_clean_subject(w.subject), max_chars=500)
         for w in getattr(digest, "work_items", [])
         if any(k in f"{w.subject} {w.sender}".lower() for k in ("orbit-security", "cmfh009", "run failed", "secrets", "ci"))
     ]
     deal_threads = [
-        _clean_subject(d.subject)
+        _sanitize_inbound_text(_clean_subject(d.subject), max_chars=500)
         for d in getattr(digest, "work_items", [])
         if any(k in f"{d.subject} {d.sender}".lower() for k in ("stripe", "lead", "pricing", "inquiry", "deal", "client", "revenue"))
     ]
@@ -568,11 +645,12 @@ def triage_email_messages(
     historical_urgent: List[str] = []
 
     for item in raw_urgent:
-        subj = _clean_subject(item.subject)
-        is_self, is_ci = _is_self_briefing_or_ci(subj, item.sender)
+        subj = _sanitize_inbound_text(_clean_subject(item.subject), max_chars=500)
+        item_sender = _sanitize_inbound_text(item.sender, max_chars=300)
+        is_self, is_ci = _is_self_briefing_or_ci(subj, item_sender)
         if is_self or is_ci:
             continue
-        if owner_low and owner_low in str(item.sender or "").lower():
+        if owner_low and owner_low in item_sender.lower():
             continue
         t_key = _normalize_thread_key(subj)
         if t_key in seen_threads:
@@ -583,14 +661,14 @@ def triage_email_messages(
         is_unread = not bool(getattr(msg, "is_read", True)) if msg is not None else False
         ts = _msg_epoch_ts(msg)
         is_recent_24h = ts > 0.0 and (ref_ts - ts) <= 86400.0
-        formatted = f"{subj} — {item.sender} ({item.date_str})"
+        formatted = f"{subj} — {item_sender} ({item.date_str})"
 
         if is_unread or is_recent_24h:
             reply_reason = None
-            if owner_low not in str(item.sender or "").lower():
+            if owner_low not in item_sender.lower():
                 reply_reason = _detect_outbound_reply_reason(
                     subject=subj,
-                    sender=item.sender,
+                    sender=item_sender,
                     msg_ts=ts,
                     outbound_by_thread=outbound_by_thread,
                     norm_sent_ts=norm_sent_ts,
@@ -609,8 +687,8 @@ def triage_email_messages(
     unread_msgs.sort(key=_msg_epoch_ts, reverse=True)
     unread_non_ci: List[str] = []
     for m in unread_msgs:
-        subj = _clean_subject(getattr(m, "subject", ""))
-        sender = str(getattr(m, "sender", ""))
+        subj = _sanitize_inbound_text(_clean_subject(getattr(m, "subject", "")), max_chars=500)
+        sender = _sanitize_inbound_text(str(getattr(m, "sender", "")), max_chars=300)
         is_self, is_ci = _is_self_briefing_or_ci(subj, sender)
         if is_self or is_ci:
             continue
@@ -710,7 +788,7 @@ def query_live_email_telemetry() -> Dict[str, Any]:
             master_briefing=hygiene_res.get("master_briefing"),
         )
         result["email_hygiene"] = hygiene_res
-        return result
+        return sanitize_email_data(result)
     except Exception as e:
         return {
             "status": f"error: {e}",
@@ -1201,15 +1279,34 @@ def _build_agenda_items(
 
 
 def _render_master_briefing_block(master_briefing: Any) -> str:
-    """Formats the Combined Daily Master Briefing delta block gracefully."""
+    """Formats the Combined Daily Master Briefing delta and sections 1-4 cleanly."""
     if isinstance(master_briefing, dict) and master_briefing.get("found"):
         subject = _clean_subject(str(master_briefing.get("subject") or "Combined Daily Master Briefing"))
         date_val = str(master_briefing.get("date") or "").strip()
         highlights = [str(h).strip() for h in (master_briefing.get("highlights") or []) if str(h).strip()]
+        sections = master_briefing.get("sections") or {}
         date_suffix = f" *({date_val})*" if date_val else ""
-        lines = [f"#### 📨 Combined Daily Master Briefing (24h Personal & Ecosystem Delta)", f"- **Latest Dispatch:** {subject}{date_suffix}"]
-        for h in highlights[:8]:
-            lines.append(f"  - {h}")
+        lines = [
+            "#### 📨 Combined Daily Master Briefing (24h Personal & Ecosystem Delta)",
+            f"- **Latest Dispatch:** {subject}{date_suffix}",
+        ]
+        section_labels = (
+            ("personal_delta", "Personal & Account Delta"),
+            ("ai_news", "AI News & Releases"),
+            ("youtube_digest", "Technical YouTube Digest"),
+            ("deprecations", "30-Day Deprecations & Deadlines"),
+        )
+        has_sections = any(sections.get(key) for key, _ in section_labels)
+        if has_sections:
+            for key, title in section_labels:
+                items = [str(x).strip() for x in (sections.get(key) or []) if str(x).strip()]
+                if items:
+                    lines.append(f"  - **{title}:**")
+                    for item in items[:12]:
+                        lines.append(f"    - {item}")
+        else:
+            for h in highlights[:24]:
+                lines.append(f"  - {h}")
         return "\n".join(lines)
     return "#### 📨 Combined Daily Master Briefing (24h Personal & Ecosystem Delta)\n- No Combined Daily Master Briefing found in latest inbox sweep."
 
@@ -1241,14 +1338,16 @@ def generate_markdown(
     inbox = inbox or {}
     campaigns = campaigns or {}
     option_c = option_c or {}
-    email_data = email_data or {}
+    email_data = sanitize_email_data(email_data or {})
     live_ci = live_ci or {}
     geo_panel = geo_panel or {}
     sys_telem = sys_telem or {}
     proj_radar = proj_radar or {}
     cal_tasks = cal_tasks or {}
-    intel_news = intel_news or {}
-    email_hygiene = email_hygiene or {}
+    intel_news = sanitize_intel_news(intel_news or {})
+    email_hygiene = dict(email_hygiene or {})
+    if "master_briefing" in email_hygiene:
+        email_hygiene["master_briefing"] = sanitize_master_briefing(email_hygiene["master_briefing"])
     deltas = deltas or {}
 
     if ci_reconciled is None:
@@ -1588,14 +1687,17 @@ def generate_briefing(speak: bool = False, email: bool = False, recipient: Optio
     sys_telem = query_system_telemetry() if query_system_telemetry else {}
     proj_radar = query_projects_radar() if query_projects_radar else {}
     cal_tasks = query_calendar_and_tasks() if query_calendar_and_tasks else {}
-    intel_news = query_intel_and_world_news() if query_intel_and_world_news else {}
+    intel_news = sanitize_intel_news(query_intel_and_world_news() if query_intel_and_world_news else {})
     email_hygiene = email_data.get("email_hygiene")
     if not email_hygiene and query_email_hygiene:
         try:
             email_hygiene = query_email_hygiene()
         except Exception:
             email_hygiene = {}
-    email_hygiene = email_hygiene or {}
+    email_hygiene = dict(email_hygiene or {})
+    if "master_briefing" in email_hygiene:
+        email_hygiene["master_briefing"] = sanitize_master_briefing(email_hygiene["master_briefing"])
+    email_data = sanitize_email_data(email_data)
 
     drives = sys_telem.get("drives", {})
     primary_drive = drives.get("A:\\") or drives.get("C:\\") or (next(iter(drives.values())) if drives else {})
@@ -1649,7 +1751,16 @@ def generate_briefing(speak: bool = False, email: bool = False, recipient: Optio
     print(report)
     print(f"\n[✔] Written to {report_path}")
 
-    # Dispatch email if requested (skipped in --dry-run)
+    # Dispatch email & persist extracted briefing intel into HyperDB + CognitiveMatrix (skipped in --dry-run)
+    if not dry_run:
+        master_brief = email_hygiene.get("master_briefing")
+        if isinstance(master_brief, dict) and master_brief.get("found"):
+            try:
+                from orbit_security.hypernote_briefing import ingest_briefing_to_stores
+
+                ingest_briefing_to_stores(master_brief)
+            except Exception:
+                pass
     if email and not dry_run:
         dispatch_email_briefing(report, recipient=recipient)
 

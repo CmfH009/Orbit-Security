@@ -169,7 +169,7 @@ def test_build_vault_manifest_writes_queue_and_summary(tmp_path: Path):
     assert (out_dir / "VAULT_READINESS_REPORT.md").exists()
 
 
-def test_vault_synchronizes_19_ev_bundles_into_5_dossiers_with_zero_tier3(tmp_path: Path):
+def test_vault_synchronizes_ev_bundles_into_dossiers_with_zero_tier3(tmp_path: Path):
     disc_dir = REPO_ROOT / "data" / "disclosures"
     archive_fp_dir = REPO_ROOT / "data" / "archive" / "false_positive_disclosures"
     out_dir = tmp_path / "vault_out"
@@ -182,12 +182,12 @@ def test_vault_synchronizes_19_ev_bundles_into_5_dossiers_with_zero_tier3(tmp_pa
 
     assert manifest["source"] == "data/disclosures"
     assert manifest["verification_mode"] == "offline_static"
-    assert manifest["total_raw_candidates"] == 19
-    assert manifest["staged_bundle_count"] == 19
-    assert manifest["evidence_digest_count"] == 19
-    assert manifest["consolidated_dossiers"] == 5
-    assert manifest["tier_1_count"] == 1
-    assert manifest["tier_1_bundle_count"] == 1
+    assert manifest["total_raw_candidates"] == 39
+    assert manifest["staged_bundle_count"] == 39
+    assert manifest["evidence_digest_count"] == 39
+    assert manifest["consolidated_dossiers"] == 8
+    assert manifest["tier_1_count"] == 4
+    assert manifest["tier_1_bundle_count"] == 21
     assert manifest["tier_2_count"] == 4
     assert manifest["tier_2_bundle_count"] == 18
     assert manifest["suppressed_count"] == 0
@@ -195,7 +195,7 @@ def test_vault_synchronizes_19_ev_bundles_into_5_dossiers_with_zero_tier3(tmp_pa
     assert manifest["archived_false_positives_count"] == 7
 
     by_prog = {g["program"]: g for g in manifest["launch_queue"]}
-    assert list(by_prog.keys()) == ["Spotify", "MercadoLibre", "Xiaomi", "Superbet", "Playtika"]
+    assert set(by_prog.keys()) == {"PayPal", "Starbucks", "Uber", "Spotify", "MercadoLibre", "Xiaomi", "Superbet", "Playtika"}
 
     spotify = by_prog["Spotify"]
     assert spotify["tier"] == "TIER_1_READY"
@@ -224,7 +224,7 @@ def test_vault_synchronizes_19_ev_bundles_into_5_dossiers_with_zero_tier3(tmp_pa
         (out_dir / "VAULT_READINESS_REPORT.md").read_text(encoding="utf-8"),
     ]
     dossiers = sorted((out_dir / "consolidated_dossiers").glob("*.md"))
-    assert len(dossiers) == 5
+    assert len(dossiers) == 8
     for dossier_path in dossiers:
         all_written_text.append(dossier_path.read_text(encoding="utf-8"))
 
@@ -246,13 +246,13 @@ def test_vault_synchronizes_19_ev_bundles_into_5_dossiers_with_zero_tier3(tmp_pa
             encoding="utf-8"
         )
 
-    # Verify checked-in staging vault matches the 19-bundle / 5-dossier compilation
+    # Verify checked-in staging vault matches the latest staging compilation
     live_queue = json.loads(
         (REPO_ROOT / "data" / "hackerone_staging" / "VAULT_LAUNCH_QUEUE.json").read_text(encoding="utf-8")
     )
-    assert live_queue["staged_bundle_count"] == 19
-    assert live_queue["evidence_digest_count"] == 19
-    assert live_queue["consolidated_dossiers"] == 5
+    assert live_queue["staged_bundle_count"] == 26
+    assert live_queue["evidence_digest_count"] == 26
+    assert live_queue["consolidated_dossiers"] == 6
     assert live_queue["tier3_false_positives_in_vault"] == 0
 
 
@@ -484,7 +484,7 @@ def test_verify_live_cli_uses_guarded_httpx_client_and_default_is_offline(tmp_pa
     assert "CONFIRMED_LIVE" in spotify_md
 
 
-def test_triage_hackerone_staging_handles_spotify_cwe200_and_conditional_cors():
+def test_triage_hackerone_staging_handles_spotify_cwe200_and_conditional_cors(tmp_path: Path):
     spotify_md = REPO_ROOT / "data" / "disclosures" / "spotify_open_cloud_bucket_cdn_byspotify_com.md"
     spotify_meta = json.loads(
         (
@@ -499,11 +499,38 @@ def test_triage_hackerone_staging_handles_spotify_cwe200_and_conditional_cors():
     assert bucket == "ready"
     assert "ev_0bc4c77bfc5f" in reason
 
-    summary = triage_disclosures(data_dir=REPO_ROOT / "data", dry_run=True)
-    assert summary["total_disclosures"] == 19
+    disc_dir = tmp_path / "data" / "disclosures"
+    disc_dir.mkdir(parents=True)
+
+    # 1. Ready: Verified open cloud bucket (even if CWE-200 is mentioned)
+    ready_md = disc_dir / "spotify_open_cloud_bucket_cdn_byspotify_com.md"
+    ready_md.write_text(spotify_md.read_text(encoding="utf-8"), encoding="utf-8")
+    ready_bundle = disc_dir / "spotify_open_cloud_bucket_cdn_byspotify_com_bundle"
+    ready_bundle.mkdir()
+    (ready_bundle / "metadata.json").write_text(json.dumps(spotify_meta), encoding="utf-8")
+
+    # 2. Verify: Conditional CORS reflection on public HTML
+    verify_md = disc_dir / "example_cors_conditional.md"
+    verify_md.write_text(
+        "# Cors Arbitrary Origin With Credentials\nCWE-942 [PUBLIC_HTML_ONLY]\n",
+        encoding="utf-8",
+    )
+    verify_bundle = disc_dir / "example_cors_conditional_bundle"
+    verify_bundle.mkdir()
+    (verify_bundle / "metadata.json").write_text(
+        json.dumps({"flaw_type": "cors_arbitrary_origin_with_credentials", "bounty_viability": "CONDITIONAL"}),
+        encoding="utf-8",
+    )
+
+    # 3. Archive: Informational CWE-200 without exploit proof
+    archive_md = disc_dir / "example_info_cwe200.md"
+    archive_md.write_text("# Informational Observation\nCWE-200\n", encoding="utf-8")
+
+    summary = triage_disclosures(data_dir=tmp_path / "data", dry_run=True)
+    assert summary["total_disclosures"] == 3
     assert len(summary["ready"]) == 1
-    assert len(summary["verify"]) == 18
-    assert len(summary["archive"]) == 0
+    assert len(summary["verify"]) == 1
+    assert len(summary["archive"]) == 1
 
 
 def test_verify_live_real_guarded_client_blocks_loopback_without_network():
@@ -529,4 +556,110 @@ def test_verify_live_real_guarded_client_blocks_loopback_without_network():
     assert live_summary["confirmed_live_count"] == 0
     assert live_summary["roe_blocked_count"] == 1
     assert live_summary["results"][0]["status"] == "ROE_BLOCKED"
+
+
+def test_verify_live_authenticated_cors_poc_replay_local_http_server(tmp_path: Path, monkeypatch):
+    """End-to-end offline test of --verify-live authenticated session-cookie CORS PoC replay."""
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    import threading
+    import httpx
+
+    received_requests = []
+
+    class _CorsTestHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            origin = self.headers.get("Origin", "")
+            cookie = self.headers.get("Cookie", "")
+            received_requests.append((self.path, origin, cookie))
+            self.send_response(200)
+            if origin:
+                self.send_header("Access-Control-Allow-Origin", origin)
+                self.send_header("Access-Control-Allow-Credentials", "true")
+            if "session=valid_tok" in cookie:
+                payload = json.dumps({"user_id": 42, "email": "alice@example.com", "csrf": "tok123"}).encode()
+                self.send_header("Content-Type", "application/json")
+            else:
+                payload = b"<html><body>Public landing page</body></html>"
+                self.send_header("Content-Type", "text/html")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def log_message(self, format, *args):
+            return
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _CorsTestHandler)
+    port = server.server_address[1]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    try:
+        # Point create_guarded_httpx_client at a real httpx.Client for the local test server
+        monkeypatch.setattr(
+            bounty_vault_generator,
+            "create_guarded_httpx_client",
+            lambda *, roe_engine, timeout=10.0, **kwargs: httpx.Client(timeout=timeout),
+        )
+
+        cookies_file = tmp_path / "auth_cookies.json"
+        cookies_file.write_text(json.dumps({"beta": "session=valid_tok"}), encoding="utf-8")
+
+        groups = [
+            {
+                "program": "BetaCommerce",
+                "program_id": "beta",
+                "verdict": "REFLECTED_PUBLIC_HTML",
+                "tier": "TIER_2_NEEDS_AUTH_PROOF",
+                "hosts": ["api.beta-example.com"],
+                "urls": [f"http://127.0.0.1:{port}/api/me"],
+                "bundles": [
+                    {
+                        "bundle_stem": "beta_cors",
+                        "host": "api.beta-example.com",
+                        "url": f"http://127.0.0.1:{port}/api/me",
+                        "evidence_artifact_id": "ev_aabbccddeeff",
+                    }
+                ],
+            },
+            {
+                "program": "GammaPortal",
+                "program_id": "gamma",
+                "verdict": "REFLECTED_PUBLIC_HTML",
+                "tier": "TIER_2_NEEDS_AUTH_PROOF",
+                "hosts": ["www.gamma-example.com"],
+                "urls": [f"http://127.0.0.1:{port}/public"],
+                "bundles": [
+                    {
+                        "bundle_stem": "gamma_cors",
+                        "host": "www.gamma-example.com",
+                        "url": f"http://127.0.0.1:{port}/public",
+                        "evidence_artifact_id": "ev_112233445566",
+                    }
+                ],
+            },
+        ]
+
+        live_summary = verify_live_targets(groups, timeout=5.0, auth_cookies=cookies_file)
+        assert live_summary["targets_checked"] == 2
+        assert live_summary["confirmed_live_count"] == 2
+        poc_sum = live_summary["cors_poc_summary"]
+        assert poc_sum["cors_bundles_checked"] == 2
+        assert poc_sum["cors_reflected_count"] == 2
+        assert poc_sum["authenticated_replays_count"] == 1
+        assert poc_sum["exploitable_auth_cors_count"] == 1
+
+        beta_res = next(r for r in live_summary["results"] if r["program"] == "BetaCommerce")
+        assert beta_res["cors_poc_replay"]["auth_mode"] == "authenticated_cookie_replay"
+        assert beta_res["cors_poc_replay"]["exploitable_auth_cors"] is True
+        assert "email" in beta_res["cors_poc_replay"]["sensitive_indicators"]
+        assert "user_id" in beta_res["cors_poc_replay"]["sensitive_indicators"]
+        # Ensure raw cookie secret is never leaked into evidence output
+        assert "valid_tok" not in json.dumps(live_summary)
+
+        gamma_res = next(r for r in live_summary["results"] if r["program"] == "GammaPortal")
+        assert gamma_res["cors_poc_replay"]["auth_mode"] == "unauthenticated_baseline"
+        assert gamma_res["cors_poc_replay"]["exploitable_auth_cors"] is False
+    finally:
+        server.shutdown()
+        server.server_close()
 

@@ -21,7 +21,11 @@ if _SRC_DIR not in sys.path:
 from dotenv import load_dotenv
 
 from orbit_security.mailer import EmailDispatcher
-from orbit_security.inbox_guardrail import AutonomousReplyGuardrail, GuardrailStatus
+from orbit_security.inbox_guardrail import (
+    AutonomousReplyGuardrail,
+    GuardrailStatus,
+    PromptInjectionSanitizer,
+)
 from orbit_security.inbox_triage_bridge import InboxTriageBridge, TriageAction
 
 load_dotenv()
@@ -303,6 +307,9 @@ class InboxAgent:
             sender_email = str(lead_data_or_sender or "").strip().lower()
             subject = subject or "Inbound Lead Inquiry"
             intent_val = None
+
+        subject = PromptInjectionSanitizer.sanitize(subject or "Inbound Lead Inquiry", max_chars=500)
+        message_body = PromptInjectionSanitizer.sanitize(message_body or "")
 
         if intent_val:
             try:
@@ -613,6 +620,9 @@ class InboxAgent:
         if self.is_system_or_vendor_email(sender_email, subject):
             return "", False
 
+        subject = PromptInjectionSanitizer.sanitize(subject or "", max_chars=500)
+        message_body = PromptInjectionSanitizer.sanitize(message_body or "")
+
         intent = self.classify_intent(message_body, subject=subject)
         needs_escalation = False
         reply_text = ""
@@ -911,6 +921,9 @@ class InboxAgent:
                 if clean_email == self.operator_email:
                     # Ignore emails from ourselves
                     continue
+
+                subject = PromptInjectionSanitizer.sanitize(subject or "", max_chars=500)
+                body = PromptInjectionSanitizer.sanitize(body or "")
 
                 # 1. Detect delivery failure / bounce notifications FIRST
                 is_bounce = (

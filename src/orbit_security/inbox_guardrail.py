@@ -37,10 +37,12 @@ FORBIDDEN_PROMISES: List[str] = [
 
 ADVERSARIAL_PATTERNS: List[re.Pattern] = [
     re.compile(r"(?i)\bignore\s+(?:all\s+)?previous\s+instructions\b"),
+    re.compile(r"(?i)\b(?:override|forget)\s+(?:all\s+)?(?:previous\s+)?instructions\b"),
     re.compile(r"(?i)\bsystem\s+prompt\b"),
     re.compile(r"(?i)\byou\s+are\s+now\s+in\s+developer\s+mode\b"),
     re.compile(r"(?i)\bdisregard\s+(?:all\s+)?security\s+polic(?:y|ies)\b"),
     re.compile(r"(?i)\bjailbreak\b"),
+    re.compile(r"<\|(?:im_start|im_end|system|assistant|user)\|>", re.IGNORECASE),
 ]
 
 

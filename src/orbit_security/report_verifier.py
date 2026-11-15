@@ -272,6 +272,19 @@ class ReportCriticVerifier:
         "dependency_confusion": ["dependency", "namespace", "npm", "pypi"],
         "ssrf": ["ssrf", "server-side request forgery", "metadata", "169.254.169.254"],
         "idor": ["idor", "insecure direct object", "direct object reference"],
+        "firebase_exposure": ["firebase", "firebaseio", "firebasedatabase", "exposed_firebase_db", "rtdb"],
+        "git_exposure": ["git", ".git", "exposed_git", "repositoryformatversion"],
+        "svn_exposure": ["svn", ".svn", "exposed_svn", "subversion"],
+        "ds_store_exposure": ["ds_store", ".ds_store", "exposed_ds_store", "bud1"],
+        "server_status_exposure": ["server-status", "server_status", "exposed_server_status", "apache server status"],
+        "actuator_exposure": ["actuator", "exposed_actuator", "spring", "mappings", "beans"],
+        "env_exposure": ["exposed_env", ".env", "env configuration"],
+        "aws_credentials_exposure": ["exposed_aws_credentials", ".aws/credentials", "aws credential"],
+        "backup_config_exposure": ["exposed_backup_config", "wp-config", "config.php", "backup configuration"],
+        "secret_exposure": [
+            "exposed_js_secret", "js secret", "hardcoded", "secret", "credential",
+            "private key", "stripe", "github", "sendgrid", "slack", "aws access key",
+        ],
     }
 
     @classmethod
@@ -390,6 +403,7 @@ class ReportCriticVerifier:
             for art in verified_artifacts:
                 if (
                     clean_domain in art.target.lower()
+                    or (art.flaw_type and art.flaw_type.lower() in clean_pitch)
                     or (art.flaw_type and any(k in art.flaw_type.lower() for k in clean_pitch.split()))
                 ):
                     verified_artifact_ids.add(art.artifact_id)

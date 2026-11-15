@@ -616,8 +616,38 @@ def _strip_tracking_urls(text: str) -> str:
     return _clean_single_line(cleaned)
 
 
+def _detect_master_section(line: str) -> Optional[str]:
+    """Identify Consolidated Daily Master Briefing section headers cleanly."""
+    clean = re.sub(r"^[#*\s\-•]+", "", line or "").strip().lower()
+    clean = re.sub(r"[*_:]+$", "", clean).strip()
+    if not clean:
+        return None
+    if re.search(r"^(?:section\s*1\b|1\.\s+).*?(?:personal|delta|account)", clean) or clean.startswith("24h personal delta"):
+        return "personal_delta"
+    if re.search(r"^(?:section\s*2\b|2\.\s+).*?(?:ai\s+news|ecosystem|research|model|tool)", clean) or re.match(r"^(?:ai\s+news|ecosystem\s+news)\b", clean):
+        return "ai_news"
+    if re.search(r"^(?:section\s*3\b|3\.\s+).*?(?:youtube|video)", clean) or re.match(r"^(?:technical\s+)?youtube\s+digest\b", clean):
+        return "youtube_digest"
+    if re.search(r"^(?:section\s*4\b|4\.\s+).*?(?:deprecat|30-?day|deadline|retire|sunset|alert)", clean) or re.match(r"^(?:30-?day\s+deprecations|upcoming\s+deprecations)\b", clean):
+        return "deprecations"
+    return None
+
+
+def _extract_raw_urls(raw_text: str) -> List[str]:
+    """Extract and deduplicate HTTP(S) URLs from plain text or HTML bodies."""
+    unescaped = (raw_text or "").replace("&amp;", "&")
+    seen: set[str] = set()
+    urls: List[str] = []
+    for match in re.findall(r"https?://[^\s<>\"'\)\]]+", unescaped):
+        cleaned = match.rstrip(".,;:!?")
+        if cleaned and cleaned not in seen:
+            seen.add(cleaned)
+            urls.append(cleaned)
+    return urls
+
+
 def _extract_master_briefing_delta(messages: Sequence[Any]) -> Dict[str, Any]:
-    """Extracts the latest 'Combined Daily Master Briefing' subject, date, and topic highlights."""
+    """Extracts the latest 'Combined Daily Master Briefing' subject, date, sections, URLs, and highlights."""
     candidates: List[Tuple[float, int, Any, str, Optional[datetime.datetime]]] = []
     for idx, msg in enumerate(messages or []):
         subj = _clean_single_line(str(_msg_field(msg, "subject", "") or ""))
@@ -643,17 +673,33 @@ def _extract_master_briefing_delta(messages: Sequence[Any]) -> Dict[str, Any]:
 
     highlights: List[str] = []
     seen_lower: set[str] = set()
+    sections: Dict[str, List[str]] = {
+        "personal_delta": [],
+        "ai_news": [],
+        "youtube_digest": [],
+        "deprecations": [],
+    }
+    section_seen: Dict[str, set[str]] = {k: set() for k in sections}
 
-    def _add_highlight(candidate_text: str) -> None:
+    def _clean_item(candidate_text: str) -> str:
         cleaned = _strip_tracking_urls(candidate_text).lstrip("-*• ").strip()
         if not cleaned or len(cleaned) < 4:
-            return
+            return ""
         if len(cleaned) > 280:
             truncated = cleaned[:277].rstrip()
             if " " in truncated and len(truncated) > 140:
                 truncated = truncated.rsplit(" ", 1)[0].rstrip(" ,;:")
             cleaned = truncated + "..."
+        return cleaned
+
+    def _add_highlight(candidate_text: str, section_name: Optional[str] = None) -> None:
+        cleaned = _clean_item(candidate_text)
+        if not cleaned:
+            return
         key = cleaned.lower()
+        if section_name and section_name in sections and key not in section_seen[section_name]:
+            section_seen[section_name].add(key)
+            sections[section_name].append(cleaned)
         if key not in seen_lower:
             seen_lower.add(key)
             highlights.append(cleaned)
@@ -667,6 +713,8 @@ def _extract_master_briefing_delta(messages: Sequence[Any]) -> Dict[str, Any]:
     body_html = str(_msg_field(best_msg, "body_html", "") or "")
     snippet = str(_msg_field(best_msg, "snippet", "") or "")
 
+    extracted_urls = _extract_raw_urls("\n".join(p for p in (body_text, body_html, snippet) if p))
+
     lines: List[str] = []
     if body_text.strip():
         lines = [ln.strip() for ln in body_text.splitlines() if ln.strip()]
@@ -679,26 +727,30 @@ def _extract_master_briefing_delta(messages: Sequence[Any]) -> Dict[str, Any]:
         r"^(?:combined daily master briefing|prepared for|self-healing status|executive table of contents|here is your\b|[=\-_]{3,})",
         re.IGNORECASE,
     )
-    bullet_lines: List[str] = []
-    numbered_lines: List[str] = []
-    for ln in lines[:200]:
+    bullet_items: List[Tuple[Optional[str], str]] = []
+    numbered_items: List[Tuple[Optional[str], str]] = []
+    current_section: Optional[str] = None
+
+    for ln in lines:
+        detected_section = _detect_master_section(ln)
+        if detected_section:
+            current_section = detected_section
+            continue
         if skip_line_re.match(ln):
             continue
         if ln.startswith(("- ", "* ", "• ")):
-            bullet_lines.append(ln[2:].strip())
+            bullet_items.append((current_section, ln[2:].strip()))
         elif re.match(r"^\d+\.\s+", ln):
-            numbered_lines.append(re.sub(r"^\d+\.\s+", "", ln).strip())
+            numbered_items.append((current_section, re.sub(r"^\d+\.\s+", "", ln).strip()))
+        elif current_section and len(ln) >= 12 and not ln.startswith(("http://", "https://")):
+            bullet_items.append((current_section, ln))
 
-    for b in bullet_lines:
-        if len(highlights) >= 8:
-            break
-        _add_highlight(b)
+    for sec_name, b in bullet_items:
+        _add_highlight(b, section_name=sec_name)
 
-    if not bullet_lines:
-        for n in numbered_lines:
-            if len(highlights) >= 6:
-                break
-            _add_highlight(n)
+    if not bullet_items or any(numbered_items):
+        for sec_name, n in numbered_items:
+            _add_highlight(n, section_name=sec_name)
 
     if not highlights and snippet.strip():
         _add_highlight(snippet)
@@ -707,7 +759,10 @@ def _extract_master_briefing_delta(messages: Sequence[Any]) -> Dict[str, Any]:
         "found": True,
         "subject": subject,
         "date": date_str,
-        "highlights": highlights[:8],
+        "highlights": highlights[:32],
+        "sections": sections,
+        "extracted_urls": extracted_urls,
+        "body_text": body_text or "\n".join(lines),
     }
 
 

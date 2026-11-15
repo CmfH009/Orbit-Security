@@ -343,11 +343,8 @@ class Blackboard:
                 VALUES (?, ?, ?, ?, ?, 0);
             """, (topic, event_type, source, payload_json, now))
             ev_id = cur.lastrowid
-            if ev_id and ev_id % 500 == 0 and topic in ("telemetry", "proactive_heartbeat"):
-                cur.execute(
-                    "DELETE FROM blackboard_events WHERE topic IN ('telemetry', 'proactive_heartbeat') AND id < ?",
-                    (max(0, ev_id - 5000),)
-                )
+            if ev_id and ev_id % 500 == 0:
+                self._prune_cursor(cur, now=now)
             conn.commit()
 
         event_dict = {
@@ -594,6 +591,103 @@ class Blackboard:
             conn.execute("DELETE FROM blackboard_events;")
             conn.commit()
 
+    def _prune_cursor(
+        self,
+        cur: sqlite3.Cursor,
+        now: Optional[float] = None,
+        max_age_days: Optional[float] = 14.0,
+        max_rows: Optional[int] = 10000,
+        telemetry_max_age_days: Optional[float] = 3.0,
+        telemetry_max_rows: Optional[int] = 2500,
+    ) -> Dict[str, int]:
+        """Executes bounded TTL and row-count retention pruning on an open cursor."""
+        now_ts = time.time() if now is None else float(now)
+        telemetry_ttl_deleted = 0
+        telemetry_cap_deleted = 0
+        ttl_deleted = 0
+        cap_deleted = 0
+
+        if telemetry_max_age_days is not None and telemetry_max_age_days >= 0:
+            tel_cutoff = now_ts - float(telemetry_max_age_days) * 86400.0
+            cur.execute(
+                "DELETE FROM blackboard_events WHERE topic IN ('telemetry', 'proactive_heartbeat') AND created_at < ?",
+                (tel_cutoff,),
+            )
+            telemetry_ttl_deleted = max(0, cur.rowcount or 0)
+
+        if telemetry_max_rows is not None and telemetry_max_rows >= 0:
+            cap_tel = int(telemetry_max_rows)
+            if cap_tel == 0:
+                cur.execute(
+                    "DELETE FROM blackboard_events WHERE topic IN ('telemetry', 'proactive_heartbeat')"
+                )
+                telemetry_cap_deleted = max(0, cur.rowcount or 0)
+            else:
+                cur.execute(
+                    """SELECT id FROM blackboard_events
+                       WHERE topic IN ('telemetry', 'proactive_heartbeat')
+                       ORDER BY id DESC LIMIT 1 OFFSET ?""",
+                    (cap_tel,),
+                )
+                row = cur.fetchone()
+                if row is not None:
+                    cur.execute(
+                        "DELETE FROM blackboard_events WHERE topic IN ('telemetry', 'proactive_heartbeat') AND id <= ?",
+                        (row[0],),
+                    )
+                    telemetry_cap_deleted = max(0, cur.rowcount or 0)
+
+        if max_age_days is not None and max_age_days >= 0:
+            cutoff_ts = now_ts - float(max_age_days) * 86400.0
+            cur.execute("DELETE FROM blackboard_events WHERE created_at < ?", (cutoff_ts,))
+            ttl_deleted = max(0, cur.rowcount or 0)
+
+        if max_rows is not None and max_rows >= 0:
+            cap_all = int(max_rows)
+            if cap_all == 0:
+                cur.execute("DELETE FROM blackboard_events")
+                cap_deleted = max(0, cur.rowcount or 0)
+            else:
+                cur.execute("SELECT id FROM blackboard_events ORDER BY id DESC LIMIT 1 OFFSET ?", (cap_all,))
+                row = cur.fetchone()
+                if row is not None:
+                    cur.execute("DELETE FROM blackboard_events WHERE id <= ?", (row[0],))
+                    cap_deleted = max(0, cur.rowcount or 0)
+
+        total_deleted = telemetry_ttl_deleted + telemetry_cap_deleted + ttl_deleted + cap_deleted
+        return {
+            "deleted": total_deleted,
+            "deleted_total": total_deleted,
+            "telemetry_ttl_deleted": telemetry_ttl_deleted,
+            "telemetry_cap_deleted": telemetry_cap_deleted,
+            "ttl_deleted": ttl_deleted,
+            "cap_deleted": cap_deleted,
+        }
+
+    @wal_retry()
+    def prune_stale_events(
+        self,
+        max_age_days: float = 14.0,
+        max_rows: int = 10000,
+        telemetry_max_age_days: float = 3.0,
+        telemetry_max_rows: int = 2500,
+    ) -> Dict[str, int]:
+        """Prunes expired and excess blackboard events to enforce bounded retention."""
+        with self._connection() as conn:
+            cur = conn.cursor()
+            stats = self._prune_cursor(
+                cur,
+                max_age_days=max_age_days,
+                max_rows=max_rows,
+                telemetry_max_age_days=telemetry_max_age_days,
+                telemetry_max_rows=telemetry_max_rows,
+            )
+            cur.execute("SELECT COUNT(*) FROM blackboard_events;")
+            remaining = cur.fetchone()[0]
+            conn.commit()
+        stats["remaining"] = int(remaining)
+        return stats
+
     @wal_retry()
     def checkpoint(self, mode: str = "PASSIVE") -> Dict[str, Any]:
         """Flushes SQLite WAL journal to the main database safely.
@@ -727,6 +821,9 @@ def publish_event(
     """
     ev_id = get_blackboard().publish(event_type, payload, source=source, topic=topic)
 
+    if _running_under_pytest() and os.environ.get("ORBIT_ALLOW_PROD_BLACKBOARD") != "1":
+        return ev_id
+
     repo_data = Path(__file__).resolve().parent.parent.parent / "data"
     orbit_events_db = repo_data / "orbit_events.db"
 
@@ -798,6 +895,20 @@ def checkpoint(mode: str = "PASSIVE") -> Dict[str, Any]:
     return get_blackboard().checkpoint(mode=mode)
 
 
+def prune_stale_events(
+    max_age_days: float = 14.0,
+    max_rows: int = 10000,
+    telemetry_max_age_days: float = 3.0,
+    telemetry_max_rows: int = 2500,
+) -> Dict[str, int]:
+    return get_blackboard().prune_stale_events(
+        max_age_days=max_age_days,
+        max_rows=max_rows,
+        telemetry_max_age_days=telemetry_max_age_days,
+        telemetry_max_rows=telemetry_max_rows,
+    )
+
+
 __all__ = [
     "Blackboard",
     "get_blackboard",
@@ -807,6 +918,7 @@ __all__ = [
     "unsubscribe",
     "broadcast",
     "checkpoint",
+    "prune_stale_events",
     "wal_retry",
     "DEFAULT_BLACKBOARD_DB",
     "TOPIC_TELEMETRY",
