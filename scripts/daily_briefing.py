@@ -1662,7 +1662,13 @@ def generate_markdown(
 """
 
 
-def generate_briefing(speak: bool = False, email: bool = False, recipient: Optional[str] = None, dry_run: bool = False):
+def generate_briefing(
+    speak: bool = False,
+    email: bool = False,
+    recipient: Optional[str] = None,
+    dry_run: bool = False,
+    pause: bool = False,
+):
     now_dt = datetime.datetime.now()
     today = now_dt.strftime("%Y-%m-%d %H:%M")
     date_key = now_dt.strftime("%Y-%m-%d")
@@ -1808,6 +1814,15 @@ def generate_briefing(speak: bool = False, email: bool = False, recipient: Optio
         if os.path.exists(hook_script):
             subprocess.run([sys.executable, hook_script, "--speak", spoken_summary])
 
+    if pause:
+        print("\n" + "=" * 60)
+        print(" [Briefing Complete] Press Enter or close this window to exit.")
+        print("=" * 60)
+        try:
+            input()
+        except (EOFError, KeyboardInterrupt):
+            pass
+
 
 def main():
     parser = argparse.ArgumentParser(description="Unified Orbit Security & Mailbox Daily Briefing")
@@ -1815,8 +1830,15 @@ def main():
     parser.add_argument("--email", action="store_true", help="Dispatch briefing to operator email")
     parser.add_argument("--recipient", type=str, default=None, help="Custom recipient email address")
     parser.add_argument("--dry-run", action="store_true", help="Generate briefing and state files without email, TTS, or IMAP mutation")
+    parser.add_argument("--pause", action="store_true", help="Keep the window open with an exit prompt until operator presses Enter")
     args = parser.parse_args()
-    generate_briefing(speak=args.speak, email=args.email, recipient=args.recipient, dry_run=args.dry_run)
+    generate_briefing(
+        speak=args.speak,
+        email=args.email,
+        recipient=args.recipient,
+        dry_run=args.dry_run,
+        pause=args.pause,
+    )
 
 
 if __name__ == "__main__":
