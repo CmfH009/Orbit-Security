@@ -112,7 +112,10 @@ class GoogleFilesApiAdapter:
     UPLOAD_ENDPOINT = "https://generativelanguage.googleapis.com/upload/v1beta/files"
 
     def __init__(self, api_key: Optional[str] = None, timeout_s: float = 30.0):
-        self.api_key = api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or ""
+        if api_key is not None:
+            self.api_key = api_key
+        else:
+            self.api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or ""
         self.timeout_s = timeout_s
         self._cache_by_hash: Dict[str, UploadedArtifact] = {}
 
