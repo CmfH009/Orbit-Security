@@ -80,6 +80,8 @@ def test_master_briefing_parses_sections_past_line_200_and_8_bullets():
 
 
 def test_hypernote_briefing_unwraps_tracking_urls_and_writes_hyperdb_and_matrix(tmp_path):
+    pytest.importorskip("hypernote")
+    pytest.importorskip("raven_matrix")
     from hypernote.core.db import HyperDB
     from orbit_security.hypernote_briefing import (
         HyperNoteBriefingEngine,
@@ -231,6 +233,7 @@ def test_daily_briefing_dry_run_vs_live_store_ingestion(monkeypatch, tmp_path):
 
 
 def test_nova_email_daemon_readonly_peek_dotenv_fallback_and_lockfile_guard(tmp_path):
+    pytest.importorskip("nova_email_daemon")
     import nova_email_daemon as ned
 
     env_path = tmp_path / ".env"
