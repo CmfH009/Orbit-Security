@@ -1478,5 +1478,43 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
         self.assertIn("DNS TXT ownership verification", reason_fb2)
 
 
+class TestHackerOneVdpHunterModuleParity(unittest.TestCase):
+    """Verifies that src/orbit_security/hackerone_vdp_hunter.py and scripts/hackerone_vdp_hunter.py
+    exist, expose all requisite screening & RoE symbols, and strictly route through egress_guard."""
+
+    def test_library_module_exports_and_egress_routing(self):
+        import orbit_security.hackerone_vdp_hunter as vdp_mod
+        from orbit_security.egress_guard import _is_bogon_or_internal_ip
+
+        # Ensure essential classes and functions are available
+        self.assertTrue(hasattr(vdp_mod, "VdpProgram"))
+        self.assertTrue(hasattr(vdp_mod, "VdpFinding"))
+        self.assertTrue(hasattr(vdp_mod, "filter_kyc_free_vdp_programs"))
+        self.assertTrue(hasattr(vdp_mod, "match_structured_scope"))
+        self.assertTrue(hasattr(vdp_mod, "screen_host_non_destructively"))
+        self.assertTrue(hasattr(vdp_mod, "evaluate_submission_quality_gate"))
+        self.assertTrue(hasattr(vdp_mod, "render_vdp_dossier"))
+        self.assertTrue(hasattr(vdp_mod, "run_vdp_hunt"))
+        self.assertTrue(hasattr(vdp_mod, "submit_vdp_finding"))
+
+        # Ensure egress_guard bogon/internal IP protection is exported and active
+        self.assertTrue(hasattr(vdp_mod, "is_safe_host"))
+        self.assertTrue(hasattr(vdp_mod, "is_safe_ip"))
+        self.assertTrue(hasattr(vdp_mod, "_is_bogon_or_internal_ip"))
+        self.assertTrue(vdp_mod._is_bogon_or_internal_ip("127.0.0.1"))
+        self.assertTrue(vdp_mod._is_bogon_or_internal_ip("10.0.0.1"))
+        self.assertTrue(vdp_mod._is_bogon_or_internal_ip("192.168.1.1"))
+        self.assertTrue(vdp_mod._is_bogon_or_internal_ip("169.254.169.254"))
+        self.assertTrue(vdp_mod._is_bogon_or_internal_ip("100.64.0.1"))
+        self.assertFalse(vdp_mod._is_bogon_or_internal_ip("8.8.8.8"))
+
+    def test_scripts_wrapper_delegation(self):
+        import hackerone_vdp_hunter as script_mod
+
+        self.assertTrue(hasattr(script_mod, "main"))
+        self.assertTrue(hasattr(script_mod, "run_vdp_hunt"))
+        self.assertTrue(hasattr(script_mod, "VdpProgram"))
+
+
 if __name__ == "__main__":
     unittest.main()
