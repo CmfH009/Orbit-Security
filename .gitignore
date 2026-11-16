@@ -124,6 +124,8 @@ docs/*HANDOFF*.md
 data/quarantined_addresses.json
 data/disposition_ledger.json
 *.eml
+data/atlas_*
+data/sent_disputes/
 
 
 

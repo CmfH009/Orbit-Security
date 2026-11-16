@@ -15,7 +15,7 @@ Earlier roadmap revisions (`v1.1.0`, `2026-11-06`) ran an outbound cold email ex
 
 ### Current Ground Truth (`scripts/orbit_readiness_audit.py`)
 - **Paid Subscribers (`data/subscribers.json`):** `0`
-- **Client Registry (`data/clients.json`):** `1` real entry (`client-velvetcraft-com`); synthetic test leaks (`c1`, `t.com`) purged and guarded via `src/orbit_security/_runtime_paths.py`.
+- **Client Registry (`data/clients.json`):** `0` active client entries; synthetic test leaks (`c1`, `t.com`, `client-velvetcraft-com`, `velvetcraft.com`) purged and guarded via `scripts/orbit_readiness_audit.py`.
 - **Landing <-> Docs Parity (`scripts/sync_landing_to_docs.py --check`):** `96/96` shared files byte-identical (`0` drift); `scripts/verify_landing_pages.py` passing (`audit.html`, `signup.html`, `fleet.html`, `portals/index.html` validated).
 - **Stripe Live Checkout Config (`Stripe Live Checkout Ready: True` via `.env`):** `STRIPE_API_KEY` (`rk_live_*`), `STRIPE_PUBLISHABLE_KEY` (`pk_live_*`), `STRIPE_PAYMENT_LINK`, `STRIPE_PRICE_STARTER` / `STRIPE_PRICE_SCALE` / `STRIPE_PRICE_ENTERPRISE`, and `STRIPE_WEBHOOK_SECRET` (`whsec_*`) are configured in `.env` and resolved cleanly by `stripe_checkout.py`, `stripe_webhook.py` (with `is_pytest_active()` live-`.env` isolation in `_resolve_webhook_secret()`), and `orbit_readiness_audit.py`.
 - **KYC / Payout Blocker (Sole Remaining External Gate 2 Blocker):** `ORBIT_KYC_STATUS = PENDING_PHYSICAL_ID` — awaiting delivery of hard-copy government ID in the mail before Stripe payout activation and HackerOne/Bugcrowd KYC-gated payouts can clear.
