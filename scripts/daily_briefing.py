@@ -1668,6 +1668,7 @@ def generate_briefing(
     recipient: Optional[str] = None,
     dry_run: bool = False,
     pause: bool = False,
+    gui: bool = False,
 ):
     now_dt = datetime.datetime.now()
     today = now_dt.strftime("%Y-%m-%d %H:%M")
@@ -1809,6 +1810,14 @@ def generate_briefing(
         f"Let's knock out the priority queue."
     )
 
+    if gui and not dry_run:
+        try:
+            from briefing_gui import show_briefing_gui
+            show_briefing_gui(report, spoken_summary=spoken_summary if speak else None)
+            return
+        except Exception as gui_err:
+            print(f"[!] GUI display error: {gui_err}")
+
     if speak and not dry_run:
         hook_script = r"C:\Users\purav\.gemini\config\scripts\nova_voice_hook.py"
         if os.path.exists(hook_script):
@@ -1816,11 +1825,13 @@ def generate_briefing(
 
     if pause:
         print("\n" + "=" * 60)
-        print(" [Briefing Complete] Press Enter or close this window to exit.")
+        print(" [Briefing Complete] Window locked open. Click [X] in the top corner to exit.")
         print("=" * 60)
         try:
-            input()
-        except (EOFError, KeyboardInterrupt):
+            while True:
+                import time
+                time.sleep(3600)
+        except (KeyboardInterrupt, SystemExit):
             pass
 
 
@@ -1830,7 +1841,8 @@ def main():
     parser.add_argument("--email", action="store_true", help="Dispatch briefing to operator email")
     parser.add_argument("--recipient", type=str, default=None, help="Custom recipient email address")
     parser.add_argument("--dry-run", action="store_true", help="Generate briefing and state files without email, TTS, or IMAP mutation")
-    parser.add_argument("--pause", action="store_true", help="Keep the window open with an exit prompt until operator presses Enter")
+    parser.add_argument("--pause", action="store_true", help="Keep the window locked open until operator manually closes it with [X]")
+    parser.add_argument("--gui", action="store_true", help="Display briefing in a dedicated persistent GUI window that only closes with [X]")
     args = parser.parse_args()
     generate_briefing(
         speak=args.speak,
@@ -1838,6 +1850,7 @@ def main():
         recipient=args.recipient,
         dry_run=args.dry_run,
         pause=args.pause,
+        gui=args.gui,
     )
 
 
