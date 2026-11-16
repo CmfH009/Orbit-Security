@@ -19,10 +19,13 @@ import urllib.parse
 try:
     from nova_brain.memory.memorilla import MemorillaCompressor, MemoryAnchor
 except ImportError:
-    for _nb_path in (Path("A:/projects/nova-brain/src"), Path("C:/AgyHut/projects/nova-brain/src")):
-        if _nb_path.exists() and str(_nb_path) not in sys.path:
-            sys.path.insert(0, str(_nb_path))
-    from nova_brain.memory.memorilla import MemorillaCompressor, MemoryAnchor
+    try:
+        for _nb_path in (Path("A:/projects/nova-brain/src"), Path("C:/AgyHut/projects/nova-brain/src")):
+            if _nb_path.exists() and str(_nb_path) not in sys.path:
+                sys.path.insert(0, str(_nb_path))
+        from nova_brain.memory.memorilla import MemorillaCompressor, MemoryAnchor
+    except ImportError:
+        from orbit_security.memorilla import MemorillaCompressor, MemoryAnchor
 
 EXTENDED_SENSITIVE_PATHS: Tuple[str, ...] = (
     "/.git/config",

@@ -63,10 +63,13 @@ from orbit_security.vdp_high_signal_detectors import (  # noqa: E402
 try:
     from nova_brain.memory.memorilla import LoopPreventionSentinel
 except ImportError:
-    for _nb_path in (Path("A:/projects/nova-brain/src"), Path("C:/AgyHut/projects/nova-brain/src")):
-        if _nb_path.exists() and str(_nb_path) not in sys.path:
-            sys.path.insert(0, str(_nb_path))
-    from nova_brain.memory.memorilla import LoopPreventionSentinel
+    try:
+        for _nb_path in (Path("A:/projects/nova-brain/src"), Path("C:/AgyHut/projects/nova-brain/src")):
+            if _nb_path.exists() and str(_nb_path) not in sys.path:
+                sys.path.insert(0, str(_nb_path))
+        from nova_brain.memory.memorilla import LoopPreventionSentinel
+    except ImportError:
+        from orbit_security.memorilla import LoopPreventionSentinel
 from orbit_security.vdp_recon_sources import (  # noqa: E402
     discover_multi_source_subdomains,
     extract_explicit_scope_hosts,
