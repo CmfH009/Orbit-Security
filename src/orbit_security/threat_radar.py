@@ -474,11 +474,20 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     repo_root = Path(__file__).resolve().parent.parent.parent
     swarm = ThreatRadarSwarm()
+    seen_daemon_cves: Dict[str, float] = {}
+    daemon_dedup_ttl_s = 86400.0
 
-    def _run_sweep() -> Dict[str, Any]:
+    def _run_sweep(dedup: bool = False) -> Dict[str, Any]:
         alerts = _load_real_threat_alerts(repo_root)
         processed = []
+        now = time.time()
         for alert in alerts:
+            cve_key = str(alert.get("cve_id") or alert.get("title") or "")
+            if dedup and cve_key:
+                last_seen = seen_daemon_cves.get(cve_key, 0.0)
+                if now - last_seen < daemon_dedup_ttl_s:
+                    continue
+                seen_daemon_cves[cve_key] = now
             res = swarm.process_incoming_threat(alert)
             if res.get("ok"):
                 processed.append(res)
@@ -487,14 +496,14 @@ def main(argv: Optional[List[str]] = None) -> int:
             "alerts_evaluated": len(alerts),
             "threats_synthesized": len(processed),
             "results": processed,
-            "timestamp": time.time(),
+            "timestamp": now,
         }
 
     if args.daemon:
         print(f"[*] Orbit Threat Radar Swarm active (Interval: {args.interval}s)")
         while True:
             try:
-                summary = _run_sweep()
+                summary = _run_sweep(dedup=True)
                 print(
                     f"[{time.strftime('%H:%M:%S')}] Threat Radar: evaluated {summary['alerts_evaluated']} alerts, "
                     f"synthesized {summary['threats_synthesized']} advisories."
@@ -503,7 +512,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 print(f"[{time.strftime('%H:%M:%S')}] Threat Radar error: {exc}")
             time.sleep(max(5, args.interval))
 
-    summary = _run_sweep()
+    summary = _run_sweep(dedup=False)
     print(json.dumps(summary, indent=2))
     return 0
 
