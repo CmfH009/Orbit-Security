@@ -31,10 +31,13 @@ def acquire_process_mutex(mutex_name: str) -> bool:
         kernel32 = ctypes.windll.kernel32
         handle = kernel32.CreateMutexW(None, False, mutex_name)
         last_error = kernel32.GetLastError()
+        ERROR_ACCESS_DENIED = 5
         ERROR_ALREADY_EXISTS = 183
-        if last_error == ERROR_ALREADY_EXISTS:
+        if last_error == ERROR_ALREADY_EXISTS or (not handle and last_error == ERROR_ACCESS_DENIED):
             if handle:
                 kernel32.CloseHandle(handle)
+            return False
+        if not handle:
             return False
         _MUTEX_HANDLE = handle
         return True

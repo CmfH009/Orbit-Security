@@ -86,6 +86,9 @@ def get_dynamic_test_count(repo_root: Optional[Path] = None) -> int:
     return 233
 
 
+_NT_FLAGS = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000) if sys.platform == "win32" else 0
+
+
 def get_recent_git_commits(repo_root: Optional[Path] = None, limit: int = 10) -> List[str]:
     """Reads recent commit subject lines via git log -n <limit> --pretty=format:%s."""
     root = repo_root or Path(__file__).resolve().parent.parent.parent
@@ -96,6 +99,7 @@ def get_recent_git_commits(repo_root: Optional[Path] = None, limit: int = 10) ->
             capture_output=True,
             text=True,
             timeout=5.0,
+            creationflags=_NT_FLAGS,
         )
         if res.returncode == 0 and res.stdout.strip():
             lines = [line.strip() for line in res.stdout.splitlines() if line.strip()]
