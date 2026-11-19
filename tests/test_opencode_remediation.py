@@ -151,3 +151,82 @@ def test_ast_sentinel_auto_fix(tmp_path):
     clean_check = sentinel.inspect_file(test_py)
     assert clean_check["ok"] is True
     assert len(clean_check["missing_imports"]) == 0
+
+
+def test_remediation_default_model_and_call_opencode_uses_file_and_archived(monkeypatch, tmp_path):
+    """Verifies local zero-cost default model, native exe preference, and --file/--archived invocation."""
+    import subprocess
+
+    synth = OpenCodeRemediationSynthesizer(patches_dir=tmp_path / "patches", enable_blackboard=False)
+    assert synth.model_name == "ollama/qwen2.5-coder:3b"
+    synth.opencode_bin = "opencode.exe"
+
+    seen_cmds = []
+
+    def _fake_run(cmd, *args, **kwargs):
+        seen_cmds.append((list(cmd), kwargs.get("env")))
+        assert "--archived" in cmd
+        assert "--file" in cmd
+        file_idx = cmd.index("--file") + 1
+        assert Path(cmd[file_idx]).exists()
+        return subprocess.CompletedProcess(
+            cmd,
+            0,
+            "Commit: fix(nginx): deny dotfiles\n```nginx\nlocation ~ /\\.git { deny all; }\n```\n",
+            "",
+        )
+
+    monkeypatch.setattr("orbit_security.opencode_remediation.subprocess.run", _fake_run)
+    patch_content, commit_msg = synth._call_opencode(
+        domain="example.com",
+        finding_id="F-99",
+        finding_title="Exposed .git",
+        severity="CRITICAL",
+        description="Exposed repo",
+        evidence="200 OK",
+        component="nginx",
+    )
+    assert commit_msg == "fix(nginx): deny dotfiles"
+    assert "deny all;" in patch_content
+    assert len(seen_cmds) == 1
+
+
+def test_create_remediation_pull_request_with_local_repo_creates_branch_and_commits(monkeypatch, tmp_path):
+    """When local_repo_dir is supplied, git branch/add/commit/push run before gh pr create."""
+    import subprocess
+
+    synth = OpenCodeRemediationSynthesizer(patches_dir=tmp_path / "patches", enable_blackboard=False)
+    artifact = RemediationPatchArtifact(
+        domain="example.com",
+        finding_id="12345678abcd",
+        finding_title="Missing DMARC",
+        severity="HIGH",
+        target_component="dns",
+        patch_content='_dmarc.example.com. 300 IN TXT "v=DMARC1; p=quarantine;"',
+        commit_message="fix(dns): add DMARC",
+        verification_passed=True,
+        verification_notes="ok",
+        created_at="2026-11-18T00:00:00Z",
+        generator="opencode",
+    )
+
+    seen_cmds = []
+
+    def _fake_run(cmd, *args, **kwargs):
+        seen_cmds.append(list(cmd))
+        if cmd[:2] == ["gh", "pr"]:
+            return subprocess.CompletedProcess(cmd, 0, "https://github.com/org/repo/pull/7\n", "")
+        return subprocess.CompletedProcess(cmd, 0, "ok", "")
+
+    monkeypatch.setattr("orbit_security.opencode_remediation.subprocess.run", _fake_run)
+    res = synth.create_remediation_pull_request(
+        artifact=artifact,
+        repo_target="org/repo",
+        dry_run=False,
+        local_repo_dir=tmp_path,
+    )
+    assert res["success"] is True
+    assert res["pr_url"] == "https://github.com/org/repo/pull/7"
+    assert any(c[:3] == ["git", "checkout", "-B"] for c in seen_cmds)
+    assert any(c[:2] == ["git", "commit"] for c in seen_cmds)
+    assert any(c[:2] == ["git", "push"] for c in seen_cmds)

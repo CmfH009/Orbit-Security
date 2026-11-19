@@ -26,6 +26,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import tempfile
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -71,14 +72,23 @@ class OpenCodeRemediationSynthesizer:
         self,
         blackboard: Optional[Blackboard] = None,
         patches_dir: Optional[Path] = None,
-        model_name: str = "google/gemini-2.5-flash",
+        model_name: str = "ollama/qwen2.5-coder:3b",
         enable_blackboard: bool = True,
     ):
         self.blackboard = blackboard or (Blackboard() if enable_blackboard else None)
         self.patches_dir = Path(patches_dir) if patches_dir else PATCHES_DIR
         self.patches_dir.mkdir(parents=True, exist_ok=True)
         self.model_name = model_name
-        self.opencode_bin = shutil.which("opencode") or shutil.which("opencode.cmd") or shutil.which("opencode.ps1")
+        native_exe = Path(os.environ.get("APPDATA", "")) / "npm" / "node_modules" / "@opencode" / "cli" / "bin" / "opencode.exe"
+        if native_exe.exists():
+            self.opencode_bin = str(native_exe)
+        else:
+            self.opencode_bin = (
+                shutil.which("opencode.exe")
+                or shutil.which("opencode")
+                or shutil.which("opencode.cmd")
+                or shutil.which("opencode.ps1")
+            )
 
     def is_opencode_available(self) -> bool:
         """Returns True if opencode CLI binary exists on PATH."""
@@ -182,12 +192,12 @@ class OpenCodeRemediationSynthesizer:
         description: str,
         evidence: str,
         component: str,
-        timeout_seconds: float = 35.0,
+        timeout_seconds: float = 90.0,
     ) -> Tuple[Optional[str], Optional[str]]:
-        """Invokes opencode CLI headlessly to generate remediation code."""
+        """Invokes opencode CLI headlessly via --file and --archived to generate remediation code."""
         prompt = (
             f"You are the Orbit Security Remediation Sentinel. "
-            f"Synthesize a strict, production-ready fix for: "
+            f"Synthesize a strict, production-ready fix for:\n"
             f"Domain: {domain}\n"
             f"Finding: {finding_title} [{severity}]\n"
             f"Description: {description}\n"
@@ -199,26 +209,40 @@ class OpenCodeRemediationSynthesizer:
             f"3. Strict zero bloat and minimal blast-radius."
         )
 
-        cmd = [
-            self.opencode_bin,
-            "run",
-            "--standalone",
-            "--auto",
-            "-m",
-            self.model_name,
-            prompt,
-        ]
+        run_env = os.environ.copy()
+        worker_cfg = WORKSPACE_ROOT / "opencode.worker.json"
+        if not worker_cfg.exists():
+            worker_cfg = Path(r"C:\AgyHut\opencode.worker.json")
+        if worker_cfg.exists() and "OPENCODE_CONFIG" not in run_env:
+            run_env["OPENCODE_CONFIG"] = str(worker_cfg)
 
-        proc = subprocess.run(
-            cmd,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            timeout=timeout_seconds,
-            encoding="utf-8",
-            errors="replace",
-        )
+        with tempfile.TemporaryDirectory(prefix="orbit-remed-") as tmp_dir:
+            prompt_file = Path(tmp_dir) / "remediation_prompt.md"
+            prompt_file.write_text(prompt, encoding="utf-8")
+            cmd = [
+                self.opencode_bin,
+                "run",
+                "--standalone",
+                "--auto",
+                "--archived",
+                "-m",
+                self.model_name,
+                "--file",
+                str(prompt_file),
+                "Synthesize the minimal remediation patch specified in the attached prompt file.",
+            ]
+
+            proc = subprocess.run(
+                cmd,
+                env=run_env,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=timeout_seconds,
+                encoding="utf-8",
+                errors="replace",
+            )
 
         if proc.returncode != 0:
             logger.warning("opencode returned non-zero exit code %d: %s", proc.returncode, proc.stderr)
@@ -369,6 +393,7 @@ class OpenCodeRemediationSynthesizer:
         repo_target: str,
         base_branch: str = "main",
         dry_run: bool = False,
+        local_repo_dir: Optional[Path] = None,
     ) -> Dict[str, Any]:
         """Packages a verified remediation patch into an automated GitHub pull request.
 
@@ -377,12 +402,11 @@ class OpenCodeRemediationSynthesizer:
             repo_target: The GitHub repository identifier (e.g. 'org/repo').
             base_branch: Target base branch (default: 'main').
             dry_run: If True, simulates git/gh actions without executing network commands.
+            local_repo_dir: Optional local git checkout where branch/commit/push is created before `gh pr create`.
 
         Returns:
             Dict containing PR status, branch name, title, and generated PR URL or command.
         """
-        import subprocess
-
         comp = artifact.target_component or "remediation"
         branch_name = f"fix/orbit-{comp}-{artifact.finding_id[:8]}"
         title = f"fix(security): remediate {artifact.finding_id} ({comp.upper()})"
@@ -423,7 +447,26 @@ class OpenCodeRemediationSynthesizer:
                 result["error"] = "GitHub CLI ('gh') is not installed or not in PATH."
                 return result
 
-            # Create branch, write patch file, commit and open PR via gh
+            if local_repo_dir is not None:
+                repo_path = Path(local_repo_dir)
+                patch_rel = Path("patches") / f"{artifact.domain.replace('.', '_')}_{artifact.finding_id[:16]}.patch"
+                patch_dest = repo_path / patch_rel
+                patch_dest.parent.mkdir(parents=True, exist_ok=True)
+                patch_dest.write_text(artifact.patch_content, encoding="utf-8")
+
+                git_steps = [
+                    ["git", "checkout", "-B", branch_name],
+                    ["git", "add", str(patch_rel)],
+                    ["git", "commit", "-m", artifact.commit_message or title],
+                    ["git", "push", "-u", "origin", branch_name],
+                ]
+                for gcmd in git_steps:
+                    gproc = subprocess.run(gcmd, cwd=str(repo_path), capture_output=True, text=True, timeout=30)
+                    if gproc.returncode != 0:
+                        result["error"] = f"{' '.join(gcmd)} failed: {gproc.stderr.strip()}"
+                        return result
+
+            # Open PR via gh
             cmd = [
                 "gh", "pr", "create",
                 "--repo", repo_target,
