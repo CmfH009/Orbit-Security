@@ -416,3 +416,53 @@ def test_white_label_onboarding_to_stripe_payment_link_portal_provisioning():
         assert retainer.stripe_customer_id == "cus_nova_001"
         assert retainer.stripe_subscription_id == "sub_nova_001"
 
+
+def test_checkout_session_completed_provisions_dns_fixpack():
+    """Verifies checkout.session.completed provisions a DnsFixpackOptimizer summary."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = Path(tmpdir)
+        handler = StripeWebhookHandler(
+            subscriber_manager=SubscriberManager(subscribers_file=tmp / "subscribers.json"),
+            sla_generator=SlaCertificateGenerator(output_dir=tmp / "certificates"),
+            fleet_registry=FleetRegistry(data_path=tmp / "clients.json"),
+        )
+
+        event = {
+            "id": "evt_fixpack_001",
+            "type": "checkout.session.completed",
+            "data": {
+                "object": {
+                    "id": "cs_fixpack_001",
+                    "customer": "cus_fixpack_001",
+                    "customer_details": {
+                        "email": "ops@meridianlabs.io",
+                        "name": "Meridian Labs",
+                    },
+                    "metadata": {
+                        "domain": "meridianlabs.io",
+                        "plan": "Scale Retainer ($299/mo)",
+                    },
+                    "amount_total": 29900,
+                    "currency": "usd",
+                    "payment_status": "paid",
+                }
+            },
+        }
+
+        result = handler.handle_webhook(json.dumps(event).encode("utf-8"))
+        assert result["status"] == "PROVISIONED"
+        assert result["apex_domain"] == "meridianlabs.io"
+        assert "dns_fixpack" in result
+        fixpack = result["dns_fixpack"]
+        assert isinstance(fixpack, dict)
+        assert fixpack["domain"] == "meridianlabs.io"
+        assert fixpack["original_spf"] == "v=spf1 include:_spf.google.com ~all"
+        assert fixpack["total_original_lookups"] == 1
+        assert fixpack["optimized_lookups"] == 0
+        assert fixpack["flattened_spf"].startswith("v=spf1")
+        assert "meridianlabs.io" in fixpack["terraform_snippet"]
+        assert "meridianlabs.io" in fixpack["bind_zone_snippet"]
+        assert fixpack["cloudflare_api_json"]["type"] == "TXT"
+        assert len(fixpack["sha256_hash"]) == 64
+
+

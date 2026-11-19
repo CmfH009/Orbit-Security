@@ -47,6 +47,7 @@ from dotenv import dotenv_values, load_dotenv
 
 from orbit_security._runtime_paths import is_pytest_active, resolve_isolated_data_path
 from orbit_security.agency_retainer import AgencyRetainerManager, RetainerTier
+from orbit_security.dns_fixpack_optimizer import DnsFixpackOptimizer
 from orbit_security.fleet import ClientTarget, FleetRegistry
 
 logger = logging.getLogger("orbit_security.stripe_webhook")
@@ -850,6 +851,19 @@ class StripeWebhookHandler:
             except Exception as ex:
                 logger.warning(f"Failed to generate client bundle for {customer_name}: {ex}")
 
+        # Step 7: Provision live DNS fixpack summary for apex_domain
+        dns_fixpack: Optional[Dict[str, Any]] = None
+        try:
+            fixpack = DnsFixpackOptimizer().generate_fixpack(
+                domain=apex_domain,
+                original_spf="v=spf1 include:_spf.google.com ~all",
+                flattened_ips=[],
+                original_lookups=1,
+            )
+            dns_fixpack = fixpack.to_dict()
+        except Exception as ex:
+            logger.warning(f"Failed to generate DNS fixpack for {apex_domain}: {ex}")
+
         return {
             "status": "PROVISIONED",
             "apex_domain": apex_domain,
@@ -865,6 +879,7 @@ class StripeWebhookHandler:
             "portal_path": portal_path,
             "bundle_path": bundle_path,
             "bundle_sha256": bundle_sha256,
+            "dns_fixpack": dns_fixpack,
         }
 
     def _sync_agency_retainer(

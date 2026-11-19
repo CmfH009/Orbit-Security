@@ -540,12 +540,73 @@
         signupCta.href = `signup.html?domain=${encodeURIComponent(domain)}&tier=${recommendedTier}`;
       }
       window._lastAuditSnapshot = { domain, score, grade, spfRecord, dmarcRecord, takeovers };
+      window._lastBackendFixpack = null;
 
       document.getElementById("resultsCard").classList.remove("hidden");
       document.getElementById("resultsCard").scrollIntoView({ behavior: "smooth" });
 
+      // Non-blocking Orbit backend DNS fixpack prefetch (falls back cleanly on GitHub Pages)
+      requestBackendDnsFixpack(domain, spfRecord)
+        .then((fp) => {
+          if (fp && window._lastAuditSnapshot && window._lastAuditSnapshot.domain === domain) {
+            window._lastBackendFixpack = fp;
+          }
+        })
+        .catch(() => {});
+
       // Run Puter.js AI Teardown
       generateAiBriefing(domain, score, grade, spfRecord, dmarcRecord, takeovers);
+    }
+
+    function isStaticAuditHost(loc) {
+      if (!loc) return true;
+      const proto = String(loc.protocol || "").toLowerCase();
+      const host = String(loc.hostname || "").toLowerCase();
+      if (!proto.startsWith("http") || proto === "file:") return true;
+      if (host === "github.io" || host.endsWith(".github.io")) return true;
+      if (host === "pages.dev" || host.endsWith(".pages.dev")) return true;
+      return false;
+    }
+
+    async function requestBackendDnsFixpack(domain, spfRecord) {
+      const cleanDomain = String(domain || "").trim().toLowerCase();
+      if (!cleanDomain || typeof fetch !== "function") return null;
+
+      const explicitEndpoint = typeof window !== "undefined" ? window.ORBIT_DNS_FIXPACK_ENDPOINT : null;
+      const loc = typeof window !== "undefined" ? window.location : null;
+      let endpoint = null;
+      if (explicitEndpoint) {
+        endpoint = explicitEndpoint;
+      } else if (loc && !isStaticAuditHost(loc) && loc.origin) {
+        endpoint = `${loc.origin}/api/orbit/dns-fixpack`;
+      } else {
+        return null;
+      }
+
+      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const timerId = controller ? setTimeout(() => controller.abort(), 1500) : null;
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            domain: cleanDomain,
+            original_spf: spfRecord || "v=spf1 ~all",
+            spf_record: spfRecord || "v=spf1 ~all",
+          }),
+          signal: controller ? controller.signal : undefined,
+        });
+        if (!res || !res.ok) return null;
+        const data = await res.json();
+        return data && data.ok ? data : null;
+      } catch (_err) {
+        return null;
+      } finally {
+        if (timerId !== null) clearTimeout(timerId);
+      }
+    }
+    if (typeof window !== "undefined") {
+      window.requestBackendDnsFixpack = requestBackendDnsFixpack;
     }
 
     async function generateAiBriefing(domain, score, grade, spf, dmarc, takeovers) {
@@ -593,7 +654,7 @@ Rules:
       aiContainer.innerHTML = summary;
     }
 
-    function buildSelfServeFixpack(snapshot, contactEmail) {
+    function buildSelfServeFixpack(snapshot, contactEmail, backendFixpack = null) {
       const domain = (snapshot && snapshot.domain) || "example.com";
       const spfLine = (!snapshot || !snapshot.spfRecord)
         ? `${domain}. 300 IN TXT "v=spf1 -all" ; Replace or include authorized senders before enforcing -all`
@@ -603,7 +664,7 @@ Rules:
         ? snapshot.takeovers.map(t => `; REMOVE DANGLING CNAME: ${t.sub} -> ${t.target} (${t.saas})`).join("\n")
         : "; No dangling CNAME takeovers detected across probed SaaS signatures.";
 
-      return [
+      const lines = [
         `# Orbit Security Remediation Fixpack (${domain})`,
         `# Generated: ${new Date().toISOString()}`,
         `# Contact: ${contactEmail}`,
@@ -627,11 +688,27 @@ Rules:
         `Contact: mailto:${contactEmail}`,
         `Preferred-Languages: en`,
         `Canonical: https://${domain}/.well-known/security.txt`,
-      ].join("\n");
+      ];
+
+      if (backendFixpack && backendFixpack.flattened_spf) {
+        lines.push(
+          "",
+          "## 4. Orbit Backend SPF Flattening & Cloudflare API Payload",
+          `# SHA-256: ${backendFixpack.sha256_hash || ""}`,
+          `# Lookups: ${backendFixpack.total_original_lookups ?? "N/A"} -> ${backendFixpack.optimized_lookups ?? 0}`,
+          backendFixpack.bind_zone_snippet || `; Flattened SPF: ${backendFixpack.flattened_spf}`,
+          "",
+          backendFixpack.terraform_snippet || "",
+          "",
+          backendFixpack.cloudflare_api_json ? JSON.stringify(backendFixpack.cloudflare_api_json, null, 2) : ""
+        );
+      }
+
+      return lines.join("\n");
     }
 
     // Lead capture -> Local Fixpack download + Track B onboarding handoff
-    document.getElementById("leadForm").addEventListener("submit", (e) => {
+    document.getElementById("leadForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const email = document.getElementById("leadEmail").value.trim();
       const snapshot = window._lastAuditSnapshot || {
@@ -644,9 +721,10 @@ Rules:
       };
       if (!email) return;
 
+      const backendFixpack = window._lastBackendFixpack || await requestBackendDnsFixpack(snapshot.domain, snapshot.spfRecord);
       const safeSlug = snapshot.domain.toLowerCase().replace(/[^a-z0-9.-]+/g, "-");
       const filename = `${safeSlug}-orbit-fixpack.txt`;
-      const fixpackBody = buildSelfServeFixpack(snapshot, email);
+      const fixpackBody = buildSelfServeFixpack(snapshot, email, backendFixpack);
 
       try {
         const blob = new Blob([fixpackBody], { type: "text/plain;charset=utf-8" });

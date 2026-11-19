@@ -1,0 +1,48 @@
+{
+  "last_optimized_utc": "2026-11-19T09:04:44.257312+00:00",
+  "temperature": 1.2,
+  "current_weights": {
+    "break_and_fix": 0.4,
+    "high_iq_wit": 0.25,
+    "multimodal_visual": 0.2,
+    "agency_growth": 0.15
+  },
+  "performance": {
+    "break_and_fix": {
+      "pillar": "break_and_fix",
+      "posts_count": 0,
+      "total_likes": 0,
+      "total_reposts": 0,
+      "total_replies": 0,
+      "total_bookmarks": 0,
+      "estimated_impressions": 0
+    },
+    "high_iq_wit": {
+      "pillar": "high_iq_wit",
+      "posts_count": 0,
+      "total_likes": 0,
+      "total_reposts": 0,
+      "total_replies": 0,
+      "total_bookmarks": 0,
+      "estimated_impressions": 0
+    },
+    "multimodal_visual": {
+      "pillar": "multimodal_visual",
+      "posts_count": 0,
+      "total_likes": 0,
+      "total_reposts": 0,
+      "total_replies": 0,
+      "total_bookmarks": 0,
+      "estimated_impressions": 0
+    },
+    "agency_growth": {
+      "pillar": "agency_growth",
+      "posts_count": 0,
+      "total_likes": 0,
+      "total_reposts": 0,
+      "total_replies": 0,
+      "total_bookmarks": 0,
+      "estimated_impressions": 0
+    }
+  }
+}
