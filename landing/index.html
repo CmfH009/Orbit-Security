@@ -506,6 +506,7 @@
                 <a href="#portals" class="hover:text-emerald-400 transition-colors">Portals</a>
                 <a href="#simple-cat" class="hover:text-emerald-400 transition-colors flex items-center gap-1.5 text-emerald-300 font-pixel"><span class="text-base">🐱</span> Simple Cat</a>
                 <a href="fleet.html" class="hover:text-emerald-400 transition-colors flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>Fleet</a>
+                <a href="audit.html" class="hover:text-emerald-400 transition-colors flex items-center gap-1.5 text-cyan-300"><span class="text-xs">🛡️</span>DNS Audit</a>
                 <a href="signup.html" class="hover:text-emerald-400 transition-colors flex items-center gap-1.5 text-slate-300"><span class="text-xs">⚡</span>Onboard</a>
                 <a href="#pricing" class="hover:text-emerald-400 transition-colors font-bold text-white">Pricing</a>
                 <a href="about.html" class="hover:text-emerald-400 transition-colors">About</a>
@@ -585,6 +586,13 @@
                     Fleet Arena
                 </span>
                 <span class="text-[9px] font-arcade bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">LIVE</span>
+            </a>
+            <a href="audit.html" class="flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-cyan-300 hover:bg-slate-900/80 text-sm font-semibold transition-all">
+                <span class="flex items-center gap-2">
+                    <span class="text-xs">🛡️</span>
+                    Instant DNS Audit
+                </span>
+                <span class="text-[9px] font-arcade bg-cyan-500/10 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/20">FREE</span>
             </a>
             <a href="signup.html" class="flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-emerald-300 hover:bg-slate-900/80 text-sm font-semibold transition-all">
                 <span class="flex items-center gap-2">
@@ -3470,10 +3478,16 @@ Apex Digital Studio</pre>
                                 <span class="text-emerald-400 font-bold font-arcade text-[10px]">★ ROI SUMMARY:</span>
                                 <span class="text-[11px] text-slate-300 font-mono">1 client covers the stack &bull; 5 clients net $1,191/mo profit &bull; 100% automated</span>
                             </div>
-                            <a href="signup.html" class="min-h-[48px] px-4 py-2.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-mono text-xs font-bold transition-colors whitespace-nowrap flex items-center justify-center gap-1.5">
-                                <span>Get Retainer Vault</span>
-                                <span>&rarr;</span>
-                            </a>
+                            <div class="flex flex-wrap items-center gap-2.5">
+                                <a href="audit.html" class="min-h-[48px] px-4 py-2.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-mono text-xs font-bold transition-colors whitespace-nowrap flex items-center justify-center gap-1.5">
+                                    <span>Free DNS Audit</span>
+                                    <span>&rarr;</span>
+                                </a>
+                                <a href="signup.html" class="min-h-[48px] px-4 py-2.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-mono text-xs font-bold transition-colors whitespace-nowrap flex items-center justify-center gap-1.5">
+                                    <span>Get Retainer Vault</span>
+                                    <span>&rarr;</span>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -4362,6 +4376,14 @@ Best regards,
             });
 
             document.querySelectorAll('a[href^="signup.html"]').forEach(link => {
+                const rawHref = (typeof link.getAttribute === 'function' ? link.getAttribute('href') : '') || link.href || '';
+                if (!rawHref) return;
+                const nextHref = updateHrefQueryParam(rawHref, 'agency', encodedAgency);
+                if (typeof link.setAttribute === 'function') link.setAttribute('href', nextHref);
+                link.href = nextHref;
+            });
+
+            document.querySelectorAll('a[href^="audit.html"]').forEach(link => {
                 const rawHref = (typeof link.getAttribute === 'function' ? link.getAttribute('href') : '') || link.href || '';
                 if (!rawHref) return;
                 const nextHref = updateHrefQueryParam(rawHref, 'agency', encodedAgency);

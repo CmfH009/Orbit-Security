@@ -360,6 +360,100 @@ class ExecutiveOSINTVerifier:
             ),
         }
 
+    def discover_via_sherlock(self, handle: str, domain: Optional[str] = None) -> Dict[str, Any]:
+        """Discovers public executive profiles via Sherlock OSINT and validates optional candidate email."""
+        clean_handle = str(handle or "").strip().lstrip("@")
+        clean_domain = (
+            str(domain or "")
+            .strip()
+            .lower()
+            .replace("https://", "")
+            .replace("http://", "")
+            .split("/")[0]
+            .split(":")[0]
+            .rstrip(".")
+        )
+
+        sherlock_payload: Dict[str, Any] = {
+            "available": False,
+            "executable": None,
+            "usernames": [clean_handle] if clean_handle else [],
+            "sites_filter": [],
+            "findings_count": 0,
+            "findings": [],
+            "elapsed_ms": 0.0,
+            "errors": [],
+        }
+
+        if not clean_handle:
+            sherlock_payload["errors"] = ["Empty handle provided"]
+        else:
+            try:
+                try:
+                    from orbit_security import sherlock_osint as _sherlock_mod
+                except ImportError:
+                    import sherlock_osint as _sherlock_mod  # type: ignore
+
+                raw_res = _sherlock_mod.run_sherlock_osint([clean_handle])
+                if hasattr(raw_res, "to_dict"):
+                    sherlock_payload = raw_res.to_dict()
+                elif isinstance(raw_res, dict):
+                    sherlock_payload = dict(raw_res)
+                else:
+                    sherlock_payload["errors"] = ["Unexpected return type from run_sherlock_osint"]
+            except Exception as exc:
+                sherlock_payload["available"] = False
+                sherlock_payload["errors"] = [str(exc)]
+
+        findings = list(sherlock_payload.get("findings") or [])
+        errors = list(sherlock_payload.get("errors") or [])
+        available = bool(sherlock_payload.get("available", False))
+
+        candidate_email: Optional[str] = None
+        syntax_details: Optional[Dict[str, Any]] = None
+        mx_details: Optional[Dict[str, Any]] = None
+        email_syntax_valid = False
+        mx_verified = False
+        mx_records: List[str] = []
+        is_generic_alias = False
+        deliverable = False
+
+        if clean_handle and clean_domain:
+            candidate_email = f"{clean_handle}@{clean_domain}"
+            syntax_details = self.verify_email_syntax(candidate_email)
+            email_syntax_valid = bool(syntax_details.get("valid", False))
+            is_generic_alias = bool(syntax_details.get("is_generic_alias", False))
+            mx_details = self.verify_domain_mx(clean_domain)
+            mx_verified = bool(mx_details.get("ok", False))
+            mx_records = list(mx_details.get("mx_records", []))
+            deliverable = bool(email_syntax_valid and mx_verified and not is_generic_alias)
+        elif clean_domain:
+            mx_details = self.verify_domain_mx(clean_domain)
+            mx_verified = bool(mx_details.get("ok", False))
+            mx_records = list(mx_details.get("mx_records", []))
+
+        return {
+            "ok": bool(available and (len(findings) > 0 or not errors)),
+            "handle": clean_handle,
+            "domain": clean_domain or None,
+            "available": available,
+            "executable": sherlock_payload.get("executable"),
+            "usernames": sherlock_payload.get("usernames", [clean_handle] if clean_handle else []),
+            "sites_filter": sherlock_payload.get("sites_filter", []),
+            "findings_count": int(sherlock_payload.get("findings_count", len(findings))),
+            "findings": findings,
+            "elapsed_ms": float(sherlock_payload.get("elapsed_ms", 0.0)),
+            "errors": errors,
+            "candidate_email": candidate_email,
+            "email_syntax_valid": email_syntax_valid,
+            "syntax_details": syntax_details,
+            "is_generic_alias": is_generic_alias,
+            "mx_verified": mx_verified,
+            "mx_records": mx_records,
+            "mx_details": mx_details,
+            "deliverable": deliverable,
+        }
+
     def audit_outreach_manifest(self, manifest_path: Optional[Path] = None) -> Dict[str, Any]:
         """Audits the fleet pilot manifest and flags generic/bounced contacts."""
         target = manifest_path or PILOT_MANIFEST_PATH

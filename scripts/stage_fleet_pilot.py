@@ -470,6 +470,63 @@ def build_ab_copy(agency: dict[str, Any], variant_bucket: str) -> tuple[str, str
     return subject, opening
 
 
+def _load_verification_cache() -> tuple[dict[str, str], bool]:
+    """Loads domain -> classification cache from verification.json (fallback: verification_report.json)."""
+    cached_classifications: dict[str, str] = {}
+    ver_primary = REPO_ROOT / "data" / "contact_verification" / "verification.json"
+    ver_fallback = REPO_ROOT / "data" / "contact_verification" / "verification_report.json"
+    ver_file = ver_primary if ver_primary.exists() else ver_fallback
+    if not ver_file.exists():
+        return cached_classifications, False
+
+    try:
+        raw_ver = json.loads(ver_file.read_text(encoding="utf-8"))
+        if not isinstance(raw_ver, dict):
+            return cached_classifications, False
+
+        results_list = raw_ver.get("results")
+        if isinstance(results_list, list):
+            for row in results_list:
+                if not isinstance(row, dict):
+                    continue
+                dom = str(row.get("agency_domain") or row.get("domain") or "").strip().lower()
+                cls = str(row.get("classification") or row.get("status") or "").strip().upper()
+                if dom and cls:
+                    cached_classifications[dom] = cls
+
+        domains_map = raw_ver.get("domains")
+        if isinstance(domains_map, dict):
+            for dom_key, rec in domains_map.items():
+                dom = str(dom_key or "").strip().lower()
+                if isinstance(rec, dict):
+                    cls = str(rec.get("classification") or rec.get("status") or "").strip().upper()
+                elif isinstance(rec, str):
+                    cls = rec.strip().upper()
+                else:
+                    cls = ""
+                if dom and cls:
+                    cached_classifications[dom] = cls
+
+        cache_loaded = ("results" in raw_ver) or ("domains" in raw_ver) or bool(cached_classifications)
+        return cached_classifications, cache_loaded
+    except Exception:
+        return {}, False
+
+
+def check_outreach_preflight() -> dict[str, Any]:
+    """Reads freeze state, historical bounce stats, and verification cache status before dispatch."""
+    from orbit_security import deliverability, private_alerting
+
+    sent, _bounced, rate = deliverability.bounce_stats()
+    _cached, cache_loaded = _load_verification_cache()
+    return {
+        "commercial_outreach_frozen": bool(private_alerting.COMMERCIAL_OUTREACH_FROZEN),
+        "bounce_rate": float(rate),
+        "total_tracked": int(sent),
+        "verification_cache_loaded": bool(cache_loaded),
+    }
+
+
 def run_deliverability_preflight(
     agencies: list[dict[str, Any]],
     max_refuted_ratio: float = 0.05,
@@ -488,18 +545,7 @@ def run_deliverability_preflight(
         except Exception:
             pass
 
-    cached_classifications: dict[str, str] = {}
-    ver_report = REPO_ROOT / "data" / "contact_verification" / "verification_report.json"
-    if ver_report.exists():
-        try:
-            raw_ver = json.loads(ver_report.read_text(encoding="utf-8"))
-            for row in raw_ver.get("results", []):
-                dom = str(row.get("agency_domain") or "").strip().lower()
-                cls = str(row.get("classification") or "").strip().upper()
-                if dom and cls:
-                    cached_classifications[dom] = cls
-        except Exception:
-            pass
+    cached_classifications, _ = _load_verification_cache()
 
     results: list[dict[str, Any]] = []
     for ag in agencies:
@@ -509,7 +555,12 @@ def run_deliverability_preflight(
             cls = "NO_MX"
         elif dom in bounced_domains or email_addr in bounced_emails or "@" not in email_addr:
             cls = "REFUTED"
-        elif dom in cached_classifications and cached_classifications[dom] in ("CONFIRMED", "UNKNOWN"):
+        elif dom in cached_classifications and cached_classifications[dom] in (
+            "CONFIRMED",
+            "UNKNOWN",
+            "REFUTED",
+            "NO_MX",
+        ):
             cls = cached_classifications[dom]
         else:
             cls = "CONFIRMED"

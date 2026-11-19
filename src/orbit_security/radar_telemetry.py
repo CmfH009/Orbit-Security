@@ -35,7 +35,7 @@ import sys
 import tempfile
 import threading
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -608,7 +608,14 @@ class RadarTelemetryService:
                 return dict(store[ref])
             ref_lower = ref.lower()
             for k, rec in store.items():
-                if k.lower() == ref_lower or (rec.get("agency_id") or "").lower() == ref_lower:
+                if k.lower() == ref_lower:
+                    return dict(rec)
+            for rec in store.values():
+                raw_aid = rec.get("agency_id") or ""
+                if raw_aid == ref or raw_aid.lower() == ref_lower:
+                    return dict(rec)
+                norm_aid = re.sub(r"[^a-z0-9]+", "-", raw_aid.lower()).strip("-")
+                if norm_aid and norm_aid == ref_lower:
                     return dict(rec)
             # Also check if ref has -<8hex> suffix and matches agency_id
             base_slug = re.sub(r"-[0-9a-f]{8}$", "", ref_lower)
@@ -1247,6 +1254,57 @@ class RadarTelemetryService:
             "size_bytes": len(content.encode("utf-8")),
         }
 
+    def generate_dns_fixpack(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generates a ready-to-apply DNS/SPF remediation fixpack for a validated public domain."""
+        from orbit_security.dns_fixpack_optimizer import DnsFixpackOptimizer
+
+        payload = data if isinstance(data, dict) else {}
+        clean_domain = self.normalize_domain(str(payload.get("domain") or ""))
+        if not clean_domain or not self.is_valid_domain(clean_domain):
+            return {"ok": False, "error": "Invalid or missing domain"}
+
+        original_spf = str(payload.get("original_spf") or payload.get("spf_record") or "v=spf1 ~all")
+        raw_ips = (
+            payload.get("flattened_ips")
+            if isinstance(payload.get("flattened_ips"), list)
+            else payload.get("client_ips")
+        )
+        if isinstance(raw_ips, list):
+            flattened_ips = [str(ip).strip() for ip in raw_ips if str(ip).strip()]
+        else:
+            flattened_ips = re.findall(r"\bip4:([^\s]+)", original_spf)
+
+        try:
+            original_lookups = int(payload.get("original_lookups") or 12)
+        except (TypeError, ValueError):
+            original_lookups = 12
+        zone_id = str(payload.get("zone_id") or "example_zone_id")
+        provider = str(payload.get("provider") or "cloudflare").strip() or "cloudflare"
+        dmarc_record = str(payload.get("dmarc_record") or "").strip()
+
+        fixpack = DnsFixpackOptimizer().generate_fixpack(
+            domain=clean_domain,
+            original_spf=original_spf,
+            flattened_ips=flattened_ips,
+            original_lookups=original_lookups,
+            zone_id=zone_id,
+        )
+        res: Dict[str, Any] = {"ok": True, **fixpack.to_dict(), "provider": provider}
+        if dmarc_record:
+            res["dmarc_record"] = dmarc_record
+        return res
+
+    def handle_stripe_webhook(
+        self, raw_body: bytes, sig_header: Optional[str] = None
+    ) -> Tuple[int, Dict[str, Any]]:
+        """Processes an incoming Stripe webhook payload using stored onboarding records."""
+        from orbit_security.stripe_webhook import StripeWebhookHandler
+
+        handler = StripeWebhookHandler(onboarding_service=self)
+        res = handler.handle_webhook(raw_body, sig_header=sig_header)
+        status_code = 400 if res.get("status") == "ERROR" else 200
+        return status_code, res
+
 
 # =============================================================================
 # Self-Healing Public Telemetry Tunnel Watchdog
@@ -1473,6 +1531,7 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
     service = RadarTelemetryService()
     tunnel_watchdog = RadarTunnelWatchdog()
     MAX_POST_BODY_BYTES = 16384
+    MAX_STRIPE_WEBHOOK_BYTES = 262144
     MAX_REQUESTS_PER_MINUTE = 30
     _rate_lock = threading.Lock()
     _rate_buckets: Dict[str, List[float]] = {}
@@ -1704,35 +1763,62 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b"Not Found")
 
+    def _read_post_bytes(self, max_bytes: int) -> Optional[bytes]:
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+        except ValueError:
+            self._send_json_error(400, "Invalid Content-Length header")
+            return None
+
+        if content_length < 0 or content_length > max_bytes:
+            try:
+                self.rfile.read(min(content_length, 65536))
+            except Exception:
+                pass
+            self._send_json_error(413, f"Payload exceeds {max_bytes} byte limit")
+            return None
+
+        return self.rfile.read(content_length) if content_length > 0 else b""
+
+    def _send_json_response(self, status_code: int, payload: Dict[str, Any]) -> None:
+        body = json.dumps(payload).encode("utf-8")
+        self.send_cors_headers(status_code, "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
+        if parsed.path in ("/api/stripe/webhook", "/stripe/webhook"):
+            raw_bytes = self._read_post_bytes(self.MAX_STRIPE_WEBHOOK_BYTES)
+            if raw_bytes is None:
+                return
+            status_code, res = self.service.handle_stripe_webhook(
+                raw_bytes,
+                self.headers.get("Stripe-Signature"),
+            )
+            self._send_json_response(status_code, res)
+            return
+
         if parsed.path in (
             "/api/orbit/radar/telemetry",
             "/api/radar/telemetry",
             "/api/orbit/onboarding",
             "/api/onboarding",
+            "/api/orbit/dns-fixpack",
+            "/api/dns-fixpack",
         ):
             client_ip = self._extract_client_ip()
             if not self._check_rate_limit(client_ip):
                 self._send_json_error(429, "Rate limit exceeded (max 30 telemetry events per minute)")
                 return
 
-            try:
-                content_length = int(self.headers.get("Content-Length", 0))
-            except ValueError:
-                self._send_json_error(400, "Invalid Content-Length header")
-                return
-
-            if content_length < 0 or content_length > self.MAX_POST_BODY_BYTES:
-                try:
-                    self.rfile.read(min(content_length, 65536))
-                except Exception:
-                    pass
-                self._send_json_error(413, f"Payload exceeds {self.MAX_POST_BODY_BYTES} byte limit")
+            raw_bytes = self._read_post_bytes(self.MAX_POST_BODY_BYTES)
+            if raw_bytes is None:
                 return
 
             try:
-                raw_body = self.rfile.read(content_length).decode("utf-8") if content_length > 0 else "{}"
+                raw_body = raw_bytes.decode("utf-8") if raw_bytes else "{}"
                 data = json.loads(raw_body)
                 if not isinstance(data, dict):
                     raise ValueError("Payload must be a JSON object")
@@ -1740,16 +1826,14 @@ class RadarTelemetryHTTPHandler(http.server.BaseHTTPRequestHandler):
                 self._send_json_error(400, f"Invalid JSON payload: {ex}")
                 return
 
-            if parsed.path in ("/api/orbit/onboarding", "/api/onboarding") or data.get("event") == "AGENCY_ONBOARDING":
+            if parsed.path in ("/api/orbit/dns-fixpack", "/api/dns-fixpack"):
+                res = self.service.generate_dns_fixpack(data)
+            elif parsed.path in ("/api/orbit/onboarding", "/api/onboarding") or data.get("event") == "AGENCY_ONBOARDING":
                 res = self.service.record_onboarding(data, client_ip=client_ip)
             else:
                 res = self.service.record_query(data, client_ip=client_ip)
             status_code = 200 if res.get("ok") else 400
-            body = json.dumps(res).encode("utf-8")
-            self.send_cors_headers(status_code, "application/json")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
+            self._send_json_response(status_code, res)
         else:
             self.send_cors_headers(404, "text/plain")
             self.end_headers()

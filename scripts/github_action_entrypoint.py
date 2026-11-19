@@ -308,6 +308,11 @@ def render_step_summary_markdown(report: Dict[str, Any]) -> str:
         "",
         f"**Overall Verdict:** `{verdict}` ({report['findings_count']} total finding(s))",
         "",
+        "> **Continuous Perimeter & DNS Protection:** Run an instant DNS/SPF/DMARC & HTTP Header Fixpack audit at "
+        "[cmfh009.github.io/Orbit-Security/audit.html](https://cmfh009.github.io/Orbit-Security/audit.html?utm_source=gh_action) "
+        "or upgrade to 24/7 Growth monitoring ($59/mo) at "
+        "[cmfh009.github.io/Orbit-Security/signup.html?tier=growth](https://cmfh009.github.io/Orbit-Security/signup.html?tier=growth&utm_source=gh_action).",
+        "",
     ]
     return "\n".join(lines)
 

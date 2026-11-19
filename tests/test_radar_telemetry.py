@@ -964,4 +964,232 @@ class TestRadarLeadEnricherAndProposalStager:
         assert "0.0.0.0" not in (rt.main.__code__.co_consts or ())
 
 
+class TestDnsFixpackStripeWebhookAndSlugFallback:
+    """Tests DNS fixpack synthesis, Stripe webhook handling, and raw-slug onboarding resolution."""
+
+    def test_raw_slug_get_onboarding_record_fallback(self, tmp_path):
+        service = RadarTelemetryService(
+            queries_file=tmp_path / "slug_queries.jsonl",
+            leads_file=tmp_path / "slug_leads.json",
+            campaigns_dir=tmp_path / "slug_campaigns",
+            onboarding_file=tmp_path / "slug_onboardings.json",
+        )
+        saved = service.record_onboarding(
+            {
+                "agency_id": "apex-studio",
+                "agency_name": "Apex Studio",
+                "contact_email": "ops@apexstudio.io",
+                "website": "https://apexstudio.io",
+                "tier": "Growth",
+            }
+        )
+        assert saved["ok"] is True
+        assert saved["client_reference_id"].startswith("apex-studio-")
+
+        # Raw slug from landing/index.html Stripe Payment Link (no -<8hex> suffix)
+        resolved = service.get_onboarding_record(client_reference_id="apex-studio")
+        assert resolved is not None
+        assert resolved["agency_id"] == "apex-studio"
+        assert resolved["agency_name"] == "Apex Studio"
+        assert resolved["contact_email"] == "ops@apexstudio.io"
+
+        # Underscore agency_id should also resolve from hyphenated landing slug
+        service.record_onboarding(
+            {
+                "agency_id": "nova_digital",
+                "agency_name": "Nova Digital",
+                "contact_email": "sec@novadigital.io",
+            }
+        )
+        resolved_norm = service.get_onboarding_record(client_reference_id="nova-digital")
+        assert resolved_norm is not None
+        assert resolved_norm["agency_id"] == "nova_digital"
+
+    def test_generate_dns_fixpack_service_and_validation(self, temp_service):
+        bad_empty = temp_service.generate_dns_fixpack({"domain": ""})
+        assert bad_empty["ok"] is False
+        assert "Invalid or missing domain" in bad_empty["error"]
+
+        bad_local = temp_service.generate_dns_fixpack({"domain": "localhost"})
+        assert bad_local["ok"] is False
+
+        res = temp_service.generate_dns_fixpack(
+            {
+                "domain": "https://10up.com/about",
+                "spf_record": "v=spf1 include:_spf.google.com ~all",
+                "dmarc_record": "v=DMARC1; p=reject;",
+                "provider": "cloudflare",
+                "client_ips": ["192.0.2.1", "198.51.100.5"],
+            }
+        )
+        assert res["ok"] is True
+        assert res["domain"] == "10up.com"
+        assert "ip4:192.0.2.1" in res["flattened_spf"]
+        assert "ip4:198.51.100.5" in res["flattened_spf"]
+        assert res["optimized_lookups"] == 0
+        assert 'resource "cloudflare_record"' in res["terraform_snippet"]
+        assert "IN    TXT" in res["bind_zone_snippet"]
+        assert res["cloudflare_api_json"]["type"] == "TXT"
+        assert len(res["sha256_hash"]) == 64
+
+    def test_handle_stripe_webhook_service_method(self, tmp_path, monkeypatch):
+        from orbit_security.stripe_webhook import generate_stripe_signature
+
+        monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_test_radar_123")
+        service = RadarTelemetryService(
+            queries_file=tmp_path / "wh_queries.jsonl",
+            leads_file=tmp_path / "wh_leads.json",
+            campaigns_dir=tmp_path / "wh_campaigns",
+            onboarding_file=tmp_path / "wh_onboardings.json",
+        )
+        service.record_onboarding(
+            {
+                "agency_id": "pixel-forge",
+                "agency_name": "Pixel Forge Agency",
+                "contact_email": "billing@pixelforge.example.com",
+                "website": "https://pixelforge.example.com",
+                "tier": "Growth",
+            }
+        )
+
+        event = {
+            "id": "evt_test_001",
+            "type": "checkout.session.completed",
+            "data": {
+                "object": {
+                    "id": "cs_test_001",
+                    "customer": "cus_test_001",
+                    "subscription": "sub_test_001",
+                    "client_reference_id": "pixel-forge",
+                    "amount_total": 5900,
+                    "currency": "usd",
+                    "customer_details": {
+                        "email": "billing@pixelforge.example.com",
+                        "name": "Pixel Forge Agency",
+                    },
+                }
+            },
+        }
+        raw_body = json.dumps(event).encode("utf-8")
+
+        # Invalid signature returns (400, ERROR)
+        bad_code, bad_res = service.handle_stripe_webhook(raw_body, sig_header="t=1,v1=bad")
+        assert bad_code == 400
+        assert bad_res["status"] == "ERROR"
+
+        # Valid signature provisions via stored onboarding record and returns 200
+        sig = generate_stripe_signature(raw_body, "whsec_test_radar_123")
+        ok_code, ok_res = service.handle_stripe_webhook(raw_body, sig_header=sig)
+        assert ok_code == 200
+        assert ok_res["status"] == "PROVISIONED"
+        assert ok_res["agency_id"] == "pixel-forge"
+        assert ok_res["agency_name"] == "Pixel Forge Agency"
+
+    def test_http_dns_fixpack_and_stripe_webhook_endpoints(self, tmp_path, monkeypatch):
+        import http.server
+        from orbit_security.stripe_webhook import generate_stripe_signature
+
+        monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_http_test_456")
+        srv_service = RadarTelemetryService(
+            queries_file=tmp_path / "http_queries.jsonl",
+            leads_file=tmp_path / "http_leads.json",
+            campaigns_dir=tmp_path / "http_campaigns",
+            onboarding_file=tmp_path / "http_onboardings.json",
+        )
+        srv_service.record_onboarding(
+            {
+                "agency_id": "beacon-web",
+                "agency_name": "Beacon Web Partners",
+                "contact_email": "ops@beaconweb.org",
+                "website": "https://beaconweb.org",
+                "tier": "Starter",
+            }
+        )
+
+        class BoundHandler(RadarTelemetryHTTPHandler):
+            service = srv_service
+
+        httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), BoundHandler)
+        port = httpd.server_address[1]
+        t = threading.Thread(target=httpd.serve_forever, daemon=True)
+        t.start()
+
+        try:
+            # 1. Valid POST /api/orbit/dns-fixpack
+            req_fp = urllib.request.Request(
+                f"http://127.0.0.1:{port}/api/orbit/dns-fixpack",
+                data=json.dumps(
+                    {
+                        "domain": "beaconweb.org",
+                        "spf_record": "v=spf1 include:_spf.google.com ~all",
+                        "client_ips": ["203.0.113.20"],
+                    }
+                ).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req_fp, timeout=5) as resp:
+                assert resp.status == 200
+                fp_body = json.loads(resp.read().decode("utf-8"))
+                assert fp_body["ok"] is True
+                assert fp_body["domain"] == "beaconweb.org"
+                assert "203.0.113.20" in fp_body["flattened_spf"]
+
+            # 2. Invalid domain on /api/dns-fixpack returns 400
+            req_bad_fp = urllib.request.Request(
+                f"http://127.0.0.1:{port}/api/dns-fixpack",
+                data=json.dumps({"domain": ""}).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with pytest.raises(urllib.error.HTTPError) as exc_fp:
+                urllib.request.urlopen(req_bad_fp, timeout=5)
+            assert exc_fp.value.code == 400
+
+            # 3. Valid signed POST /api/stripe/webhook
+            wh_payload = json.dumps(
+                {
+                    "id": "evt_http_001",
+                    "type": "checkout.session.completed",
+                    "data": {
+                        "object": {
+                            "id": "cs_http_001",
+                            "customer": "cus_http_001",
+                            "subscription": "sub_http_001",
+                            "client_reference_id": "beacon-web",
+                            "amount_total": 2900,
+                            "currency": "usd",
+                            "customer_details": {"email": "ops@beaconweb.org"},
+                        }
+                    },
+                }
+            ).encode("utf-8")
+            sig = generate_stripe_signature(wh_payload, "whsec_http_test_456")
+            req_wh = urllib.request.Request(
+                f"http://127.0.0.1:{port}/api/stripe/webhook",
+                data=wh_payload,
+                headers={"Content-Type": "application/json", "Stripe-Signature": sig},
+                method="POST",
+            )
+            with urllib.request.urlopen(req_wh, timeout=5) as resp_wh:
+                assert resp_wh.status == 200
+                wh_res = json.loads(resp_wh.read().decode("utf-8"))
+                assert wh_res["status"] == "PROVISIONED"
+                assert wh_res["agency_id"] == "beacon-web"
+
+            # 4. Bad signature on /stripe/webhook returns 400
+            req_bad_wh = urllib.request.Request(
+                f"http://127.0.0.1:{port}/stripe/webhook",
+                data=wh_payload,
+                headers={"Content-Type": "application/json", "Stripe-Signature": "t=1,v1=invalid"},
+                method="POST",
+            )
+            with pytest.raises(urllib.error.HTTPError) as exc_wh:
+                urllib.request.urlopen(req_bad_wh, timeout=5)
+            assert exc_wh.value.code == 400
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+
+
 

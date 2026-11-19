@@ -75,28 +75,34 @@ class PerimeterRoastCrafter:
         domain: str,
         initial_score: int,
         rescued_score: int,
-        blunder_type: str = "dangling_cname"
+        blunder_type: str = "dangling_cname",
+        anonymize_target: bool = False,
     ) -> Dict[str, Any]:
         """Crafts a factual, memorable roast post grounded in empirical security deltas."""
         delta = max(0, rescued_score - initial_score)
 
-        if blunder_type == "dangling_cname":
-            blunder_desc = f"left a dangling CNAME pointing to an abandoned Fastly endpoint on {domain}"
-            punchline = "Anyone with $5 could claim their subdomains. Project ORBIT locked the perimeter down."
-        elif blunder_type == "dmarc_reject":
-            blunder_desc = f"misconfigured their DMARC record without p=reject, causing 40% of their enterprise mail to bounce"
-            punchline = "Zero DNS auth hygiene for a tier-1 creative studio. We rescued their score from {initial_score} to {rescued_score}."
-        else:
-            blunder_desc = f"ran an enterprise Shopify storefront scoring {initial_score}/100 with zero CSP headers"
-            punchline = "We rescored and remediated the entire estate to {rescued_score} (+{delta} pts)."
+        def _render_post(target_agency: str, target_domain: str) -> str:
+            if blunder_type == "dangling_cname":
+                blunder_desc = f"left a dangling CNAME pointing to an abandoned Fastly endpoint on {target_domain}"
+                punchline = "Anyone with $5 could claim their subdomains. Project ORBIT locked the perimeter down."
+            elif blunder_type == "dmarc_reject":
+                blunder_desc = "misconfigured their DMARC record without p=reject, causing 40% of their enterprise mail to bounce"
+                punchline = "Zero DNS auth hygiene for a tier-1 creative studio. We rescued their score from {initial_score} to {rescued_score}."
+            else:
+                blunder_desc = f"ran an enterprise Shopify storefront scoring {initial_score}/100 with zero CSP headers"
+                punchline = "We rescored and remediated the entire estate to {rescued_score} (+{delta} pts)."
 
-        post_text = (
-            f"🔥 Perimeter Autopsy: {agency_name} ({domain})\n\n"
-            f"They {blunder_desc}.\n"
-            f"{punchline}\n\n"
-            f"Initial posture: {initial_score} (F) ➔ Rescued posture: {rescued_score} (B+) (+{delta} pts).\n"
-            f"Stop letting DNS blunders tank your client trust. 🪐 #OrbitSecurity #ShopifyDev #AppSec"
-        )
+            return (
+                f"🔥 Perimeter Autopsy: {target_agency} ({target_domain})\n\n"
+                f"They {blunder_desc}.\n"
+                f"{punchline}\n\n"
+                f"Initial posture: {initial_score} (F) ➔ Rescued posture: {rescued_score} (B+) (+{delta} pts).\n"
+                f"Stop letting DNS blunders tank your client trust. 🪐 #OrbitSecurity #ShopifyDev #AppSec"
+            )
+
+        raw_post_text = _render_post(agency_name, domain)
+        anonymized_post_text = _render_post("an enterprise commerce agency", "[redacted-client-domain]")
+        post_text = anonymized_post_text if anonymize_target else raw_post_text
 
         roast_payload = {
             "roast_id": f"roast_{uuid.uuid4().hex[:8]}",
@@ -106,10 +112,12 @@ class PerimeterRoastCrafter:
             "rescued_score": rescued_score,
             "score_delta": delta,
             "post_text": post_text,
+            "anonymized_post_text": anonymized_post_text,
+            "anonymized": bool(anonymize_target),
             "char_count": len(post_text),
             "staged_at": time.time(),
             "adr002_compliant": True,
-            "status": "STAGED_FOR_REVIEW"
+            "status": "STAGED_FOR_REVIEW",
         }
 
         publish_event(

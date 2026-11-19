@@ -132,3 +132,6 @@ def test_render_step_summary_markdown_formats_table():
     assert "## 🛡️ Orbit Security CI/CD Gate" in md
     assert "| Engine | Status | Details |" in md
     assert "12 Python files scanned" in md
+    assert "audit.html?utm_source=gh_action" in md
+    assert "signup.html?tier=growth" in md
+    assert "signup.html?tier=growth&utm_source=gh_action" in md

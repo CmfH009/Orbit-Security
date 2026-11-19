@@ -11,10 +11,19 @@ from orbit_security.inbox_guardrail import (
 import time
 
 def test_canonical_constants_integrity():
+    assert CANONICAL_PRICING["starter"]["monthly"] == 29
+    assert CANONICAL_PRICING["starter"]["annual"] == 290
+    assert CANONICAL_PRICING["growth"]["monthly"] == 59
+    assert CANONICAL_PRICING["growth"]["annual"] == 590
+    assert CANONICAL_PRICING["pro"]["monthly"] == 99
+    assert CANONICAL_PRICING["pro"]["annual"] == 990
     assert CANONICAL_PRICING["monitoring"]["monthly"] == 499
     assert CANONICAL_PRICING["remediation"]["monthly"] == 1499
     assert CANONICAL_PRICING["enterprise"]["monthly"] == 4999
     assert "https://cal.com/orbit-security" in CANONICAL_URLS["booking"]
+    assert CANONICAL_URLS["self_serve"] == "https://cmfh009.github.io/Orbit-Security/"
+    assert CANONICAL_URLS["audit"] == "https://cmfh009.github.io/Orbit-Security/audit.html"
+    assert CANONICAL_URLS["signup"] == "https://cmfh009.github.io/Orbit-Security/signup.html"
     assert "soc 2" in FORBIDDEN_PROMISES
 
 def test_sanitizer_truncates_large_payloads():
@@ -362,4 +371,49 @@ def test_sanitizer_neutralizes_xml_tags_with_attributes():
     assert "[prompt]" in sanitized
     assert "[context]" in sanitized
 
+
+def test_layer3_self_serve_pricing_and_funnel_urls_approved():
+    guard = AutonomousReplyGuardrail()
+
+    res = guard.evaluate(
+        draft_reply=(
+            "Start with Starter ($29/mo), Growth ($59/mo), or Pro ($99/mo). "
+            "Run a free audit at https://cmfh009.github.io/Orbit-Security/audit.html, "
+            "configure onboarding at https://cmfh009.github.io/Orbit-Security/signup.html, "
+            "or deploy immediately at https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800.\n\n"
+            "Best,\nCarson Haynes"
+        ),
+        sender="founder@agency-one.com",
+        subject="Re: Self-Serve Pricing",
+    )
+    assert res.status == GuardrailStatus.APPROVED
+    assert res.violation_code is None
+
+    res_checkout = guard.evaluate(
+        draft_reply=(
+            "Your annual Growth option is $590/yr: https://checkout.stripe.com/c/pay/cs_test_123\n\n"
+            "Regards,\nOrbit Security Concierge"
+        ),
+        sender="cto@agency-two.com",
+        subject="Re: Checkout Link",
+    )
+    assert res_checkout.status == GuardrailStatus.APPROVED
+    assert res_checkout.violation_code is None
+
+    # Verify $250 and github.com remain strictly blocked
+    res_bad_price = guard.evaluate(
+        draft_reply="Special custom rate of $250/mo.\n\nBest,\nCarson Haynes",
+        sender="ops@agency-three.com",
+        subject="Re: Pricing",
+    )
+    assert res_bad_price.status == GuardrailStatus.BLOCKED
+    assert res_bad_price.violation_code == "UNAUTHORIZED_PRICE_DISCREPANCY"
+
+    res_bad_url = guard.evaluate(
+        draft_reply="Repo: https://github.com/orbit-security/sentinel\n\nBest,\nCarson Haynes",
+        sender="ops@agency-four.com",
+        subject="Re: Repo",
+    )
+    assert res_bad_url.status == GuardrailStatus.BLOCKED
+    assert res_bad_url.violation_code == "UNAUTHORIZED_EXTERNAL_LINK"
 

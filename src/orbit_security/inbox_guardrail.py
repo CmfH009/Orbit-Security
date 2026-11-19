@@ -8,6 +8,21 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urlsplit
 
 CANONICAL_PRICING: Dict[str, Dict[str, Any]] = {
+    "starter": {
+        "monthly": 29,
+        "annual": 290,
+        "features": ["Self-serve continuous DNS/SPF/DMARC monitoring", "Single domain coverage"],
+    },
+    "growth": {
+        "monthly": 59,
+        "annual": 590,
+        "features": ["Continuous DNS/Header/SARIF monitoring", "Automated DNS Fix Pack exports"],
+    },
+    "pro": {
+        "monthly": 99,
+        "annual": 990,
+        "features": ["Multi-domain agency fleet radar", "White-label client portal & SLA certificate"],
+    },
     "monitoring": {
         "monthly": 499,
         "annual": 4990,
@@ -27,7 +42,10 @@ CANONICAL_PRICING: Dict[str, Dict[str, Any]] = {
 CANONICAL_URLS: Dict[str, str] = {
     "booking": "https://cal.com/orbit-security",
     "portal_root": "https://orbit-security.com/portals/",
-    "sample_audit": "https://orbit-security.com/sample_audit.pdf"
+    "sample_audit": "https://orbit-security.com/sample_audit.pdf",
+    "self_serve": "https://cmfh009.github.io/Orbit-Security/",
+    "audit": "https://cmfh009.github.io/Orbit-Security/audit.html",
+    "signup": "https://cmfh009.github.io/Orbit-Security/signup.html",
 }
 
 FORBIDDEN_PROMISES: List[str] = [
@@ -216,12 +234,21 @@ class AutonomousReplyGuardrail:
 
             urls = re.findall(r"https?://[^\s<>\"']+", draft_reply)
             for u in urls:
-                netloc = urlsplit(u).netloc.lower().split(":")[0]
+                parsed_url = urlsplit(u)
+                netloc = parsed_url.netloc.lower().split(":")[0]
                 if not (
                     netloc == "orbit-security.com"
                     or netloc.endswith(".orbit-security.com")
                     or netloc == "cal.com"
                     or netloc.endswith(".cal.com")
+                    or (
+                        netloc == "cmfh009.github.io"
+                        and (
+                            parsed_url.path == "/Orbit-Security"
+                            or parsed_url.path.startswith("/Orbit-Security/")
+                        )
+                    )
+                    or netloc in ("buy.stripe.com", "checkout.stripe.com")
                 ):
                     return GuardrailEvaluationResult(
                         status=GuardrailStatus.BLOCKED,
