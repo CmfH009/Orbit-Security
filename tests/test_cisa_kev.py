@@ -158,3 +158,44 @@ def test_publish_blackboard_event_on_match(tmp_path, sample_kev_catalog_data):
     assert payload["cve_id"] == "CVE-2021-41773"
     assert payload["product"] == "HTTP Server"
     assert payload["domain"] == "vulnerable.agency.internal"
+
+
+def test_nginx2root_version_bounded_correlation_and_bare_banner_guard(tmp_path):
+    from orbit_security.cisa_kev import CRITICAL_ADVISORY_RADAR
+
+    cache_file = tmp_path / "cisa_kev_cache.json"
+    catalog = CisaKevCatalog(cache_file=cache_file, offline_fixture={"vulnerabilities": CRITICAL_ADVISORY_RADAR})
+
+    assert "CVE-2026-123007" in catalog.vulnerabilities
+    assert "CVE-2026-121481" in catalog.vulnerabilities
+
+    # Bare NGINX banner must NEVER match
+    assert catalog.correlate_server_headers({"Server": "nginx"}) == []
+
+    # Vulnerable branches (<1.30.7 and 1.31.0-<1.31.9) must match all 5 nginx2root CVEs
+    for vuln_ver in ("nginx/1.30.6", "nginx/1.28.2", "nginx/1.31.8"):
+        matches = catalog.correlate_server_headers({"Server": vuln_ver})
+        matched_ids = {m.cve_id for m in matches}
+        assert matched_ids == {
+            "CVE-2026-123007",
+            "CVE-2026-123633",
+            "CVE-2026-121810",
+            "CVE-2026-123634",
+            "CVE-2026-113425",
+        }
+
+    # Patched versions must NOT match
+    for safe_ver in ("nginx/1.30.7", "nginx/1.31.9", "nginx/1.32.0"):
+        assert catalog.correlate_server_headers({"Server": safe_ver}) == []
+
+
+def test_default_catalog_merges_critical_advisory_radar_without_offline_fixture(tmp_path):
+    cache_file = tmp_path / "cisa_kev_cache.json"
+    cache_file.write_text(
+        json.dumps({"timestamp": time.time(), "catalog": {"vulnerabilities": []}}),
+        encoding="utf-8",
+    )
+    catalog = CisaKevCatalog(cache_file=cache_file)
+    assert "CVE-2026-123007" in catalog.vulnerabilities
+    assert "CVE-2026-121481" in catalog.vulnerabilities
+

@@ -96,6 +96,82 @@ BUILTIN_KEV_FALLBACK = {
     ],
 }
 
+# Critical 0-day / high-severity advisories tracked prior to upstream CISA KEV catalog sync
+CRITICAL_ADVISORY_RADAR: List[Dict[str, Any]] = [
+    {
+        "cveID": "CVE-2026-123007",
+        "vendorProject": "NGINX",
+        "product": "NGINX (nginx2root)",
+        "vulnerabilityName": "NGINX HTTP/2 Integer Overflow to Heap R/W (nginx2root)",
+        "dateAdded": "2026-11-19",
+        "shortDescription": "Critical HTTP/2 integer overflow leading to heap read/write (CVSS 4.0 9.2, nginx2root).",
+        "requiredAction": "Patch to nginx 1.30.7 or 1.31.9.",
+        "dueDate": "2026-11-26",
+        "knownRansomwareCampaignUse": "Unknown",
+        "notes": "Affects <1.30.7, 1.31.0-<1.31.9",
+    },
+    {
+        "cveID": "CVE-2026-123633",
+        "vendorProject": "NGINX",
+        "product": "NGINX (nginx2root)",
+        "vulnerabilityName": "NGINX HTTP/2 Use-After-Free (nginx2root)",
+        "dateAdded": "2026-11-19",
+        "shortDescription": "Critical HTTP/2 use-after-free vulnerability (CVSS 4.0 9.2, nginx2root).",
+        "requiredAction": "Patch to nginx 1.30.7 or 1.31.9.",
+        "dueDate": "2026-11-26",
+        "knownRansomwareCampaignUse": "Unknown",
+        "notes": "Affects <1.30.7, 1.31.0-<1.31.9",
+    },
+    {
+        "cveID": "CVE-2026-121810",
+        "vendorProject": "NGINX",
+        "product": "NGINX (nginx2root)",
+        "vulnerabilityName": "NGINX HTTP/3 Use-After-Free (nginx2root)",
+        "dateAdded": "2026-11-19",
+        "shortDescription": "Critical HTTP/3 use-after-free vulnerability (CVSS 4.0 9.2, nginx2root).",
+        "requiredAction": "Patch to nginx 1.30.7 or 1.31.9.",
+        "dueDate": "2026-11-26",
+        "knownRansomwareCampaignUse": "Unknown",
+        "notes": "Affects <1.30.7, 1.31.0-<1.31.9",
+    },
+    {
+        "cveID": "CVE-2026-123634",
+        "vendorProject": "NGINX",
+        "product": "NGINX (nginx2root)",
+        "vulnerabilityName": "NGINX Resolver + proxy_pass Use-After-Free (nginx2root)",
+        "dateAdded": "2026-11-19",
+        "shortDescription": "Critical resolver and proxy_pass use-after-free vulnerability (CVSS 4.0 9.2, nginx2root).",
+        "requiredAction": "Patch to nginx 1.30.7 or 1.31.9.",
+        "dueDate": "2026-11-26",
+        "knownRansomwareCampaignUse": "Unknown",
+        "notes": "Affects <1.30.7, 1.31.0-<1.31.9",
+    },
+    {
+        "cveID": "CVE-2026-113425",
+        "vendorProject": "NGINX",
+        "product": "NGINX (nginx2root)",
+        "vulnerabilityName": "NGINX Mail Proxy Use-After-Free (nginx2root)",
+        "dateAdded": "2026-11-19",
+        "shortDescription": "Critical mail proxy use-after-free vulnerability (CVSS 4.0 9.2, nginx2root).",
+        "requiredAction": "Patch to nginx 1.30.7 or 1.31.9.",
+        "dueDate": "2026-11-26",
+        "knownRansomwareCampaignUse": "Unknown",
+        "notes": "Affects <1.30.7, 1.31.0-<1.31.9",
+    },
+    {
+        "cveID": "CVE-2026-121481",
+        "vendorProject": "OpenSSL",
+        "product": "OpenSSL",
+        "vulnerabilityName": "OpenSSL EVP_EncodeBlock() Buffer Overflow Vulnerability",
+        "dateAdded": "2026-11-20",
+        "shortDescription": "Buffer overflow in OpenSSL EVP_EncodeBlock() (CVSS 9.8, openssl/openssl#33652).",
+        "requiredAction": "Apply vendor OpenSSL security patch immediately.",
+        "dueDate": "2026-11-27",
+        "knownRansomwareCampaignUse": "Unknown",
+        "notes": "OpenSSL EVP_EncodeBlock() buffer overflow (PR #33652)",
+    },
+]
+
 
 @dataclass
 class KevVulnerability:
@@ -115,40 +191,89 @@ class KevVulnerability:
 _BANNER_TOKEN_REGEX = re.compile(r"([a-zA-Z0-9_\-\.\+]+)(?:/([0-9]+(?:\.[0-9a-zA-Z_\-]+)*))?")
 
 
+_RANGE_BOUND_REGEX = re.compile(r"(\d+(?:\.\d+)*)-<(\d+(?:\.\d+)*)")
+_UPPER_BOUND_REGEX = re.compile(r"(?<![\d.\-])<(\d+(?:\.\d+)*)")
+
+
+def _parse_semver(ver: str) -> Optional[Tuple[int, ...]]:
+    """Extracts a comparable integer version tuple from a version string."""
+    match = re.match(r"^(\d+(?:\.\d+)*)", (ver or "").strip())
+    if not match:
+        return None
+    parts = [int(p) for p in match.group(1).split(".")]
+    while len(parts) < 3:
+        parts.append(0)
+    return tuple(parts)
+
+
+def _normalize_vendor_product(raw_name: str, version: Optional[str]) -> Tuple[str, str, Optional[str]]:
+    """Maps raw software banner token to canonical (vendor, product, version)."""
+    name = raw_name.lower()
+    if "apache" in name:
+        return "apache", "http_server", version
+    if "nginx" in name:
+        return "nginx", "nginx", version
+    if "openssl" in name:
+        return "openssl", "openssl", version
+    if "php" in name:
+        return "php", "php", version
+    if "iis" in name or "microsoft" in name:
+        return "microsoft", "iis", version
+    if "cloudflare" in name:
+        return "cloudflare", "cloudflare", version
+    if "ivanti" in name:
+        return "ivanti", "connect_secure", version
+    if "citrix" in name:
+        return "citrix", "netscaler", version
+    return name, name, version
+
+
+def _iter_header_software_versions(header_value: str) -> List[Tuple[str, str, Optional[str]]]:
+    """Extracts all (vendor, product, version) tokens from a composite banner header."""
+    if not header_value or not isinstance(header_value, str):
+        return []
+    tokens: List[Tuple[str, str, Optional[str]]] = []
+    for match in _BANNER_TOKEN_REGEX.finditer(header_value.strip()):
+        raw_name = match.group(1)
+        version = match.group(2) if match.group(2) else None
+        tokens.append(_normalize_vendor_product(raw_name, version))
+    return tokens
+
+
 def parse_header_software_version(header_value: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
     """Extracts software vendor/product and numerical version from a banner string.
     
     Returns:
         (vendor, product, version_str) or (vendor, product, None) if no version is given.
     """
-    if not header_value or not isinstance(header_value, str):
+    tokens = _iter_header_software_versions(header_value)
+    if not tokens:
         return None, None, None
+    return tokens[0]
 
-    clean = header_value.strip()
-    match = _BANNER_TOKEN_REGEX.search(clean)
-    if not match:
-        return None, None, None
 
-    raw_name = match.group(1).lower()
-    version = match.group(2) if match.group(2) else None
+def _version_matches_advisory(ver: str, vuln: KevVulnerability) -> bool:
+    """Checks exact version mentions and bounded `<X.Y.Z` / `A.B.C-<X.Y.Z` ranges in advisory metadata."""
+    range_bounds = _RANGE_BOUND_REGEX.findall(vuln.notes or "")
+    upper_bounds = _UPPER_BOUND_REGEX.findall(vuln.notes or "")
 
-    # Normalization mapping for common web software
-    if "apache" in raw_name:
-        return "apache", "http_server", version
-    elif "nginx" in raw_name:
-        return "nginx", "nginx", version
-    elif "php" in raw_name:
-        return "php", "php", version
-    elif "iis" in raw_name or "microsoft" in raw_name:
-        return "microsoft", "iis", version
-    elif "cloudflare" in raw_name:
-        return "cloudflare", "cloudflare", version
-    elif "ivanti" in raw_name:
-        return "ivanti", "connect_secure", version
-    elif "citrix" in raw_name:
-        return "citrix", "netscaler", version
+    if range_bounds or upper_bounds:
+        parsed_ver = _parse_semver(ver)
+        if parsed_ver is None:
+            return False
+        for lo_str, hi_str in range_bounds:
+            lo = _parse_semver(lo_str)
+            hi = _parse_semver(hi_str)
+            if lo is not None and hi is not None and lo <= parsed_ver < hi:
+                return True
+        for hi_str in upper_bounds:
+            hi = _parse_semver(hi_str)
+            if hi is not None and parsed_ver < hi:
+                return True
+        return False
 
-    return raw_name, raw_name, version
+    v_desc = f"{vuln.short_description} {vuln.notes}".lower()
+    return ver in v_desc or ver in vuln.notes
 
 
 class CisaKevCatalog:
@@ -223,7 +348,14 @@ class CisaKevCatalog:
 
         # Parse catalog into structured dict
         self.vulnerabilities.clear()
-        for item in catalog_data.get("vulnerabilities", []):
+        items = list(catalog_data.get("vulnerabilities", []))
+        if not self.offline_fixture:
+            existing_ids = {item.get("cveID") for item in items if item.get("cveID")}
+            for adv in CRITICAL_ADVISORY_RADAR:
+                if adv.get("cveID") not in existing_ids:
+                    items.append(adv)
+
+        for item in items:
             cve_id = item.get("cveID")
             if cve_id:
                 vuln = KevVulnerability(
@@ -254,25 +386,26 @@ class CisaKevCatalog:
         A concrete version number is mandatory to assert an exploit match.
         """
         matches: List[KevVulnerability] = []
+        seen_cves: set[str] = set()
         target_headers = ["server", "x-powered-by", "x-aspnet-version", "x-generator"]
 
         for h_name, h_val in headers.items():
             if h_name.lower() not in target_headers:
                 continue
 
-            vendor, product, ver = parse_header_software_version(h_val)
-            # Guard: If no numerical version is exposed, do NOT match bare banners
-            if not ver or not vendor:
-                continue
+            for vendor, product, ver in _iter_header_software_versions(h_val):
+                # Guard: If no numerical version is exposed, do NOT match bare banners
+                if not ver or not vendor:
+                    continue
 
-            for vuln in self.vulnerabilities.values():
-                v_vendor = vuln.vendor_project.lower()
-                v_desc = (vuln.short_description + " " + vuln.notes).lower()
+                for vuln in self.vulnerabilities.values():
+                    if vuln.cve_id in seen_cves:
+                        continue
+                    v_vendor = vuln.vendor_project.lower()
 
-                # Vendor alignment
-                if vendor in v_vendor or v_vendor in vendor:
-                    # Version-bounded check: does the vulnerability description specifically target this version?
-                    if ver in v_desc or f"{ver}" in vuln.notes:
+                    # Vendor alignment + strict version-bounded check
+                    if (vendor in v_vendor or v_vendor in vendor) and _version_matches_advisory(ver, vuln):
+                        seen_cves.add(vuln.cve_id)
                         matches.append(vuln)
 
                         # Publish to Blackboard SQLite WAL if blackboard is connected
