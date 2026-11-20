@@ -921,5 +921,14 @@ def test_run_local_critic_reconciliation_and_5_section_order(tmp_path):
     assert "Port `8765` -> **Browser Companion**" in md
 
 
+def test_known_expected_ports_includes_patch_desktop_app():
+    import scripts.unified_morning_cockpit as cockpit
+
+    assert cockpit.KNOWN_EXPECTED_PORTS.get(4064) == "Patch Desktop App"
+    triage = cockpit._triage_listening_ports()["port_triage"]
+    assert all(e.get("port") != 4064 for e in triage["unexpected_listeners"])
+
+
+
 
 

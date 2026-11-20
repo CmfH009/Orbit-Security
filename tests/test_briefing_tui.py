@@ -329,9 +329,16 @@ def test_briefing_gui_has_no_tkinter_and_delegates_to_tui(monkeypatch):
 
 
 def test_scheduled_task_configs_and_manifest_use_highest_runlevel_and_tui():
-    ps1_text = Path(r"A:\system\scripts\install_orbit_tasks.ps1").read_text(encoding="utf-8")
-    manifest = json.loads(Path(r"A:\system\scripts\orbit_tasks_manifest.json").read_text(encoding="utf-8"))
-    daemon_text = Path(r"A:\system\scripts\orbit_daemon.py").read_text(encoding="utf-8")
+    sys_scripts = Path(r"A:\system\scripts") if Path(r"A:\system\scripts").exists() else Path(r"C:\AgyHut\system\scripts")
+    ps1_path = sys_scripts / "install_orbit_tasks.ps1"
+    manifest_path = sys_scripts / "orbit_tasks_manifest.json"
+    daemon_path = sys_scripts / "orbit_daemon.py"
+    if not (ps1_path.exists() and manifest_path.exists() and daemon_path.exists()):
+        pytest.skip("Host system task configs not present in CI environment")
+
+    ps1_text = ps1_path.read_text(encoding="utf-8")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    daemon_text = daemon_path.read_text(encoding="utf-8")
 
     # install_orbit_tasks.ps1 checks
     daily_block = ps1_text.split('$tasks["OrbitSecurityDailyBriefing"]', 1)[1].split("}", 1)[0]

@@ -140,6 +140,7 @@ def _get_cpu_name() -> str:
 
 
 KNOWN_EXPECTED_PORTS: Dict[int, str] = {
+    4064: "Patch Desktop App",
     4173: "Vite Preview Test Server (ephemeral dev)",
     8088: "Orbit Stripe Webhook / Local Cockpit",
     8200: "Nova Brain HTTP Server",
