@@ -72,11 +72,12 @@ def test_master_briefing_parses_sections_past_line_200_and_8_bullets():
     assert len(res["extracted_urls"]) >= 3
 
     rendered = _render_master_briefing_block(res)
-    assert "AI News & Releases" in rendered
-    assert "Technical YouTube Digest" in rendered
-    assert "30-Day Deprecations & Deadlines" in rendered
+    assert "3.2 AI / Antigravity / Dev Radar" in rendered
+    assert "3.4 Technical YouTube & Newsletter Digest" in rendered
+    assert "3.5 Upcoming 30-Day Pricing, CVE & Deprecation Deadlines" in rendered
     assert "Unlimited-OCR" in rendered
     assert "Google Opal closes" in rendered
+    assert "https://github.com/baidu/Unlimited-OCR" in rendered
 
 
 def test_hypernote_briefing_unwraps_tracking_urls_and_writes_hyperdb_and_matrix(tmp_path):

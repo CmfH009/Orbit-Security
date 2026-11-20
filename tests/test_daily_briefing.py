@@ -15,6 +15,7 @@ def test_reconcile_ci_alerts_marks_stale_email_alerts_resolved_when_head_is_gree
     stale_email_alerts = [
         "[CmfH009/Orbit-Security] Run failed: Orbit Security CI - main (42a8f0d)",
         "[CmfH009/Orbit-Security] Run failed: Orbit Security CI - main (cf922c4)",
+        "[CmfH009/microgravity] Run failed: CI - master (e830ea3)",
     ]
     live_ci = {
         "status": "ok",
@@ -29,6 +30,7 @@ def test_reconcile_ci_alerts_marks_stale_email_alerts_resolved_when_head_is_gree
     assert len(reconciled["resolved_alerts"]) == 2
     assert "717b2aa" in reconciled["summary_markdown"]
     assert "RESOLVED on HEAD 717b2aa" in reconciled["summary_markdown"]
+    assert "microgravity" not in reconciled["summary_markdown"]
     assert "green on HEAD" in reconciled["spoken_note"]
 
 
@@ -366,20 +368,20 @@ def test_generate_markdown_top3_banner_and_geo_collapse():
     )
 
     assert "**24h Delta (Δ):** vs 2026-11-13: Disk -1.3 GB | Commits +3" in md
-    top3_idx = md.index("## ⚡ TOP 3 PRIORITY ACTIONS TODAY")
-    sec1_idx = md.index("### 1. Orbit Security Daemon & Sentinel Health")
+    top3_idx = md.index("## ⚡ 1. TOP 3 PRIORITY ACTIONS TODAY")
+    sec2_idx = md.index("## 🖥️ 2. Live Local System, Port Triage & Multi-Repo Health")
     header_idx = md.index("**24h Delta (Δ):**")
-    assert header_idx < top3_idx < sec1_idx
+    assert header_idx < top3_idx < sec2_idx
 
-    banner_slice = md[top3_idx:sec1_idx]
+    banner_slice = md[top3_idx:sec2_idx]
     assert "1. First critical action" in banner_slice
     assert "2. Second important action" in banner_slice
     assert "3. Third priority action" in banner_slice
     assert "Fourth lower-priority action" not in banner_slice
 
-    # Static GEO collapsed into 1-line UNCHANGED summary
-    geo_start = md.index("### 7. GEO Visibility & AI Citation Panel")
-    geo_end = md.index("### 8. Host Hardware")
+    # Static GEO collapsed into 1-line UNCHANGED summary inside Section 2.4
+    geo_start = md.index("**GEO Visibility & AI Citation Panel")
+    geo_end = md.index("**Mailbox Hygiene")
     geo_block = md[geo_start:geo_end]
     assert "UNCHANGED vs 2026-11-13" in geo_block
     assert "16.7%" in geo_block
@@ -487,6 +489,7 @@ def test_generate_markdown_handles_missing_master_briefing_gracefully():
         email_hygiene={"master_briefing": {"found": False, "subject": "", "date": "", "highlights": []}},
     )
     assert "No Combined Daily Master Briefing found" in md
+    assert "[WARN] Gemini Master Briefing not yet received" in md
 
 
 def test_generate_briefing_dry_run_skips_email_and_imap_mutation(tmp_path, monkeypatch):
@@ -518,7 +521,7 @@ def test_generate_briefing_dry_run_skips_email_and_imap_mutation(tmp_path, monke
     md_files = list(tmp_path.glob("briefing_*.md"))
     assert len(md_files) == 1
     content = md_files[0].read_text(encoding="utf-8")
-    assert "## ⚡ TOP 3 PRIORITY ACTIONS TODAY" in content
+    assert "## ⚡ 1. TOP 3 PRIORITY ACTIONS TODAY" in content
     assert "**24h Delta (Δ):**" in content
     assert "> 💡 **Why It Matters**: AI matters." in content
     assert "EMPTY_ICAL_FEED (0 VEVENTs, 189 bytes)" in content
@@ -781,13 +784,13 @@ def test_awaiting_reply_excluded_from_top3_and_rendered_in_section4():
     assert all("urgent email item" not in item for item in agenda_items)
 
     md = generate_markdown(today="2026-11-14", email_data=email_data, agenda_items=agenda_items)
-    top3_section = md.split("## 1.", 1)[0]
-    sec4 = md.split("## 4.", 1)[1].split("## 5.", 1)[0]
+    top3_section = md.split("## 🖥️ 2. Live Local System", 1)[0]
+    sec2_4 = md.split("### 2.4 Track A Bounty Vault", 1)[1].split("## ☁️ 3. Gemini Cloud Intelligence Digest", 1)[0]
 
     assert "support@atlasfin.com" not in top3_section
-    assert "- **⏳ Awaiting External Reply:** 1" in sec4
-    assert "  - ⏳ Account Verification — support@atlasfin.com (2026-11-13 22:48) [outbound reply in thread]" in sec4
-    assert "No new or unread urgent action items today." in sec4
+    assert "- **⏳ Awaiting External Reply:** 1" in sec2_4
+    assert "  - ⏳ Account Verification — support@atlasfin.com (2026-11-13 22:48) [outbound reply in thread]" in sec2_4
+    assert "No new or unread urgent action items today." in sec2_4
 
 
 def test_generate_markdown_deduplicates_section9_agenda_items():
@@ -797,31 +800,125 @@ def test_generate_markdown_deduplicates_section9_agenda_items():
         today="2026-11-14",
         agenda_items=["Alpha task", "Beta task", "Gamma task"],
     )
-    top3_exact = md_exact3.split("## 1.", 1)[0]
-    sec9_exact = md_exact3.split("**Recommended Engineering Agenda Today:**", 1)[1].split("## 10.", 1)[0]
+    top3_exact = md_exact3.split("## 🖥️ 2. Live Local System", 1)[0]
+    sec2_3_exact = md_exact3.split("**Recommended Engineering Agenda Today:**", 1)[1].split("### 2.4 Track A Bounty Vault", 1)[0]
 
     assert "1. Alpha task" in top3_exact
     assert "2. Beta task" in top3_exact
     assert "3. Gamma task" in top3_exact
-    assert "Alpha task" not in sec9_exact
-    assert "Beta task" not in sec9_exact
-    assert "Gamma task" not in sec9_exact
-    assert "Top 3 priorities surfaced in executive banner above (0 overflow backlog items)." in sec9_exact
+    assert "Alpha task" not in sec2_3_exact
+    assert "Beta task" not in sec2_3_exact
+    assert "Gamma task" not in sec2_3_exact
+    assert "Top 3 priorities surfaced in executive banner above (0 overflow backlog items)." in sec2_3_exact
 
     md_five = generate_markdown(
         today="2026-11-14",
         agenda_items=["Alpha task", "Beta task", "Gamma task", "Delta overflow", "Epsilon overflow"],
     )
-    top3_five = md_five.split("## 1.", 1)[0]
-    sec9_five = md_five.split("**Recommended Engineering Agenda Today:**", 1)[1].split("## 10.", 1)[0]
+    top3_five = md_five.split("## 🖥️ 2. Live Local System", 1)[0]
+    sec2_3_five = md_five.split("**Recommended Engineering Agenda Today:**", 1)[1].split("### 2.4 Track A Bounty Vault", 1)[0]
 
     assert "Delta overflow" not in top3_five
     assert "Epsilon overflow" not in top3_five
-    assert "Alpha task" not in sec9_five
-    assert "Beta task" not in sec9_five
-    assert "Gamma task" not in sec9_five
-    assert "4. Delta overflow" in sec9_five
-    assert "5. Epsilon overflow" in sec9_five
+    assert "Alpha task" not in sec2_3_five
+    assert "Beta task" not in sec2_3_five
+    assert "Gamma task" not in sec2_3_five
+    assert "4. Delta overflow" in sec2_3_five
+    assert "5. Epsilon overflow" in sec2_3_five
+
+
+def test_run_local_critic_reconciliation_and_5_section_order(tmp_path):
+    import subprocess
+    from scripts.daily_briefing import generate_markdown, run_local_critic_reconciliation
+
+    ws_root = tmp_path / "AgyHut"
+    repo_dir = ws_root / "projects" / "microgravity"
+    repo_dir.mkdir(parents=True)
+    (ws_root / "system" / "scripts").mkdir(parents=True)
+    (ws_root / "system" / "scripts" / "go.mod").write_text("module multi_adapter_proxy\n\ngo 1.26.5\n", encoding="utf-8")
+    (repo_dir / "go.mod").write_text("module github.com/CmfH009/microgravity\n\ngo 1.26.4\n", encoding="utf-8")
+
+    subprocess.run(["git", "init", str(repo_dir)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["git", "-C", str(repo_dir), "checkout", "-B", "master"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    (repo_dir / "main.go").write_text("package main\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo_dir), "add", "."], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(
+        ["git", "-C", str(repo_dir), "-c", "user.name=Test", "-c", "user.email=test@orbit.local", "commit", "-m", "feat: base"],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    fail_sha = subprocess.check_output(["git", "-C", str(repo_dir), "rev-parse", "--short", "HEAD"], text=True).strip()
+
+    (repo_dir / "main.go").write_text("package main\nfunc main() {}\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo_dir), "add", "main.go"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(
+        ["git", "-C", str(repo_dir), "-c", "user.name=Test", "-c", "user.email=test@orbit.local", "commit", "-m", "fix: patch ci"],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    critic = run_local_critic_reconciliation(
+        master_briefing={
+            "found": True,
+            "sections": {
+                "ops_cicd_sla": ["Stellar Cyber application"],
+                "competitive_security": ["Go MCP SDK CVE-2026-34742 (< v1.4.0 DNS rebinding)"],
+            },
+            "parser_meta": {"hard_stopped_at_dossier": True, "suppressed_stale_echo_lines": 4},
+        },
+        post_delta={
+            "ci_cd_all": [
+                {
+                    "repo": "CmfH009/microgravity",
+                    "workflow": "CI",
+                    "branch": "master",
+                    "sha": fail_sha,
+                    "subject": f"[CmfH009/microgravity] Run failed: CI - master ({fail_sha})",
+                }
+            ]
+        },
+        option_c={"staged_reports": 75},
+        daemon={"supervisor_pid": 18684},
+        sys_telem={
+            "port_triage": {
+                "expected_listeners": [{"port": 8765, "service": "Browser Companion", "process": "node", "pid": 16016}],
+                "unexpected_listeners": [],
+                "summary": "0 unexpected listeners; 1 expected local service(s) [8765=Browser Companion]",
+            }
+        },
+        workspace_root=ws_root,
+        gh_ci_querier=lambda repo, branch: {"status": "ok", "head_sha": "abc9999", "all_green": True, "failing_workflows": []},
+    )
+
+    assert critic["active_ci_failures"] == []
+    assert critic["active_security_actions"] == []
+    joined_critic = "\n".join(critic["summary_lines"])
+    assert "RESOLVED_ON_HEAD" in joined_critic
+    assert "VERIFIED_CLEAN" in joined_critic
+    assert "SUPPRESSED" in joined_critic
+
+    md = generate_markdown(
+        today="2026-11-19 10:15",
+        schedule_mode="early",
+        sys_telem={
+            "port_triage": {
+                "expected_listeners": [{"port": 8765, "service": "Browser Companion", "process": "node", "pid": 16016}],
+                "unexpected_listeners": [],
+                "summary": "0 unexpected listeners",
+            }
+        },
+        critic_reconciled=critic,
+    )
+    i1 = md.index("## ⚡ 1. TOP 3 PRIORITY ACTIONS TODAY")
+    i2 = md.index("## 🖥️ 2. Live Local System, Port Triage & Multi-Repo Health")
+    i3 = md.index("## ☁️ 3. Gemini Cloud Intelligence Digest")
+    i4 = md.index("## 🏔️ 4. Missoula Home, Ziva & Brittany Corner")
+    i5 = md.index("## 🔍 5. Critic Verification Log")
+    assert i1 < i2 < i3 < i4 < i5
+    assert "09:00 MST (Early Morning Mode)" in md
+    assert "Port `8765` -> **Browser Companion**" in md
 
 
 

@@ -5,12 +5,14 @@ Powers the expanded morning intelligence briefing for Nova and Orbit Security.
 
 from __future__ import annotations
 
+import base64
 from concurrent.futures import ThreadPoolExecutor
 import datetime
 import email
 from email.header import decode_header
 from email.utils import parseaddr, parsedate_to_datetime
 import imaplib
+import inspect
 import json
 import os
 from pathlib import Path
@@ -24,7 +26,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from zoneinfo import ZoneInfo
 
 try:
     import psutil
@@ -136,8 +139,134 @@ def _get_cpu_name() -> str:
     return default_cpu
 
 
+KNOWN_EXPECTED_PORTS: Dict[int, str] = {
+    4173: "Vite Preview Test Server (ephemeral dev)",
+    8088: "Orbit Stripe Webhook / Local Cockpit",
+    8200: "Nova Brain HTTP Server",
+    8201: "Nova Brain Telemetry / WebSocket",
+    8203: "Orbit MCP / Sidekick Bridge",
+    8501: "Streamlit Test Server (ephemeral dev)",
+    8765: "Browser Companion",
+    8989: "Orbit Multi-Adapter Proxy",
+    9008: "Orbit Sidekick Health",
+    9010: "Orbit Inbox Worker Health",
+    9012: "Nova Email Daemon Health",
+    9090: "Orbit Sentinel Health",
+    11434: "Ollama Local LLM",
+    28894: "OpenCode Server",
+}
+
+_EPHEMERAL_DEV_PORTS = frozenset({4173, 8501})
+_IGNORED_OS_SYNC_PROCESSES = frozenset(
+    {"svchost", "svchost.exe", "system", "googledrivefs", "googledrivefs.exe", "onedrive.sync.service", "onedrive.sync.service.exe", "lsass", "lsass.exe"}
+)
+
+CORE_ACTIVE_REPOS: Tuple[str, ...] = (
+    "orbit-security",
+    "microgravity",
+    "nova-brain",
+    "hypernote",
+    "canine-sanctuary",
+    "browser-companion",
+    "email-organizer",
+)
+
+
+def _triage_listening_ports() -> Dict[str, Any]:
+    """Scans local listening TCP ports and classifies expected Orbit/ecosystem services vs unexpected listeners."""
+    open_ports: List[int] = []
+    for port in (4173, 8501, 8765):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.2)
+                if s.connect_ex(("127.0.0.1", port)) == 0:
+                    open_ports.append(port)
+        except Exception:
+            pass
+
+    seen_ports: Dict[int, Dict[str, Any]] = {}
+    if psutil is not None:
+        try:
+            for conn in psutil.net_connections(kind="tcp"):
+                if str(getattr(conn, "status", "")) != "LISTEN":
+                    continue
+                laddr = getattr(conn, "laddr", None)
+                if not laddr:
+                    continue
+                ip = str(getattr(laddr, "ip", "") or "")
+                port = int(getattr(laddr, "port", 0) or 0)
+                if port < 1024 or port > 49151:
+                    continue
+                if ip not in ("127.0.0.1", "0.0.0.0", "::", "::1", ""):
+                    continue
+                pid = getattr(conn, "pid", None)
+                proc_name = ""
+                if isinstance(pid, int) and pid > 0:
+                    try:
+                        proc_name = psutil.Process(pid).name()
+                    except Exception:
+                        proc_name = ""
+                if proc_name.lower() in _IGNORED_OS_SYNC_PROCESSES:
+                    continue
+                if port not in seen_ports:
+                    seen_ports[port] = {"port": port, "addr": ip, "pid": pid, "process": proc_name or "unknown"}
+        except Exception:
+            pass
+
+    # Ensure key expected ports probed directly even if psutil.net_connections is restricted
+    for port in (4173, 8088, 8200, 8203, 8501, 8765, 8989, 11434):
+        if port in seen_ports:
+            continue
+        if port in open_ports:
+            seen_ports[port] = {"port": port, "addr": "127.0.0.1", "pid": None, "process": "detected"}
+            continue
+        if port not in (4173, 8501, 8765):
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(0.15)
+                    if s.connect_ex(("127.0.0.1", port)) == 0:
+                        seen_ports[port] = {"port": port, "addr": "127.0.0.1", "pid": None, "process": "detected"}
+            except Exception:
+                pass
+
+    expected_listeners: List[Dict[str, Any]] = []
+    unexpected_listeners: List[Dict[str, Any]] = []
+    for port in sorted(seen_ports):
+        entry = dict(seen_ports[port])
+        known_svc = KNOWN_EXPECTED_PORTS.get(port)
+        if known_svc and port not in _EPHEMERAL_DEV_PORTS:
+            entry["service"] = known_svc
+            entry["status"] = "expected"
+            expected_listeners.append(entry)
+        else:
+            entry["service"] = known_svc or "Unknown Listener"
+            entry["status"] = "ephemeral_dev" if port in _EPHEMERAL_DEV_PORTS else "unexpected"
+            unexpected_listeners.append(entry)
+
+    if unexpected_listeners:
+        unexp_desc = ", ".join(f"{e['port']} ({e['service']}/{e['process']})" for e in unexpected_listeners)
+        summary = f"ALERT: {len(unexpected_listeners)} unexpected/dev listener(s): {unexp_desc} | {len(expected_listeners)} expected ecosystem listener(s)"
+    elif expected_listeners:
+        exp_desc = ", ".join(f"{e['port']}={e['service']}" for e in expected_listeners[:5])
+        if len(expected_listeners) > 5:
+            exp_desc += f" (+{len(expected_listeners) - 5} more)"
+        summary = f"0 unexpected listeners; {len(expected_listeners)} expected local service(s) [{exp_desc}]"
+    else:
+        summary = "0 open debug/ecosystem listeners detected"
+
+    return {
+        "open_ports": open_ports,
+        "port_triage": {
+            "expected_listeners": expected_listeners,
+            "unexpected_listeners": unexpected_listeners,
+            "total_listening": len(seen_ports),
+            "summary": summary,
+        },
+    }
+
+
 def query_system_telemetry() -> Dict[str, Any]:
-    """Queries live hardware sensors, CPU, thermals, uptime, RAM, and storage health."""
+    """Queries live hardware sensors, CPU, thermals, uptime, RAM, storage health, and open-port triage."""
     cpu_name = _get_cpu_name()
     cores = os.cpu_count() or 4
     thermals = _query_hardware_thermals()
@@ -186,16 +315,8 @@ def query_system_telemetry() -> Dict[str, Any]:
             except Exception:
                 pass
 
-    # Port state check (verify test servers are cleanly shut down)
-    open_ports = []
-    for port in (4173, 8501, 8765):
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(0.2)
-                if s.connect_ex(("127.0.0.1", port)) == 0:
-                    open_ports.append(port)
-        except Exception:
-            pass
+    # Port state check & expected vs unexpected delta triage
+    port_info = _triage_listening_ports()
 
     return {
         "cpu_name": cpu_name,
@@ -210,7 +331,8 @@ def query_system_telemetry() -> Dict[str, Any]:
         "ram_pct": ram_pct,
         "battery": battery_info,
         "drives": drives,
-        "open_ports": open_ports,
+        "open_ports": port_info["open_ports"],
+        "port_triage": port_info["port_triage"],
     }
 
 
@@ -228,22 +350,32 @@ def _is_within_48h(iso_date_str: str, now: datetime.datetime) -> bool:
         return False
 
 
-def _query_git_last_commit(repo_path: str, pathspec: Optional[str] = None) -> tuple[str, str, str]:
-    """Returns (last_commit_iso[:16], commit_subject, branch) scoped cleanly to repo_path/pathspec."""
+def _query_git_repo_details(repo_path: str, pathspec: Optional[str] = None) -> Dict[str, Any]:
+    """Queries last commit, short SHA, branch, 48h commit count, and dirty-tree file count."""
     args_base = ["git", "-C", repo_path]
     tail = ["--", pathspec] if pathspec else ["--", "."]
+    result: Dict[str, Any] = {
+        "last_commit": "",
+        "head_sha": "",
+        "commit_msg": "",
+        "branch": "N/A",
+        "commits_48h": 0,
+        "dirty_count": 0,
+        "dirty_files": [],
+    }
     try:
         out = subprocess.check_output(
-            [*args_base, "log", "-1", "--format=%cd\x1f%s", "--date=iso", *tail],
+            [*args_base, "log", "-1", "--format=%cd\x1f%h\x1f%s", "--date=iso", *tail],
             text=True,
             timeout=2,
             stderr=subprocess.DEVNULL,
         ).strip()
         if not out:
-            return "", "", "N/A"
-        parts = out.split("\x1f", 1)
+            return result
+        parts = out.split("\x1f", 2)
         c_date = parts[0].strip()
-        c_msg = parts[1].strip() if len(parts) > 1 else ""
+        c_sha = parts[1].strip() if len(parts) > 1 else ""
+        c_msg = parts[2].strip() if len(parts) > 2 else ""
         if pathspec:
             c_branch = "master"
         else:
@@ -253,9 +385,42 @@ def _query_git_last_commit(repo_path: str, pathspec: Optional[str] = None) -> tu
                 timeout=2,
                 stderr=subprocess.DEVNULL,
             ).strip()
-        return c_date, c_msg, (c_branch or "HEAD")
+        cnt_out = subprocess.check_output(
+            [*args_base, "rev-list", "--count", "--since=48 hours ago", "HEAD", *tail],
+            text=True,
+            timeout=2,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        status_cmd = [*args_base, "status", "--porcelain"]
+        if pathspec:
+            status_cmd.extend(["--", pathspec])
+        st_out = subprocess.check_output(
+            status_cmd,
+            text=True,
+            timeout=2,
+            stderr=subprocess.DEVNULL,
+        )
+        dirty_lines = [ln.strip() for ln in st_out.splitlines() if ln.strip()]
+        result.update(
+            {
+                "last_commit": c_date,
+                "head_sha": c_sha,
+                "commit_msg": c_msg,
+                "branch": c_branch or "HEAD",
+                "commits_48h": int(cnt_out) if cnt_out.isdigit() else 0,
+                "dirty_count": len(dirty_lines),
+                "dirty_files": dirty_lines[:5],
+            }
+        )
     except Exception:
-        return "", "", "N/A"
+        pass
+    return result
+
+
+def _query_git_last_commit(repo_path: str, pathspec: Optional[str] = None) -> tuple[str, str, str]:
+    """Returns (last_commit_iso[:16], commit_subject, branch) scoped cleanly to repo_path/pathspec."""
+    details = _query_git_repo_details(repo_path, pathspec=pathspec)
+    return details["last_commit"], details["commit_msg"], details["branch"]
 
 
 def _query_inbox_queues(inbox_root: str) -> Dict[str, int]:
@@ -331,25 +496,39 @@ def query_projects_radar(
             last_commit_date = ""
             commit_msg = ""
             branch = "N/A"
+            head_sha = ""
+            commits_48h = 0
+            dirty_count = 0
+            dirty_files: List[str] = []
             is_active_48h = False
             repo_kind = "untracked"
 
             if has_standalone_git:
                 repo_kind = "standalone"
-                c_date, c_msg, c_branch = _query_git_last_commit(p)
+                details = _query_git_repo_details(p)
+                c_date = details["last_commit"]
                 if c_date:
-                    branch = c_branch
-                    commit_msg = c_msg
+                    branch = details["branch"]
+                    commit_msg = details["commit_msg"]
+                    head_sha = details["head_sha"]
+                    commits_48h = details["commits_48h"]
+                    dirty_count = details["dirty_count"]
+                    dirty_files = details["dirty_files"]
                     last_commit_date = c_date[:16]
-                    is_active_48h = _is_within_48h(c_date, now)
+                    is_active_48h = _is_within_48h(c_date, now) or commits_48h > 0
             elif workspace_root:
-                c_date, c_msg, c_branch = _query_git_last_commit(workspace_root, f"projects/{name}")
+                details = _query_git_repo_details(workspace_root, f"projects/{name}")
+                c_date = details["last_commit"]
                 if c_date:
                     repo_kind = "monorepo"
-                    branch = f"{c_branch} (monorepo)"
-                    commit_msg = c_msg
+                    branch = f"{details['branch']} (monorepo)"
+                    commit_msg = details["commit_msg"]
+                    head_sha = details["head_sha"]
+                    commits_48h = details["commits_48h"]
+                    dirty_count = details["dirty_count"]
+                    dirty_files = details["dirty_files"]
                     last_commit_date = c_date[:16]
-                    is_active_48h = _is_within_48h(c_date, now)
+                    is_active_48h = _is_within_48h(c_date, now) or commits_48h > 0
 
             roadmap = "None"
             for r_name in ("ROADMAP.md", "FUTURE_ROADMAP.md", "HANDOFF_NOVA_FEATURE_ROADMAP.md", "HANDOFF.md"):
@@ -360,8 +539,12 @@ def query_projects_radar(
             item = {
                 "name": name,
                 "branch": branch,
+                "head_sha": head_sha,
                 "last_commit": last_commit_date,
                 "commit_msg": commit_msg,
+                "commits_48h": commits_48h,
+                "dirty_count": dirty_count,
+                "dirty_files": dirty_files,
                 "roadmap": roadmap,
                 "is_active_48h": is_active_48h,
                 "repo_kind": repo_kind,
@@ -407,10 +590,13 @@ def query_projects_radar(
             pass
 
     inbox_queues = _query_inbox_queues(inbox_root)
+    by_name = {p["name"].lower(): p for p in projects}
+    core_active_repos = [by_name[name.lower()] for name in CORE_ACTIVE_REPOS if name.lower() in by_name]
 
     return {
         "total_projects": len(projects),
         "projects": projects,
+        "core_active_repos": core_active_repos,
         "recently_active": recently_active,
         "workspace_root_commits_48h": workspace_root_commits_48h,
         "workspace_dirty_count": workspace_dirty_count,
@@ -585,10 +771,19 @@ def _split_top_level_topics(text: str) -> List[str]:
 
 
 def _strip_html_to_lines(raw_html: str) -> List[str]:
-    """Extracts readable lines and list items from HTML email bodies."""
+    """Extracts readable lines and list items from HTML email bodies while preserving anchor links."""
     if not raw_html:
         return []
-    text = re.sub(r"(?i)<li[^>]*>", "\n- ", raw_html)
+    text = re.sub(
+        r'(?is)<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>',
+        lambda m: (
+            f"[{_clean_single_line(re.sub(r'<[^>]+>', ' ', m.group(2))) or m.group(1)}]({m.group(1).strip()})"
+            if m.group(1).strip().lower().startswith(("http://", "https://"))
+            else _clean_single_line(re.sub(r"<[^>]+>", " ", m.group(2)))
+        ),
+        raw_html,
+    )
+    text = re.sub(r"(?i)<li[^>]*>", "\n- ", text)
     text = re.sub(r"(?i)<(?:br|p|div|h[1-6]|tr)[^>]*>", "\n", text)
     text = re.sub(r"<[^>]+>", " ", text)
     text = (
@@ -602,34 +797,229 @@ def _strip_html_to_lines(raw_html: str) -> List[str]:
     return [ln.strip() for ln in text.splitlines() if ln.strip()]
 
 
+_TRACKING_QUERY_PARAMS = frozenset(
+    {
+        "utm_source",
+        "utm_medium",
+        "utm_campaign",
+        "utm_term",
+        "utm_content",
+        "utm_id",
+        "fbclid",
+        "gclid",
+        "mc_cid",
+        "mc_eid",
+        "sa",
+        "ust",
+        "usg",
+        "ved",
+    }
+)
+
+
+def _unwrap_tracking_url(raw_url: str) -> str:
+    """Unwraps Google/Substack/YouTube redirect wrappers and strips tracking query params."""
+    url = (raw_url or "").replace("&amp;", "&").strip().strip("<>")
+    if not url:
+        return ""
+    try:
+        parsed = urllib.parse.urlsplit(url)
+        host = parsed.netloc.lower()
+        if host.endswith("google.com") and parsed.path == "/url":
+            qs = urllib.parse.parse_qs(parsed.query, keep_blank_values=False)
+            target = (qs.get("q") or qs.get("url") or [""])[0].strip()
+            if target.startswith(("http://", "https://")):
+                url = target
+        elif host.endswith("youtube.com") and parsed.path == "/redirect":
+            qs = urllib.parse.parse_qs(parsed.query, keep_blank_values=False)
+            target = (qs.get("q") or [""])[0].strip()
+            if target.startswith(("http://", "https://")):
+                url = target
+        elif "substack.com" in host and "/redirect/" in parsed.path:
+            segs = [s for s in parsed.path.split("/") if s]
+            for seg in reversed(segs):
+                if len(seg) >= 16:
+                    try:
+                        padded = seg + "=" * (-len(seg) % 4)
+                        decoded = json.loads(base64.urlsafe_b64decode(padded).decode("utf-8", errors="ignore"))
+                        if isinstance(decoded, dict) and str(decoded.get("e", "")).startswith(("http://", "https://")):
+                            url = str(decoded["e"]).strip()
+                            break
+                    except Exception:
+                        continue
+    except Exception:
+        pass
+
+    try:
+        parsed2 = urllib.parse.urlsplit(url)
+        if parsed2.query:
+            pairs = urllib.parse.parse_qsl(parsed2.query, keep_blank_values=True)
+            filtered = [
+                (k, v)
+                for k, v in pairs
+                if k.lower() not in _TRACKING_QUERY_PARAMS and not (k.lower() == "source" and v.lower() in ("gmail", "editors"))
+            ]
+            new_query = urllib.parse.urlencode(
+                filtered,
+                doseq=True,
+                quote_via=lambda s, safe="", encoding=None, errors=None: urllib.parse.quote(
+                    s, safe=f"{safe}@", encoding=encoding or "utf-8", errors=errors or "strict"
+                ),
+            )
+            url = urllib.parse.urlunsplit((parsed2.scheme, parsed2.netloc, parsed2.path, new_query, parsed2.fragment))
+    except Exception:
+        pass
+    return url
+
+
+def _friendly_link_label(clean_url: str) -> str:
+    """Derives a concise human-readable label for a bare URL."""
+    try:
+        parsed = urllib.parse.urlsplit(clean_url)
+        host = parsed.netloc.lower()
+        if host.startswith("www."):
+            host = host[4:]
+        if host == "mail.google.com":
+            return "Gmail Thread"
+        if host == "keep.google.com":
+            return "Google Keep"
+        if host == "drive.google.com":
+            return "Google Drive"
+        if host == "sites.google.com":
+            return "Google Site"
+        if host == "discuss.ai.google.dev":
+            return "AI Forum"
+        if host == "github.com":
+            parts = [p for p in parsed.path.split("/") if p]
+            return f"github.com/{parts[0]}/{parts[1]}" if len(parts) >= 2 else "GitHub"
+        if host == "arxiv.org":
+            parts = [p for p in parsed.path.split("/") if p]
+            return f"arXiv:{parts[-1]}" if parts else "arXiv"
+        if host == "huggingface.co":
+            parts = [p for p in parsed.path.split("/") if p]
+            return "/".join(parts[:2]) if len(parts) >= 2 else "HuggingFace"
+        return host or "Link"
+    except Exception:
+        return "Link"
+
+
+def _preserve_inline_markdown_links(text: str) -> str:
+    """Unwraps tracking URLs and converts bare URLs / 'Label: URL' items into inline [Label](URL) Markdown links."""
+    raw = _clean_single_line((text or "").replace("&amp;", "&"))
+    if not raw:
+        return ""
+
+    # 1. Whole-item 'Label: https://...' format (e.g. 'LinkedIn: https://...', 'Thread: https://...')
+    label_url_match = re.match(r"^(?P<label>.+?)\s*:\s*<?(?P<url>https?://[^\s<>\]\"']+)>?\s*$", raw)
+    if label_url_match:
+        label = label_url_match.group("label").strip(" -*•")
+        url = _unwrap_tracking_url(label_url_match.group("url").rstrip(".,;:!?"))
+        if label and url and "](" not in label:
+            return f"[{label}]({url})"
+
+    # 2. Unwrap existing [Label](URL) links while leaving them tokenized so bare-URL pass skips them
+    placeholders: List[str] = []
+
+    def _stash_md_link(match: re.Match[str]) -> str:
+        lbl = _clean_single_line(match.group(1))
+        url = _unwrap_tracking_url(match.group(2))
+        token = f"__MDLINK_{len(placeholders)}__"
+        placeholders.append(f"[{lbl}]({url})" if url else lbl)
+        return token
+
+    tokenized = re.sub(r"\[([^\]]+)\]\(\s*(https?://[^)\s]+)\s*\)", _stash_md_link, raw)
+
+    # 3. Convert any remaining bare URLs (inside <...>, (...), or inline) into [Label](unwrapped_url)
+    def _format_bare_url(raw_u: str) -> str:
+        full = raw_u
+        trailing = ""
+        while full and full[-1] in ".,;:!?":
+            trailing = full[-1] + trailing
+            full = full[:-1]
+        clean_url = _unwrap_tracking_url(full)
+        if not clean_url:
+            return trailing
+        lbl = _friendly_link_label(clean_url)
+        return f"[{lbl}]({clean_url}){trailing}"
+
+    tokenized = re.sub(r"<\s*(https?://[^>\s]+)\s*>", lambda m: _format_bare_url(m.group(1)), tokenized)
+    tokenized = re.sub(r"https?://[^\s<>\"'\)\]]+", lambda m: _format_bare_url(m.group(0)), tokenized)
+
+    for idx, md_link in enumerate(placeholders):
+        tokenized = tokenized.replace(f"__MDLINK_{idx}__", md_link)
+
+    return _clean_single_line(tokenized)
+
+
 def _strip_tracking_urls(text: str) -> str:
-    """Removes Google redirect wrappers and long tracking URLs before bullet truncation."""
-    cleaned = re.sub(r"\[([^\]]+)\]\(\s*https?://[^)\s]+\s*\)", r"\1", text or "")
-    cleaned = re.sub(r"<\s*https?://[^>\s]+\s*>", "", cleaned)
-    cleaned = re.sub(r"\(\s*https?://[^)]*(?:\)|$)", "", cleaned)
-    cleaned = re.sub(r"\s*[,;|—–-]\s*https?://[^\s)\]>]+(?=\s*\))", "", cleaned)
-    cleaned = re.sub(r"https?://[^\s)\]>]+", "", cleaned)
-    cleaned = re.sub(r"\(\s*\)", "", cleaned)
-    cleaned = re.sub(r"\(\s*[,;|]\s*", "(", cleaned)
-    cleaned = re.sub(r"\s*[,;|]\s*\)", ")", cleaned)
-    cleaned = re.sub(r"\s+([,.;:!?])", r"\1", cleaned)
-    return _clean_single_line(cleaned)
+    """Preserves inline Markdown links while unwrapping tracking URLs (compat wrapper)."""
+    return _preserve_inline_markdown_links(text)
+
+
+_AGY_DELIMITER_MAP: Dict[str, str] = {
+    "OPS_CICD_SLA": "ops_cicd_sla",
+    "AI_DEV_RADAR": "ai_dev_radar",
+    "COMPETITIVE_SECURITY": "competitive_security",
+    "YOUTUBE_NEWSLETTERS": "youtube_newsletters",
+    "DEADLINES_CHECKLIST": "deadlines_checklist",
+    "ZIVA_AND_BRITTANY": "ziva_and_brittany",
+    "CRITIC_AUDIT": "critic_audit",
+    "FULL_DOSSIER": "__HARD_STOP__",
+    "PERSONAL_DOSSIER": "__HARD_STOP__",
+    "DOSSIER": "__HARD_STOP__",
+}
+
+
+def _detect_agy_delimiter(line: str) -> Optional[str]:
+    """Detects strict [AGY_SECTION:...] top-level delimiters."""
+    m = re.match(r"^\s*\[AGY_SECTION\s*:\s*([A-Z0-9_]+)\s*\]\s*$", (line or "").strip(), re.IGNORECASE)
+    if not m:
+        return None
+    key = m.group(1).strip().upper()
+    return _AGY_DELIMITER_MAP.get(key)
 
 
 def _detect_master_section(line: str) -> Optional[str]:
-    """Identify Consolidated Daily Master Briefing section headers cleanly."""
+    """Identifies [AGY_SECTION:...] delimiters, numbered TOC sections, or Section 5 hard-stop headers."""
+    delim = _detect_agy_delimiter(line)
+    if delim:
+        return delim
+
     clean = re.sub(r"^[#*\s\-•]+", "", line or "").strip().lower()
     clean = re.sub(r"[*_:]+$", "", clean).strip()
     if not clean:
         return None
-    if re.search(r"^(?:section\s*1\b|1\.\s+).*?(?:personal|delta|account)", clean) or clean.startswith("24h personal delta"):
-        return "personal_delta"
-    if re.search(r"^(?:section\s*2\b|2\.\s+).*?(?:ai\s+news|ecosystem|research|model|tool)", clean) or re.match(r"^(?:ai\s+news|ecosystem\s+news)\b", clean):
-        return "ai_news"
-    if re.search(r"^(?:section\s*3\b|3\.\s+).*?(?:youtube|video)", clean) or re.match(r"^(?:technical\s+)?youtube\s+digest\b", clean):
-        return "youtube_digest"
-    if re.search(r"^(?:section\s*4\b|4\.\s+).*?(?:deprecat|30-?day|deadline|retire|sunset|alert)", clean) or re.match(r"^(?:30-?day\s+deprecations|upcoming\s+deprecations)\b", clean):
-        return "deprecations"
+
+    # Hard-stop BEFORE any Full Cumulative Personal Dossier / Section 5 header
+    if (
+        re.search(r"^(?:section\s*5\b|5\.\s+).*?(?:dossier|cumulative|personal\s+dossier)", clean)
+        or re.match(r"^(?:full\s+cumulative\s+personal\s+dossier|5\.1\s+core\s+identity)\b", clean)
+    ):
+        return "__HARD_STOP__"
+
+    if re.search(r"^(?:section\s*1\b|1\.\s+).*?(?:personal|delta|account|ops|ci/?cd|sla)", clean) or clean.startswith("24h personal delta"):
+        return "ops_cicd_sla"
+    if (
+        re.search(
+            r"^(?:section\s*2\b|2\.\s+).*?(?:ai\s+news|google\s+ai|antigravity|gemini|gemma|dev\s+stack|ecosystem|research|model|tool|radar)",
+            clean,
+        )
+        or re.match(r"^(?:ai\s+news|ecosystem\s+news|ai/dev\s+radar)\b", clean)
+    ):
+        return "ai_dev_radar"
+    if re.match(r"^(?:competitive\s*(?:&|and)?\s*(?:adversarial\s+)?security|security\s+radar)\b", clean):
+        return "competitive_security"
+    if re.search(r"^(?:section\s*3\b|3\.\s+).*?(?:youtube|video|newsletter)", clean) or re.match(r"^(?:technical\s+)?youtube\s+digest\b", clean):
+        return "youtube_newsletters"
+    if (
+        re.search(r"^(?:section\s*4\b|4\.\s+).*?(?:deprecat|30-?day|deadline|pricing|retire|sunset|alert|checklist)", clean)
+        or re.match(r"^(?:30-?day\s+deprecations|upcoming\s+(?:30-day\s+)?(?:api\s+pricing|deprecations))\b", clean)
+    ):
+        return "deadlines_checklist"
+    if re.match(r"^(?:ziva\s*(?:&|and)\s*brittany|missoula\s+(?:home|corner))\b", clean):
+        return "ziva_and_brittany"
+    if re.match(r"^(?:critic\s+(?:audit|verification))\b", clean):
+        return "critic_audit"
     return None
 
 
@@ -646,8 +1036,104 @@ def _extract_raw_urls(raw_text: str) -> List[str]:
     return urls
 
 
+_STALE_ORBIT_ECHO_HEADER_RE = re.compile(
+    r"^orbit\s+security\s+daily\s+operational\s+briefing\b",
+    re.IGNORECASE,
+)
+_STALE_ORBIT_ECHO_CHILD_RE = re.compile(
+    r"^(?:daemon\s*&\s*mesh|track\s*a\s*vault(?:\s+expanded)?|track\s*b\s*&\s*stripe|geo\s*panel|recent\s*repo\s*commits|host\s*telemetry)\s*:",
+    re.IGNORECASE,
+)
+_COMPETITIVE_CVE_CUE_RE = re.compile(
+    r"(?:CVE-\d{4}-\d+|\b(?:vulnerability|injection|rebinding|heap\s+overflow|ruby2shell|exploit|security\s+advisory|ransomware|breach|0-?day|zero-?day)\b)",
+    re.IGNORECASE,
+)
+_PURE_MD_LINK_RE = re.compile(r"^\[[^\]]+\]\([^)]+\)$")
+
+
+def _truncate_preserving_links(text: str, max_len: int = 900) -> str:
+    """Truncates overly long prose without cutting inside a [Label](URL) Markdown link."""
+    if len(text) <= max_len:
+        return text
+    # Avoid slicing inside a Markdown link span
+    cut = max_len - 3
+    for m in re.finditer(r"\[[^\]]+\]\([^)]+\)", text):
+        if m.start() < cut < m.end():
+            if m.end() <= max_len + 260:
+                return text
+            cut = m.start()
+            break
+    truncated = text[:cut].rstrip(" ,;:-")
+    if " " in truncated and len(truncated) > 160 and not truncated.endswith(")"):
+        truncated = truncated.rsplit(" ", 1)[0].rstrip(" ,;:")
+    return (truncated + "...") if truncated else text[:max_len]
+
+
+def _fold_section_entries(raw_entries: List[Tuple[int, str]]) -> List[str]:
+    """Folds parent header labels ending in ':' into child links/prose so zero dangling bullets remain."""
+    folded: List[str] = []
+    idx = 0
+    total = len(raw_entries)
+
+    while idx < total:
+        indent, text = raw_entries[idx]
+        if not text:
+            idx += 1
+            continue
+
+        # Look ahead at indented children when a bullet ends with ':' and has no inline payload
+        if text.endswith(":"):
+            header_label = text[:-1].strip()
+            children: List[Tuple[int, str]] = []
+            look = idx + 1
+            while look < total and raw_entries[look][0] > indent:
+                children.append(raw_entries[look])
+                look += 1
+
+            if not children:
+                # Dangling colon-only header with zero children: suppress cleanly
+                idx += 1
+                continue
+
+            # If children are purely links (e.g. Gmail Threads -> LinkedIn, Workable, Erin Graham Reply)
+            if all(_PURE_MD_LINK_RE.match(ch_txt) for _, ch_txt in children):
+                folded.append(f"{header_label}: " + " | ".join(ch_txt for _, ch_txt in children))
+                idx = look
+                continue
+
+            # Mixed prose + sub-links (e.g. Stellar Cyber, X Money)
+            sub_folded = _fold_section_entries(children)
+            if sub_folded:
+                # Fold any standalone '[Thread](url)' item onto the preceding prose item
+                merged_sub: List[str] = []
+                for sub_txt in sub_folded:
+                    if _PURE_MD_LINK_RE.match(sub_txt) and merged_sub and not merged_sub[-1].endswith(")"):
+                        merged_sub[-1] = f"{merged_sub[-1]} ({sub_txt})"
+                    else:
+                        merged_sub.append(sub_txt)
+                first = merged_sub[0]
+                if header_label and not first.lower().startswith(header_label.lower()[:12]):
+                    folded.append(f"**{header_label}:** {first}")
+                else:
+                    folded.append(first)
+                folded.extend(merged_sub[1:])
+            idx = look
+            continue
+
+        # Standalone trailing [Thread](url) right after a non-colon sibling at same/higher indent
+        if _PURE_MD_LINK_RE.match(text) and text.startswith("[Thread](") and folded:
+            folded[-1] = f"{folded[-1]} ({text})"
+            idx += 1
+            continue
+
+        folded.append(text)
+        idx += 1
+
+    return folded
+
+
 def _extract_master_briefing_delta(messages: Sequence[Any]) -> Dict[str, Any]:
-    """Extracts the latest 'Combined Daily Master Briefing' subject, date, sections, URLs, and highlights."""
+    """Extracts the latest 'Combined Daily Master Briefing' using strict boundaries, hard-stop before Section 5, and inline links."""
     candidates: List[Tuple[float, int, Any, str, Optional[datetime.datetime]]] = []
     for idx, msg in enumerate(messages or []):
         subj = _clean_single_line(str(_msg_field(msg, "subject", "") or ""))
@@ -666,14 +1152,25 @@ def _extract_master_briefing_delta(messages: Sequence[Any]) -> Dict[str, Any]:
     raw_date = _msg_field(best_msg, "date")
     if dt is not None:
         date_str = dt.strftime("%Y-%m-%d %H:%M")
+        timestamp_utc = float(dt.timestamp())
     elif raw_date:
         date_str = _clean_single_line(str(raw_date))
+        timestamp_utc = 0.0
     else:
         date_str = ""
+        timestamp_utc = 0.0
 
     highlights: List[str] = []
     seen_lower: set[str] = set()
     sections: Dict[str, List[str]] = {
+        "ops_cicd_sla": [],
+        "ai_dev_radar": [],
+        "competitive_security": [],
+        "youtube_newsletters": [],
+        "deadlines_checklist": [],
+        "ziva_and_brittany": [],
+        "critic_audit": [],
+        # Legacy aliases preserved for downstream consumers (hypernote_briefing.py / tests)
         "personal_delta": [],
         "ai_news": [],
         "youtube_digest": [],
@@ -682,24 +1179,39 @@ def _extract_master_briefing_delta(messages: Sequence[Any]) -> Dict[str, Any]:
     section_seen: Dict[str, set[str]] = {k: set() for k in sections}
 
     def _clean_item(candidate_text: str) -> str:
-        cleaned = _strip_tracking_urls(candidate_text).lstrip("-*• ").strip()
+        stripped = re.sub(r"^[-*•]+\s+", "", (candidate_text or "").strip())
+        cleaned = _preserve_inline_markdown_links(stripped)
         if not cleaned or len(cleaned) < 4:
             return ""
-        if len(cleaned) > 280:
-            truncated = cleaned[:277].rstrip()
-            if " " in truncated and len(truncated) > 140:
-                truncated = truncated.rsplit(" ", 1)[0].rstrip(" ,;:")
-            cleaned = truncated + "..."
-        return cleaned
+        if cleaned.endswith(":") and "](" not in cleaned:
+            return ""
+        return _truncate_preserving_links(cleaned, max_len=900)
 
-    def _add_highlight(candidate_text: str, section_name: Optional[str] = None) -> None:
-        cleaned = _clean_item(candidate_text)
+    def _add_to_section(sec_key: Optional[str], cleaned_text: str) -> None:
+        if not sec_key or sec_key not in sections:
+            return
+        k = cleaned_text.lower()
+        if k not in section_seen[sec_key]:
+            section_seen[sec_key].add(k)
+            sections[sec_key].append(cleaned_text)
+
+    def _add_highlight(candidate_text: str, section_name: Optional[str] = None, already_cleaned: bool = False) -> None:
+        cleaned = candidate_text if already_cleaned else _clean_item(candidate_text)
         if not cleaned:
             return
         key = cleaned.lower()
-        if section_name and section_name in sections and key not in section_seen[section_name]:
-            section_seen[section_name].add(key)
-            sections[section_name].append(cleaned)
+        if section_name:
+            _add_to_section(section_name, cleaned)
+            if section_name == "ops_cicd_sla":
+                _add_to_section("personal_delta", cleaned)
+            elif section_name == "ai_dev_radar":
+                _add_to_section("ai_news", cleaned)
+            elif section_name == "competitive_security":
+                _add_to_section("ai_news", cleaned)
+            elif section_name == "youtube_newsletters":
+                _add_to_section("youtube_digest", cleaned)
+            elif section_name == "deadlines_checklist":
+                _add_to_section("deprecations", cleaned)
         if key not in seen_lower:
             seen_lower.add(key)
             highlights.append(cleaned)
@@ -713,56 +1225,432 @@ def _extract_master_briefing_delta(messages: Sequence[Any]) -> Dict[str, Any]:
     body_html = str(_msg_field(best_msg, "body_html", "") or "")
     snippet = str(_msg_field(best_msg, "snippet", "") or "")
 
-    extracted_urls = _extract_raw_urls("\n".join(p for p in (body_text, body_html, snippet) if p))
+    extracted_urls = [_unwrap_tracking_url(u) for u in _extract_raw_urls("\n".join(p for p in (body_text, body_html, snippet) if p))]
+    extracted_urls = [u for u in dict.fromkeys(extracted_urls) if u]
 
-    lines: List[str] = []
+    raw_lines: List[str] = []
     if body_text.strip():
-        lines = [ln.strip() for ln in body_text.splitlines() if ln.strip()]
+        raw_lines = [ln.rstrip() for ln in body_text.splitlines() if ln.strip()]
     elif body_html.strip():
-        lines = _strip_html_to_lines(body_html)
+        raw_lines = _strip_html_to_lines(body_html)
     elif snippet.strip():
-        lines = [ln.strip() for ln in snippet.splitlines() if ln.strip()]
+        raw_lines = [ln.rstrip() for ln in snippet.splitlines() if ln.strip()]
 
     skip_line_re = re.compile(
-        r"^(?:combined daily master briefing|prepared for|self-healing status|executive table of contents|here is your\b|[=\-_]{3,})",
+        r"^(?:combined daily master briefing|prepared for|generated:|self-healing status|here is your\b|[=\-_]{3,}|note:\s*your\s+['\"]consolidation of personal information)",
         re.IGNORECASE,
     )
-    bullet_items: List[Tuple[Optional[str], str]] = []
-    numbered_items: List[Tuple[Optional[str], str]] = []
-    current_section: Optional[str] = None
 
-    for ln in lines:
+    raw_section_entries: Dict[Optional[str], List[Tuple[int, str]]] = {}
+    numbered_entries: Dict[Optional[str], List[Tuple[int, str]]] = {}
+    current_section: Optional[str] = None
+    in_toc = False
+    last_toc_num = 0
+    explicit_delimiters_used = False
+    hard_stopped_at_dossier = False
+    suppressed_stale_echo_lines = 0
+    stale_echo_notes: List[str] = []
+    skip_echo_indent: Optional[int] = None
+    in_sub_24_security = False
+
+    for raw_ln in raw_lines:
+        indent = len(raw_ln) - len(raw_ln.lstrip(" \t"))
+        ln = raw_ln.strip()
+        if not ln:
+            continue
+
+        if re.match(r"^executive\s+table\s+of\s+contents\b", ln, re.IGNORECASE):
+            in_toc = True
+            last_toc_num = 0
+            continue
+
+        agy_delim = _detect_agy_delimiter(ln)
+        if agy_delim:
+            in_toc = False
+            explicit_delimiters_used = True
+            skip_echo_indent = None
+            in_sub_24_security = False
+            if agy_delim == "__HARD_STOP__":
+                hard_stopped_at_dossier = True
+                break
+            current_section = agy_delim
+            continue
+
+        if in_toc:
+            if re.match(r"^[=\-_]{3,}$", ln):
+                in_toc = False
+                continue
+            toc_num_m = re.match(r"^(\d+)\.\s+", ln)
+            if toc_num_m:
+                num_val = int(toc_num_m.group(1))
+                if num_val > last_toc_num:
+                    last_toc_num = num_val
+                    continue
+            # Either went backward (e.g. 5 -> 1) or hit real body text -> TOC ended
+            in_toc = False
+
         detected_section = _detect_master_section(ln)
         if detected_section:
+            skip_echo_indent = None
+            in_sub_24_security = False
+            if detected_section == "__HARD_STOP__":
+                hard_stopped_at_dossier = True
+                break
             current_section = detected_section
             continue
+
         if skip_line_re.match(ln):
             continue
-        if ln.startswith(("- ", "* ", "• ")):
-            bullet_items.append((current_section, ln[2:].strip()))
+
+        # Detect Section 2.4 Dev Stack / MCP Security subheading under fallback numbered mode
+        if current_section == "ai_dev_radar" and not explicit_delimiters_used:
+            if re.match(r"^2\.4\b", ln):
+                in_sub_24_security = True
+                continue
+            elif re.match(r"^2\.\d+\b", ln):
+                in_sub_24_security = False
+                continue
+
+        # Suppress 24h stale echoed Orbit Operational Briefing inside Gemini Section 1
+        if current_section == "ops_cicd_sla":
+            bare_probe = re.sub(r"^[-*•]+\s+", "", ln).strip()
+            if skip_echo_indent is not None:
+                if indent > skip_echo_indent or _STALE_ORBIT_ECHO_CHILD_RE.match(bare_probe):
+                    suppressed_stale_echo_lines += 1
+                    continue
+                skip_echo_indent = None
+            if _STALE_ORBIT_ECHO_HEADER_RE.match(bare_probe) or _STALE_ORBIT_ECHO_CHILD_RE.match(bare_probe):
+                skip_echo_indent = indent
+                suppressed_stale_echo_lines += 1
+                stale_echo_notes.append(bare_probe[:120])
+                continue
+
+        is_bullet = ln.startswith(("- ", "* ", "• "))
+        if is_bullet:
+            payload = ln[2:].strip()
+            target_sec = current_section
+            if target_sec == "ai_dev_radar" and not explicit_delimiters_used:
+                if (in_sub_24_security and _COMPETITIVE_CVE_CUE_RE.search(payload)) or _COMPETITIVE_CVE_CUE_RE.search(payload):
+                    target_sec = "competitive_security"
+            preserved = _preserve_inline_markdown_links(payload)
+            if preserved:
+                raw_section_entries.setdefault(target_sec, []).append((indent, preserved))
         elif re.match(r"^\d+\.\s+", ln):
-            numbered_items.append((current_section, re.sub(r"^\d+\.\s+", "", ln).strip()))
+            payload = re.sub(r"^\d+\.\s+", "", ln).strip()
+            preserved = _preserve_inline_markdown_links(payload)
+            if preserved:
+                numbered_entries.setdefault(current_section, []).append((indent, preserved))
         elif current_section and len(ln) >= 12 and not ln.startswith(("http://", "https://")):
-            bullet_items.append((current_section, ln))
+            preserved = _preserve_inline_markdown_links(ln)
+            if preserved:
+                raw_section_entries.setdefault(current_section, []).append((indent, preserved))
 
-    for sec_name, b in bullet_items:
-        _add_highlight(b, section_name=sec_name)
+    for sec_name, entry_list in raw_section_entries.items():
+        for item_text in _fold_section_entries(entry_list):
+            if item_text.endswith(":") and "](" not in item_text:
+                continue
+            _add_highlight(_truncate_preserving_links(item_text, max_len=900), section_name=sec_name, already_cleaned=True)
 
-    if not bullet_items or any(numbered_items):
-        for sec_name, n in numbered_items:
-            _add_highlight(n, section_name=sec_name)
+    if not raw_section_entries or any(numbered_entries.values()):
+        for sec_name, entry_list in numbered_entries.items():
+            for item_text in _fold_section_entries(entry_list):
+                if item_text.endswith(":") and "](" not in item_text:
+                    continue
+                _add_highlight(_truncate_preserving_links(item_text, max_len=900), section_name=sec_name, already_cleaned=True)
 
     if not highlights and snippet.strip():
         _add_highlight(snippet)
+
+    # Ensure zero dangling bullets survived
+    for sec_k, sec_vals in list(sections.items()):
+        sections[sec_k] = [v for v in sec_vals if not (v.endswith(":") and "](" not in v)]
 
     return {
         "found": True,
         "subject": subject,
         "date": date_str,
-        "highlights": highlights[:32],
+        "timestamp_utc": timestamp_utc,
+        "highlights": highlights[:40],
         "sections": sections,
         "extracted_urls": extracted_urls,
-        "body_text": body_text or "\n".join(lines),
+        "body_text": body_text or "\n".join(raw_lines),
+        "parser_meta": {
+            "strict_delimiters": explicit_delimiters_used,
+            "hard_stopped_at_dossier": hard_stopped_at_dossier,
+            "suppressed_stale_echo_lines": suppressed_stale_echo_lines,
+            "stale_echo_notes": stale_echo_notes[:5],
+        },
+    }
+
+
+MASTER_BRIEFING_GMAIL_QUERY = 'label:Orbit/Briefings subject:"Combined Daily Master Briefing" newer_than:1d'
+DELTA_GMAIL_QUERIES: Dict[str, str] = {
+    "ci_cd": "label:Orbit/CI-CD newer_than:2d",
+    "vdp": "label:Orbit/VDP newer_than:7d",
+    "work": "label:Work newer_than:3d",
+}
+
+
+def _get_denver_tz() -> datetime.tzinfo:
+    """Returns America/Denver tzinfo with fixed MST (-07:00) fallback."""
+    try:
+        return ZoneInfo("America/Denver")
+    except Exception:
+        return datetime.timezone(datetime.timedelta(hours=-7))
+
+
+def _denver_date_of(dt: Optional[datetime.datetime]) -> Optional[datetime.date]:
+    if dt is None:
+        return None
+    aware = dt if dt.tzinfo else dt.replace(tzinfo=datetime.timezone.utc)
+    return aware.astimezone(_get_denver_tz()).date()
+
+
+def _build_xgm_raw_query(gmail_query: str) -> str:
+    """Formats a Gmail search string into an IMAP X-GM-RAW criterion."""
+    escaped = (gmail_query or "").replace("\\", "\\\\").replace('"', '\\"')
+    return f'X-GM-RAW "{escaped}"'
+
+
+def fetch_gemini_master_briefing_from_gmail(
+    target_date: Optional[datetime.date] = None,
+    client: Optional[Any] = None,
+    query: str = MASTER_BRIEFING_GMAIL_QUERY,
+) -> Tuple[Dict[str, Any], str]:
+    """Queries Gmail deterministically for today's Combined Daily Master Briefing without mutating \\Seen."""
+    expected_date = target_date or datetime.datetime.now(_get_denver_tz()).date()
+    xgm_query = _build_xgm_raw_query(query)
+    msgs: List[Any] = []
+    status = "connected"
+
+    if client is not None:
+        try:
+            msgs = list(client.fetch_messages(folder="[Gmail]/All Mail", query=xgm_query, limit=5) or [])
+            if not msgs:
+                msgs = list(client.fetch_messages(folder="INBOX", query=xgm_query, limit=5) or [])
+        except Exception as exc:
+            return {"found": False, "subject": "", "date": "", "highlights": []}, f"error: {exc}"
+    else:
+        msgs, status = _fetch_imap_messages(folder="[Gmail]/All Mail", query=xgm_query, limit=5)
+        if not msgs:
+            in_msgs, in_status = _fetch_imap_messages(folder="INBOX", query=xgm_query, limit=5)
+            if in_msgs:
+                msgs = in_msgs
+                status = in_status
+            elif status.startswith("error:") and in_status == "connected":
+                status = in_status
+
+    if not msgs:
+        return {"found": False, "subject": "", "date": "", "highlights": [], "matches_target_date": False}, status
+
+    # Prefer candidate matching expected_date in America/Denver
+    matching_msgs: List[Any] = []
+    stale_msgs: List[Any] = []
+    for m in msgs:
+        subj = _clean_single_line(str(_msg_field(m, "subject", "") or ""))
+        if not subj.lower().startswith(_MASTER_BRIEFING_PREFIX):
+            continue
+        msg_dt = _parse_msg_datetime(_msg_field(m, "date"))
+        msg_denver_date = _denver_date_of(msg_dt)
+        if msg_denver_date is None or msg_denver_date == expected_date:
+            matching_msgs.append(m)
+        else:
+            stale_msgs.append(m)
+
+    if matching_msgs:
+        extracted = _extract_master_briefing_delta(matching_msgs)
+        extracted["matches_target_date"] = True
+        extracted["gmail_query"] = query
+        return extracted, status
+
+    stale_extracted = _extract_master_briefing_delta(stale_msgs) if stale_msgs else {"found": False, "subject": "", "date": ""}
+    return {
+        "found": False,
+        "subject": "",
+        "date": "",
+        "highlights": [],
+        "matches_target_date": False,
+        "stale_candidate": {
+            "subject": stale_extracted.get("subject", ""),
+            "date": stale_extracted.get("date", ""),
+        }
+        if stale_extracted.get("found")
+        else None,
+    }, status
+
+
+def poll_gemini_master_briefing_with_backoff(
+    target_date: Optional[datetime.date] = None,
+    max_retries: int = 3,
+    retry_interval_sec: float = 300.0,
+    sleep_fn: Callable[[float], None] = time.sleep,
+    fetcher_fn: Optional[Callable[[], Tuple[Dict[str, Any], str]]] = None,
+) -> Dict[str, Any]:
+    """Polls Gmail for today's Master Briefing, retrying every 5 minutes up to 3 times before local-only fallback."""
+    expected_date = target_date or datetime.datetime.now(_get_denver_tz()).date()
+    retries = max(0, int(max_retries))
+    last_status = "unconfigured"
+    stale_candidate = None
+
+    for attempt in range(retries + 1):
+        if fetcher_fn is not None:
+            briefing, last_status = fetcher_fn()
+        else:
+            briefing, last_status = fetch_gemini_master_briefing_from_gmail(target_date=expected_date)
+
+        if briefing.get("stale_candidate"):
+            stale_candidate = briefing["stale_candidate"]
+
+        if briefing.get("found") and briefing.get("matches_target_date", True):
+            return {
+                **briefing,
+                "ingestion_status": "received",
+                "attempts": attempt + 1,
+                "warning_banner": "",
+                "gmail_status": last_status,
+            }
+
+        if last_status == "unconfigured":
+            break
+
+        if attempt < retries and retry_interval_sec > 0:
+            sleep_fn(float(retry_interval_sec))
+
+    return {
+        "found": False,
+        "subject": "",
+        "date": "",
+        "timestamp_utc": 0.0,
+        "highlights": [],
+        "sections": {
+            "ops_cicd_sla": [],
+            "ai_dev_radar": [],
+            "competitive_security": [],
+            "youtube_newsletters": [],
+            "deadlines_checklist": [],
+            "ziva_and_brittany": [],
+            "critic_audit": [],
+            "personal_delta": [],
+            "ai_news": [],
+            "youtube_digest": [],
+            "deprecations": [],
+        },
+        "extracted_urls": [],
+        "ingestion_status": "missing_after_backoff",
+        "attempts": 1 if last_status == "unconfigured" else retries + 1,
+        "warning_banner": "[WARN] Gemini Master Briefing not yet received",
+        "gmail_status": last_status,
+        "stale_candidate": stale_candidate,
+    }
+
+
+_GH_CI_SUBJECT_RE = re.compile(
+    r"^\[(?P<repo>[^\]]+)\]\s*Run\s+(?P<state>failed|cancelled|timed out)\s*:\s*(?P<workflow>.+?)\s*-\s*(?P<branch>[^\s(]+)\s*\((?P<sha>[0-9a-fA-F]{6,40})\)",
+    re.IGNORECASE,
+)
+
+
+def query_post_briefing_email_delta(
+    since_ts: Optional[float] = None,
+    client: Optional[Any] = None,
+    limit: int = 15,
+) -> Dict[str, Any]:
+    """Scans Orbit/CI-CD, Orbit/VDP, and Work labels for high-priority messages after the Gemini briefing timestamp."""
+    empty_result: Dict[str, Any] = {
+        "status": "unconfigured",
+        "since_ts": since_ts or 0.0,
+        "ci_cd_all": [],
+        "ci_cd_delta": [],
+        "vdp_all": [],
+        "vdp_delta": [],
+        "work_delta": [],
+        "work_recent": [],
+        "total_delta_count": 0,
+    }
+
+    def _fetch_label(raw_q: str) -> Tuple[List[Any], str]:
+        xgm = _build_xgm_raw_query(raw_q)
+        if client is not None:
+            try:
+                return list(client.fetch_messages(folder="[Gmail]/All Mail", query=xgm, limit=limit) or []), "connected"
+            except Exception as exc:
+                return [], f"error: {exc}"
+        return _fetch_imap_messages(folder="[Gmail]/All Mail", query=xgm, limit=limit)
+
+    ci_msgs, ci_status = _fetch_label(DELTA_GMAIL_QUERIES["ci_cd"])
+    if ci_status == "unconfigured":
+        return empty_result
+    vdp_msgs, _ = _fetch_label(DELTA_GMAIL_QUERIES["vdp"])
+    work_msgs, _ = _fetch_label(DELTA_GMAIL_QUERIES["work"])
+
+    cutoff_ts = float(since_ts or 0.0)
+    now_utc = datetime.datetime.now(datetime.timezone.utc).timestamp()
+
+    def _format_entry(msg: Any, bucket: str) -> Dict[str, Any]:
+        subj = _clean_single_line(str(_msg_field(msg, "subject", "") or ""))
+        sender = _clean_single_line(str(_msg_field(msg, "sender", "") or ""))
+        dt = _parse_msg_datetime(_msg_field(msg, "date"))
+        ts = float(dt.timestamp()) if dt else 0.0
+        denver_str = dt.astimezone(_get_denver_tz()).strftime("%Y-%m-%d %H:%M %Z") if dt else ""
+        age_hours = round(max(0.0, (now_utc - ts) / 3600.0), 1) if ts > 0 else 0.0
+        entry: Dict[str, Any] = {
+            "bucket": bucket,
+            "subject": subj,
+            "sender": sender,
+            "date": denver_str,
+            "timestamp_utc": ts,
+            "age_hours": age_hours,
+            "is_after_briefing": bool(ts > cutoff_ts) if cutoff_ts > 0.0 else True,
+            "labels": sorted(str(l) for l in (_msg_field(msg, "labels", set()) or set())),
+        }
+        ci_m = _GH_CI_SUBJECT_RE.match(subj)
+        if ci_m:
+            entry["repo"] = ci_m.group("repo").strip()
+            entry["workflow"] = ci_m.group("workflow").strip()
+            entry["branch"] = ci_m.group("branch").strip()
+            entry["sha"] = ci_m.group("sha").strip()
+        return entry
+
+    ci_all = [_format_entry(m, "ci_cd") for m in ci_msgs]
+    ci_all.sort(key=lambda e: e["timestamp_utc"], reverse=True)
+    ci_delta = [e for e in ci_all if e["is_after_briefing"]]
+
+    vdp_all = []
+    seen_vdp = set()
+    for m in sorted(vdp_msgs, key=lambda x: (_parse_msg_datetime(_msg_field(x, "date")) or datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)).timestamp(), reverse=True):
+        entry = _format_entry(m, "vdp")
+        if "your profile was recently changed" in entry["subject"].lower():
+            continue
+        tkey = _normalize_thread_key(entry["subject"])
+        if tkey in seen_vdp:
+            continue
+        seen_vdp.add(tkey)
+        vdp_all.append(entry)
+    vdp_delta = [e for e in vdp_all if e["is_after_briefing"]]
+
+    seen_ci_vdp_keys = {_normalize_thread_key(e["subject"]) for e in (*ci_all, *vdp_all)}
+    work_recent: List[Dict[str, Any]] = []
+    for m in work_msgs:
+        entry = _format_entry(m, "work")
+        s_low = entry["subject"].lower()
+        if s_low.startswith(_MASTER_BRIEFING_PREFIX) or "orbit security daily operational briefing" in s_low:
+            continue
+        if _normalize_thread_key(entry["subject"]) in seen_ci_vdp_keys:
+            continue
+        work_recent.append(entry)
+    work_recent.sort(key=lambda e: e["timestamp_utc"], reverse=True)
+    work_delta = [e for e in work_recent if e["is_after_briefing"]]
+
+    return {
+        "status": "connected",
+        "since_ts": cutoff_ts,
+        "ci_cd_all": ci_all,
+        "ci_cd_delta": ci_delta,
+        "vdp_all": vdp_all,
+        "vdp_delta": vdp_delta,
+        "work_delta": work_delta,
+        "work_recent": work_recent[:8],
+        "total_delta_count": len(ci_delta) + len(vdp_delta) + len(work_delta),
     }
 
 

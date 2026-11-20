@@ -503,7 +503,7 @@ def test_query_google_calendar_zero_vevent_and_gmail_invite_fallback(monkeypatch
     assert any("Live Sync" in e for e in cal_ok["events_today"])
 
 
-def test_extract_master_briefing_delta_strips_tracking_urls_before_truncating():
+def test_extract_master_briefing_delta_preserves_inline_links_and_unwraps_tracking_urls():
     import datetime
     from types import SimpleNamespace
     from scripts.unified_morning_cockpit import _extract_master_briefing_delta
@@ -514,24 +514,224 @@ def test_extract_master_briefing_delta_strips_tracking_urls_before_truncating():
         date=datetime.datetime(2026, 11, 14, 11, 16, tzinfo=datetime.timezone.utc),
         body_text=(
             "COMBINED DAILY MASTER BRIEFING\n"
+            "EXECUTIVE TABLE OF CONTENTS\n"
+            "1. 24-Hour Personal Delta\n"
+            "2. Google AI, Antigravity & Dev Stack News\n"
+            "3. Technical YouTube Digest\n"
+            "4. Upcoming 30-Day API Pricing & Deprecation Deadlines\n"
+            "5. Full Cumulative Personal Dossier (Subsections 5.1 – 5.7)\n"
+            "======================================================================\n"
+            "1. 24-HOUR PERSONAL DELTA\n"
+            "======================================================================\n"
             "- Atlas Financial unauthorized account — FTC identity theft affidavit submitted via portal "
-            "(https://www.google.com/url?q=https://reportfraud.ftc.gov/confirmation/very-long-tracking-token-that-previously-clipped-the-rest-of-this-sentence&sa=D&source=editors) "
+            "(https://www.google.com/url?q=https://reportfraud.ftc.gov/confirmation/very-long-tracking-token&sa=D&source=editors) "
             "and response receipt archived (359,020 bytes, https://www.google.com/url?q=https://drive.google.com/file/d/abc123def456/view&ust=999999) "
             "at 2026-11-14 02:49 UTC.\n"
             "- LinkedIn Identity Verification — appeal accepted [support case](https://www.google.com/url?q=https://www.linkedin.com/help/linkedin/answer/a1339724&sa=D) "
             "and 2FA access fully restored.\n"
+            "- Stellar Cyber Application:\n"
+            "  * Gmail Threads:\n"
+            "    - LinkedIn: https://www.google.com/url?q=https://mail.google.com/mail/?authuser%3Dcarsonmail009@gmail.com%23all/thread-f:111&source=gmail&ust=1795&sa=E\n"
+            "    - Workable: https://www.google.com/url?q=https://mail.google.com/mail/?authuser%3Dcarsonmail009@gmail.com%23all/thread-f:222&source=gmail&ust=1795&sa=E\n"
+            "- Orbit Security Daily Operational Briefing (2026-11-13):\n"
+            "  * Daemon & Mesh: Supervisor ACTIVE (PID: 15032)\n"
+            "  * Track A Vault Expanded to 54 Bundles: stale echo\n"
+            "======================================================================\n"
+            "4. UPCOMING 30-DAY API PRICING & DEPRECATION DEADLINES\n"
+            "======================================================================\n"
+            "- Dec 3, 2026 — Gemini Omni 1.1 Auto-Routes to 1.2\n"
+            "======================================================================\n"
+            "5. FULL CUMULATIVE PERSONAL DOSSIER (SUBSECTIONS 5.1 – 5.7)\n"
+            "======================================================================\n"
+            "5.1 Core Identity, Location & Credentials\n"
+            "- Date of Birth: May 23, 1992 | Residence: Studio 1 Super 8 Missoula\n"
         ),
     )
 
     res = _extract_master_briefing_delta([msg])
     assert res["found"] is True
-    joined = "\n".join(res["highlights"])
-    assert "https://" not in joined
-    assert "google.com/url" not in joined
-    assert "FTC identity theft affidavit submitted via portal" in joined
-    assert "(359,020 bytes)" in joined
-    assert "2026-11-14 02:49 UTC" in joined
-    assert "support case and 2FA access fully restored" in joined
+    assert res["parser_meta"]["hard_stopped_at_dossier"] is True
+    assert res["parser_meta"]["suppressed_stale_echo_lines"] >= 3
+
+    ops_items = res["sections"]["ops_cicd_sla"]
+    dl_items = res["sections"]["deadlines_checklist"]
+    joined_ops = "\n".join(ops_items)
+    joined_all = "\n".join([*ops_items, *dl_items, *res["highlights"]])
+
+    # Tracking wrappers unwrapped while inline Markdown links [Label](URL) are preserved
+    assert "google.com/url" not in joined_all
+    assert "https://reportfraud.ftc.gov/confirmation/very-long-tracking-token" in joined_ops
+    assert "https://drive.google.com/file/d/abc123def456/view" in joined_ops
+    assert "[support case](https://www.linkedin.com/help/linkedin/answer/a1339724)" in joined_ops
+    assert "[LinkedIn](https://mail.google.com/mail/?authuser=carsonmail009@gmail.com#all/thread-f:111)" in joined_ops
+    assert "[Workable](https://mail.google.com/mail/?authuser=carsonmail009@gmail.com#all/thread-f:222)" in joined_ops
+
+    # Zero blank dangling bullets ending with ':'
+    for sec_vals in res["sections"].values():
+        for entry in sec_vals:
+            assert not (entry.strip().endswith(":") and "](" not in entry), f"Dangling bullet found: {entry!r}"
+
+    # Zero 24h stale Orbit echo & zero Section 5 dossier bleed
+    assert "Track A Vault Expanded to 54 Bundles" not in joined_all
+    assert "May 23, 1992" not in joined_all
+    assert "Super 8" not in joined_all
+    assert "5.1 Core Identity" not in joined_all
+    assert len(dl_items) == 1
+    assert "Gemini Omni 1.1" in dl_items[0]
+
+
+def test_extract_master_briefing_delta_parses_strict_agy_delimiters_and_hard_stops():
+    import datetime
+    from types import SimpleNamespace
+    from scripts.unified_morning_cockpit import _extract_master_briefing_delta
+
+    msg = SimpleNamespace(
+        id="mb-agy",
+        subject="Combined Daily Master Briefing — November 20, 2026",
+        date=datetime.datetime(2026, 11, 20, 16, 30, tzinfo=datetime.timezone.utc),
+        body_text=(
+            "[AGY_SECTION:OPS_CICD_SLA]\n"
+            "- Stellar Cyber application under review ([Erin Graham](https://mail.google.com/mail/#all/thread-1))\n"
+            "[AGY_SECTION:AI_DEV_RADAR]\n"
+            "- Gemini 4 Neon GA in Antigravity ([Blog](https://blog.google/neon))\n"
+            "[AGY_SECTION:COMPETITIVE_SECURITY]\n"
+            "- Go MCP SDK CVE-2026-34742 < v1.4.0 DNS rebinding ([Advisory](https://nihardaily.com/go-mcp))\n"
+            "[AGY_SECTION:YOUTUBE_NEWSLETTERS]\n"
+            "- AI Search: local MoE streaming overview ([YouTube](https://youtube.com/watch?v=abc))\n"
+            "[AGY_SECTION:DEADLINES_CHECKLIST]\n"
+            "- Nov 30: Gemini 4 Carbon & Argon intro pricing ends\n"
+            "[AGY_SECTION:ZIVA_AND_BRITTANY]\n"
+            "- Pick up Ziva chew toy and Missoula errands\n"
+            "[AGY_SECTION:CRITIC_AUDIT]\n"
+            "- Verify Go MCP SDK across local repos\n"
+            "[AGY_SECTION:FULL_DOSSIER]\n"
+            "- Sensitive static dossier line that must NEVER bleed\n"
+        ),
+    )
+
+    res = _extract_master_briefing_delta([msg])
+    assert res["found"] is True
+    assert res["parser_meta"]["strict_delimiters"] is True
+    assert res["parser_meta"]["hard_stopped_at_dossier"] is True
+
+    sec = res["sections"]
+    assert any("Stellar Cyber" in x and "https://mail.google.com/mail/#all/thread-1" in x for x in sec["ops_cicd_sla"])
+    assert any("Gemini 4 Neon" in x for x in sec["ai_dev_radar"])
+    assert any("CVE-2026-34742" in x for x in sec["competitive_security"])
+    assert any("MoE streaming" in x for x in sec["youtube_newsletters"])
+    assert any("Nov 30" in x for x in sec["deadlines_checklist"])
+    assert any("Ziva chew toy" in x for x in sec["ziva_and_brittany"])
+    assert any("Verify Go MCP SDK" in x for x in sec["critic_audit"])
+    assert "NEVER bleed" not in "\n".join(res["highlights"])
+    assert "NEVER bleed" not in "\n".join(v for vals in sec.values() for v in vals)
+
+
+def test_poll_gemini_master_briefing_with_backoff_and_post_briefing_delta():
+    import datetime
+    from types import SimpleNamespace
+    from scripts.unified_morning_cockpit import (
+        poll_gemini_master_briefing_with_backoff,
+        query_post_briefing_email_delta,
+    )
+
+    sleep_calls = []
+    attempts = {"n": 0}
+
+    def flaky_fetcher():
+        attempts["n"] += 1
+        if attempts["n"] < 3:
+            return {"found": False, "matches_target_date": False, "subject": "", "date": "", "highlights": []}, "connected"
+        return {
+            "found": True,
+            "matches_target_date": True,
+            "subject": "Combined Daily Master Briefing — November 20, 2026",
+            "date": "2026-11-20 09:30",
+            "timestamp_utc": 1795190000.0,
+            "highlights": ["Synced"],
+        }, "connected"
+
+    res_ok = poll_gemini_master_briefing_with_backoff(
+        target_date=datetime.date(2026, 11, 20),
+        max_retries=3,
+        retry_interval_sec=300.0,
+        sleep_fn=sleep_calls.append,
+        fetcher_fn=flaky_fetcher,
+    )
+    assert res_ok["found"] is True
+    assert res_ok["attempts"] == 3
+    assert res_ok["warning_banner"] == ""
+    assert sleep_calls == [300.0, 300.0]
+
+    # Exhausting all 3 retries triggers local-only fallback banner
+    miss_sleeps = []
+    res_miss = poll_gemini_master_briefing_with_backoff(
+        target_date=datetime.date(2026, 11, 20),
+        max_retries=3,
+        retry_interval_sec=300.0,
+        sleep_fn=miss_sleeps.append,
+        fetcher_fn=lambda: ({"found": False, "matches_target_date": False}, "connected"),
+    )
+    assert res_miss["found"] is False
+    assert res_miss["attempts"] == 4
+    assert res_miss["warning_banner"] == "[WARN] Gemini Master Briefing not yet received"
+    assert miss_sleeps == [300.0, 300.0, 300.0]
+
+    # Post-briefing delta scan across Orbit/CI-CD, Orbit/VDP, and Work
+    briefing_dt = datetime.datetime(2026, 11, 19, 17, 28, tzinfo=datetime.timezone.utc)
+    after_dt = datetime.datetime(2026, 11, 20, 1, 40, tzinfo=datetime.timezone.utc)
+    before_dt = datetime.datetime(2026, 11, 19, 15, 0, tzinfo=datetime.timezone.utc)
+
+    class FakeDeltaClient:
+        def fetch_messages(self, folder="[Gmail]/All Mail", query=None, limit=15):
+            q = query or ""
+            if "Orbit/CI-CD" in q:
+                return [
+                    SimpleNamespace(
+                        id="ci-1",
+                        subject="[CmfH009/microgravity] Run failed: CI - master (e830ea3)",
+                        sender="notifications@github.com",
+                        date=after_dt,
+                        labels={"Orbit/CI-CD"},
+                    )
+                ]
+            if "Orbit/VDP" in q:
+                return [
+                    SimpleNamespace(
+                        id="vdp-1",
+                        subject="[disney] #4204024: Dangling DNS CNAME on test.hulu.com",
+                        sender="no-reply@hackerone.com",
+                        date=before_dt,
+                        labels={"Orbit/VDP"},
+                    )
+                ]
+            if "label:Work" in q:
+                return [
+                    SimpleNamespace(
+                        id="w-1",
+                        subject="Re: Stellar Cyber ML Infrastructure Engineer Interview",
+                        sender="egraham@stellarcyber.ai",
+                        date=after_dt,
+                        labels={"Work"},
+                    ),
+                    SimpleNamespace(
+                        id="w-self",
+                        subject="Orbit Security Daily Operational Briefing - 2026-11-19",
+                        sender="carsonmail009@gmail.com",
+                        date=after_dt,
+                        labels={"Work"},
+                    ),
+                ]
+            return []
+
+    delta = query_post_briefing_email_delta(since_ts=briefing_dt.timestamp(), client=FakeDeltaClient())
+    assert delta["status"] == "connected"
+    assert len(delta["ci_cd_delta"]) == 1
+    assert delta["ci_cd_delta"][0]["repo"] == "CmfH009/microgravity"
+    assert delta["ci_cd_delta"][0]["sha"] == "e830ea3"
+    assert len(delta["vdp_all"]) == 1
+    assert len(delta["vdp_delta"]) == 0  # arrived before briefing_dt
+    assert len(delta["work_delta"]) == 1
+    assert "Stellar Cyber" in delta["work_delta"][0]["subject"]
 
 
 def test_query_email_hygiene_and_sent_reply_metadata(monkeypatch):
