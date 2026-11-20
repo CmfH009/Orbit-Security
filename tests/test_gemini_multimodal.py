@@ -277,6 +277,28 @@ class TestMultimodalToolReturn:
         assert "generativelanguage.googleapis.com" in art.uri
         assert art.mime_type == "application/pdf"
 
+    def test_upload_falls_back_to_local_on_402_depleted_credits(self, temp_audit_pdf: Path, monkeypatch):
+        adapter = GoogleFilesApiAdapter(api_key="depleted-key")
+        fake_resp = type("Resp", (), {"status_code": 402, "text": "prepayment credits depleted"})()
+
+        class _FakeClient:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def post(self, *args, **kwargs):
+                return fake_resp
+
+        monkeypatch.setattr(
+            "orbit_security.tools.gemini_multimodal.create_guarded_httpx_client",
+            lambda **kwargs: _FakeClient(),
+        )
+        art = adapter.upload_file(temp_audit_pdf)
+        assert art.file_name.startswith("files/local-")
+        assert art.mime_type == "application/pdf"
+
     def test_upload_missing_file_raises_error(self, tmp_path: Path):
         adapter = GoogleFilesApiAdapter(api_key="test")
         with pytest.raises(FileNotFoundError):

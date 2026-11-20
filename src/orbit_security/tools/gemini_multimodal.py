@@ -162,8 +162,7 @@ class GoogleFilesApiAdapter:
         file_bytes = p.read_bytes()
         file_size = len(file_bytes)
 
-        # In offline/test environments without an active API key, produce a deterministic simulated URI
-        if not self.api_key:
+        def _cache_local_artifact() -> UploadedArtifact:
             simulated_id = f"local-{file_hash[:12]}"
             artifact = UploadedArtifact(
                 file_name=f"files/{simulated_id}",
@@ -175,6 +174,11 @@ class GoogleFilesApiAdapter:
             )
             self._cache_by_hash[file_hash] = artifact
             return artifact
+
+        local_only = os.environ.get("ORBIT_LOCAL_ONLY", "").strip().lower() in ("1", "true", "yes")
+        # In offline/local-only mode or without an active API key, produce a deterministic simulated URI
+        if not self.api_key or local_only:
+            return _cache_local_artifact()
 
         # Real upload using resumable or multipart POST
         headers = {
@@ -207,6 +211,11 @@ class GoogleFilesApiAdapter:
                 headers={"x-goog-api-key": self.api_key},
                 files=files,
             )
+            if resp.status_code in (402, 429):
+                logger.warning(
+                    f"Gemini Files API quota/credits exhausted [{resp.status_code}]; falling back to local artifact reference."
+                )
+                return _cache_local_artifact()
             if resp.status_code not in (200, 201):
                 raise RuntimeError(
                     f"Files API upload failed [{resp.status_code}]: {resp.text}"
