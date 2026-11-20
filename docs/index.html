@@ -75,8 +75,10 @@
           "knowsAbout": [
             "Subdomain Takeovers",
             "Dangling DNS Records",
-            "DMARC RFC 7489 Email Security",
-            "PHP Bot Exploits and CVE-2017-9841",
+            "AWS Route53 and Cloudflare CNAME Auditing",
+            "Cloud Storage Bucket Takeover Detection (S3 and GCS)",
+            "DMARC RFC 7489 and SPF RFC 7208 Email Security",
+            "CISA KEV and FIRST EPSS Threat Intelligence",
             "Attack Surface Management (ASM)",
             "White-Label Security Retainers"
           ]
@@ -108,7 +110,7 @@
           "url": "https://cmfh009.github.io/Orbit-Security/",
           "name": "Orbit Security | Attack Surface & Subdomain Hygiene for Web Agencies",
           "datePublished": "2026-09-25",
-          "dateModified": "2026-10-22",
+          "dateModified": "2026-11-20",
           "inLanguage": "en",
           "about": {
             "@id": "https://cmfh009.github.io/Orbit-Security/#organization"
@@ -176,6 +178,22 @@
               "acceptedAnswer": {
                 "@type": "Answer",
                 "text": "Orbit Security adheres strictly to the Computer Fraud and Abuse Act (CFAA) safe harbor standards. We provide an exact, copy-paste Agency-Client Safe Harbor Contract Rider in our RFC Disclaimer. You can paste this one-paragraph clause into your Master Services Agreements (MSAs) or Web Care SOWs to give your agency contractual clearance to conduct automated perimeter surveillance."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How does Orbit Security detect dangling CNAME records on AWS Route53, Cloudflare, and cloud buckets?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Orbit Security's passive GhostDNS engine resolves CNAME chains and DNS records across AWS Route53, Cloudflare, Amazon S3, Google Cloud Storage, Azure, Fastly, GitHub Pages, Shopify, and Unbounce. It flags NXDOMAIN dangling pointers and unattached multi-tenant endpoints before attackers can claim them, and generates DNS/NGINX remediation scripts for your team."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does Orbit Security verify SPF, DKIM, and DMARC plus active CVE exposure for agency fleets?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. Every domain audit validates RFC 7208 SPF, DKIM, and RFC 7489 DMARC enforcement alongside CISA KEV and FIRST EPSS threat radar correlation (including critical NGINX nginx2root and OpenSSL advisories) across single domains or entire agency fleets."
               }
             },
             {

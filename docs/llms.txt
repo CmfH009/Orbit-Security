@@ -4,12 +4,23 @@ Orbit Security is an autonomous perimeter intelligence and attack surface manage
 
 ## Capabilities
 
-- Continuous attack surface discovery across subdomains, CNAME targets, and certificate transparency logs
-- Dangling DNS and subdomain takeover detection with remediation guidance
-- DMARC, SPF, and email authentication policy auditing (RFC 7489 / RFC 7208)
+- Continuous attack surface discovery across subdomains, CNAME targets, AWS Route53/Cloudflare records, and certificate transparency logs
+- Dangling DNS, GhostDNS, and subdomain/cloud-bucket takeover detection (S3, GCS, Azure, Fastly, GitHub Pages, Shopify, Unbounce) with remediation guidance
+- DMARC, SPF, DKIM, and email authentication policy auditing (RFC 7489 / RFC 7208) for agency client fleets
+- Live CISA KEV & FIRST EPSS Threat Radar tracking active CVEs and 0-days including `nginx2root` (`CVE-2026-123007`..`CVE-2026-113425`) and OpenSSL (`CVE-2026-121481`)
 - Exposure checks for configuration files, backup archives, and secrets in public responses
-- Per-domain and per-client reporting, white-labelable for agency delivery
+- Browser-compiled white-label PDF reports and client threat portals for agency delivery
 - Ongoing monitoring scopes for Shopify Plus, WordPress VIP, and Laravel client estates
+
+## Key surfaces & self-serve tools
+
+- Interactive Perimeter Audit & Live Threat Radar: https://cmfh009.github.io/Orbit-Security/
+- Agency Fleet Command & Multi-Domain Audits: https://cmfh009.github.io/Orbit-Security/fleet.html
+- Self-Serve Agency Retainer Onboarding ($29/$59/$99 per mo): https://cmfh009.github.io/Orbit-Security/signup.html
+- GhostDNS Dangling CNAME Detection: https://cmfh009.github.io/Orbit-Security/ghostdns/index.html
+- StealthBridge Passive Verification: https://cmfh009.github.io/Orbit-Security/stealthbridge/index.html
+- White-Label Client Portals: https://cmfh009.github.io/Orbit-Security/portals/index.html
+- Compact CISA KEV & EPSS JSON Feed: https://cmfh009.github.io/Orbit-Security/assets/kev_epss_radar.json
 
 ## Key facts
 

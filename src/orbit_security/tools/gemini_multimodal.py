@@ -112,6 +112,7 @@ class GoogleFilesApiAdapter:
     UPLOAD_ENDPOINT = "https://generativelanguage.googleapis.com/upload/v1beta/files"
 
     def __init__(self, api_key: Optional[str] = None, timeout_s: float = 30.0):
+        self._explicit_api_key = api_key is not None
         if api_key is not None:
             self.api_key = api_key
         else:
@@ -137,6 +138,27 @@ class GoogleFilesApiAdapter:
             for chunk in iter(lambda: f.read(65536), b""):
                 hasher.update(chunk)
         return hasher.hexdigest()
+
+    def _is_local_only_enabled(self) -> bool:
+        if self._explicit_api_key:
+            return False
+        val = os.environ.get("ORBIT_LOCAL_ONLY", "").strip().lower()
+        if val in ("1", "true", "yes"):
+            return True
+        repo_root = Path(__file__).resolve().parent.parent.parent.parent
+        for env_path in (repo_root / ".env", repo_root / ".env.gemini"):
+            try:
+                if not env_path.is_file():
+                    continue
+                for line in env_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+                    s = line.strip()
+                    if s.startswith("ORBIT_LOCAL_ONLY="):
+                        v = s.split("=", 1)[1].strip().strip('"').strip("'").lower()
+                        if v in ("1", "true", "yes"):
+                            return True
+            except OSError:
+                continue
+        return False
 
     def upload_file(
         self,
@@ -175,7 +197,7 @@ class GoogleFilesApiAdapter:
             self._cache_by_hash[file_hash] = artifact
             return artifact
 
-        local_only = os.environ.get("ORBIT_LOCAL_ONLY", "").strip().lower() in ("1", "true", "yes")
+        local_only = self._is_local_only_enabled()
         # In offline/local-only mode or without an active API key, produce a deterministic simulated URI
         if not self.api_key or local_only:
             return _cache_local_artifact()
