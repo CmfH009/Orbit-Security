@@ -41,9 +41,11 @@
 
     <!-- Shared Production Stylesheet -->
     <link rel="stylesheet" href="assets/styles.min.css?v=20261026v6">
-    <script src="assets/simple_cat.js?v=20261026v6"></script>
+    <script src="assets/simple_cat.js?v=20261026v6" defer></script>
 
     <style>
+        html { overflow-x: hidden; color-scheme: dark; }
+        body { overflow-x: clip; }
         .font-arcade { font-family: 'Press Start 2P', monospace, cursive; }
         .font-pixel { font-family: 'Silkscreen', monospace; }
         
@@ -191,12 +193,15 @@
                 </div>
             </a>
             
-            <div class="flex items-center gap-3">
-                <a href="fleet.html" class="min-h-[48px] px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-500/50 text-xs text-slate-300 hover:text-emerald-400 font-medium transition-all flex items-center">
-                    Fleet Command
+            <div class="flex items-center gap-2 sm:gap-3">
+                <a href="audit.html" class="hidden sm:flex min-h-[44px] px-3.5 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-cyan-500/50 text-xs text-cyan-300 font-medium transition-all items-center whitespace-nowrap">
+                    DNS Audit
                 </a>
-                <a href="index.html" class="min-h-[48px] px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs text-slate-400 hover:text-slate-200 transition-all flex items-center">
-                    Back to Home
+                <a href="fleet.html" class="min-h-[44px] px-3 sm:px-4 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-500/50 text-xs text-slate-300 hover:text-emerald-400 font-medium transition-all flex items-center whitespace-nowrap">
+                    Fleet
+                </a>
+                <a href="index.html" class="min-h-[44px] px-3 sm:px-4 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs text-slate-400 hover:text-slate-200 transition-all flex items-center whitespace-nowrap">
+                    Home
                 </a>
             </div>
         </div>
@@ -226,28 +231,28 @@
                 <div class="form-grid2 mb-6">
                     <div class="flex flex-col gap-1.5">
                         <label for="agency_id" class="text-xs font-mono font-bold uppercase text-slate-400">Agency Slug / ID</label>
-                        <input id="agency_id" name="agency_id" type="text" placeholder="eastside-co" required value="eastside-co"
-                               class="w-full min-h-[48px] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono">
-                        <span class="text-[11px] text-slate-500 font-mono">Generates /portal/eastside-co</span>
+                        <input id="agency_id" name="agency_id" type="text" placeholder="e.g. apex-digital" required value=""
+                               class="w-full min-h-[48px] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono">
+                        <span class="text-[11px] text-slate-500 font-mono">Generates /portal/&lt;your-slug&gt;</span>
                     </div>
 
                     <div class="flex flex-col gap-1.5">
                         <label for="agency_name" class="text-xs font-mono font-bold uppercase text-slate-400">Agency Name</label>
-                        <input id="agency_name" name="agency_name" type="text" placeholder="Eastside Co" required value="Eastside Co"
-                               class="w-full min-h-[48px] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-sans">
+                        <input id="agency_name" name="agency_name" type="text" placeholder="e.g. Apex Digital Studio" required value=""
+                               class="w-full min-h-[48px] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-sans">
                         <span class="text-[11px] text-slate-500 font-mono">Appears on client audit PDFs</span>
                     </div>
 
                     <div class="flex flex-col gap-1.5 sm:col-span-2 col-full">
                         <label for="contact_email" class="text-xs font-mono font-bold uppercase text-slate-400">Billing &amp; Contact Email</label>
-                        <input id="contact_email" name="contact_email" type="email" placeholder="ops@agency.com" required value="ops@eastsideco.com"
-                               class="w-full min-h-[48px] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-sans">
+                        <input id="contact_email" name="contact_email" type="email" placeholder="ops@youragency.com" required value=""
+                               class="w-full min-h-[48px] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-sans">
                     </div>
 
                     <div class="flex flex-col gap-1.5 sm:col-span-2 col-full">
                         <label for="website" class="text-xs font-mono font-bold uppercase text-slate-400">Agency Website</label>
-                        <input id="website" name="website" type="url" placeholder="https://eastsideco.com" required value="https://eastsideco.com"
-                               class="w-full min-h-[48px] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-sans">
+                        <input id="website" name="website" type="url" placeholder="https://youragency.com" required value=""
+                               class="w-full min-h-[48px] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-sans">
                     </div>
 
                     <!-- Retainer Tier Select Grid -->
@@ -287,20 +292,20 @@
                     <!-- Custom Portal Domain & Tagline -->
                     <div class="flex flex-col gap-1.5">
                         <label for="custom_domain" class="text-xs font-mono font-bold uppercase text-slate-400">Custom Portal Domain (Optional)</label>
-                        <input id="custom_domain" name="custom_domain" type="text" placeholder="security.eastsideco.com"
-                               class="w-full min-h-[48px] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono">
+                        <input id="custom_domain" name="custom_domain" type="text" placeholder="security.youragency.com"
+                               class="w-full min-h-[48px] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono">
                     </div>
 
                     <div class="flex flex-col gap-1.5">
                         <label for="support_email" class="text-xs font-mono font-bold uppercase text-slate-400">Client Support Email</label>
-                        <input id="support_email" name="support_email" type="email" placeholder="ops@eastsideco.com" value="ops@eastsideco.com"
-                               class="w-full min-h-[48px] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-sans">
+                        <input id="support_email" name="support_email" type="email" placeholder="security@youragency.com" value=""
+                               class="w-full min-h-[48px] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-sans">
                     </div>
 
                     <div class="flex flex-col gap-1.5 sm:col-span-2 col-full">
                         <label for="tagline" class="text-xs font-mono font-bold uppercase text-slate-400">Agency Tagline / Subtitle</label>
-                        <input id="tagline" name="tagline" type="text" placeholder="Enterprise Shopify Plus Technical Solutions" value="Enterprise Shopify Plus Technical Solutions"
-                               class="w-full min-h-[48px] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-sans">
+                        <input id="tagline" name="tagline" type="text" placeholder="Managed Web &amp; Perimeter Security Operations" value=""
+                               class="w-full min-h-[48px] px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-sans">
                     </div>
 
                     <!-- White-Label Brand Colors -->
@@ -424,7 +429,7 @@
                     const emailEl = document.getElementById('contact_email');
                     const supportEl = document.getElementById('support_email');
                     if (emailEl) emailEl.value = emailParam;
-                    if (supportEl && supportEl.value === 'ops@eastsideco.com') {
+                    if (supportEl && !supportEl.value) {
                         supportEl.value = emailParam;
                     }
                 }
@@ -442,10 +447,10 @@
                     const derivedSlug = cleanDomain.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
                     const idEl = document.getElementById('agency_id');
                     const nameEl = document.getElementById('agency_name');
-                    if (idEl && idEl.value === 'eastside-co' && derivedSlug) {
+                    if (idEl && !idEl.value && derivedSlug) {
                         idEl.value = derivedSlug;
                     }
-                    if (nameEl && nameEl.value === 'Eastside Co' && !agencyParam) {
+                    if (nameEl && !nameEl.value && !agencyParam) {
                         nameEl.value = cleanDomain;
                     }
                 }
@@ -454,7 +459,7 @@
                     const idEl = document.getElementById('agency_id');
                     const derivedSlug = agencyParam.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
                     if (nameEl) nameEl.value = agencyParam;
-                    if (idEl && idEl.value === 'eastside-co' && derivedSlug) {
+                    if (idEl && !idEl.value && derivedSlug) {
                         idEl.value = derivedSlug;
                     }
                 }

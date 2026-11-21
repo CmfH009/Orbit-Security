@@ -15,6 +15,7 @@ Orbit Security is an autonomous perimeter intelligence and attack surface manage
 ## Key surfaces & self-serve tools
 
 - Interactive Perimeter Audit & Live Threat Radar: https://cmfh009.github.io/Orbit-Security/
+- Instant Client-Side DNS & Subdomain Takeover Audit (RFC-8484 DoH + BIND/Terraform Fixpack): https://cmfh009.github.io/Orbit-Security/audit.html
 - Agency Fleet Command & Multi-Domain Audits: https://cmfh009.github.io/Orbit-Security/fleet.html
 - Self-Serve Agency Retainer Onboarding ($29/$59/$99 per mo): https://cmfh009.github.io/Orbit-Security/signup.html
 - GhostDNS Dangling CNAME Detection: https://cmfh009.github.io/Orbit-Security/ghostdns/index.html

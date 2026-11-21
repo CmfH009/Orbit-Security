@@ -1,10 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#060a16">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.puter.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https://cmfh009.github.io; connect-src 'self' http://127.0.0.1:* http://localhost:* https://cloudflare-dns.com https://dns.google https://api.puter.com https://*.puter.com; object-src 'none'; base-uri 'self'; form-action 'self';">
   <title>Orbit Security // Autonomous Instant DNS & Subdomain Takeover Scanner</title>
   <meta name="description" content="Free instant zero-dollar security audit for enterprise domains. Scans SPF, DMARC, dangling CNAMEs, and SaaS takeovers via RFC-8484 DNS-over-HTTPS.">
+  <meta name="author" content="Carson Haynes | Founder, Orbit Security">
   <link rel="canonical" href="https://cmfh009.github.io/Orbit-Security/audit.html">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Orbit Security">
@@ -12,17 +16,73 @@
   <meta property="og:title" content="Orbit Security // Autonomous Instant DNS & Subdomain Takeover Scanner">
   <meta property="og:description" content="Free instant zero-dollar security audit for enterprise domains. Scans SPF, DMARC, dangling CNAMEs, and SaaS takeovers via RFC-8484 DNS-over-HTTPS.">
   <meta property="og:image" content="https://cmfh009.github.io/Orbit-Security/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Orbit Security Instant DNS and Subdomain Takeover Audit Scanner.">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@_arsoncode">
+  <meta name="twitter:creator" content="@_arsoncode">
   <meta name="twitter:url" content="https://cmfh009.github.io/Orbit-Security/audit.html">
   <meta name="twitter:title" content="Orbit Security // Autonomous Instant DNS & Subdomain Takeover Scanner">
   <meta name="twitter:description" content="Free instant zero-dollar security audit for enterprise domains. Scans SPF, DMARC, dangling CNAMEs, and SaaS takeovers via RFC-8484 DNS-over-HTTPS.">
   <meta name="twitter:image" content="https://cmfh009.github.io/Orbit-Security/assets/og-image.png">
+  <meta name="twitter:image:alt" content="Orbit Security Instant DNS and Subdomain Takeover Audit Scanner.">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="preconnect" href="https://cloudflare-dns.com" crossorigin>
+  <link rel="preconnect" href="https://dns.google" crossorigin>
+  <!-- Production Compiled Stylesheet (Zero-Render-Delay, Offline Fonts Vendored) -->
+  <link rel="stylesheet" href="assets/styles.min.css?v=20261026v6">
   <!-- Puter.js Free Serverless AI Gateway (non-blocking defer; local fallback active if unavailable) -->
   <script src="https://js.puter.com/v2/" defer></script>
-  <!-- Tailwind CSS via CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": "https://cmfh009.github.io/Orbit-Security/audit.html#webpage",
+        "url": "https://cmfh009.github.io/Orbit-Security/audit.html",
+        "name": "Orbit Security // Autonomous Instant DNS & Subdomain Takeover Scanner",
+        "datePublished": "2026-10-02",
+        "dateModified": "2026-11-21",
+        "isPartOf": { "@id": "https://cmfh009.github.io/Orbit-Security/#website" },
+        "about": { "@id": "https://cmfh009.github.io/Orbit-Security/#organization" },
+        "breadcrumb": { "@id": "https://cmfh009.github.io/Orbit-Security/audit.html#breadcrumb" }
+      },
+      {
+        "@type": "WebApplication",
+        "@id": "https://cmfh009.github.io/Orbit-Security/audit.html#app",
+        "name": "Orbit Security Instant DNS Audit Scanner",
+        "applicationCategory": "SecurityApplication",
+        "operatingSystem": "Any (browser)",
+        "description": "Free client-side RFC-8484 DNS-over-HTTPS auditor checking SPF, DMARC, MX, and SaaS subdomain takeover exposure with downloadable BIND/Terraform fixpacks.",
+        "url": "https://cmfh009.github.io/Orbit-Security/audit.html",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "publisher": { "@id": "https://cmfh009.github.io/Orbit-Security/#organization" }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://cmfh009.github.io/Orbit-Security/audit.html#breadcrumb",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://cmfh009.github.io/Orbit-Security/" },
+          { "@type": "ListItem", "position": 2, "name": "Instant DNS Audit", "item": "https://cmfh009.github.io/Orbit-Security/audit.html" }
+        ]
+      }
+    ]
+  }
+  </script>
   <style>
+    html { overflow-x: hidden; color-scheme: dark; }
+    body { overflow-x: clip; background-color: #060a16; }
+    .font-arcade { font-family: 'Press Start 2P', monospace, cursive; }
+    .font-pixel { font-family: 'Silkscreen', monospace; }
+    .pixel-box-emerald { box-shadow: 4px 4px 0px #064e3b; border: 2px solid #10b981; }
+    .card-glass {
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.80) 0%, rgba(6, 10, 22, 0.92) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.1), 0 12px 35px -10px rgba(2, 6, 23, 0.8);
+      backdrop-filter: blur(16px);
+    }
     @keyframes pulse-slow {
       0%, 100% { opacity: 0.2; }
       50% { opacity: 0.5; }
@@ -35,33 +95,48 @@
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-emerald-500 selection:text-black">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-emerald-500 selection:text-black" style="background-color: #060a16;">
 
   <!-- Glow effect -->
   <div class="fixed inset-0 grid-bg pointer-events-none"></div>
-  <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[700px] h-[300px] bg-emerald-500/10 blur-[140px] pointer-events-none rounded-full"></div>
+  <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[700px] max-w-full h-[300px] bg-emerald-500/10 blur-[140px] pointer-events-none rounded-full"></div>
 
-  <!-- Header -->
-  <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
-    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <a href="index.html" class="flex items-center space-x-2 text-emerald-400 font-bold tracking-wider text-lg">
-          <span class="inline-block w-3 h-3 bg-emerald-500 rounded-full animate-ping mr-1"></span>
-          ORBIT // AUDIT
+  <!-- Unified Header -->
+  <header class="border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <a href="index.html" class="flex items-center gap-2.5 group flex-shrink-0">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 p-0.5 flex items-center justify-center shadow-lg shadow-emerald-500/20 pixel-box-emerald overflow-hidden">
+            <img src="assets/logo.png" alt="Orbit Security Logo" width="36" height="36" class="w-full h-full object-contain rounded-lg" />
+          </div>
+          <div>
+            <span class="text-base sm:text-lg font-bold tracking-tight text-white font-pixel block leading-tight whitespace-nowrap">Orbit Security</span>
+            <span class="text-[9px] font-arcade text-emerald-400 uppercase block leading-tight whitespace-nowrap">DNS AUDIT // RFC-8484</span>
+          </div>
         </a>
-        <span class="text-xs px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/50">RFC-8484 DoH</span>
-        <span class="text-xs px-2 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800">Zero-Dollar Sovereign</span>
+        <span class="hidden lg:inline-block text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/50 whitespace-nowrap">Zero-Dollar Sovereign</span>
       </div>
-      <div class="flex items-center space-x-4 text-sm">
-        <a href="index.html" class="text-slate-400 hover:text-slate-200 transition">Home</a>
-        <a href="fleet.html" class="text-slate-400 hover:text-slate-200 transition">Fleet</a>
-        <a href="signup.html" class="text-emerald-400 hover:text-emerald-300 font-semibold transition">Onboard</a>
-        <a href="https://github.com/CmfH009/Orbit-Security" target="_blank" class="text-slate-400 hover:text-emerald-400 transition flex items-center space-x-1">
-          <span>GitHub</span>
-          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
-        </a>
-      </div>
+
+      <nav class="hidden md:flex items-center gap-5 text-sm font-medium text-slate-300" aria-label="Primary Navigation">
+        <a href="index.html" class="hover:text-emerald-400 transition-colors">Home</a>
+        <a href="audit.html" aria-current="page" class="text-emerald-400 font-semibold border-b border-emerald-400 pb-0.5">DNS Audit</a>
+        <a href="fleet.html" class="hover:text-emerald-400 transition-colors">Fleet</a>
+        <a href="about.html" class="hover:text-emerald-400 transition-colors">About</a>
+        <a href="signup.html" class="px-4 py-2 min-h-[40px] rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase tracking-wide transition inline-flex items-center">Start Retainer</a>
+      </nav>
+
+      <button type="button" id="auditMobileMenuBtn" class="md:hidden min-w-[44px] min-h-[44px] p-2 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-300 hover:text-white flex items-center justify-center cursor-pointer" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="auditMobileMenu">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/></svg>
+      </button>
     </div>
+
+    <nav id="auditMobileMenu" class="hidden md:hidden bg-slate-950/98 border-b border-emerald-500/40 px-4 py-3 space-y-1" aria-label="Mobile Navigation">
+      <a href="index.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-slate-200 hover:bg-slate-900 hover:text-emerald-400">Home</a>
+      <a href="fleet.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-slate-200 hover:bg-slate-900 hover:text-emerald-400">Fleet Command</a>
+      <a href="about.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-slate-200 hover:bg-slate-900 hover:text-emerald-400">About Us</a>
+      <a href="https://github.com/CmfH009/Orbit-Security" target="_blank" rel="noopener noreferrer" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-900 hover:text-white">GitHub</a>
+      <a href="signup.html" class="flex items-center justify-center min-h-[48px] mt-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase tracking-wide">Start Agency Retainer</a>
+    </nav>
   </header>
 
   <!-- Hero Section -->
@@ -257,20 +332,30 @@
   </main>
 
   <!-- Footer -->
-  <footer class="border-t border-slate-900 bg-slate-950 py-6 text-center text-xs text-slate-600 relative z-10">
-    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-      <div>Project ORBIT • Sovereign Autonomous Workstation & Security Intelligence</div>
-      <div class="flex items-center space-x-3 text-slate-500">
-        <span>CFAA Safe Harbor Compliant</span>
-        <span>•</span>
-        <span>RFC-8484 TLS 1.3</span>
-        <span>•</span>
-        <span>$0.00 Cloud Invariant</span>
+  <footer class="border-t border-slate-900 bg-slate-950 py-6 text-center text-xs text-slate-500 relative z-10">
+    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div>Orbit Security &copy; 2026 &bull; RFC-8484 TLS 1.3 Passive DNS Telemetry</div>
+      <div class="flex flex-wrap items-center justify-center gap-4 text-slate-400">
+        <a href="about.html" class="min-h-[44px] inline-flex items-center px-1 hover:text-emerald-400 transition">About</a>
+        <a href="disclaimer.html" class="min-h-[44px] inline-flex items-center px-1 hover:text-emerald-400 transition">Safe Harbor</a>
+        <a href="privacy.html" class="min-h-[44px] inline-flex items-center px-1 hover:text-emerald-400 transition">Privacy</a>
+        <a href="terms.html" class="min-h-[44px] inline-flex items-center px-1 hover:text-emerald-400 transition">Terms</a>
       </div>
     </div>
   </footer>
 
   <script>
+    // Mobile nav toggle
+    (function initAuditMobileMenu() {
+      const btn = document.getElementById("auditMobileMenuBtn");
+      const menu = document.getElementById("auditMobileMenu");
+      if (!btn || !menu) return;
+      btn.addEventListener("click", () => {
+        const isOpen = !menu.classList.contains("hidden");
+        menu.classList.toggle("hidden", isOpen);
+        btn.setAttribute("aria-expanded", String(!isOpen));
+      });
+    })();
     // Known SaaS CNAME takeover targets
     const SAAS_FINGERPRINTS = [
       { pattern: "github.io", name: "GitHub Pages" },

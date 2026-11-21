@@ -2,7 +2,10 @@
 <html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#060a16">
+    <meta name="color-scheme" content="dark">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https://cmfh009.github.io; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
     <title>About Us | Orbit Security — Autonomous Perimeter Intelligence for Web Agencies</title>
     <meta name="description" content="Orbit Security is autonomous perimeter intelligence by Carson Haynes: dangling-DNS takeover defense, DMARC and white-label client audits for web agencies.">
     <link rel="canonical" href="https://cmfh009.github.io/Orbit-Security/about.html">
@@ -177,18 +180,15 @@
     }
     </script>
 
-    <!-- Tailwind CSS CDN & Custom Fonts -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Production Compiled Stylesheet (Zero-Render-Delay, Offline Fonts Vendored) -->
+    <link rel="stylesheet" href="assets/styles.min.css?v=20261026v6">
     <script src="assets/simple_cat.js?v=20261026v6" defer></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Press+Start+2P&family=VT323&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
-        .font-pixel { font-family: 'Press Start 2P', monospace; }
-        .font-arcade { font-family: 'VT323', monospace; }
-        .font-sans { font-family: 'Space Grotesk', sans-serif; }
+        html { overflow-x: hidden; color-scheme: dark; }
+        body { overflow-x: clip; }
+        .font-arcade { font-family: 'Press Start 2P', monospace, cursive; }
+        .font-pixel { font-family: 'Silkscreen', monospace; }
 
         .pixel-box-emerald {
             box-shadow: 4px 4px 0px #064e3b;
@@ -219,39 +219,47 @@
 
     <!-- Header Navigation -->
     <header class="sticky top-0 z-50 backdrop-blur-md bg-slate-950/90 border-b border-slate-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <a href="index.html" class="flex items-center gap-2.5 sm:gap-3 group">
-                    <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/30 transition-all pixel-box-emerald flex-shrink-0">
-                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-slate-950 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5 flex-shrink-0">
+                <a href="index.html" class="flex items-center gap-2.5 group">
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 p-0.5 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/30 transition-all pixel-box-emerald flex-shrink-0 overflow-hidden">
+                        <img src="assets/logo.png" alt="Orbit Security Logo" width="40" height="40" class="w-full h-full object-contain rounded-lg" />
                     </div>
                     <div class="flex items-center">
-                        <span class="text-lg sm:text-xl font-bold tracking-tight text-white font-pixel" style="color:#ffffff; white-space:nowrap;">Orbit Security</span>
-                        <span class="hidden xs:inline-block text-[9px] ml-1.5 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-arcade uppercase">ABOUT US</span>
+                        <span class="text-base sm:text-xl font-bold tracking-tight text-white font-pixel" style="color:#ffffff; white-space:nowrap;">Orbit Security</span>
+                        <span class="hidden xl:inline-block text-[9px] ml-2 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-arcade uppercase">ABOUT</span>
                     </div>
                 </a>
             </div>
             
-            <nav class="hidden md:flex items-center gap-3.5 lg:gap-4 text-xs lg:text-sm font-medium text-slate-300" style="white-space:nowrap;">
+            <nav class="hidden md:flex items-center gap-4 lg:gap-5 text-xs lg:text-sm font-medium text-slate-300" style="white-space:nowrap;" aria-label="Primary Navigation">
                 <a href="index.html#audit-preview" class="hover:text-emerald-400 transition-colors">Audit Studio</a>
-                <a href="index.html#sentinels" class="hover:text-emerald-400 transition-colors">Sentinels</a>
-                <a href="index.html#simulate" class="hover:text-emerald-400 transition-colors">Simulator</a>
+                <a href="audit.html" class="hover:text-emerald-400 transition-colors text-cyan-300">DNS Audit</a>
                 <a href="fleet.html" class="hover:text-emerald-400 transition-colors flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>Fleet</a>
-                <a href="signup.html" class="hover:text-emerald-400 transition-colors">Onboard</a>
-                <a href="index.html#pricing" class="hover:text-emerald-400 transition-colors font-bold text-white">Pricing</a>
-                <a href="about.html" class="text-emerald-400 font-semibold border-b border-emerald-400 pb-0.5">About Us</a>
+                <a href="index.html#pricing" class="hover:text-emerald-400 transition-colors font-semibold text-white">Pricing</a>
+                <a href="about.html" aria-current="page" class="text-emerald-400 font-semibold border-b border-emerald-400 pb-0.5">About</a>
                 <a href="#faq" class="hover:text-emerald-400 transition-colors">FAQ</a>
             </nav>
 
-            <div class="flex items-center gap-3">
-                <a href="index.html" class="text-xs font-mono text-slate-400 hover:text-emerald-400 transition-colors hidden sm:inline-block">← Back to Hub</a>
-                <a href="index.html#pricing" class="px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-all pixel-btn shadow-md shadow-emerald-500/20">
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <a href="index.html" class="hidden xl:inline-flex min-h-[40px] items-center px-2 text-xs font-mono text-slate-400 hover:text-emerald-400 transition-colors whitespace-nowrap">← Hub</a>
+                <a href="signup.html" class="hidden sm:inline-flex min-h-[40px] px-3.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-all pixel-btn shadow-md shadow-emerald-500/20 items-center whitespace-nowrap">
                     Get Protected
                 </a>
+                <button type="button" id="aboutMobileMenuBtn" class="md:hidden min-w-[42px] min-h-[42px] p-2 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-300 hover:text-white flex items-center justify-center cursor-pointer" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="aboutMobileMenu">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/></svg>
+                </button>
             </div>
         </div>
+
+        <nav id="aboutMobileMenu" class="hidden md:hidden bg-slate-950/98 border-b border-emerald-500/40 px-4 py-3 space-y-1" aria-label="Mobile Navigation">
+            <a href="index.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-slate-200 hover:bg-slate-900 hover:text-emerald-400">Home</a>
+            <a href="audit.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-cyan-300 hover:bg-slate-900">Instant DNS Audit</a>
+            <a href="fleet.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-slate-200 hover:bg-slate-900 hover:text-emerald-400">Fleet Command</a>
+            <a href="index.html#pricing" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-slate-200 hover:bg-slate-900 hover:text-emerald-400">Pricing Plans</a>
+            <a href="#faq" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-slate-200 hover:bg-slate-900 hover:text-emerald-400">FAQ</a>
+            <a href="signup.html" class="flex items-center justify-center min-h-[48px] mt-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase tracking-wide">Get Protected</a>
+        </nav>
     </header>
 
     <!-- Main Content Container -->
@@ -266,7 +274,7 @@
             </nav>
             <div class="flex items-center gap-2 text-slate-400">
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Last Verified & Updated: <strong class="text-slate-200">October 22, 2026</strong></span>
+                <span>Last Verified &amp; Updated: <strong class="text-slate-200">November 21, 2026</strong></span>
             </div>
         </div>
 
@@ -602,25 +610,38 @@
             </p>
             <p>
                 <strong class="text-slate-300">‡ Retainer ROI Methodology Note (Benchmark 2026-10-22):</strong>
-                10,493% annualized ROI model calculated on an agency managing 25 client domains on a $250/mo security care plan ($75,000/yr gross retainer billings) against Orbit Pro tier subscription ($59/mo, or $708/yr fixed cost), yielding $74,292/yr in gross margin with zero incremental headcount.
+                10,493% annualized ROI model calculated on an agency managing 25 client domains on a $250/mo security care plan ($75,000/yr gross retainer billings) against Orbit Growth tier subscription ($59/mo, or $708/yr fixed cost), yielding $74,292/yr in gross margin with zero incremental headcount.
             </p>
         </div>
 
     </main>
 
     <!-- Footer -->
-    <footer class="relative z-10 py-12 bg-slate-950 border-t border-slate-900 text-slate-500 text-xs">
+    <footer class="relative z-10 py-10 bg-slate-950 border-t border-slate-900 text-slate-500 text-xs">
         <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p>&copy; 2026 Orbit Security Operations. All rights reserved.</p>
-            <div class="flex flex-wrap items-center gap-6">
-                <a href="about.html" class="text-emerald-400 hover:underline">About Us</a>
-                <a href="terms.html" class="text-slate-400 hover:text-white transition-colors">Terms of Service</a>
-                <a href="privacy.html" class="text-slate-400 hover:text-white transition-colors">Privacy Policy</a>
-                <a href="refunds.html" class="text-slate-400 hover:text-white transition-colors">Refunds</a>
-                <a href="disclaimer.html" class="text-slate-400 hover:text-white transition-colors">RFC Disclaimer</a>
+            <div class="flex flex-wrap items-center justify-center gap-4">
+                <a href="about.html" class="min-h-[44px] inline-flex items-center px-1 text-emerald-400 hover:underline">About Us</a>
+                <a href="terms.html" class="min-h-[44px] inline-flex items-center px-1 text-slate-400 hover:text-white transition-colors">Terms of Service</a>
+                <a href="privacy.html" class="min-h-[44px] inline-flex items-center px-1 text-slate-400 hover:text-white transition-colors">Privacy Policy</a>
+                <a href="refunds.html" class="min-h-[44px] inline-flex items-center px-1 text-slate-400 hover:text-white transition-colors">Refunds</a>
+                <a href="disclaimer.html" class="min-h-[44px] inline-flex items-center px-1 text-slate-400 hover:text-white transition-colors">RFC Disclaimer</a>
             </div>
         </div>
     </footer>
+
+    <script>
+        (function initAboutMobileMenu() {
+            const btn = document.getElementById('aboutMobileMenuBtn');
+            const menu = document.getElementById('aboutMobileMenu');
+            if (!btn || !menu) return;
+            btn.addEventListener('click', () => {
+                const isOpen = !menu.classList.contains('hidden');
+                menu.classList.toggle('hidden', isOpen);
+                btn.setAttribute('aria-expanded', String(!isOpen));
+            });
+        })();
+    </script>
 
 </body>
 </html>
