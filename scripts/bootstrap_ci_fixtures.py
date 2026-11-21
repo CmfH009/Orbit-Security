@@ -60,6 +60,14 @@ _ARCHIVED_TIER3_STEMS = (
     "gitlab_graphql_introspection_gitlab_com",
     "shopify_graphql_introspection_media_myshopify_com",
     "expediagroup_bbp_graphql_introspection_www_hotwire_com",
+    "fixture_cloudfront_403_noise_01_example_com",
+    "fixture_cloudfront_403_noise_02_example_com",
+    "fixture_cloudfront_403_noise_03_example_com",
+    "fixture_public_helm_bucket_noise_04_example_com",
+    "fixture_public_pki_bucket_noise_05_example_com",
+    "fixture_static_cdn_cors_noise_06_example_com",
+    "fixture_static_cdn_cors_noise_07_example_com",
+    "fixture_telemetry_cors_noise_08_example_com",
 )
 
 _TIER2_PROGRAM_SPEC: Tuple[Tuple[str, str, int], ...] = (
@@ -280,6 +288,132 @@ def _seed_spotify_bundle(disc_dir: Path) -> None:
     _write_verified_bundle(disc_dir, stem=stem, meta=meta, h1_md=h1_md, bc_md=bc_md, tech_txt=tech_txt)
 
 
+def _seed_starbucks_bundle(disc_dir: Path) -> None:
+    stem = "starbucks_subdomain_takeover_takeover_01_starbucks_fixture_example_com"
+    domain = "takeover-01.starbucks-fixture.example.com"
+    cname_target = "sbux-fixture-01.trafficmanager.net"
+    flaw_type = "subdomain_takeover"
+    provider = "Microsoft Azure Traffic Manager"
+    raw_evidence = (
+        f"Dangling CNAME '{cname_target}' points to unallocated Microsoft Azure resource "
+        "(NXDOMAIN response)."
+    )
+    ev_id = compute_evidence_digest(
+        target=domain,
+        status_code=None,
+        flaw_type=flaw_type,
+        evidence_snippet=raw_evidence,
+        provider=provider,
+    )
+    meta = {
+        "program_id": "starbucks",
+        "program_name": "Starbucks",
+        "platform": "hackerone",
+        "target_domain": domain,
+        "cname_target": cname_target,
+        "flaw_type": flaw_type,
+        "provider": provider,
+        "severity": "HIGH",
+        "cvss_score": 7.5,
+        "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+        "cwe_id": "CWE-284: Improper Access Control",
+        "bounty_viability": "HIGH_CONFIDENCE",
+        "evidence_artifact_id": ev_id,
+        "timestamp": "2026-11-14T00:00:00+00:00",
+    }
+    tech_txt = (
+        f"TARGET DOMAIN: {domain}\n"
+        f"VULNERABILITY: {flaw_type}\n"
+        f"CNAME TARGET: {cname_target}\n"
+        f"PROVIDER: {provider}\n"
+        f"EVIDENCE ARTIFACT ID: {ev_id}\n\n"
+        f"OBSERVED RAW EVIDENCE:\n{raw_evidence}\n\n"
+        "REMEDIATION GUIDANCE:\n"
+        "1. Remove the dangling DNS CNAME record.\n"
+    )
+    h1_md = (
+        f"# [Subdomain Takeover] Dangling CNAME on {domain}\n\n"
+        f"**Program:** Starbucks (Hackerone)  \n"
+        f"**Asset (In-Scope Target):** `{domain}`  \n"
+        "**Weakness:** `CWE-284: Improper Access Control`  \n"
+        "**Severity:** `HIGH` (CVSS 3.1: **7.5**)  \n"
+        "**Bounty Viability Grade:** `HIGH_CONFIDENCE`  \n"
+        f"**Evidence Artifact ID:** `{ev_id}`  \n\n"
+        "## Summary\n"
+        f"{raw_evidence}\n"
+    )
+    bc_md = (
+        f"# Bugcrowd Report: Subdomain Takeover on {domain}\n\n"
+        f"**Target Asset:** `{domain}`  \n"
+        f"**Evidence Artifact ID:** `{ev_id}`  \n\n"
+        f"{raw_evidence}\n"
+    )
+    _write_verified_bundle(disc_dir, stem=stem, meta=meta, h1_md=h1_md, bc_md=bc_md, tech_txt=tech_txt)
+
+
+def _seed_hyatt_bundle(disc_dir: Path) -> None:
+    stem = "hyatt_open_cloud_bucket_portal_wifi_hyatt_com"
+    domain = "portal.wifi.hyatt.com"
+    flaw_type = "open_cloud_bucket"
+    provider = "Cloud Storage"
+    raw_evidence = (
+        "Public cloud storage bucket listing is exposed on 'portal.wifi.hyatt.com'. "
+        "Signature match: '<ListBucketResult'. "
+        "[UNVERIFIED_BUCKET_KEYS: Akamai captive-portal CDN with no sensitive/non-public object keys recorded in offline evidence; "
+        "inspect XML <Key> listing before H1 submission]"
+    )
+    ev_id = compute_evidence_digest(
+        target=domain,
+        status_code=None,
+        flaw_type=flaw_type,
+        evidence_snippet=raw_evidence,
+        provider=provider,
+    )
+    meta = {
+        "program_id": "hyatt",
+        "program_name": "Hyatt Hotels",
+        "platform": "hackerone",
+        "target_domain": domain,
+        "cname_target": "wifi.hyatt.com.edgekey.net",
+        "flaw_type": flaw_type,
+        "provider": provider,
+        "severity": "MEDIUM",
+        "cvss_score": 5.3,
+        "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+        "cwe_id": "CWE-284: Improper Access Control",
+        "bounty_viability": "CONDITIONAL",
+        "evidence_artifact_id": ev_id,
+        "timestamp": "2026-11-18T13:00:45.378253+00:00",
+    }
+    tech_txt = (
+        f"TARGET DOMAIN: {domain}\n"
+        f"VULNERABILITY: {flaw_type}\n"
+        f"PROVIDER: {provider}\n"
+        f"EVIDENCE ARTIFACT ID: {ev_id}\n\n"
+        f"OBSERVED RAW EVIDENCE:\n{raw_evidence}\n\n"
+        "REMEDIATION GUIDANCE:\n"
+        "1. Disable public READ permissions on the cloud storage bucket.\n"
+    )
+    h1_md = (
+        f"# [Cloud Storage] Open Public Bucket Directory Listing on {domain}\n\n"
+        f"**Program:** Hyatt Hotels (Hackerone)  \n"
+        f"**Asset (In-Scope Target):** `{domain}`  \n"
+        "**Weakness:** `CWE-284: Improper Access Control`  \n"
+        "**Severity:** `MEDIUM` (CVSS 3.1: **5.3**)  \n"
+        "**Bounty Viability Grade:** `CONDITIONAL`  \n"
+        f"**Evidence Artifact ID:** `{ev_id}`  \n\n"
+        "## Summary\n"
+        f"Open cloud bucket listing on `{domain}` (`<ListBucketResult`) pending object key proof.\n"
+    )
+    bc_md = (
+        f"# Bugcrowd Report: Open Cloud Bucket on {domain}\n\n"
+        f"**Target Asset:** `{domain}`  \n"
+        f"**Evidence Artifact ID:** `{ev_id}`  \n\n"
+        f"Open cloud bucket listing on `{domain}` (`<ListBucketResult`) pending object key proof.\n"
+    )
+    _write_verified_bundle(disc_dir, stem=stem, meta=meta, h1_md=h1_md, bc_md=bc_md, tech_txt=tech_txt)
+
+
 def _seed_synthetic_cors_bundle(
     disc_dir: Path,
     *,
@@ -354,6 +488,132 @@ def _seed_synthetic_cors_bundle(
     _write_verified_bundle(disc_dir, stem=stem, meta=meta, h1_md=h1_md, bc_md=bc_md, tech_txt=tech_txt)
 
 
+def _seed_starbucks_bundle(disc_dir: Path) -> None:
+    stem = "starbucks_subdomain_takeover_takeover_01_starbucks_fixture_example_com"
+    domain = "takeover-01.starbucks-fixture.example.com"
+    cname_target = "sbux-fixture-01.trafficmanager.net"
+    flaw_type = "subdomain_takeover"
+    provider = "Microsoft Azure Traffic Manager"
+    raw_evidence = (
+        f"Dangling CNAME '{cname_target}' points to unallocated Microsoft Azure resource "
+        "(NXDOMAIN response)."
+    )
+    ev_id = compute_evidence_digest(
+        target=domain,
+        status_code=None,
+        flaw_type=flaw_type,
+        evidence_snippet=raw_evidence,
+        provider=provider,
+    )
+    meta = {
+        "program_id": "starbucks",
+        "program_name": "Starbucks",
+        "platform": "hackerone",
+        "target_domain": domain,
+        "cname_target": cname_target,
+        "flaw_type": flaw_type,
+        "provider": provider,
+        "severity": "HIGH",
+        "cvss_score": 7.5,
+        "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+        "cwe_id": "CWE-284: Improper Access Control",
+        "bounty_viability": "HIGH_CONFIDENCE",
+        "evidence_artifact_id": ev_id,
+        "timestamp": "2026-11-14T00:00:00+00:00",
+    }
+    tech_txt = (
+        f"TARGET DOMAIN: {domain}\n"
+        f"VULNERABILITY: {flaw_type}\n"
+        f"CNAME TARGET: {cname_target}\n"
+        f"PROVIDER: {provider}\n"
+        f"EVIDENCE ARTIFACT ID: {ev_id}\n\n"
+        f"OBSERVED RAW EVIDENCE:\n{raw_evidence}\n\n"
+        "REMEDIATION GUIDANCE:\n"
+        "1. Remove the dangling DNS CNAME record.\n"
+    )
+    h1_md = (
+        f"# [Subdomain Takeover] Dangling CNAME on {domain}\n\n"
+        f"**Program:** Starbucks (Hackerone)  \n"
+        f"**Asset (In-Scope Target):** `{domain}`  \n"
+        "**Weakness:** `CWE-284: Improper Access Control`  \n"
+        "**Severity:** `HIGH` (CVSS 3.1: **7.5**)  \n"
+        "**Bounty Viability Grade:** `HIGH_CONFIDENCE`  \n"
+        f"**Evidence Artifact ID:** `{ev_id}`  \n\n"
+        "## Summary\n"
+        f"{raw_evidence}\n"
+    )
+    bc_md = (
+        f"# Bugcrowd Report: Subdomain Takeover on {domain}\n\n"
+        f"**Target Asset:** `{domain}`  \n"
+        f"**Evidence Artifact ID:** `{ev_id}`  \n\n"
+        f"{raw_evidence}\n"
+    )
+    _write_verified_bundle(disc_dir, stem=stem, meta=meta, h1_md=h1_md, bc_md=bc_md, tech_txt=tech_txt)
+
+
+def _seed_hyatt_bundle(disc_dir: Path) -> None:
+    stem = "hyatt_open_cloud_bucket_portal_wifi_hyatt_com"
+    domain = "portal.wifi.hyatt.com"
+    flaw_type = "open_cloud_bucket"
+    provider = "Cloud Storage"
+    raw_evidence = (
+        "Public cloud storage bucket listing is exposed on 'portal.wifi.hyatt.com'. "
+        "Signature match: '<ListBucketResult'. "
+        "[UNVERIFIED_BUCKET_KEYS: Akamai captive-portal CDN with no sensitive/non-public object keys recorded in offline evidence; "
+        "inspect XML <Key> listing before H1 submission]"
+    )
+    ev_id = compute_evidence_digest(
+        target=domain,
+        status_code=None,
+        flaw_type=flaw_type,
+        evidence_snippet=raw_evidence,
+        provider=provider,
+    )
+    meta = {
+        "program_id": "hyatt",
+        "program_name": "Hyatt Hotels",
+        "platform": "hackerone",
+        "target_domain": domain,
+        "cname_target": "wifi.hyatt.com.edgekey.net",
+        "flaw_type": flaw_type,
+        "provider": provider,
+        "severity": "MEDIUM",
+        "cvss_score": 5.3,
+        "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+        "cwe_id": "CWE-284: Improper Access Control",
+        "bounty_viability": "CONDITIONAL",
+        "evidence_artifact_id": ev_id,
+        "timestamp": "2026-11-18T13:00:45.378253+00:00",
+    }
+    tech_txt = (
+        f"TARGET DOMAIN: {domain}\n"
+        f"VULNERABILITY: {flaw_type}\n"
+        f"PROVIDER: {provider}\n"
+        f"EVIDENCE ARTIFACT ID: {ev_id}\n\n"
+        f"OBSERVED RAW EVIDENCE:\n{raw_evidence}\n\n"
+        "REMEDIATION GUIDANCE:\n"
+        "1. Disable public READ permissions on the cloud storage bucket.\n"
+    )
+    h1_md = (
+        f"# [Cloud Storage] Open Public Bucket Directory Listing on {domain}\n\n"
+        f"**Program:** Hyatt Hotels (Hackerone)  \n"
+        f"**Asset (In-Scope Target):** `{domain}`  \n"
+        "**Weakness:** `CWE-284: Improper Access Control`  \n"
+        "**Severity:** `MEDIUM` (CVSS 3.1: **5.3**)  \n"
+        "**Bounty Viability Grade:** `CONDITIONAL`  \n"
+        f"**Evidence Artifact ID:** `{ev_id}`  \n\n"
+        "## Summary\n"
+        f"Open cloud bucket listing on `{domain}` (`<ListBucketResult`) pending object key proof.\n"
+    )
+    bc_md = (
+        f"# Bugcrowd Report: Open Cloud Bucket on {domain}\n\n"
+        f"**Target Asset:** `{domain}`  \n"
+        f"**Evidence Artifact ID:** `{ev_id}`  \n\n"
+        f"Open cloud bucket listing on `{domain}` (`<ListBucketResult`) pending object key proof.\n"
+    )
+    _write_verified_bundle(disc_dir, stem=stem, meta=meta, h1_md=h1_md, bc_md=bc_md, tech_txt=tech_txt)
+
+
 def ensure_disclosures_and_staging(repo_root: Path) -> Dict[str, Any]:
     """Seeds synthetic disclosure bundles and staging queue manifests if absent."""
     data_dir = repo_root / "data"
@@ -368,7 +628,11 @@ def ensure_disclosures_and_staging(repo_root: Path) -> Dict[str, Any]:
 
     seeded_bundles = 0
     if not any(disc_dir.glob("*.md")):
+        _seed_starbucks_bundle(disc_dir)
+        seeded_bundles += 1
         _seed_spotify_bundle(disc_dir)
+        seeded_bundles += 1
+        _seed_hyatt_bundle(disc_dir)
         seeded_bundles += 1
         for prog_id, prog_name, count in _TIER2_PROGRAM_SPEC:
             for idx in range(1, count + 1):
