@@ -8,8 +8,10 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build:css": "tailwindcss -i ./landing/input.css -o ./landing/assets/styles.min.css --minify"
+    "test": "npm run check:landing",
+    "build:css": "tailwindcss -i ./landing/input.css -o ./landing/assets/styles.min.css --minify",
+    "sync:docs": "python scripts/sync_landing_to_docs.py --apply",
+    "check:landing": "python scripts/sync_landing_to_docs.py --check && node tests/test_radar_parity_suite.js && node tests/test_simplecat_visuals_and_scroll.js && python scripts/verify_landing_pages.py && pytest -q tests/test_social_cards_and_footnotes.py tests/test_challenger_m8_adversarial.py tests/test_x_ad_campaign.py tests/test_meta_ad_campaign.py"
   },
   "repository": {
     "type": "git",
