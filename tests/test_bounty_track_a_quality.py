@@ -1001,6 +1001,8 @@ class TestRound5FalsePositiveHardeningGuards:
             ("helm.elastic.co", helm_public_xml),
             ("charts.acme.com", helm_public_xml),
             ("crl.pki.uberinternal.com", crl_public_xml),
+            ("prod-pki-cloud.uberinternal.com", crl_public_xml),
+            ("prod-pki-cloud-staging.uberinternal.com", crl_public_xml),
             ("ocsp.acme.com", crl_public_xml),
         ):
             res = CloudBucketTakeoverSentinel.audit_target(
@@ -1013,6 +1015,33 @@ class TestRound5FalsePositiveHardeningGuards:
                 f"Public-by-design bucket {host} without sensitive keys must not be HIGH_CONFIDENCE"
             )
             assert res["bounty_viability"] == "INFORMATIONAL_LOW"
+
+        # Public .pem CA cert on a PKI host must NOT false-positive, while .key MUST escalate
+        pki_pem_xml = (
+            "<ListBucketResult><Name>uber-pki</Name>"
+            "<Contents><Key>ca/uber-root.pem</Key></Contents>"
+            "</ListBucketResult>"
+        )
+        res_pki_pem = CloudBucketTakeoverSentinel.audit_target(
+            target_domain="prod-pki-cloud.uberinternal.com",
+            mock_body=pki_pem_xml,
+            mock_status=200,
+        )
+        assert res_pki_pem is not None
+        assert res_pki_pem["bounty_viability"] == "INFORMATIONAL_LOW"
+
+        pki_priv_key_xml = (
+            "<ListBucketResult><Name>uber-pki</Name>"
+            "<Contents><Key>private/root-ca.key</Key></Contents>"
+            "</ListBucketResult>"
+        )
+        res_pki_key = CloudBucketTakeoverSentinel.audit_target(
+            target_domain="prod-pki-cloud.uberinternal.com",
+            mock_body=pki_priv_key_xml,
+            mock_status=200,
+        )
+        assert res_pki_key is not None
+        assert res_pki_key["bounty_viability"] == "HIGH_CONFIDENCE"
 
         # If sensitive/non-public keys ARE proven, keep HIGH_CONFIDENCE
         res_sens = CloudBucketTakeoverSentinel.audit_target(
@@ -1079,6 +1108,10 @@ class TestRound5FalsePositiveHardeningGuards:
             "files.stripe.com",
             "files.trello.com",
             "fp.coinbase.com",
+            "fpbi8c1t.uber.com",
+            "fpfcpn2u.uber.com",
+            "tracking.ibi.uber.com",
+            "analytics.query.yahoo.com",
         ]
         for shost in static_hosts:
             sres = CorsMisconfigurationSentinel.audit_target(shost, mock_responses=arb_mock)

@@ -36,6 +36,17 @@ def test_classify_finding_tier_separates_ready_from_auth_needed_and_noise():
     }
     assert classify_finding_tier(bucket_finding) == "TIER_1_READY"
 
+    conditional_bucket_finding = {
+        "program": "GammaHotel",
+        "host": "portal.wifi.gamma-example.com",
+        "url": "https://portal.wifi.gamma-example.com/",
+        "code": 200,
+        "verdict": "OPEN_BUCKET_LISTING",
+        "bounty_viability": "CONDITIONAL",
+        "score": 5,
+    }
+    assert classify_finding_tier(conditional_bucket_finding) == "TIER_2_NEEDS_AUTH_PROOF"
+
     cors_html_finding = {
         "program": "BetaCommerce",
         "host": "checkout.beta-example.com",
@@ -204,7 +215,13 @@ def test_vault_synchronizes_ev_bundles_into_dossiers_with_zero_tier3(tmp_path: P
     assert len(spotify["evidence_digests"]) == len(spotify["hosts"])
     assert all(re.match(r"^ev_[0-9a-f]{12}$", d) for d in spotify["evidence_digests"])
 
-    # Ensure archived CloudFront and intentional public-bucket FPs are absent from the vault
+    # Hyatt open bucket has no offline sensitive key proofs and must stay downgraded to Tier 2
+    hyatt = by_prog[("Hyatt Hotels", "OPEN_BUCKET_LISTING")]
+    assert hyatt["tier"] == "TIER_2_NEEDS_AUTH_PROOF"
+    assert hyatt["bounty_viability"] == "CONDITIONAL"
+    assert hyatt["hosts"] == ["portal.wifi.hyatt.com"]
+
+    # Ensure archived CloudFront, PKI, and static/CDN/telemetry FPs are absent from the vault
     expected_tier2_counts = {"MercadoLibre": 9, "Xiaomi": 6, "Superbet": 2, "Playtika": 1}
     for prog_name, expected_n in expected_tier2_counts.items():
         grp = by_prog[(prog_name, "REFLECTED_PUBLIC_HTML")]
@@ -237,6 +254,20 @@ def test_vault_synchronizes_ev_bundles_into_dossiers_with_zero_tier3(tmp_path: P
         "i.nintendo.net",
         "helm.elastic.co",
         "crl.pki.uberinternal.com",
+        "prod-pki-cloud.uberinternal.com",
+        "prod-pki-cloud-staging.uberinternal.com",
+        "assets.yelp.com",
+        "media.yelp.com",
+        "static.yelp.com",
+        "static1.yelp.com",
+        "images.mercadolibre.com.co",
+        "files.trello.com",
+        "files.stripe.com",
+        "fp.coinbase.com",
+        "fpbi8c1t.uber.com",
+        "fpfcpn2u.uber.com",
+        "tracking.ibi.uber.com",
+        "analytics.query.yahoo.com",
     ):
         assert forbidden not in joined
 

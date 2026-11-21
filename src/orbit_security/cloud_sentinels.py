@@ -29,8 +29,11 @@ from orbit_security.scanner import is_safe_host
 
 logger = logging.getLogger("orbit_security.cloud_sentinels")
 
-INTENTIONAL_PUBLIC_BUCKET_PREFIXES: Tuple[str, ...] = ("helm", "charts", "crl", "ocsp")
-_STATIC_CDN_TELEMETRY_LABEL_RE = re.compile(r"^(?:assets|static[a-z0-9_-]*|media|images|files|fp)$")
+INTENTIONAL_PUBLIC_BUCKET_PREFIXES: Tuple[str, ...] = ("helm", "charts", "crl", "ocsp", "pki")
+_PKI_BUCKET_TOKENS: frozenset[str] = frozenset({"pki", "crl", "ocsp"})
+_STATIC_CDN_TELEMETRY_LABEL_RE = re.compile(
+    r"^(?:assets|static[a-z0-9_-]*|media|images|files|fp|fp(?=[a-z0-9]{6}$)(?=.*\d)[a-z0-9]{6}|tracking|telemetry|analytics)$"
+)
 _SENSITIVE_BUCKET_KEY_EXTENSIONS: Tuple[str, ...] = (
     ".sql",
     ".sql.gz",
@@ -70,16 +73,34 @@ _SENSITIVE_BUCKET_KEY_KEYWORDS: Tuple[str, ...] = (
 )
 
 
-def is_intentional_public_bucket_host(host: str) -> bool:
-    """Return True for hostnames backed by public-by-design chart/PKI buckets (helm.*, charts.*, crl.*, ocsp.*)."""
+def _clean_hostname(host: str) -> str:
     clean = (host or "").strip().lower().rstrip(".")
     if "://" in clean:
         clean = urllib.parse.urlparse(clean).hostname or clean
-    clean = clean.split(":")[0]
+    return clean.split(":")[0]
+
+
+def _is_pki_bucket_host(host: str) -> bool:
+    """Return True for PKI/CA/CRL distribution hostnames (e.g. crl.pki.*, ocsp.*, prod-pki-cloud.*)."""
+    clean = _clean_hostname(host)
+    if not clean or "." not in clean:
+        return False
+    labels = clean.split(".")
+    sub_labels = labels[:-2] if len(labels) >= 3 else labels[:1]
+    for label in sub_labels:
+        tokens = [tok for tok in re.split(r"[-_]+", label) if tok]
+        if any(tok in _PKI_BUCKET_TOKENS for tok in tokens):
+            return True
+    return False
+
+
+def is_intentional_public_bucket_host(host: str) -> bool:
+    """Return True for hostnames backed by public-by-design chart/PKI buckets (helm.*, charts.*, crl.*, ocsp.*, *pki*)."""
+    clean = _clean_hostname(host)
     if not clean or "." not in clean:
         return False
     first_label = clean.split(".", 1)[0]
-    return first_label in INTENTIONAL_PUBLIC_BUCKET_PREFIXES
+    return first_label in INTENTIONAL_PUBLIC_BUCKET_PREFIXES or _is_pki_bucket_host(clean)
 
 
 def has_sensitive_bucket_keys(xml_body: str, host: str = "") -> Tuple[bool, List[str]]:
@@ -89,9 +110,7 @@ def has_sensitive_bucket_keys(xml_body: str, host: str = "") -> Tuple[bool, List
     keys = re.findall(r"<Key>(.*?)</Key>", xml_body, re.IGNORECASE)
     if not keys:
         return False, []
-    is_pki_host = is_intentional_public_bucket_host(host) and (
-        host.strip().lower().startswith(("crl.", "ocsp."))
-    )
+    is_pki_host = _is_pki_bucket_host(host)
     matched: List[str] = []
     for key in keys:
         key_clean = key.strip()
@@ -108,11 +127,8 @@ def has_sensitive_bucket_keys(xml_body: str, host: str = "") -> Tuple[bool, List
 
 
 def is_static_cdn_or_telemetry_host(host: str) -> bool:
-    """Return True for obvious static/CDN/telemetry hostnames (assets.*, static*.*, media.*, images.*, files.*, fp.*)."""
-    clean = (host or "").strip().lower().rstrip(".")
-    if "://" in clean:
-        clean = urllib.parse.urlparse(clean).hostname or clean
-    clean = clean.split(":")[0]
+    """Return True for obvious static/CDN/telemetry hostnames (assets.*, static*.*, media.*, images.*, files.*, fp.*, tracking.*, analytics.*)."""
+    clean = _clean_hostname(host)
     if not clean or "." not in clean:
         return False
     first_label = clean.split(".", 1)[0]

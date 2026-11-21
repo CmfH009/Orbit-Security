@@ -145,8 +145,11 @@ def classify_finding_tier(entry: Dict[str, Any]) -> str:
     if code != 200 or score < 5:
         return "TIER_3_SUPPRESSED"
 
-    if verdict in ("OPEN_BUCKET_LISTING", "AUTHENTICATED_CORS_SENSITIVE", "DANGLING_TAKEOVER_VERIFIED") or score >= 6:
+    if verdict in ("AUTHENTICATED_CORS_SENSITIVE", "DANGLING_TAKEOVER_VERIFIED") or score >= 6:
         return "TIER_1_READY"
+
+    if verdict == "OPEN_BUCKET_LISTING":
+        return "TIER_1_READY" if score >= 6 else "TIER_2_NEEDS_AUTH_PROOF"
 
     if verdict == "REFLECTED_PUBLIC_HTML" and score == 5:
         return "TIER_2_NEEDS_AUTH_PROOF"
@@ -447,6 +450,16 @@ def render_remediation_dossier(
                 "## Pre-Submission Auth Proof Prerequisite",
                 f"- Verified CORS `Access-Control-Allow-Origin: {UNTRUSTED_POC_ORIGIN}` + `Access-Control-Allow-Credentials: true` reflection on public HTML only (`[PUBLIC_HTML_ONLY]`).",
                 "- Before submission, capture an authenticated JSON/API endpoint PoC exposing user session data, PII, or CSRF tokens.",
+            ]
+        )
+
+    if verdict == "OPEN_BUCKET_LISTING" and tier != "TIER_1_READY":
+        lines.extend(
+            [
+                "",
+                "## Pre-Submission Object-Key Proof Prerequisite",
+                "- Offline evidence only records a bare `<ListBucketResult` signature without proven sensitive or non-public object keys.",
+                "- Before submission, inspect the bucket XML `<Key>` listing to verify exposure of genuinely sensitive/non-public artifacts rather than intentional public portal/CDN assets.",
             ]
         )
 
