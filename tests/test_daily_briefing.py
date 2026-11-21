@@ -929,6 +929,29 @@ def test_known_expected_ports_includes_patch_desktop_app():
     assert all(e.get("port") != 4064 for e in triage["unexpected_listeners"])
 
 
+def test_generate_briefing_accepts_injected_briefing_engine_in_memory(tmp_path, monkeypatch):
+    from orbit_security.briefing import BriefingEngine, CollectorAdapters
+    import scripts.daily_briefing as db
+
+    monkeypatch.setattr(db, "DEFAULT_BRIEFINGS_DIR", tmp_path)
+    adapters = CollectorAdapters.in_memory(
+        system_telemetry={"temp_c": 41.0, "ram_pct": 48.0, "drives": {"A:\\": {"free_gb": 140.0, "total_gb": 443.2, "pct_free": 31.6}}},
+        daemon_health={"live_verified_active": True, "supervisor_pid": 111, "sentinel_live_verified": True, "sentinel_pid": 222, "services_live_active": 2, "services_total": 2, "sentinel_restarts": 0},
+        github_ci={"status": "ok", "head_sha": "deadbee", "all_green": True, "failing_workflows": [], "passing_workflows": ["CI"]},
+        option_c_readiness={"kyc_payout_status": "PENDING_PHYSICAL_ID", "staged_reports": 10, "tier_1_items": ["Spotify"], "tier_2_items": []},
+        email_telemetry={"scanned": 5, "unread": 0, "unread_non_ci_count": 0, "unread_list": [], "urgent": 0, "urgent_list": [], "historical_alerts_count": 0, "ci_alerts": [], "deal_threads": []},
+        intel_news={"ai_innovations": ["Local Model Release"], "tech_and_security": [], "world_news": [], "ai_takeaway": "Faster local inference.", "world_takeaway": ""},
+    )
+    engine = BriefingEngine(adapters=adapters)
+    res = db.generate_briefing(speak=False, email=False, dry_run=True, engine=engine)
+
+    assert "deadbee" in res.markdown
+    assert "Faster local inference." in res.markdown
+    assert (tmp_path / f"briefing_{res.date_key}.md").is_file()
+    assert (tmp_path / "briefing_state_latest.json").is_file()
+
+
+
 
 
 

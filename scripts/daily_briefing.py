@@ -1,34 +1,20 @@
-"""Orbit Security & Mailbox Operations: Unified Daily Executive Briefing.
+"""Thin CLI / TUI / Mutex / Dispatch runner over `orbit_security.briefing`.
 
-Aggregates:
-1. Live Stripe balance, 24h revenue, active subscriptions, and inbox receipts.
-2. Orbit Security Sentinel & Master Supervisor daemon health.
-3. Inbound negotiations, escalations, and client inquiries from Orbit/Deal-Desk.
-4. GitHub CI/CD build telemetry and security scanning alerts (Orbit/CI-CD).
-5. Agency outbound campaign pipeline status.
-6. Mailbox hygiene stats (inbox zero count, unsubscribes, spam purged).
-7. Synthesizes consolidated Markdown report, emails operator, and speaks via Nova TTS.
+Delegates two-phase telemetry collection, prompt-injection sanitization, CI/delta reconciliation,
+critic verification, Markdown rendering, and spoken debrief synthesis to `BriefingEngine`.
 """
 
 from __future__ import annotations
 
 import argparse
 import datetime
-import inspect
 import json
 import os
 from pathlib import Path
-import re
 import subprocess
 import sys
-import urllib.request
-from typing import Dict, Any, Optional, List, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence
 from dotenv import load_dotenv
-
-try:
-    import psutil
-except ImportError:
-    psutil = None
 
 # Ensure UTF-8 output on Windows terminals (and safe streams under pythonw.exe)
 if sys.stdout is None:
@@ -46,153 +32,73 @@ elif hasattr(sys.stderr, "reconfigure"):
     except Exception:
         pass
 
-# Add local src/ and email-organizer to sys.path
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-_local_src = str(_REPO_ROOT / "src")
-_email_org_root = r"A:\projects\email-organizer"
-_scripts_dir = os.path.dirname(__file__)
-for p in (_local_src, _email_org_root, _scripts_dir):
-    if p not in sys.path and os.path.exists(p):
-        sys.path.insert(0, p)
+_SRC_DIR = str(_REPO_ROOT / "src")
+if _SRC_DIR not in sys.path and (_REPO_ROOT / "src").is_dir():
+    sys.path.insert(0, _SRC_DIR)
 
-try:
-    from unified_morning_cockpit import (
-        query_system_telemetry,
-        query_projects_radar,
-        query_calendar_and_tasks,
-        query_intel_and_world_news,
-        query_email_hygiene,
-        poll_gemini_master_briefing_with_backoff,
-        query_post_briefing_email_delta,
-    )
-except ImportError:
-    try:
-        from scripts.unified_morning_cockpit import (
-            query_system_telemetry,
-            query_projects_radar,
-            query_calendar_and_tasks,
-            query_intel_and_world_news,
-            query_email_hygiene,
-            poll_gemini_master_briefing_with_backoff,
-            query_post_briefing_email_delta,
-        )
-    except ImportError:
-        query_system_telemetry = None
-        query_projects_radar = None
-        query_calendar_and_tasks = None
-        query_intel_and_world_news = None
-        query_email_hygiene = None
-        poll_gemini_master_briefing_with_backoff = None
-        query_post_briefing_email_delta = None
-
-try:
-    from orbit_security.inbox_guardrail import PromptInjectionSanitizer
-except ImportError:
-    PromptInjectionSanitizer = None
-
-
-def _sanitize_inbound_text(value: Any, max_chars: int = 4000) -> str:
-    """Screens untrusted inbound text through PromptInjectionSanitizer."""
-    if value is None:
-        return ""
-    raw = str(value)
-    if PromptInjectionSanitizer is not None:
-        return PromptInjectionSanitizer.sanitize(raw, max_chars=max_chars)
-    return raw[:max_chars].strip()
-
-
-def sanitize_intel_news(intel_news: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    """Sanitizes HN and Google News RSS feed payloads before Markdown/TTS exposure."""
-    if not isinstance(intel_news, dict):
-        return {}
-    cleaned = dict(intel_news)
-    for list_key in ("ai_innovations", "tech_and_security", "world_news"):
-        items = cleaned.get(list_key)
-        if isinstance(items, list):
-            cleaned[list_key] = [_sanitize_inbound_text(item, max_chars=1000) for item in items if item is not None]
-    for str_key in ("ai_takeaway", "world_takeaway"):
-        if cleaned.get(str_key) is not None:
-            cleaned[str_key] = _sanitize_inbound_text(cleaned[str_key], max_chars=1000)
-    return cleaned
-
-
-def sanitize_master_briefing(master_briefing: Any) -> Any:
-    """Sanitizes extracted IMAP Combined Daily Master Briefing fields without clipping preserved Markdown links."""
-    if not isinstance(master_briefing, dict):
-        return master_briefing
-    cleaned = dict(master_briefing)
-    if cleaned.get("subject") is not None:
-        cleaned["subject"] = _sanitize_inbound_text(cleaned["subject"], max_chars=800)
-    if cleaned.get("body_text") is not None:
-        cleaned["body_text"] = _sanitize_inbound_text(cleaned["body_text"], max_chars=12000)
-    if isinstance(cleaned.get("highlights"), list):
-        cleaned["highlights"] = [_sanitize_inbound_text(h, max_chars=1500) for h in cleaned["highlights"]]
-    if isinstance(cleaned.get("sections"), dict):
-        sec_clean: Dict[str, Any] = {}
-        for sec_k, sec_vals in cleaned["sections"].items():
-            if isinstance(sec_vals, list):
-                sec_clean[sec_k] = [_sanitize_inbound_text(v, max_chars=1500) for v in sec_vals]
-            else:
-                sec_clean[sec_k] = sec_vals
-        cleaned["sections"] = sec_clean
-    return cleaned
-
-
-def sanitize_email_data(email_data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    """Sanitizes IMAP-derived lists, post-briefing delta items, and nested master_briefing payloads."""
-    if not isinstance(email_data, dict):
-        return {}
-    cleaned = dict(email_data)
-    for list_key in (
-        "unread_list",
-        "urgent_list",
-        "awaiting_external_reply",
-        "historical_alerts_sample",
-        "ci_alerts",
-        "deal_threads",
-    ):
-        items = cleaned.get(list_key)
-        if isinstance(items, list):
-            cleaned[list_key] = [_sanitize_inbound_text(item, max_chars=600) for item in items]
-    if isinstance(cleaned.get("email_hygiene"), dict):
-        hyg = dict(cleaned["email_hygiene"])
-        if "master_briefing" in hyg:
-            hyg["master_briefing"] = sanitize_master_briefing(hyg["master_briefing"])
-        cleaned["email_hygiene"] = hyg
-    if isinstance(cleaned.get("post_briefing_delta"), dict):
-        pdelta = dict(cleaned["post_briefing_delta"])
-        for bucket_k in ("ci_cd_all", "ci_cd_delta", "vdp_all", "vdp_delta", "work_delta", "work_recent"):
-            bucket_vals = pdelta.get(bucket_k)
-            if isinstance(bucket_vals, list):
-                sanitized_entries = []
-                for entry in bucket_vals:
-                    if isinstance(entry, dict):
-                        e_copy = dict(entry)
-                        if e_copy.get("subject") is not None:
-                            e_copy["subject"] = _sanitize_inbound_text(e_copy["subject"], max_chars=600)
-                        if e_copy.get("sender") is not None:
-                            e_copy["sender"] = _sanitize_inbound_text(e_copy["sender"], max_chars=300)
-                        sanitized_entries.append(e_copy)
-                    else:
-                        sanitized_entries.append(_sanitize_inbound_text(entry, max_chars=600))
-                pdelta[bucket_k] = sanitized_entries
-        cleaned["post_briefing_delta"] = pdelta
-    return cleaned
-
+from orbit_security.briefing import (  # noqa: E402
+    BriefingConfig,
+    BriefingEngine,
+    BriefingResult,
+    CollectorAdapters,
+    DEFAULT_BRIEFINGS_DIR,
+    EmailCollectRequest,
+    TelemetrySnapshot,
+    archive_superseded_ci_alerts_in_imap,
+    compute_and_save_daily_deltas,
+    poll_gemini_master_briefing_with_backoff,
+    probe_workspace_critic_evidence,
+    query_calendar_and_tasks,
+    query_campaign_outreach,
+    query_daemon_health,
+    query_email_hygiene,
+    query_geo_panel_telemetry,
+    query_inbox_pipeline,
+    query_intel_and_world_news,
+    query_live_email_telemetry,
+    query_live_github_ci_status,
+    query_option_c_readiness,
+    query_post_briefing_email_delta,
+    query_projects_radar,
+    query_stripe_telemetry,
+    query_system_telemetry,
+    reconcile_ci_alerts_with_live_status,
+    render_master_briefing_block as _render_master_briefing_block,
+    run_local_critic_reconciliation,
+    sanitize_email_data,
+    sanitize_inbound_text as _sanitize_inbound_text,
+    sanitize_intel_news,
+    sanitize_master_briefing,
+    triage_email_messages,
+)
+from orbit_security.briefing.pipeline import _build_agenda_items  # noqa: E402
+from orbit_security.briefing.system_collectors import _count_commits_24h  # noqa: E402
 
 load_dotenv()
+
+# Sentinel references so the CLI adapter bridge distinguishes live defaults from test stubs
+_DEFAULT_QUERY_LIVE_EMAIL = query_live_email_telemetry
+_DEFAULT_QUERY_LIVE_GITHUB_CI = query_live_github_ci_status
+_DEFAULT_COMPUTE_AND_SAVE_DELTAS = compute_and_save_daily_deltas
 
 
 def dispatch_email_briefing(report_markdown: str, recipient: Optional[str] = None) -> bool:
     """Dispatches the daily operational briefing to operator email via EmailDispatcher."""
     try:
         from orbit_security.mailer import EmailDispatcher
+
         dispatcher = EmailDispatcher()
         if not dispatcher.is_configured():
             print("[!] Email dispatch skipped: SMTP not fully configured.")
             return False
 
-        target_email = recipient or os.getenv("DEFAULT_AGENCY_EMAIL") or os.getenv("SMTP_USER") or "carsonmail009@gmail.com"
+        target_email = (
+            recipient
+            or os.getenv("DEFAULT_AGENCY_EMAIL")
+            or os.getenv("SMTP_USER")
+            or "carsonmail009@gmail.com"
+        )
         subject = f"Orbit Security Daily Operational Briefing - {datetime.date.today().strftime('%Y-%m-%d')}"
 
         sent = dispatcher.send_email(
@@ -204,1519 +110,9 @@ def dispatch_email_briefing(report_markdown: str, recipient: Optional[str] = Non
             print(f"[✔] Daily briefing email dispatched to {target_email}")
             return True
         return False
-    except Exception as e:
-        print(f"[!] Email dispatch error: {e}")
-        return False
-
-
-def query_stripe_telemetry() -> Dict[str, Any]:
-    """Queries live Stripe API for balance, 24h charges, and subscriptions."""
-    api_key = os.getenv("STRIPE_SECRET_KEY") or os.getenv("STRIPE_API_KEY")
-    if not api_key:
-        return {"status": "unconfigured", "available_usd": 0.0, "pending_usd": 0.0, "recent_charges": 0, "active_subscriptions": 0}
-
-    headers = {"Authorization": f"Bearer {api_key}"}
-
-    def api_get(endpoint: str) -> Dict[str, Any]:
-        req = urllib.request.Request(f"https://api.stripe.com/v1/{endpoint}", headers=headers)
-        with urllib.request.urlopen(req) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-
-    try:
-        bal = api_get("balance")
-        avail = sum(item.get("amount", 0) for item in bal.get("available", [])) / 100.0
-        pending = sum(item.get("amount", 0) for item in bal.get("pending", [])) / 100.0
-
-        charges_data = api_get("charges?limit=10").get("data", [])
-        subs_data = api_get("subscriptions?status=active&limit=10").get("data", [])
-
-        return {
-            "status": "active",
-            "available_usd": avail,
-            "pending_usd": pending,
-            "recent_charges": len(charges_data),
-            "active_subscriptions": len(subs_data),
-        }
-    except Exception as e:
-        return {"status": f"error: {e}", "available_usd": 0.0, "pending_usd": 0.0, "recent_charges": 0, "active_subscriptions": 0}
-
-
-def _is_pid_alive(pid: Any) -> bool:
-    """Checks whether an integer PID is currently running in the OS process table."""
-    if not isinstance(pid, int) or pid <= 0 or psutil is None:
-        return False
-    try:
-        return bool(psutil.pid_exists(pid))
-    except Exception:
-        return False
-
-
-def query_daemon_health() -> Dict[str, Any]:
-    """Checks PID and live OS process status of Orbit Master Supervisor and Sentinel daemon."""
-    state_file = r"A:\system\state\orbit_daemon_state.json"
-    if os.path.exists(state_file):
-        try:
-            with open(state_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            sv_pid = data.get("supervisor_pid")
-            running = bool(data.get("running", False))
-            services = data.get("services", {})
-            sentinel = services.get("orbit_security", {})
-            sen_pid = sentinel.get("pid")
-
-            sv_alive = _is_pid_alive(sv_pid)
-            sen_alive = _is_pid_alive(sen_pid)
-            svc_state_active = sum(1 for s in services.values() if isinstance(s, dict) and s.get("active"))
-            svc_live_active = sum(
-                1 for s in services.values()
-                if isinstance(s, dict) and s.get("active") and _is_pid_alive(s.get("pid"))
-            )
-
-            return {
-                "supervisor_pid": sv_pid,
-                "supervisor_active": running and bool(sv_pid),
-                "supervisor_pid_alive": sv_alive,
-                "live_verified_active": bool(running and sv_pid and sv_alive),
-                "sentinel_pid": sen_pid,
-                "sentinel_running": bool(sentinel.get("active", False)),
-                "sentinel_pid_alive": sen_alive,
-                "sentinel_live_verified": bool(sentinel.get("active", False) and sen_alive),
-                "sentinel_restarts": sentinel.get("restart_count", 0),
-                "state_timestamp": str(data.get("timestamp") or ""),
-                "services_live_active": svc_live_active,
-                "services_state_active": svc_state_active,
-                "services_total": len(services),
-            }
-        except Exception:
-            pass
-
-    return {
-        "supervisor_pid": None,
-        "supervisor_active": False,
-        "supervisor_pid_alive": False,
-        "live_verified_active": False,
-        "sentinel_pid": None,
-        "sentinel_running": False,
-        "sentinel_pid_alive": False,
-        "sentinel_live_verified": False,
-        "sentinel_restarts": 0,
-        "state_timestamp": "",
-        "services_live_active": 0,
-        "services_state_active": 0,
-        "services_total": 0,
-    }
-
-
-def query_option_c_readiness(
-    repo_root: Optional[Path] = None,
-    vault_file: Optional[Path] = None,
-) -> Dict[str, Any]:
-    """Aggregates Option C Dual-Track Minimal readiness (Track A Bounty Vault + Track B Inbound Funnel)."""
-    root = Path(repo_root) if repo_root else _REPO_ROOT
-    v_path = Path(vault_file) if vault_file else (root / "data" / "hackerone_staging" / "VAULT_LAUNCH_QUEUE.json")
-
-    audit: Dict[str, Any] = {}
-    try:
-        try:
-            from orbit_readiness_audit import run_readiness_audit
-        except ImportError:
-            from scripts.orbit_readiness_audit import run_readiness_audit
-        audit = run_readiness_audit(repo_root=root, verify_cutover=False)
-    except Exception:
-        audit = {}
-
-    vault: Dict[str, Any] = {}
-    if v_path.is_file():
-        try:
-            vault = json.loads(v_path.read_text(encoding="utf-8"))
-        except Exception:
-            vault = {}
-
-    catalog = audit.get("bounty_catalog", {})
-    disc = audit.get("disclosures_and_radar", {})
-    ev = disc.get("ev_digest_coverage", {})
-    parity = audit.get("landing_docs_parity", {})
-    tb = audit.get("track_b_funnel", {})
-    stripe_cfg = audit.get("stripe_config", {})
-    subs = audit.get("subscribers", {})
-    clients = audit.get("clients_hygiene", {})
-
-    tier_1_items: List[str] = []
-    tier_2_items: List[str] = []
-    for entry in vault.get("launch_queue", []):
-        if not isinstance(entry, dict):
-            continue
-        prog = str(entry.get("program") or "Unknown")
-        tier = str(entry.get("tier") or "")
-        if tier == "TIER_1_READY":
-            hosts = ", ".join(entry.get("hosts", [])[:2])
-            digests = ", ".join(entry.get("evidence_digests", [])[:2])
-            tier_1_items.append(f"{prog} ({hosts}) [{digests}]")
-        elif tier == "TIER_2_NEEDS_AUTH_PROOF":
-            b_count = len(entry.get("bundles", []))
-            tier_2_items.append(f"{prog} ({b_count})")
-
-    return {
-        "revenue_focus": audit.get("revenue_focus", "Option C (Dual-Track Minimal: Verified Bounties + Inbound Fixpack/Audit)"),
-        "technical_floor_clean": bool(audit.get("technical_floor_clean", False)),
-        "commercial_outreach_frozen": bool(audit.get("commercial_outreach_frozen", True)),
-        "kyc_payout_status": str(audit.get("kyc_payout_status", "PENDING_PHYSICAL_ID")),
-        "blockers": list(audit.get("blockers", [])),
-        "unique_programs": int(catalog.get("unique_programs", 0)),
-        "cash_tier_count": int(catalog.get("cash_tier_count", 0)),
-        "staged_reports": int(disc.get("active_submittable_reports", 0)),
-        "paired_bundles": int(disc.get("paired_bundle_count", 0)),
-        "ev_covered": int(ev.get("covered_count", 0)),
-        "ev_total": int(ev.get("total_staged", 0)),
-        "archived_total": int(disc.get("archived_total_count", 0)),
-        "consolidated_dossiers": int(vault.get("consolidated_dossiers", 0)),
-        "tier_1_items": tier_1_items,
-        "tier_2_items": tier_2_items,
-        "landing_docs_in_sync": bool(parity.get("in_sync", False)),
-        "landing_docs_identical": int(parity.get("identical_count", 0)),
-        "landing_docs_shared": int(parity.get("shared_count", 0)),
-        "track_b_ready": bool(tb.get("ready", False)),
-        "stripe_live_checkout_ready": bool(stripe_cfg.get("live_checkout_ready", False)),
-        "paid_subscribers": int(subs.get("count", 0)),
-        "active_clients": int(clients.get("client_count", 0)),
-    }
-
-
-def query_inbox_pipeline() -> Dict[str, Any]:
-    """Inspects leads_state.json for negotiation status and escalations."""
-    leads_file = os.path.join(os.path.dirname(__file__), "..", "data", "leads_state.json")
-    if not os.path.exists(leads_file):
-        return {"total_threads": 0, "escalations": 0, "inquiries": 0}
-
-    try:
-        with open(leads_file, "r", encoding="utf-8") as f:
-            leads = json.load(f)
-        total = len(leads)
-        escalations = sum(
-            1 for v in leads.values()
-            if (v.get("escalated") and v.get("intent") in ("READY_TO_BUY", "HIGH_INTENT", "REQUEST_HUMAN"))
-            or v.get("intent") in ("READY_TO_BUY", "HIGH_INTENT", "REQUEST_HUMAN")
-        )
-        inquiries = sum(1 for v in leads.values() if "INQUIRY" in str(v.get("intent", "")))
-        return {
-            "total_threads": total,
-            "escalations": escalations,
-            "inquiries": inquiries,
-        }
-    except Exception:
-        return {"total_threads": 0, "escalations": 0, "inquiries": 0}
-
-
-def query_campaign_outreach(
-    repo_root: Optional[Path] = None,
-    dispatched_file: Optional[Path] = None,
-    out_root: Optional[Path] = None,
-) -> Dict[str, Any]:
-    """Inspects dispatched_campaigns.json (sorted newest-first) and outbound freeze status."""
-    root = Path(repo_root) if repo_root else _REPO_ROOT
-    d_file = Path(dispatched_file) if dispatched_file else (root / "data" / "dispatched_campaigns.json")
-    o_root = Path(out_root) if out_root else (root / "outbound_campaigns")
-    dispatched_count = 0
-    recent = []
-    if d_file.is_file():
-        try:
-            data = json.loads(d_file.read_text(encoding="utf-8"))
-            dispatched_count = len(data)
-            sorted_entries = sorted(
-                data.items(),
-                key=lambda kv: str((kv[1] or {}).get("dispatched_at", "")),
-                reverse=True,
-            )
-            for domain, info in sorted_entries[:5]:
-                info_dict = info if isinstance(info, dict) else {}
-                recent.append(f"{info_dict.get('agency_name', domain)} ({domain}) - {info_dict.get('dispatched_at', '')}")
-        except Exception:
-            pass
-
-    staged_count = 0
-    if o_root.is_dir():
-        try:
-            staged_count = len([d for d in o_root.iterdir() if d.is_dir()])
-        except Exception:
-            pass
-
-    frozen = True
-    try:
-        from orbit_security.private_alerting import COMMERCIAL_OUTREACH_FROZEN
-        frozen = bool(COMMERCIAL_OUTREACH_FROZEN)
-    except Exception:
-        pass
-
-    return {
-        "dispatched_count": dispatched_count,
-        "staged_count": staged_count,
-        "recent_dispatched": recent,
-        "frozen": frozen,
-    }
-
-
-def _msg_epoch_ts(msg: Any) -> float:
-    """Converts EmailMessage.date into a UTC epoch float safely."""
-    dt = getattr(msg, "date", None)
-    if dt is None:
-        return 0.0
-    try:
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=datetime.timezone.utc)
-        return float(dt.timestamp())
-    except Exception:
-        return 0.0
-
-
-def _clean_subject(subject: str) -> str:
-    return (subject or "").replace("\r", "").replace("\n", " ").strip()
-
-
-def _normalize_thread_key(subject: str) -> str:
-    cleaned = re.sub(r"\s+", " ", _clean_subject(subject)).strip()
-    while True:
-        stripped = re.sub(r"^(re|fwd?|fw)\s*:\s*", "", cleaned, flags=re.IGNORECASE).strip()
-        if stripped == cleaned:
-            break
-        cleaned = stripped
-    return cleaned.lower()
-
-
-def _is_self_briefing_or_ci(subject: str, sender: str = "") -> tuple[bool, bool]:
-    """Returns (is_self_briefing, is_ci_alert)."""
-    subj_low = _clean_subject(subject).lower()
-    comb_low = f"{subj_low} {sender.lower()}"
-    is_self = (
-        "orbit security daily operational briefing" in subj_low
-        or "google ai daily briefing" in subj_low
-    )
-    is_ci = any(k in comb_low for k in ("orbit-security", "cmfh009", "run failed"))
-    return is_self, is_ci
-
-
-_OUTBOUND_ACTION_CUE_RE = re.compile(
-    r"\b(submitted|uploaded|replied|responded|sent|filed|appealed|resolved|completed|confirmed)\b",
-    re.IGNORECASE,
-)
-_ISO_OR_DT_IN_TEXT_RE = re.compile(
-    r"(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})?)"
-)
-_TOPIC_STOPWORDS = frozenset({
-    "re", "fw", "fwd", "the", "and", "for", "with", "from", "your", "our",
-    "immediate", "request", "update", "alert", "notice", "statement", "account",
-    "urgent", "action", "required", "email", "message", "today", "closure",
-    "http", "https", "www", "com", "google", "url",
-})
-
-
-def _parse_any_ts(val: Any) -> float:
-    """Parses datetime/epoch/ISO/YYYY-MM-DD HH:MM values into UTC epoch seconds."""
-    if val is None or val == "":
-        return 0.0
-    if isinstance(val, (int, float)):
-        return float(val)
-    if isinstance(val, datetime.datetime):
-        dt = val if val.tzinfo else val.replace(tzinfo=datetime.timezone.utc)
-        return float(dt.timestamp())
-    text = str(val).strip()
-    if not text:
-        return 0.0
-    try:
-        dt = datetime.datetime.fromisoformat(text.replace("Z", "+00:00"))
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=datetime.timezone.utc)
-        return float(dt.timestamp())
-    except ValueError:
-        pass
-    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
-        try:
-            dt = datetime.datetime.strptime(text[:19], fmt).replace(tzinfo=datetime.timezone.utc)
-            return float(dt.timestamp())
-        except ValueError:
-            continue
-    return 0.0
-
-
-def _detect_outbound_reply_reason(
-    *,
-    subject: str,
-    sender: str,
-    msg_ts: float,
-    outbound_by_thread: Dict[str, float],
-    norm_sent_ts: Dict[str, float],
-    norm_sent_subjects: set[str],
-    master_briefing: Optional[Dict[str, Any]],
-) -> Optional[str]:
-    """Returns a status reason if an urgent inbound thread already has a newer outbound reply/confirmation."""
-    t_key = _normalize_thread_key(subject)
-    if t_key in outbound_by_thread and outbound_by_thread[t_key] > msg_ts:
-        return "outbound reply in thread"
-    if t_key in norm_sent_ts:
-        if msg_ts == 0.0 or norm_sent_ts[t_key] > msg_ts:
-            return "outbound reply in Sent"
-    elif t_key in norm_sent_subjects:
-        return "outbound reply in Sent"
-
-    if not isinstance(master_briefing, dict) or not master_briefing.get("found", True):
-        return None
-    highlights = [str(h).strip() for h in (master_briefing.get("highlights") or []) if str(h).strip()]
-    if not highlights:
-        return None
-
-    mb_ts = _parse_any_ts(master_briefing.get("date"))
-    if msg_ts > 0.0 and mb_ts > 0.0 and mb_ts < msg_ts:
-        return None
-
-    sender_low = str(sender or "").lower()
-    domain_root = ""
-    if "@" in sender_low:
-        dom = sender_low.rsplit("@", 1)[-1].strip("<> ")
-        domain_root = dom.split(".")[0] if dom else ""
-
-    topic_tokens = {
-        tok
-        for tok in re.findall(r"[a-z0-9]+(?:\.[0-9]+)?", t_key)
-        if len(tok) >= 4 and tok not in _TOPIC_STOPWORDS
-    }
-
-    for hl in highlights:
-        if not _OUTBOUND_ACTION_CUE_RE.search(hl):
-            continue
-        embedded_dt_match = _ISO_OR_DT_IN_TEXT_RE.search(hl)
-        if embedded_dt_match and msg_ts > 0.0:
-            hl_ts = _parse_any_ts(embedded_dt_match.group(1))
-            if hl_ts > 0.0 and hl_ts <= msg_ts:
-                continue
-
-        hl_low = hl.lower()
-        hl_words = {
-            w for w in re.findall(r"[a-z0-9]+(?:\.[0-9]+)?", hl_low)
-            if len(w) >= 4 and w not in _TOPIC_STOPWORDS
-        }
-        brand_match = bool(
-            domain_root
-            and len(domain_root) >= 4
-            and (
-                domain_root in hl_words
-                or any(domain_root.startswith(w) or w.startswith(domain_root) for w in hl_words)
-            )
-        )
-        topic_overlap = topic_tokens & hl_words
-        if brand_match or len(topic_overlap) >= 2:
-            return "confirmed in Master Briefing"
-
-    return None
-
-
-def triage_email_messages(
-    messages: List[Any],
-    digest: Any,
-    now_ts: Optional[float] = None,
-    *,
-    owner_email: str = "carsonmail009@gmail.com",
-    sent_replied_subjects: Optional[Sequence[str]] = None,
-    sent_replied_timestamps: Optional[Dict[str, Any]] = None,
-    master_briefing: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
-    """Filters, deduplicates, and sorts email digest signals into actionable today vs awaiting/historical buckets."""
-    ref_ts = float(now_ts if now_ts is not None else datetime.datetime.now(datetime.timezone.utc).timestamp())
-    msg_by_id = {getattr(m, "id", None): m for m in messages}
-    owner_low = (owner_email or "carsonmail009@gmail.com").strip().lower()
-
-    # Track outbound self-replies present in the fetched message list
-    outbound_by_thread: Dict[str, float] = {}
-    for m in messages:
-        m_sender = str(getattr(m, "sender", "") or "").lower()
-        m_labels = {str(lbl).lower() for lbl in (getattr(m, "labels", None) or ())}
-        m_subj = _clean_subject(getattr(m, "subject", ""))
-        is_self_briefing, _ = _is_self_briefing_or_ci(m_subj, m_sender)
-        if is_self_briefing or m_subj.lower().startswith("combined daily master briefing"):
-            continue
-        is_outbound = (owner_low and owner_low in m_sender) or ("sent" in m_labels)
-        if not is_outbound:
-            continue
-        m_key = _normalize_thread_key(m_subj)
-        m_ts = _msg_epoch_ts(m)
-        if m_key and m_ts > outbound_by_thread.get(m_key, -1.0):
-            outbound_by_thread[m_key] = m_ts
-
-    norm_sent_ts: Dict[str, float] = {}
-    for raw_subj, raw_ts in (sent_replied_timestamps or {}).items():
-        n_key = _normalize_thread_key(str(raw_subj))
-        parsed = _parse_any_ts(raw_ts)
-        if n_key and parsed > norm_sent_ts.get(n_key, -1.0):
-            norm_sent_ts[n_key] = parsed
-
-    norm_sent_subjects = {
-        _normalize_thread_key(str(s))
-        for s in (sent_replied_subjects or ())
-        if _normalize_thread_key(str(s))
-    }
-
-    ci_alerts = [
-        _sanitize_inbound_text(_clean_subject(w.subject), max_chars=500)
-        for w in getattr(digest, "work_items", [])
-        if any(k in f"{w.subject} {w.sender}".lower() for k in ("orbit-security", "cmfh009", "run failed", "secrets", "ci"))
-    ]
-    deal_threads = [
-        _sanitize_inbound_text(_clean_subject(d.subject), max_chars=500)
-        for d in getattr(digest, "work_items", [])
-        if any(k in f"{d.subject} {d.sender}".lower() for k in ("stripe", "lead", "pricing", "inquiry", "deal", "client", "revenue"))
-    ]
-
-    # Sort urgent items newest-first, deduplicate by thread subject, and drop self-briefings & CI alerts
-    raw_urgent = list(getattr(digest, "urgent_items", []))
-    raw_urgent.sort(key=lambda u: _msg_epoch_ts(msg_by_id.get(u.message_id)), reverse=True)
-
-    seen_threads: set[str] = set()
-    urgent_today: List[str] = []
-    awaiting_external_reply: List[str] = []
-    historical_urgent: List[str] = []
-
-    for item in raw_urgent:
-        subj = _sanitize_inbound_text(_clean_subject(item.subject), max_chars=500)
-        item_sender = _sanitize_inbound_text(item.sender, max_chars=300)
-        is_self, is_ci = _is_self_briefing_or_ci(subj, item_sender)
-        if is_self or is_ci:
-            continue
-        if owner_low and owner_low in item_sender.lower():
-            continue
-        t_key = _normalize_thread_key(subj)
-        if t_key in seen_threads:
-            continue
-        seen_threads.add(t_key)
-
-        msg = msg_by_id.get(item.message_id)
-        is_unread = not bool(getattr(msg, "is_read", True)) if msg is not None else False
-        ts = _msg_epoch_ts(msg)
-        is_recent_24h = ts > 0.0 and (ref_ts - ts) <= 86400.0
-        formatted = f"{subj} — {item_sender} ({item.date_str})"
-
-        if is_unread or is_recent_24h:
-            reply_reason = None
-            if owner_low not in item_sender.lower():
-                reply_reason = _detect_outbound_reply_reason(
-                    subject=subj,
-                    sender=item_sender,
-                    msg_ts=ts,
-                    outbound_by_thread=outbound_by_thread,
-                    norm_sent_ts=norm_sent_ts,
-                    norm_sent_subjects=norm_sent_subjects,
-                    master_briefing=master_briefing,
-                )
-            if reply_reason:
-                awaiting_external_reply.append(f"{formatted} [{reply_reason}]")
-            else:
-                urgent_today.append(formatted)
-        else:
-            historical_urgent.append(formatted)
-
-    # Non-CI, non-self unread messages sorted newest-first
-    unread_msgs = [m for m in messages if not getattr(m, "is_read", True)]
-    unread_msgs.sort(key=_msg_epoch_ts, reverse=True)
-    unread_non_ci: List[str] = []
-    for m in unread_msgs:
-        subj = _sanitize_inbound_text(_clean_subject(getattr(m, "subject", "")), max_chars=500)
-        sender = _sanitize_inbound_text(str(getattr(m, "sender", "")), max_chars=300)
-        is_self, is_ci = _is_self_briefing_or_ci(subj, sender)
-        if is_self or is_ci:
-            continue
-        unread_non_ci.append(f"{subj} ({sender})")
-
-    total_fin = sum((getattr(digest, "financial_totals", {}) or {}).values())
-
-    return {
-        "status": "connected",
-        "scanned": getattr(digest, "total_scanned", len(messages)),
-        "unread": getattr(digest, "unread_count", len(unread_msgs)),
-        "unread_non_ci_count": len(unread_non_ci),
-        "unread_list": unread_non_ci[:5],
-        "urgent": len(urgent_today),
-        "urgent_list": urgent_today[:5],
-        "awaiting_external_reply_count": len(awaiting_external_reply),
-        "awaiting_external_reply": awaiting_external_reply[:5],
-        "historical_alerts_count": len(historical_urgent),
-        "historical_alerts_sample": historical_urgent[:3],
-        "ci_alerts": ci_alerts,
-        "deal_threads": deal_threads,
-        "total_financial_amount": total_fin,
-        "financial_currency": "USD",
-        "hygiene": getattr(digest, "hygiene_stats", {}),
-    }
-
-
-def query_live_email_telemetry(
-    max_retries: int = 0,
-    retry_interval_sec: float = 300.0,
-    target_date: Optional[datetime.date] = None,
-) -> Dict[str, Any]:
-    """Connects to email-organizer, polls Gemini Master Briefing with backoff, runs delta scan, and extracts telemetry."""
-    try:
-        from email_organizer.client import IMAPEmailClient
-        from email_organizer.classifier import EmailClassifier
-        from email_organizer.digest import MorningDigestGenerator
-        from email_organizer.ledger import SenderLedger
-        from email_organizer.models import OrganizerConfig
-
-        env_file = os.path.join(_email_org_root, ".env")
-        imap_user = os.environ.get("IMAP_USER", "carsonmail009@gmail.com")
-        imap_pass = os.environ.get("IMAP_PASS", "")
-
-        if os.path.exists(env_file):
-            with open(env_file, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith("IMAP_USER="):
-                        imap_user = line.split("=", 1)[1].strip().strip("'\"")
-                    elif line.startswith("IMAP_PASS="):
-                        imap_pass = line.split("=", 1)[1].strip().strip("'\"")
-
-        if not imap_pass:
-            imap_pass = os.environ.get("GMAIL_APP_PASSWORD", "")
-
-        if not imap_pass:
-            return {
-                "status": "unconfigured",
-                "scanned": 0,
-                "unread": 0,
-                "unread_non_ci_count": 0,
-                "unread_list": [],
-                "ci_alerts": [],
-                "deal_threads": [],
-                "urgent": 0,
-                "urgent_list": [],
-                "historical_alerts_count": 0,
-                "post_briefing_delta": {},
-            }
-
-        # Deterministic Gemini Master Briefing ingestion (label:Orbit/Briefings) with retry backoff
-        polled_master: Optional[Dict[str, Any]] = None
-        if poll_gemini_master_briefing_with_backoff is not None:
-            try:
-                polled_master = poll_gemini_master_briefing_with_backoff(
-                    target_date=target_date,
-                    max_retries=max_retries,
-                    retry_interval_sec=retry_interval_sec,
-                )
-            except Exception:
-                polled_master = None
-
-        # Non-mutating peek on INBOX
-        client = IMAPEmailClient(
-            host="imap.gmail.com",
-            port=993,
-            user=imap_user,
-            password=imap_pass,
-        )
-        client.connect()
-        messages = client.fetch_messages(folder="INBOX", limit=50)
-        client.disconnect()
-
-        db_path = os.path.join(_email_org_root, "email_organizer.db")
-        ledger = SenderLedger(db_path) if os.path.exists(db_path) else None
-        config = OrganizerConfig()
-        classifier = EmailClassifier(config=config, ledger=ledger)
-        generator = MorningDigestGenerator(classifier=classifier, ledger=ledger)
-
-        digest = generator.generate(messages=messages)
-        hygiene_res: Dict[str, Any] = {}
-        if query_email_hygiene:
-            try:
-                hygiene_res = query_email_hygiene(messages=messages) or {}
-            except Exception:
-                hygiene_res = {}
-
-        if isinstance(polled_master, dict):
-            hygiene_res["master_briefing"] = polled_master
-
-        effective_master = hygiene_res.get("master_briefing")
-        since_ts = effective_master.get("timestamp_utc") if isinstance(effective_master, dict) and effective_master.get("found") else None
-        post_delta: Dict[str, Any] = {}
-        if query_post_briefing_email_delta is not None:
-            try:
-                post_delta = query_post_briefing_email_delta(since_ts=since_ts)
-            except Exception:
-                post_delta = {}
-
-        result = triage_email_messages(
-            messages=messages,
-            digest=digest,
-            owner_email=imap_user,
-            sent_replied_subjects=hygiene_res.get("sent_replied_subjects"),
-            sent_replied_timestamps=hygiene_res.get("sent_replied_timestamps"),
-            master_briefing=effective_master,
-        )
-        result["email_hygiene"] = hygiene_res
-        result["post_briefing_delta"] = post_delta
-        return sanitize_email_data(result)
-    except Exception as e:
-        return {
-            "status": f"error: {e}",
-            "scanned": 0,
-            "unread": 0,
-            "unread_non_ci_count": 0,
-            "unread_list": [],
-            "ci_alerts": [],
-            "deal_threads": [],
-            "urgent": 0,
-            "urgent_list": [],
-            "historical_alerts_count": 0,
-            "post_briefing_delta": {},
-        }
-
-
-def query_live_github_ci_status(
-    repo: str = "CmfH009/Orbit-Security",
-    branch: str = "main",
-    timeout: float = 6.0,
-) -> Dict[str, Any]:
-    """Queries GitHub Actions REST API for the latest workflow runs on HEAD of `branch`."""
-    url = f"https://api.github.com/repos/{repo}/actions/runs?branch={branch}&per_page=15"
-    headers = {
-        "User-Agent": "OrbitSecurity-DailyBriefing/1.0",
-        "Accept": "application/vnd.github+json",
-    }
-    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-
-    try:
-        req = urllib.request.Request(url, headers=headers)
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                data = json.loads(resp.read().decode("utf-8", errors="ignore"))
-        except Exception:
-            # Fallback to unauthenticated public repo query if token fails or transient timeout occurs
-            fallback_headers = {k: v for k, v in headers.items() if k != "Authorization"}
-            req2 = urllib.request.Request(url, headers=fallback_headers)
-            with urllib.request.urlopen(req2, timeout=timeout + 4.0) as resp:
-                data = json.loads(resp.read().decode("utf-8", errors="ignore"))
-        runs = data.get("workflow_runs", [])
-        if not runs:
-            return {"status": "empty", "head_sha": "", "all_green": False, "failing_workflows": [], "passing_workflows": []}
-
-        head_full_sha = str(runs[0].get("head_sha", ""))
-        head_sha = head_full_sha[:7]
-        head_runs = [r for r in runs if str(r.get("head_sha", "")).startswith(head_sha)]
-
-        failing_workflows: List[str] = []
-        passing_workflows: List[str] = []
-        seen_names = set()
-        for r in head_runs:
-            name = str(r.get("name", "Workflow"))
-            if name in seen_names:
-                continue
-            seen_names.add(name)
-            conclusion = str(r.get("conclusion") or "").lower()
-            status = str(r.get("status") or "").lower()
-            if status == "completed":
-                if conclusion == "success":
-                    passing_workflows.append(name)
-                elif conclusion in ("failure", "timed_out", "action_required", "cancelled"):
-                    failing_workflows.append(name)
-
-        all_green = len(passing_workflows) > 0 and len(failing_workflows) == 0
-        return {
-            "status": "ok",
-            "head_sha": head_sha,
-            "all_green": all_green,
-            "failing_workflows": failing_workflows,
-            "passing_workflows": passing_workflows,
-        }
     except Exception as exc:
-        return {
-            "status": f"error: {exc}",
-            "head_sha": "",
-            "all_green": False,
-            "failing_workflows": [],
-            "passing_workflows": [],
-        }
-
-
-def archive_superseded_ci_alerts_in_imap(live_ci: Dict[str, Any]) -> int:
-    """Marks superseded GitHub Actions failure emails as read, labels them Orbit/CI-CD, and archives them from INBOX when live HEAD is all_green."""
-    if not live_ci.get("all_green"):
-        return 0
-
-    try:
-        import imaplib
-
-        env_file = os.path.join(_email_org_root, ".env")
-        imap_user = os.environ.get("IMAP_USER", "carsonmail009@gmail.com")
-        imap_pass = os.environ.get("IMAP_PASS", "")
-        if os.path.exists(env_file):
-            with open(env_file, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith("IMAP_USER="):
-                        imap_user = line.split("=", 1)[1].strip().strip("'\"")
-                    elif line.startswith("IMAP_PASS="):
-                        imap_pass = line.split("=", 1)[1].strip().strip("'\"")
-        if not imap_pass:
-            imap_pass = os.environ.get("GMAIL_APP_PASSWORD", "")
-        if not imap_pass:
-            return 0
-
-        conn = imaplib.IMAP4_SSL("imap.gmail.com", 993)
-        conn.login(imap_user, imap_pass)
-        conn.select("INBOX")
-        status, data = conn.search(None, 'SUBJECT "Run failed"')
-        if status != "OK" or not data or not data[0]:
-            conn.logout()
-            return 0
-
-        msg_ids = data[0].split()
-        archived_count = 0
-        try:
-            conn.create('"Orbit/CI-CD"')
-        except Exception:
-            pass
-
-        for mid in msg_ids:
-            try:
-                conn.store(mid, "+X-GM-LABELS", '("Orbit/CI-CD")')
-            except Exception:
-                pass
-            conn.store(mid, "+FLAGS", r"(\Seen \Deleted)")
-            archived_count += 1
-
-        if archived_count > 0:
-            conn.expunge()
-        conn.close()
-        conn.logout()
-        return archived_count
-    except Exception:
-        return 0
-
-
-def _is_other_repo_ci_alert(alert_text: str) -> bool:
-    """Returns True when a CI alert explicitly targets a repository other than Orbit-Security."""
-    m = re.match(r"^\s*\[([^\]]+)\]", alert_text or "")
-    if not m:
+        print(f"[!] Email dispatch error: {exc}")
         return False
-    repo_tag = m.group(1).strip().lower()
-    return "/" in repo_tag and "orbit-security" not in repo_tag
-
-
-def reconcile_ci_alerts_with_live_status(
-    email_ci_alerts: List[str],
-    live_ci: Dict[str, Any],
-    archived_in_imap: int = 0,
-) -> Dict[str, Any]:
-    """Reconciles historical Orbit-Security inbox CI failure emails against live GitHub Actions HEAD status."""
-    orbit_alerts = [a for a in (email_ci_alerts or []) if not _is_other_repo_ci_alert(str(a))]
-    head_sha = live_ci.get("head_sha", "")
-    all_green = bool(live_ci.get("all_green", False))
-    failing_wf = live_ci.get("failing_workflows", [])
-
-    if all_green:
-        lines = [f"  - 🟢 All GitHub Actions green on `HEAD` (`{head_sha}`)"]
-        if archived_in_imap > 0:
-            lines.append(f"  - 🧹 Auto-archived {archived_in_imap} superseded CI failure notification(s) to `Orbit/CI-CD`")
-        for s in orbit_alerts[:3]:
-            clean_s = s.replace("\r", "").replace("\n", " ").strip()
-            lines.append(f"  - ✅ [RESOLVED on HEAD {head_sha}] {clean_s}")
-        return {
-            "active_failures": 0,
-            "resolved_alerts": list(orbit_alerts),
-            "archived_in_imap": archived_in_imap,
-            "summary_markdown": "\n".join(lines),
-            "spoken_note": f"all CI test runs are green on HEAD {head_sha}",
-        }
-
-    if failing_wf:
-        active_count = len(failing_wf)
-        lines = [f"  - ⚠️ Live failing workflow on `HEAD` (`{head_sha}`): {wf}" for wf in failing_wf[:3]]
-        for s in orbit_alerts[:2]:
-            clean_s = s.replace("\r", "").replace("\n", " ").strip()
-            lines.append(f"  - ⚠️ {clean_s}")
-        return {
-            "active_failures": active_count,
-            "resolved_alerts": [],
-            "summary_markdown": "\n".join(lines),
-            "spoken_note": f"heads up, {active_count} GitHub CI workflows failing on HEAD",
-        }
-
-    # Fallback when live API is unreachable
-    ci_count = len(orbit_alerts)
-    summary_str = (
-        "\n".join([f"  - ⚠️ {s.replace(chr(13), '').replace(chr(10), ' ').strip()}" for s in orbit_alerts[:3]])
-        if ci_count > 0
-        else "  - All GitHub Actions green on CmfH009/Orbit-Security"
-    )
-    return {
-        "active_failures": ci_count,
-        "resolved_alerts": [],
-        "summary_markdown": summary_str,
-        "spoken_note": f"heads up, {ci_count} GitHub CI failures logged in Orbit CI CD" if ci_count > 0 else "all CI test runs are green",
-    }
-
-
-def query_geo_panel_telemetry(log_file: Optional[str] = None) -> Dict[str, Any]:
-    """Queries the latest 12-query GEO visibility & citation panel summary and delta from data/geo_panels.jsonl."""
-    try:
-        from pathlib import Path
-        from orbit_security.geo_panel import GeoPromptPanel
-
-        target_log = Path(log_file) if log_file else None
-        summary = GeoPromptPanel.get_latest_summary_and_delta(log_file=target_log)
-        latest = summary.get("latest") or {}
-        delta = summary.get("delta") or {}
-        has_data = bool(summary.get("has_data"))
-        has_prev = bool(summary.get("has_previous_run"))
-
-        if not has_data:
-            md_line = "- **GEO Panel Status:** No GEO panel runs recorded yet (`python scripts/run_geo_panel.py`)"
-        else:
-            m_rate = latest.get("mention_rate_pct", 0.0)
-            c_rate = latest.get("citation_rate_pct", 0.0)
-            auth = latest.get("composite_authority_score", 0.0)
-            if has_prev:
-                dm = delta.get("mention_rate_delta_pct", 0.0)
-                dc = delta.get("citation_rate_delta_pct", 0.0)
-                da = delta.get("authority_score_delta", 0.0)
-                delta_str = f"Δ Mention `{dm:+.1f}%` | Δ Citation `{dc:+.1f}%` | Δ Authority `{da:+.1f} pts`"
-            else:
-                delta_str = "Baseline run established (awaiting next panel for delta)"
-            md_line = (
-                f"- **Latest 12-Query Panel:** Mention Rate `{m_rate:.1f}%` | Citation Rate `{c_rate:.1f}%` | Authority Score `{auth:.1f}/100`\n"
-                f"- **Panel Run-over-Run Delta:** {delta_str}\n"
-                f"- **Total Logged GEO Probes:** {summary.get('total_records', 0)}"
-            )
-        return {
-            **summary,
-            "summary_markdown": md_line,
-        }
-    except Exception as ex:
-        return {
-            "has_data": False,
-            "has_previous_run": False,
-            "total_records": 0,
-            "latest": {},
-            "delta": {"mention_rate_delta_pct": 0.0, "citation_rate_delta_pct": 0.0, "authority_score_delta": 0.0},
-            "summary_markdown": f"- **GEO Panel Status:** Unavailable ({ex})",
-        }
-
-
-_STATE_DATE_FILE_RE = re.compile(r"^briefing_state_(\d{4}-\d{2}-\d{2})\.json$")
-DEFAULT_BRIEFINGS_DIR = _REPO_ROOT / "daily_briefings"
-_DELTA_FLOAT_KEYS = ("disk_free_gb", "geo_citation_share_pct")
-_DELTA_INT_KEYS = ("commits_24h", "unread_count", "urgent_count", "tier1_ready", "tier2_queued")
-
-
-def _normalize_delta_snapshot(snapshot: Dict[str, Any]) -> Dict[str, Any]:
-    """Coerces tracked snapshot fields to deterministic numeric/string types."""
-    norm: Dict[str, Any] = {}
-    for k in _DELTA_FLOAT_KEYS:
-        try:
-            norm[k] = round(float(snapshot.get(k, 0.0) or 0.0), 2)
-        except (TypeError, ValueError):
-            norm[k] = 0.0
-    for k in _DELTA_INT_KEYS:
-        try:
-            norm[k] = int(snapshot.get(k, 0) or 0)
-        except (TypeError, ValueError):
-            norm[k] = 0
-    kyc_val = snapshot.get("kyc_gate")
-    norm["kyc_gate"] = str(kyc_val) if kyc_val not in (None, "") else "PENDING_PHYSICAL_ID"
-    return norm
-
-
-def _load_json_dict(path: Path) -> Optional[Dict[str, Any]]:
-    """Reads a JSON file and returns a dict or None on missing/invalid payloads."""
-    if not path.is_file():
-        return None
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else None
-    except Exception:
-        return None
-
-
-def _extract_snapshot_payload(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """Extracts tracked snapshot dict from either a wrapped state record or flat snapshot."""
-    snap = data.get("snapshot")
-    if isinstance(snap, dict):
-        return snap
-    all_keys = (*_DELTA_FLOAT_KEYS, *_DELTA_INT_KEYS, "kyc_gate")
-    if any(k in data for k in all_keys):
-        return data
-    return None
-
-
-def _find_previous_snapshot(
-    date_key: str,
-    target_dir: Path,
-) -> tuple[Optional[str], Optional[Dict[str, Any]]]:
-    """Finds the most recent prior-day snapshot, avoiding today's own snapshot on repeated runs."""
-    candidates: List[tuple[str, Path]] = []
-    for entry in target_dir.iterdir():
-        if not entry.is_file():
-            continue
-        match = _STATE_DATE_FILE_RE.match(entry.name)
-        if not match:
-            continue
-        file_date = match.group(1)
-        if file_date < date_key:
-            candidates.append((file_date, entry))
-
-    candidates.sort(key=lambda item: item[0], reverse=True)
-    for file_date, entry in candidates:
-        data = _load_json_dict(entry)
-        if data:
-            snap = _extract_snapshot_payload(data)
-            if snap is not None:
-                return file_date, snap
-
-    latest_data = _load_json_dict(target_dir / "briefing_state_latest.json")
-    if latest_data:
-        latest_date = str(latest_data.get("date") or "")[:10]
-        if latest_date and latest_date < date_key:
-            snap = _extract_snapshot_payload(latest_data)
-            if snap is not None:
-                return latest_date, snap
-        if latest_date == date_key and isinstance(latest_data.get("previous_snapshot"), dict):
-            prev_date = latest_data.get("previous_date")
-            return (str(prev_date)[:10] if prev_date else None), latest_data["previous_snapshot"]
-
-    today_data = _load_json_dict(target_dir / f"briefing_state_{date_key}.json")
-    if today_data and isinstance(today_data.get("previous_snapshot"), dict):
-        prev_date = today_data.get("previous_date")
-        return (str(prev_date)[:10] if prev_date else None), today_data["previous_snapshot"]
-
-    return None, None
-
-
-def compute_and_save_daily_deltas(
-    date_str: str,
-    current_snapshot: Dict[str, Any],
-    state_dir: Optional[Path] = None,
-) -> Dict[str, Any]:
-    """Computes 24h day-over-day deltas against the prior day's snapshot and persists state files."""
-    date_key = str(date_str).strip()[:10] or datetime.date.today().isoformat()
-    target_dir = Path(state_dir) if state_dir is not None else DEFAULT_BRIEFINGS_DIR
-    target_dir.mkdir(parents=True, exist_ok=True)
-
-    normalized = _normalize_delta_snapshot(current_snapshot)
-    prev_date, raw_prev = _find_previous_snapshot(date_key=date_key, target_dir=target_dir)
-
-    if raw_prev is not None:
-        previous_snapshot = _normalize_delta_snapshot(raw_prev)
-        has_previous = True
-        deltas: Dict[str, Any] = {}
-        for k in _DELTA_FLOAT_KEYS:
-            deltas[k] = round(normalized[k] - previous_snapshot[k], 2)
-        for k in _DELTA_INT_KEYS:
-            deltas[k] = int(normalized[k] - previous_snapshot[k])
-        kyc_prev = previous_snapshot["kyc_gate"]
-        kyc_curr = normalized["kyc_gate"]
-        kyc_changed = kyc_curr != kyc_prev
-        deltas["kyc_gate"] = f"{kyc_prev} -> {kyc_curr}" if kyc_changed else "unchanged"
-        has_prev_geo = "geo_citation_share_pct" in raw_prev
-        geo_unchanged = bool(has_prev_geo and round(normalized["geo_citation_share_pct"], 2) == round(previous_snapshot["geo_citation_share_pct"], 2))
-        kyc_note = f"{kyc_prev} -> {kyc_curr}" if kyc_changed else f"{kyc_curr} (unchanged)"
-        summary_line = (
-            f"vs {prev_date or 'prior'}: "
-            f"Disk {deltas['disk_free_gb']:+.1f} GB | "
-            f"Commits {deltas['commits_24h']:+d} | "
-            f"Unread {deltas['unread_count']:+d} | "
-            f"Urgent {deltas['urgent_count']:+d} | "
-            f"Tier-1 {deltas['tier1_ready']:+d} | "
-            f"Tier-2 {deltas['tier2_queued']:+d} | "
-            f"GEO {deltas['geo_citation_share_pct']:+.1f}% | "
-            f"KYC: {kyc_note}"
-        )
-    else:
-        previous_snapshot = None
-        has_previous = False
-        deltas = {k: 0.0 for k in _DELTA_FLOAT_KEYS}
-        deltas.update({k: 0 for k in _DELTA_INT_KEYS})
-        deltas["kyc_gate"] = "baseline"
-        kyc_changed = False
-        geo_unchanged = False
-        summary_line = (
-            f"Baseline ({date_key}): "
-            f"Disk {normalized['disk_free_gb']:.1f} GB free | "
-            f"Commits {normalized['commits_24h']} | "
-            f"Unread {normalized['unread_count']} | "
-            f"Urgent {normalized['urgent_count']} | "
-            f"Tier-1 {normalized['tier1_ready']} | "
-            f"Tier-2 {normalized['tier2_queued']} | "
-            f"GEO {normalized['geo_citation_share_pct']:.1f}% | "
-            f"KYC: {normalized['kyc_gate']}"
-        )
-
-    state_payload = {
-        "date": date_key,
-        "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "snapshot": normalized,
-        "previous_date": prev_date,
-        "previous_snapshot": previous_snapshot,
-        "has_previous": has_previous,
-        "deltas": deltas,
-        "geo_unchanged": geo_unchanged,
-        "kyc_changed": kyc_changed,
-        "summary_line": summary_line,
-    }
-
-    dated_path = target_dir / f"briefing_state_{date_key}.json"
-    latest_path = target_dir / "briefing_state_latest.json"
-    serialized = json.dumps(state_payload, indent=2)
-    dated_path.write_text(serialized, encoding="utf-8")
-    latest_path.write_text(serialized, encoding="utf-8")
-
-    return {
-        "date": date_key,
-        "has_previous": has_previous,
-        "previous_date": prev_date,
-        "current": normalized,
-        "previous": previous_snapshot,
-        "deltas": deltas,
-        "geo_unchanged": geo_unchanged,
-        "kyc_changed": kyc_changed,
-        "summary_line": summary_line,
-        "state_file": str(dated_path),
-        "latest_file": str(latest_path),
-    }
-
-
-def _count_commits_24h(
-    proj_radar: Dict[str, Any],
-    repo_root: Optional[Path] = None,
-    now_dt: Optional[datetime.datetime] = None,
-) -> int:
-    """Counts recent 24h commits across root workspace radar and standalone orbit-security repo."""
-    ref_now = now_dt or datetime.datetime.now()
-    cutoff = ref_now - datetime.timedelta(hours=24)
-    root_count = 0
-    for entry in proj_radar.get("workspace_root_commits_48h", []):
-        parts = [p.strip() for p in str(entry).split("|")]
-        if len(parts) < 2:
-            continue
-        try:
-            commit_dt = datetime.datetime.strptime(parts[1][:16], "%Y-%m-%d %H:%M")
-            if commit_dt >= cutoff:
-                root_count += 1
-        except ValueError:
-            continue
-
-    repo_count = 0
-    target_repo = Path(repo_root) if repo_root else _REPO_ROOT
-    if (target_repo / ".git").exists():
-        try:
-            out = subprocess.check_output(
-                ["git", "-C", str(target_repo), "rev-list", "--count", "--since=24 hours ago", "HEAD"],
-                text=True,
-                timeout=2,
-                stderr=subprocess.DEVNULL,
-            ).strip()
-            if out.isdigit():
-                repo_count = int(out)
-        except Exception:
-            repo_count = 0
-
-    return root_count + repo_count
-
-
-_BRIEFING_CI_LINE_RE = re.compile(
-    r"\[(?P<repo>[^\]]+)\]\s*Run\s+(?:failed|cancelled|timed out)\s*:\s*(?P<workflow>.+?)\s*-\s*(?P<branch>[^\s(]+)\s*\((?P<sha>[0-9a-fA-F]{6,40})\)",
-    re.IGNORECASE,
-)
-
-
-def _find_workspace_root(explicit_root: Optional[Path] = None) -> Path:
-    if explicit_root is not None:
-        return Path(explicit_root)
-    if Path(r"C:\AgyHut\projects").is_dir():
-        return Path(r"C:\AgyHut")
-    if Path(r"A:\projects").is_dir():
-        return Path(r"A:\\")
-    return _REPO_ROOT.parent.parent
-
-
-def run_local_critic_reconciliation(
-    *,
-    master_briefing: Optional[Dict[str, Any]] = None,
-    post_delta: Optional[Dict[str, Any]] = None,
-    email_ci_alerts: Optional[Sequence[str]] = None,
-    live_ci: Optional[Dict[str, Any]] = None,
-    proj_radar: Optional[Dict[str, Any]] = None,
-    option_c: Optional[Dict[str, Any]] = None,
-    daemon: Optional[Dict[str, Any]] = None,
-    sys_telem: Optional[Dict[str, Any]] = None,
-    workspace_root: Optional[Path] = None,
-    gh_ci_querier: Optional[Any] = None,
-) -> Dict[str, Any]:
-    """Cross-checks Gemini cloud alerts and Gmail CI/CVE signals against live local disk & git state."""
-    mb = master_briefing if isinstance(master_briefing, dict) else {}
-    delta = post_delta if isinstance(post_delta, dict) else {}
-    live_ci = live_ci or {}
-    proj_radar = proj_radar or {}
-    option_c = option_c or {}
-    daemon = daemon or {}
-    sys_telem = sys_telem or {}
-    ws_root = _find_workspace_root(workspace_root)
-
-    checks: List[Dict[str, str]] = []
-    active_ci_failures: List[str] = []
-    active_security_actions: List[str] = []
-    resolved_ci_alerts: List[str] = []
-
-    # 1. Multi-Repo CI Failure Reconciliation
-    ci_candidates: List[Dict[str, str]] = []
-    seen_ci_keys: set[tuple[str, str]] = set()
-    for item in delta.get("ci_cd_all", []) or []:
-        if isinstance(item, dict) and item.get("repo") and item.get("sha"):
-            key = (str(item["repo"]).lower(), str(item["sha"]).lower())
-            if key not in seen_ci_keys:
-                seen_ci_keys.add(key)
-                ci_candidates.append(
-                    {
-                        "repo": str(item["repo"]),
-                        "workflow": str(item.get("workflow") or "CI"),
-                        "branch": str(item.get("branch") or "main"),
-                        "sha": str(item["sha"]),
-                        "subject": str(item.get("subject") or ""),
-                    }
-                )
-
-    sections = mb.get("sections") if isinstance(mb.get("sections"), dict) else {}
-    sec_ci_lines = [
-        line
-        for sec_k in ("ops_cicd_sla", "critic_audit", "personal_delta")
-        for line in (sections.get(sec_k, []) or [])
-    ]
-    for line in [*sec_ci_lines, *(email_ci_alerts or ())]:
-        m = _BRIEFING_CI_LINE_RE.search(str(line))
-        if m:
-            key = (m.group("repo").strip().lower(), m.group("sha").strip().lower())
-            if key not in seen_ci_keys:
-                seen_ci_keys.add(key)
-                ci_candidates.append(
-                    {
-                        "repo": m.group("repo").strip(),
-                        "workflow": m.group("workflow").strip(),
-                        "branch": m.group("branch").strip(),
-                        "sha": m.group("sha").strip(),
-                        "subject": str(line),
-                    }
-                )
-
-    for ci in ci_candidates:
-        repo_full = ci["repo"]
-        short_repo = repo_full.split("/")[-1].strip().lower()
-        branch = ci["branch"]
-        fail_sha = ci["sha"]
-        wf = ci["workflow"]
-
-        local_dir = ws_root / "projects" / short_repo
-        local_head = ""
-        commits_ahead = 0
-        if (local_dir / ".git").exists():
-            try:
-                local_head = subprocess.check_output(
-                    ["git", "-C", str(local_dir), "rev-parse", "--short", "HEAD"],
-                    text=True,
-                    timeout=2,
-                    stderr=subprocess.DEVNULL,
-                ).strip()
-                ahead_out = subprocess.check_output(
-                    ["git", "-C", str(local_dir), "rev-list", "--count", f"{fail_sha}..HEAD"],
-                    text=True,
-                    timeout=2,
-                    stderr=subprocess.DEVNULL,
-                ).strip()
-                if ahead_out.isdigit():
-                    commits_ahead = int(ahead_out)
-            except Exception:
-                pass
-
-        gh_status: Dict[str, Any] = {}
-        if short_repo == "orbit-security" and live_ci:
-            gh_status = live_ci
-        elif gh_ci_querier is not None:
-            try:
-                gh_status = gh_ci_querier(repo=repo_full, branch=branch) or {}
-            except Exception:
-                gh_status = {}
-
-        gh_head = str(gh_status.get("head_sha") or "")
-        gh_green = bool(gh_status.get("all_green", False))
-        gh_failing = list(gh_status.get("failing_workflows", []) or [])
-
-        if gh_green and gh_head:
-            msg = f"`{repo_full}` `{wf}` failure on `{fail_sha}` superseded — GitHub Actions all green on `HEAD` `{gh_head}`"
-            if local_head and commits_ahead > 0:
-                msg += f" (local `HEAD` `{local_head}`, `{commits_ahead}` commit(s) ahead)"
-            checks.append({"check": f"CI:{repo_full}", "status": "RESOLVED_ON_HEAD", "detail": msg})
-            resolved_ci_alerts.append(msg)
-        elif gh_failing:
-            if local_head and local_head != gh_head and commits_ahead > 0:
-                msg = (
-                    f"`{repo_full}` `{wf}` failing on remote `{gh_head}` (from `{fail_sha}`); "
-                    f"local `HEAD` `{local_head}` is `{commits_ahead}` commit(s) ahead — push/verify remote CI"
-                )
-                checks.append({"check": f"CI:{repo_full}", "status": "LOCAL_AHEAD_REMOTE_FAILING", "detail": msg})
-            else:
-                msg = f"`{repo_full}` `{wf}` failing on `{branch}` (`{gh_head or fail_sha}`)"
-                checks.append({"check": f"CI:{repo_full}", "status": "ACTIVE_FAILURE", "detail": msg})
-            active_ci_failures.append(msg)
-        elif local_head and commits_ahead > 0:
-            msg = (
-                f"`{repo_full}` `{wf}` failure (`{fail_sha}`) locally superseded: "
-                f"`{local_dir}` is on `{local_head}` (`{commits_ahead}` commit(s) ahead; verify remote CI)"
-            )
-            checks.append({"check": f"CI:{repo_full}", "status": "LOCALLY_SUPERSEDED", "detail": msg})
-            resolved_ci_alerts.append(msg)
-        else:
-            msg = f"`{repo_full}` `{wf}` failure flagged on `{branch}` (`{fail_sha}`)"
-            checks.append({"check": f"CI:{repo_full}", "status": "ACTIVE_FAILURE", "detail": msg})
-            active_ci_failures.append(msg)
-
-    # 2. Go MCP SDK CVE-2026-34742 (< v1.4.0 DNS Rebinding) Local Disk Check
-    mb_blob = " ".join(
-        [
-            str(mb.get("subject") or ""),
-            *(str(x) for x in (mb.get("highlights") or [])),
-            *(str(x) for sec in sections.values() if isinstance(sec, list) for x in sec),
-        ]
-    )
-    if re.search(r"CVE-2026-34742|go\s+mcp\s+sdk", mb_blob, re.IGNORECASE):
-        go_mod_paths: List[Path] = []
-        sys_gomod = ws_root / "system" / "scripts" / "go.mod"
-        if sys_gomod.is_file():
-            go_mod_paths.append(sys_gomod)
-        proj_root = ws_root / "projects"
-        if proj_root.is_dir():
-            for child in sorted(proj_root.iterdir()):
-                if child.is_dir() and not child.name.startswith("."):
-                    gm = child / "go.mod"
-                    if gm.is_file():
-                        go_mod_paths.append(gm)
-
-        vuln_hits: List[str] = []
-        scanned_labels: List[str] = []
-        for gm in go_mod_paths:
-            try:
-                rel = str(gm.relative_to(ws_root)).replace("\\", "/")
-            except ValueError:
-                rel = str(gm)
-            scanned_labels.append(rel)
-            try:
-                content = gm.read_text(encoding="utf-8", errors="ignore")
-                for line in content.splitlines():
-                    low = line.lower()
-                    if "modelcontextprotocol/go-sdk" in low or "mcp-go" in low:
-                        ver_m = re.search(r"\bv(\d+)\.(\d+)\.(\d+)", line)
-                        if ver_m and (int(ver_m.group(1)), int(ver_m.group(2)), int(ver_m.group(3))) < (1, 4, 0):
-                            vuln_hits.append(f"{rel}: {line.strip()}")
-            except Exception:
-                pass
-
-        if vuln_hits:
-            detail = f"Vulnerable Go MCP SDK < v1.4.0 detected locally: {'; '.join(vuln_hits)}"
-            checks.append({"check": "CVE-2026-34742", "status": "PATCH_REQUIRED", "detail": detail})
-            active_security_actions.append(detail)
-        else:
-            scanned_str = ", ".join(f"`{s}`" for s in scanned_labels) or "workspace `go.mod` files"
-            detail = (
-                f"Checked {scanned_str} — `0` references to `modelcontextprotocol/go-sdk < v1.4.0` "
-                "(not affected by CVE-2026-34742; `microgravity` already hardened loopback/origin checks)"
-            )
-            checks.append({"check": "CVE-2026-34742", "status": "VERIFIED_CLEAN", "detail": detail})
-
-    # 3. Stale Cloud Echo Suppression & Ground-Truth Vault Reconciliation
-    parser_meta = mb.get("parser_meta") if isinstance(mb.get("parser_meta"), dict) else {}
-    suppressed_echo = int(parser_meta.get("suppressed_stale_echo_lines", 0) or 0)
-    if suppressed_echo > 0:
-        staged_cnt = option_c.get("staged_reports", 0)
-        sv_pid = daemon.get("supervisor_pid")
-        checks.append(
-            {
-                "check": "24h_Stale_Overlap",
-                "status": "SUPPRESSED",
-                "detail": (
-                    f"Eliminated {suppressed_echo} stale Orbit operational echo line(s) from Gemini Section 1; "
-                    f"replaced with live local state (`{staged_cnt}` staged Track A bundles, Supervisor PID `{sv_pid}`)"
-                ),
-            }
-        )
-
-    # 4. Digest Parser Boundary & Inline Link Integrity Check
-    if mb.get("found"):
-        hard_stopped = bool(parser_meta.get("hard_stopped_at_dossier", False))
-        all_sec_items = [str(v) for vals in sections.values() if isinstance(vals, list) for v in vals]
-        dangling_cnt = sum(1 for v in all_sec_items if v.strip().endswith(":") and "](" not in v)
-        md_links_cnt = sum(len(re.findall(r"\[[^\]]+\]\([^)]+\)", v)) for v in all_sec_items)
-        checks.append(
-            {
-                "check": "Parser_Boundary_&_Links",
-                "status": "PASS" if dangling_cnt == 0 else "WARN",
-                "detail": (
-                    f"Hard-stop before Section 5 Dossier=`{hard_stopped}` | "
-                    f"Blank dangling bullets=`{dangling_cnt}` | "
-                    f"Preserved inline Markdown links=`{md_links_cnt}`"
-                ),
-            }
-        )
-
-    # 5. Open-Port Delta Triage Verification
-    port_triage = sys_telem.get("port_triage") if isinstance(sys_telem.get("port_triage"), dict) else {}
-    if port_triage:
-        unexp = port_triage.get("unexpected_listeners", []) or []
-        exp = port_triage.get("expected_listeners", []) or []
-        checks.append(
-            {
-                "check": "Open_Port_Delta_Triage",
-                "status": "WARN" if unexp else "PASS",
-                "detail": f"{len(exp)} expected ecosystem listener(s) mapped, {len(unexp)} unexpected listener(s)",
-            }
-        )
-
-    summary_lines = [
-        f"  - **[{c['status']}] `{c['check']}`:** {c['detail']}"
-        for c in checks
-    ] or ["  - **[PASS] `Local_State_Baseline`:** No unresolved cloud vs. local discrepancies detected."]
-
-    return {
-        "checks": checks,
-        "active_ci_failures": active_ci_failures,
-        "active_security_actions": active_security_actions,
-        "resolved_ci_alerts": resolved_ci_alerts,
-        "summary_lines": summary_lines,
-    }
-
-
-def _build_agenda_items(
-    ci_count: int,
-    live_ci: Dict[str, Any],
-    option_c: Dict[str, Any],
-    email_data: Dict[str, Any],
-    daemon: Dict[str, Any],
-    inbox_q: Dict[str, Any],
-    *,
-    post_delta: Optional[Dict[str, Any]] = None,
-    critic_res: Optional[Dict[str, Any]] = None,
-    master_briefing: Optional[Dict[str, Any]] = None,
-    sys_telem: Optional[Dict[str, Any]] = None,
-) -> List[str]:
-    """Derives prioritized engineering, VDP/career SLA, and multi-repo CI agenda items."""
-    state_ts = daemon.get("state_timestamp") or "unknown"
-    delta = post_delta if isinstance(post_delta, dict) else {}
-    critic = critic_res if isinstance(critic_res, dict) else {}
-    mb = master_briefing if isinstance(master_briefing, dict) else {}
-    telem = sys_telem if isinstance(sys_telem, dict) else {}
-
-    agenda_items: List[str] = []
-
-    # 1. Active Multi-Repo CI Failures (Orbit-Security + post-briefing Critic-verified CI failures)
-    if ci_count > 0:
-        failing_names = ", ".join(live_ci.get("failing_workflows", [])) or "GitHub CI"
-        agenda_items.append(f"Fix {ci_count} failing GitHub Actions workflow(s) on `CmfH009/Orbit-Security` HEAD ({failing_names}).")
-    for multi_ci in critic.get("active_ci_failures", []) or []:
-        if "Orbit-Security" not in multi_ci:
-            agenda_items.append(f"Multi-Repo CI: {multi_ci}")
-
-    # 2. Local Security / CVE Patch Requirements & Unexpected Listeners
-    for sec_act in critic.get("active_security_actions", []) or []:
-        agenda_items.append(f"Security Patch: {sec_act}")
-    port_triage = telem.get("port_triage") if isinstance(telem.get("port_triage"), dict) else {}
-    unexp_ports = port_triage.get("unexpected_listeners", []) or []
-    if unexp_ports:
-        p_desc = ", ".join(f"{e.get('port')} ({e.get('process')})" for e in unexp_ports[:3])
-        agenda_items.append(f"Port Triage: inspect unexpected local listener(s): {p_desc}.")
-
-    # 3. "Waiting on Carson" VDP & Career SLAs (post-briefing delta + Gmail VDP/Work replies)
-    vdp_delta = delta.get("vdp_delta", []) or []
-    vdp_all = delta.get("vdp_all", []) or []
-    work_delta = delta.get("work_delta", []) or []
-    if vdp_delta:
-        top_vdp = vdp_delta[0]
-        agenda_items.append(f"Waiting on Carson (VDP Delta): respond to `{top_vdp.get('subject')}` ({top_vdp.get('sender')}).")
-    elif any("analyst" in str(v.get("subject", "")).lower() or "4204024" in str(v.get("subject", "")) for v in vdp_all):
-        disney_vdp = next((v for v in vdp_all if "4204024" in str(v.get("subject", ""))), vdp_all[0])
-        agenda_items.append(
-            f"Waiting on Carson (VDP SLA, `{disney_vdp.get('age_hours', 0)}h` age): fulfill HackerOne analyst PoC request on `{disney_vdp.get('subject')}`."
-        )
-
-    if work_delta:
-        top_work = work_delta[0]
-        agenda_items.append(f"Career / Work Delta: review `{top_work.get('subject')}` from `{top_work.get('sender')}`.")
-
-    # 4. Option C KYC / Tier-2 CORS & Unread/Urgent Email Triage
-    if option_c.get("kyc_payout_status") != "VERIFIED":
-        agenda_items.append(
-            "Gate 2 Physical ID / KYC watch: keep Tier-1 Spotify bucket ready and capture authenticated session/PII proof for Tier-2 CONDITIONAL CORS bundles (MercadoLibre, Xiaomi, Superbet, Playtika)."
-        )
-    if email_data.get("unread_non_ci_count", 0) > 0:
-        agenda_items.append(f"Triage {email_data['unread_non_ci_count']} unread non-CI message(s) in `carsonmail009@gmail.com`.")
-    elif email_data.get("urgent", 0) > 0:
-        agenda_items.append(f"Review {email_data['urgent']} actionable urgent email item(s) in `carsonmail009@gmail.com`.")
-
-    if mb.get("warning_banner"):
-        agenda_items.append(f"{mb['warning_banner']} — check Gmail `Orbit/Briefings` label or re-run once delivered.")
-
-    if not daemon.get("live_verified_active"):
-        agenda_items.append(f"Restart `OrbitMasterSupervisor` daemon if 24/7 background monitoring is desired (state stale since `{state_ts}`).")
-    if inbox_q.get("failed", 0) > 0:
-        agenda_items.append(f"Inspect {inbox_q['failed']} failed task(s) in `A:\\inbox\\failed`.")
-    if not agenda_items:
-        agenda_items.append("Run `orbit_readiness_audit.py --verify-cutover` and advance active workspace sprint.")
-    return agenda_items
-
-
-def _render_cloud_subsection(title: str, items: Sequence[str], empty_note: str, limit: int = 16) -> str:
-    clean_items = [str(x).strip() for x in (items or []) if str(x).strip()]
-    lines = [f"#### {title}"]
-    if clean_items:
-        for item in clean_items[:limit]:
-            lines.append(f"- {item}")
-    else:
-        lines.append(f"- {empty_note}")
-    return "\n".join(lines)
-
-
-def _render_master_briefing_block(master_briefing: Any) -> str:
-    """Formats the Gemini Combined Daily Master Briefing cleanly using strict canonical sections and inline links."""
-    if isinstance(master_briefing, dict) and master_briefing.get("found"):
-        subject = _clean_subject(str(master_briefing.get("subject") or "Combined Daily Master Briefing"))
-        date_val = str(master_briefing.get("date") or "").strip()
-        highlights = [str(h).strip() for h in (master_briefing.get("highlights") or []) if str(h).strip()]
-        sections = master_briefing.get("sections") or {}
-        date_suffix = f" *({date_val})*" if date_val else ""
-        lines = [
-            f"- **Latest Dispatch:** {subject}{date_suffix}",
-        ]
-
-        ops_items = sections.get("ops_cicd_sla") or sections.get("personal_delta") or []
-        ai_items = sections.get("ai_dev_radar") or sections.get("ai_news") or []
-        comp_sec_items = sections.get("competitive_security") or []
-        yt_items = sections.get("youtube_newsletters") or sections.get("youtube_digest") or []
-        dl_items = sections.get("deadlines_checklist") or sections.get("deprecations") or []
-
-        has_canonical = any((ops_items, ai_items, comp_sec_items, yt_items, dl_items))
-        if has_canonical:
-            lines.append("")
-            lines.append(_render_cloud_subsection("3.1 VDP / Career SLAs & Personal Delta", ops_items, "No new personal or SLA items in this dispatch."))
-            lines.append("")
-            lines.append(_render_cloud_subsection("3.2 AI / Antigravity / Dev Radar", ai_items, "No new AI/dev stack releases in this dispatch."))
-            lines.append("")
-            lines.append(_render_cloud_subsection("3.3 Competitive & Adversarial Security Radar", comp_sec_items, "No new CVE or competitive security alerts in this dispatch."))
-            lines.append("")
-            lines.append(_render_cloud_subsection("3.4 Technical YouTube & Newsletter Digest", yt_items, "No new curated YouTube uploads or newsletter highlights in past 24h."))
-            lines.append("")
-            lines.append(_render_cloud_subsection("3.5 Upcoming 30-Day Pricing, CVE & Deprecation Deadlines", dl_items, "No upcoming 30-day deadlines reported."))
-        else:
-            for h in highlights[:24]:
-                lines.append(f"  - {h}")
-        return "\n".join(lines)
-
-    warn = ""
-    if isinstance(master_briefing, dict) and master_briefing.get("warning_banner"):
-        warn = f"**{master_briefing['warning_banner']}** — "
-    else:
-        warn = "**[WARN] Gemini Master Briefing not yet received** — "
-    return f"- {warn}No Combined Daily Master Briefing found in latest inbox sweep; running in local-only mode."
 
 
 def generate_markdown(
@@ -1741,416 +137,72 @@ def generate_markdown(
     agenda_items: Optional[List[str]] = None,
     critic_reconciled: Optional[Dict[str, Any]] = None,
 ) -> str:
-    """Renders the unified 5-section daily executive briefing Markdown report."""
+    """Backward-compatible wrapper delegating Markdown synthesis to BriefingEngine.synthesize()."""
     today_str = today or datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-    stripe = stripe or {}
-    daemon = daemon or {}
-    inbox = inbox or {}
-    campaigns = campaigns or {}
-    option_c = option_c or {}
-    email_data = sanitize_email_data(email_data or {})
-    live_ci = live_ci or {}
-    geo_panel = geo_panel or {}
-    sys_telem = sys_telem or {}
-    proj_radar = proj_radar or {}
-    cal_tasks = cal_tasks or {}
-    intel_news = sanitize_intel_news(intel_news or {})
-    email_hygiene = dict(email_hygiene or {})
-    if "master_briefing" in email_hygiene:
-        email_hygiene["master_briefing"] = sanitize_master_briefing(email_hygiene["master_briefing"])
-    deltas = deltas or {}
-
-    master_brief = email_hygiene.get("master_briefing") or {}
-    post_delta = email_data.get("post_briefing_delta") or {}
-
-    if ci_reconciled is None:
-        ci_reconciled = reconcile_ci_alerts_with_live_status(
-            email_data.get("ci_alerts", []),
-            live_ci,
-            archived_in_imap=0,
-        )
-
-    if critic_reconciled is None:
-        critic_reconciled = run_local_critic_reconciliation(
-            master_briefing=master_brief,
-            post_delta=post_delta,
-            email_ci_alerts=email_data.get("ci_alerts", []),
-            live_ci=live_ci,
-            proj_radar=proj_radar,
-            option_c=option_c,
-            daemon=daemon,
-            sys_telem=sys_telem,
-            gh_ci_querier=None,
-        )
-
-    ci_count = ci_reconciled.get("active_failures", 0)
-    ci_summary_str = ci_reconciled.get("summary_markdown", "  - All GitHub Actions green on CmfH009/Orbit-Security")
-
-    recent_str = "\n".join([f"  - {r}" for r in campaigns.get("recent_dispatched", [])]) or "  - None yet"
-    deal_count = len(email_data.get("deal_threads", []))
-    deals_summary_str = (
-        "\n".join([f"  - 💼 {s}" for s in email_data.get("deal_threads", [])[:3]])
-        if deal_count > 0
-        else "  - No pending customer inquiries waiting in Orbit/Deal-Desk"
+    snapshot = TelemetrySnapshot(
+        generated_at=today_str,
+        date_key=today_str[:10],
+        schedule_mode=schedule_mode,
+        stripe=dict(stripe or {}),
+        daemon=dict(daemon or {}),
+        inbox=dict(inbox or {}),
+        campaigns=dict(campaigns or {}),
+        option_c=dict(option_c or {}),
+        email_data=dict(email_data or {}),
+        email_hygiene=dict(email_hygiene or {}),
+        live_ci=dict(live_ci or {}),
+        geo_panel=dict(geo_panel or {}),
+        system_telemetry=dict(sys_telem or {}),
+        projects_radar=dict(proj_radar or {}),
+        calendar_tasks=dict(cal_tasks or {}),
+        intel_news=dict(intel_news or {}),
     )
-    hygiene = email_data.get("hygiene", {}) or {}
+    cfg = BriefingConfig(
+        schedule_mode=schedule_mode,
+        delta_override=deltas if deltas is not None else {},
+        ci_reconciled_override=ci_reconciled,
+        critic_override=critic_reconciled,
+        agenda_override=agenda_items,
+    )
+    engine = BriefingEngine(adapters=CollectorAdapters.in_memory())
+    return engine.synthesize(snapshot, cfg).markdown
 
-    # Ground-truth Daemon & Supervisor Banner
-    sv_pid = daemon.get("supervisor_pid")
-    sen_pid = daemon.get("sentinel_pid")
-    state_ts = daemon.get("state_timestamp") or "unknown"
-    if daemon.get("live_verified_active"):
-        supervisor_banner = f"🟢 ACTIVE (PID: {sv_pid})"
-    elif daemon.get("supervisor_active"):
-        supervisor_banner = f"🟡 STOPPED / STALE STATE (Last seen: {state_ts}, PID {sv_pid} not running)"
-    else:
-        supervisor_banner = "🔴 INACTIVE"
 
-    if daemon.get("sentinel_live_verified"):
-        sentinel_banner = f"🟢 RUNNING (PID: {sen_pid})"
-    elif daemon.get("sentinel_running"):
-        sentinel_banner = f"🟡 STOPPED / STALE STATE (Last seen: {state_ts}, PID {sen_pid} not running)"
-    else:
-        sentinel_banner = "🔴 STOPPED"
+def _build_cli_adapters() -> CollectorAdapters:
+    """Builds CollectorAdapters bound to current module-level collectors (supports legacy test hooks)."""
 
-    # Hardware, Storage & Open-Port Delta Triage Formatting
-    drives_telem = sys_telem.get("drives", {})
-    drive_notes = {"A:\\": " (Mapped to C:\\AgyHut)", "G:\\": " (Google Drive Mirror)"}
-    drive_lines = []
-    for d_letter, d_info in drives_telem.items():
-        note = drive_notes.get(d_letter, "")
-        drive_lines.append(
-            f"  - **Drive {d_letter}**{note}: `{d_info.get('free_gb', 0)} GB free` of `{d_info.get('total_gb', 0)} GB` ({d_info.get('pct_free', 0)}% free)"
-        )
-    drives_str = "\n".join(drive_lines) if drive_lines else "  - Storage info unavailable"
-
-    port_triage = sys_telem.get("port_triage") or {}
-    if port_triage:
-        expected_ports = port_triage.get("expected_listeners", []) or []
-        unexpected_ports = port_triage.get("unexpected_listeners", []) or []
-        if unexpected_ports:
-            unexp_tags = ", ".join(f"`{e['port']}` ({e.get('service', 'Unknown')} / `{e.get('process', '?')}`)" for e in unexpected_ports)
-            ports_status = f"⚠️ Unexpected/Dev Listeners: {unexp_tags}"
-        else:
-            ports_status = f"🟢 {port_triage.get('summary', '0 unexpected listeners')}"
-        if expected_ports:
-            mapped_lines = [
-                f"    - Port `{e['port']}` -> **{e['service']}** (`{e.get('process', 'detected')}`, PID `{e.get('pid') or 'n/a'}`)"
-                for e in expected_ports
-            ]
-            ports_status += "\n" + "\n".join(mapped_lines)
-    else:
-        ports_status = (
-            "🟢 0 open debug ports (Ports 4173, 8501, 8765 verified closed)"
-            if not sys_telem.get("open_ports")
-            else f"⚠️ Active ports: {sys_telem.get('open_ports')}"
-        )
-
-    temp_c = sys_telem.get("temp_c", 52.0)
-    chassis_c = sys_telem.get("chassis_temp_c")
-    exhaust_c = sys_telem.get("exhaust_temp_c")
-    fan_rpm = sys_telem.get("fan_rpm")
-    thermal_extras = []
-    if chassis_c is not None:
-        thermal_extras.append(f"Chassis {chassis_c}°C")
-    if exhaust_c is not None:
-        thermal_extras.append(f"Exhaust {exhaust_c}°C")
-    if fan_rpm is not None:
-        thermal_extras.append(f"Fan {fan_rpm} RPM")
-    thermal_suffix = f" ({', '.join(thermal_extras)})" if thermal_extras else " (Optimal)"
-
-    # Workspace, Core 7 Active Repos & Inbox Queues Formatting
-    core_repos = proj_radar.get("core_active_repos", [])
-    if core_repos:
-        core_lines = []
-        for p in core_repos:
-            dirty_cnt = int(p.get("dirty_count", 0) or 0)
-            dirty_tag = f"dirty `{dirty_cnt}`" if dirty_cnt > 0 else "clean"
-            c48 = int(p.get("commits_48h", 0) or 0)
-            sha_tag = f"`{p['head_sha']}`" if p.get("head_sha") else "`n/a`"
-            core_lines.append(
-                f"  - **{p['name']}** (`{p['branch']}` @ {sha_tag}, `{c48}` commits/48h, {dirty_tag}): {p.get('commit_msg') or 'No commits'} *({p.get('last_commit') or 'n/a'})*"
+    def _email_adapter(req: EmailCollectRequest) -> Dict[str, Any]:
+        if query_live_email_telemetry is _DEFAULT_QUERY_LIVE_EMAIL:
+            return query_live_email_telemetry(
+                max_retries=req.max_retries,
+                retry_interval_sec=req.retry_interval_sec,
+                target_date=req.target_date,
             )
-        core_repos_str = "\n".join(core_lines)
-    else:
-        recent_projs = proj_radar.get("recently_active", [])
-        if recent_projs:
-            core_repos_str = "\n".join(
-                f"  - 🔥 **{p['name']}** (`{p['branch']}`): {p['commit_msg']} *(last commit: {p['last_commit']})*"
-                for p in recent_projs[:7]
-            )
-        else:
-            core_repos_str = "  - No project commits recorded in the last 48 hours."
+        return query_live_email_telemetry()
 
-    root_commits = proj_radar.get("workspace_root_commits_48h", [])
-    root_commits_str = "\n".join([f"  - `{c}`" for c in root_commits[:5]]) if root_commits else "  - No root workspace commits in the last 48 hours."
-    inbox_q = proj_radar.get("inbox_queues", {})
-    inbox_q_line = (
-        f"pending `{inbox_q.get('pending', 0)}` | in_progress `{inbox_q.get('in_progress', 0)}` | "
-        f"failed `{inbox_q.get('failed', 0)}` | expansion `{inbox_q.get('expansion_queue', 0)}` | "
-        f"completed_24h `{inbox_q.get('completed_24h', 0)}`"
+    def _github_ci_adapter(repo: str = "CmfH009/Orbit-Security", branch: str = "main") -> Dict[str, Any]:
+        if query_live_github_ci_status is _DEFAULT_QUERY_LIVE_GITHUB_CI:
+            return query_live_github_ci_status(repo=repo, branch=branch)
+        return query_live_github_ci_status()
+
+    return CollectorAdapters(
+        system_telemetry=query_system_telemetry,
+        daemon_health=query_daemon_health,
+        email_telemetry=_email_adapter,
+        email_hygiene=query_email_hygiene,
+        calendar_tasks=query_calendar_and_tasks,
+        archive_ci_alerts=archive_superseded_ci_alerts_in_imap,
+        github_ci=_github_ci_adapter,
+        stripe_telemetry=query_stripe_telemetry,
+        option_c_readiness=query_option_c_readiness,
+        inbox_pipeline=query_inbox_pipeline,
+        campaign_outreach=query_campaign_outreach,
+        geo_panel=query_geo_panel_telemetry,
+        projects_radar=query_projects_radar,
+        intel_news=query_intel_and_world_news,
+        commits_24h=lambda radar, now_dt: _count_commits_24h(radar, now_dt=now_dt),
+        workspace_critic_probe=lambda cands, blob: probe_workspace_critic_evidence(cands, blob),
     )
-
-    if agenda_items is None:
-        agenda_items = _build_agenda_items(
-            ci_count=ci_count,
-            live_ci=live_ci,
-            option_c=option_c,
-            email_data=email_data,
-            daemon=daemon,
-            inbox_q=inbox_q,
-            post_delta=post_delta,
-            critic_res=critic_reconciled,
-            master_briefing=master_brief,
-            sys_telem=sys_telem,
-        )
-    top3_items = agenda_items[:3]
-    top3_str = "\n".join([f"{i + 1}. {item}" for i, item in enumerate(top3_items)]) if top3_items else "1. Run `orbit_readiness_audit.py --verify-cutover` and advance active workspace sprint."
-    overflow_items = agenda_items[3:]
-    if overflow_items:
-        agenda_str = "\n".join([f"  {i + 4}. {item}" for i, item in enumerate(overflow_items)])
-    else:
-        agenda_str = "  - Top 3 priorities surfaced in executive banner above (0 overflow backlog items)."
-
-    delta_summary_line = str(deltas.get("summary_line") or "Baseline snapshot pending")
-
-    # Hygiene & 24h inbox volume
-    scanned_cnt = email_data.get("scanned", email_hygiene.get("total_scanned", 0))
-    archived_cnt = email_hygiene.get(
-        "archived_count",
-        email_hygiene.get("archived", hygiene.get("archived_count", hygiene.get("archived", 0))),
-    )
-    trashed_cnt = email_hygiene.get(
-        "trashed_count",
-        email_hygiene.get("trashed", hygiene.get("trashed_count", hygiene.get("trashed", 0))),
-    )
-    unsub_cnt = email_hygiene.get(
-        "unsubscribed_count",
-        email_hygiene.get("unsubscribed", hygiene.get("unsubscribed_count", hygiene.get("unsubscribed", 0))),
-    )
-    received_24h = email_hygiene.get("received_24h", 0)
-    read_cleared_24h = email_hygiene.get("read_or_cleared_24h", 0)
-    auto_hygiene_cnt = email_hygiene.get("auto_hygiene_candidates", 0)
-    master_briefing_block = _render_master_briefing_block(master_brief)
-
-    # Post-Briefing High-Priority Gmail Delta Formatting
-    delta_lines: List[str] = []
-    for label_title, bucket_key in (
-        ("Orbit/CI-CD (Post-Briefing)", "ci_cd_delta"),
-        ("Orbit/VDP (Post-Briefing)", "vdp_delta"),
-        ("Work / Career (Post-Briefing)", "work_delta"),
-    ):
-        for entry in post_delta.get(bucket_key, []) or []:
-            delta_lines.append(
-                f"  - **{label_title}:** {entry.get('subject')} — `{entry.get('sender')}` *({entry.get('date')})*"
-            )
-    if not delta_lines:
-        delta_lines.append("  - 0 new high-priority messages arrived in `Orbit/CI-CD`, `Orbit/VDP`, or `Work` after Gemini's briefing timestamp.")
-    post_delta_str = "\n".join(delta_lines)
-
-    # GEO Visibility & AI Citation Panel (collapsed when unchanged vs prior day)
-    if deltas.get("geo_unchanged"):
-        latest_geo = geo_panel.get("latest") or {}
-        c_rate = float(latest_geo.get("citation_rate_pct", (deltas.get("current") or {}).get("geo_citation_share_pct", 0.0)))
-        m_rate = float(latest_geo.get("mention_rate_pct", 0.0))
-        auth = float(latest_geo.get("composite_authority_score", 0.0))
-        prev_dt = deltas.get("previous_date") or "prior day"
-        geo_section_body = (
-            f"- **UNCHANGED vs {prev_dt}:** Citation Share `{c_rate:.1f}%` "
-            f"(Mention `{m_rate:.1f}%` | Authority `{auth:.1f}/100` | {geo_panel.get('total_records', 0)} probes logged)."
-        )
-    else:
-        geo_section_body = geo_panel.get("summary_markdown", "- **GEO Panel Status:** Pending")
-
-    # Calendar, Tasks & Ziva/Brittany Missoula Corner Formatting
-    feed_status = str(cal_tasks.get("feed_status") or "").strip()
-    fallback_used = bool(cal_tasks.get("fallback_used", False))
-    structured_events = cal_tasks.get("events") or []
-    gmail_invites = [
-        ev for ev in structured_events
-        if isinstance(ev, dict) and ev.get("source") == "gmail_invite"
-    ]
-    fallback_events_count = int(cal_tasks.get("fallback_events_count", len(gmail_invites)) or 0)
-
-    raw_today = list(cal_tasks.get("events_today", []))
-    raw_week = list(cal_tasks.get("events_week", []))
-    if not raw_today and not raw_week and gmail_invites:
-        for inv in gmail_invites[:5]:
-            summary = str(inv.get("summary") or inv.get("subject") or "Calendar Invitation")
-            when = str(inv.get("when") or "").strip()
-            label = f"📩 {summary} ({when})" if when else f"📩 {summary}"
-            if inv.get("is_today"):
-                raw_today.append(label)
-            else:
-                raw_week.append(label)
-
-    if cal_tasks.get("configured") or raw_today or raw_week or gmail_invites or feed_status:
-        events_str = "\n".join([f"  - {e}" for e in raw_today]) or "  - No meetings or events scheduled for today."
-        week_str = "\n".join([f"  - {e}" for e in raw_week]) or "  - Clear schedule for the remainder of the week."
-        birthdays_str = "\n".join([f"  - {b}" for b in cal_tasks.get("birthdays", [])]) if cal_tasks.get("birthdays") else "  - No birthdays today."
-    else:
-        events_str = "  - *Google Calendar sync*: Set `GOOGLE_CALENDAR_ICAL_URL` in `.env` to stream live events."
-        week_str = "  - *Weekly runway*: Set `GOOGLE_CALENDAR_ICAL_URL` in `.env` to stream weekly schedule."
-        birthdays_str = "  - None registered."
-
-    cal_diag_lines: List[str] = []
-    if feed_status:
-        fb_note = f" (Gmail invite fallback active: `{fallback_events_count}` invite(s) surfaced)" if fallback_used else ""
-        cal_diag_lines.append(f"- **Calendar Feed Status:** `{feed_status}`{fb_note}")
-    elif fallback_used:
-        cal_diag_lines.append(f"- **Calendar Feed Status:** Gmail invite fallback active (`{fallback_events_count}` invite(s))")
-    cal_diag_block = ("\n" + "\n".join(cal_diag_lines)) if cal_diag_lines else ""
-
-    ziva_items = (master_brief.get("sections") or {}).get("ziva_and_brittany", []) if isinstance(master_brief, dict) else []
-    ziva_str = (
-        "\n".join([f"  - 🐾 {item}" for item in ziva_items])
-        if ziva_items
-        else "  - 🐾 Household baseline active (Missoula, MT · Ziva & Brittany); no new `[AGY_SECTION:ZIVA_AND_BRITTANY]` delta in today's dispatch."
-    )
-
-    # Fallback/Supplement Intel & World News (optional takeaways)
-    ai_list = intel_news.get("ai_innovations", [])
-    tech_sec_list = intel_news.get("tech_and_security", [])
-    world_list = intel_news.get("world_news", [])
-    ai_news_str = "\n".join([f"  - 🤖 {item}" for item in ai_list]) if ai_list else "  - No live HN AI frontpage items fetched."
-    tech_sec_str = "\n".join([f"  - 🛡️ {item}" for item in tech_sec_list]) if tech_sec_list else "  - No live engineering/security frontpage items fetched."
-    world_news_str = "\n".join([f"  - 🌐 {item}" for item in world_list]) if world_list else "  - Macro markets and world news nominal."
-    ai_takeaway = str(intel_news.get("ai_takeaway") or "").strip()
-    world_takeaway = str(intel_news.get("world_takeaway") or "").strip()
-    ai_takeaway_line = f"> 💡 **Why It Matters**: {ai_takeaway}\n" if ai_takeaway else ""
-    world_takeaway_line = f"> 💡 **Why It Matters**: {world_takeaway}\n" if world_takeaway else ""
-
-    # Email Action Items breakdown
-    urgent_items_list = email_data.get("urgent_list", [])
-    urgent_items_str = "\n".join([f"  - 🚨 {u}" for u in urgent_items_list]) if urgent_items_list else "  - No new or unread urgent action items today."
-    awaiting_list = email_data.get("awaiting_external_reply", [])
-    awaiting_count = int(email_data.get("awaiting_external_reply_count", len(awaiting_list)) or 0)
-    if awaiting_list:
-        awaiting_lines = "\n".join([f"  - ⏳ {item}" for item in awaiting_list])
-        awaiting_block = f"\n- **⏳ Awaiting External Reply:** {awaiting_count}\n{awaiting_lines}"
-    elif awaiting_count > 0:
-        awaiting_block = f"\n- **⏳ Awaiting External Reply:** {awaiting_count}"
-    else:
-        awaiting_block = ""
-    unread_list = email_data.get("unread_list", [])
-    unread_non_ci_str = "\n".join([f"  - ✉️ {u}" for u in unread_list]) if unread_list else "  - No unread non-CI messages."
-
-    tier_1_str = ", ".join(option_c.get("tier_1_items", [])) or "None"
-    tier_2_str = ", ".join(option_c.get("tier_2_items", [])) or "None"
-    outreach_freeze_label = "❄️ FROZEN (Option C Guardrail — 0 active blasts)" if campaigns.get("frozen", True) else "🟢 ACTIVE"
-
-    warn_banner_line = ""
-    if isinstance(master_brief, dict) and master_brief.get("warning_banner"):
-        warn_banner_line = f"\n> ⚠️ **{master_brief['warning_banner']}** (Local-only fallback active after backoff)\n"
-
-    sched_label = "09:00 MST (Early Morning Mode)" if str(schedule_mode).lower().startswith("early") else "10:15 MST (Default +45m Buffer)"
-    critic_log_str = "\n".join(critic_reconciled.get("summary_lines", []))
-
-    return f"""# Orbit Security & Antigravity: Unified Daily Executive Briefing
-**Generated:** {today_str} | **Schedule:** {sched_label}  
-**Supervisor Status:** {supervisor_banner}  
-**24h Delta (Δ):** {delta_summary_line}
-{warn_banner_line}
----
-
-## ⚡ 1. TOP 3 PRIORITY ACTIONS TODAY
-{top3_str}
-
----
-
-## 🖥️ 2. Live Local System, Port Triage & Multi-Repo Health
-
-### 2.1 Supervisor, Sentinel & CI/CD Status
-- **Sentinel Daemon Status:** {sentinel_banner}
-- **Service Mesh Live:** {daemon.get("services_live_active", 0)}/{daemon.get("services_total", 0)} services running (state file active count: {daemon.get("services_state_active", 0)})
-- **Process Restarts:** {daemon.get("sentinel_restarts", 0)}
-- **Orbit-Security CI (`CmfH009/Orbit-Security`):** Active Failures = `{ci_count}`
-{ci_summary_str}
-
-### 2.2 Host Hardware, Thermals & Open-Port Delta Triage
-- **CPU & Thermal Health:** `{sys_telem.get("cpu_name", "Intel Core i7-1185G7")}` · **{temp_c}°C**{thermal_suffix}
-- **Host Uptime:** `{sys_telem.get("uptime", "Unknown")}`
-- **Memory Load:** `{sys_telem.get("ram_used_gb", 0.0)} GB used` of `{sys_telem.get("ram_total_gb", 16.0)} GB` ({sys_telem.get("ram_pct", 0.0)}% load)
-- **Power & Battery:** `{sys_telem.get("battery", "AC Connected")}`
-- **Storage Pools:**
-{drives_str}
-- **Open-Port Delta Triage:** {ports_status}
-
-### 2.3 Multi-Repo 48h Velocity & Dirty-Tree Status (`C:\\AgyHut`)
-- **Total Workspace Projects:** {proj_radar.get("total_projects", 0)} repositories in `A:\\projects` | **Root Uncommitted Files:** `{proj_radar.get("workspace_dirty_count", 0)}`
-- **`A:\\inbox` Autonomous Queues:** {inbox_q_line}
-- **Core Active Repos (48h Commits & Dirty Tree):**
-{core_repos_str}
-- **Root Workspace (`C:\\AgyHut`) 48h Velocity:**
-{root_commits_str}
-- **Recommended Engineering Agenda Today:**
-{agenda_str}
-
-### 2.4 Track A Bounty Vault, Track B/Stripe, GEO Citation Share & Mailbox Hygiene
-- **Strategic Focus:** {option_c.get("revenue_focus")}
-- **Technical Floor Clean:** {option_c.get("technical_floor_clean")} | **KYC / Payout Gate:** `{option_c.get("kyc_payout_status")}`
-- **Bounty Catalog:** {option_c.get("unique_programs", 0)} unique programs ({option_c.get("cash_tier_count", 0)} cash tier)
-- **Submission Vault (`data/hackerone_staging`):** {option_c.get("staged_reports", 0)} staged `.md` + {option_c.get("paired_bundles", 0)} paired `.zip` bundles (`{option_c.get("ev_covered", 0)}/{option_c.get("ev_total", 0)}` `ev_` digests, `{option_c.get("consolidated_dossiers", 0)}` dossiers, `{option_c.get("archived_total", 0)}` archived noise)
-- **Tier-1 Ready (Pending KYC ID):** {tier_1_str}
-- **Tier-2 Conditional CORS (Needs Auth Proof):** {tier_2_str}
-- **Track B Self-Serve Funnel:** `ready={option_c.get("track_b_ready")}` | **Landing <-> Docs Parity:** `{option_c.get("landing_docs_identical")}/{option_c.get("landing_docs_shared")}` (`in_sync={option_c.get("landing_docs_in_sync")}`)
-- **Stripe Live Checkout Ready:** `{option_c.get("stripe_live_checkout_ready")}` | **Available:** ${stripe.get("available_usd", 0.0):.2f} USD | **Pending:** ${stripe.get("pending_usd", 0.0):.2f} USD | **Paid Subs:** {option_c.get("paid_subscribers", 0)} ({stripe.get("active_subscriptions", 0)} Stripe)
-- **Inbound Deals & Lead Pipeline (`Orbit/Deal-Desk`):** {deal_count} deals | {inbox.get("total_threads", 0)} threads tracked ({inbox.get("escalations", 0)} escalations)
-{deals_summary_str}
-- **Cold Email Outreach Status:** {outreach_freeze_label} ({campaigns.get("dispatched_count", 0)} historical dispatches)
-- **Historical Outreach Registry (Recent):**
-{recent_str}
-- **GEO Visibility & AI Citation Panel (`data/geo_panels.jsonl`):**
-{geo_section_body}
-- **Mailbox Hygiene (`carsonmail009@gmail.com`):**
-  - **Total Scanned in Last Sweep:** {scanned_cnt}
-  - **24h Inbox Flow:** `{received_24h} received` | `{read_cleared_24h} read/cleared` | `{auto_hygiene_cnt} auto-hygiene candidates`
-  - **Eligible Inbox Zero Archiving:** {archived_cnt}
-  - **Marketing Promos & Spam Purged:** {trashed_cnt}
-  - **Active Unsubscribe Targets Extracted:** {unsub_cnt}
-  - **Unread Inbox Messages:** {email_data.get("unread", 0)} total ({email_data.get("unread_non_ci_count", 0)} non-CI)
-{unread_non_ci_str}
-  - **Today's Actionable Urgent Items:** {email_data.get("urgent", 0)} *(historical read alerts deduplicated: {email_data.get("historical_alerts_count", 0)})*
-{urgent_items_str}{awaiting_block}
-
----
-
-## ☁️ 3. Gemini Cloud Intelligence Digest
-
-{master_briefing_block}
-
-#### 3.6 Post-Briefing High-Priority Gmail Delta (`Orbit/CI-CD`, `Orbit/VDP`, `Work`)
-{post_delta_str}
-
-#### 3.7 Live Local Macro & Frontpage Supplement
-- **AI & Agent Engineering (HN):**
-{ai_takeaway_line}{ai_news_str}
-- **Engineering & Security (HN):**
-{tech_sec_str}
-- **World & Macro News:**
-{world_takeaway_line}{world_news_str}
-
----
-
-## 🏔️ 4. Missoula Home, Ziva & Brittany Corner
-- **Household & Missoula Updates:**
-{ziva_str}
-- **Google Workspace Agenda (Calendar & Tasks):**{cal_diag_block}
-  - **Today's Events & Meetings:**
-{events_str}
-  - **Birthdays & Observances:**
-{birthdays_str}
-  - **Rest of Week Lookahead:**
-{week_str}
-
----
-
-## 🔍 5. Critic Verification Log
-{critic_log_str}
-
----
-*Unified briefing autonomously synthesized & verified by Nova & Orbit Security Sentinel.*
-"""
 
 
 def generate_briefing(
@@ -2164,119 +216,44 @@ def generate_briefing(
     schedule_mode: str = "default",
     max_retries: Optional[int] = None,
     retry_interval_sec: float = 300.0,
-):
+    *,
+    engine: Optional[BriefingEngine] = None,
+) -> BriefingResult:
+    """Runs Phase 1 collection + Phase 2 synthesis via BriefingEngine, then writes/dispatches artifacts."""
     now_dt = datetime.datetime.now()
-    today = now_dt.strftime("%Y-%m-%d %H:%M")
     date_key = now_dt.strftime("%Y-%m-%d")
-    effective_retries = 0 if (dry_run and max_retries is None) else (3 if max_retries is None else int(max_retries))
+    active_engine = engine or BriefingEngine(adapters=_build_cli_adapters())
 
-    stripe = query_stripe_telemetry()
-    daemon = query_daemon_health()
-    inbox = query_inbox_pipeline()
-    campaigns = query_campaign_outreach()
-    option_c = query_option_c_readiness()
-
-    email_sig = inspect.signature(query_live_email_telemetry)
-    if "max_retries" in email_sig.parameters:
-        email_data = query_live_email_telemetry(
-            max_retries=effective_retries,
-            retry_interval_sec=retry_interval_sec,
-            target_date=now_dt.date(),
-        )
-    else:
-        email_data = query_live_email_telemetry()
-
-    live_ci = query_live_github_ci_status()
-    archived_ci_count = 0 if dry_run else (archive_superseded_ci_alerts_in_imap(live_ci) if email_data.get("ci_alerts") else 0)
-    geo_panel = query_geo_panel_telemetry()
-
-    ci_reconciled = reconcile_ci_alerts_with_live_status(
-        email_data.get("ci_alerts", []),
-        live_ci,
-        archived_in_imap=archived_ci_count,
-    )
-    ci_count = ci_reconciled["active_failures"]
-
-    # Extended Morning Cockpit Queries
-    sys_telem = query_system_telemetry() if query_system_telemetry else {}
-    proj_radar = query_projects_radar() if query_projects_radar else {}
-    cal_tasks = query_calendar_and_tasks() if query_calendar_and_tasks else {}
-    intel_news = sanitize_intel_news(query_intel_and_world_news() if query_intel_and_world_news else {})
-    email_hygiene = email_data.get("email_hygiene")
-    if not email_hygiene and query_email_hygiene:
-        try:
-            email_hygiene = query_email_hygiene()
-        except Exception:
-            email_hygiene = {}
-    email_hygiene = dict(email_hygiene or {})
-    if "master_briefing" in email_hygiene:
-        email_hygiene["master_briefing"] = sanitize_master_briefing(email_hygiene["master_briefing"])
-    email_data = sanitize_email_data(email_data)
-
-    master_brief = email_hygiene.get("master_briefing") or {}
-    post_delta = email_data.get("post_briefing_delta") or {}
-
-    critic_reconciled = run_local_critic_reconciliation(
-        master_briefing=master_brief,
-        post_delta=post_delta,
-        email_ci_alerts=email_data.get("ci_alerts", []),
-        live_ci=live_ci,
-        proj_radar=proj_radar,
-        option_c=option_c,
-        daemon=daemon,
-        sys_telem=sys_telem,
-        gh_ci_querier=None if dry_run else query_live_github_ci_status,
-    )
-
-    drives = sys_telem.get("drives", {})
-    primary_drive = drives.get("A:\\") or drives.get("C:\\") or (next(iter(drives.values())) if drives else {})
-    snapshot = {
-        "disk_free_gb": float(primary_drive.get("free_gb", 0.0) or 0.0),
-        "commits_24h": _count_commits_24h(proj_radar, now_dt=now_dt),
-        "unread_count": int(email_data.get("unread", 0) or 0),
-        "urgent_count": int(email_data.get("urgent", 0) or 0),
-        "tier1_ready": len(option_c.get("tier_1_items", [])),
-        "tier2_queued": len(option_c.get("tier_2_items", [])),
-        "geo_citation_share_pct": float((geo_panel.get("latest") or {}).get("citation_rate_pct", 0.0) or 0.0),
-        "kyc_gate": str(option_c.get("kyc_payout_status") or "PENDING_PHYSICAL_ID"),
-    }
-    deltas = compute_and_save_daily_deltas(date_str=date_key, current_snapshot=snapshot)
-
-    inbox_q = proj_radar.get("inbox_queues", {})
-    agenda_items = _build_agenda_items(
-        ci_count=ci_count,
-        live_ci=live_ci,
-        option_c=option_c,
-        email_data=email_data,
-        daemon=daemon,
-        inbox_q=inbox_q,
-        post_delta=post_delta,
-        critic_res=critic_reconciled,
-        master_briefing=master_brief,
-        sys_telem=sys_telem,
-    )
-
-    report = generate_markdown(
-        today=today,
+    collect_cfg = BriefingConfig(
+        now=now_dt,
         schedule_mode=schedule_mode,
-        stripe=stripe,
-        daemon=daemon,
-        inbox=inbox,
-        campaigns=campaigns,
-        option_c=option_c,
-        email_data=email_data,
-        live_ci=live_ci,
-        ci_reconciled=ci_reconciled,
-        geo_panel=geo_panel,
-        sys_telem=sys_telem,
-        proj_radar=proj_radar,
-        cal_tasks=cal_tasks,
-        intel_news=intel_news,
-        email_hygiene=email_hygiene,
-        deltas=deltas,
-        agenda_items=agenda_items,
-        critic_reconciled=critic_reconciled,
+        dry_run=dry_run,
+        max_retries=max_retries,
+        retry_interval_sec=retry_interval_sec,
+        state_dir=DEFAULT_BRIEFINGS_DIR,
+        persist_state=True,
     )
+    snapshot = active_engine.collect_snapshot(collect_cfg)
+
+    delta_override: Optional[Dict[str, Any]] = None
+    if compute_and_save_daily_deltas is not _DEFAULT_COMPUTE_AND_SAVE_DELTAS:
+        delta_override = compute_and_save_daily_deltas(
+            date_str=date_key,
+            current_snapshot=snapshot.delta_metrics(),
+        )
+
+    synth_cfg = BriefingConfig(
+        now=now_dt,
+        schedule_mode=schedule_mode,
+        dry_run=dry_run,
+        state_dir=DEFAULT_BRIEFINGS_DIR,
+        persist_state=delta_override is None,
+        delta_override=delta_override,
+    )
+    result = active_engine.synthesize(snapshot, synth_cfg)
+    report = result.markdown
+    spoken_summary = result.spoken_summary
+    master_brief = result.snapshot.master_briefing
 
     # Save Unified Report
     DEFAULT_BRIEFINGS_DIR.mkdir(parents=True, exist_ok=True)
@@ -2298,53 +275,6 @@ def generate_briefing(
     if email and not dry_run:
         dispatch_email_briefing(report, recipient=recipient)
 
-    # Nova Spoken Debrief (TTS) - Sharp emo coder chick, ground-truth metrics, zero canned fluff
-    sen_pid = daemon.get("sentinel_pid")
-    if daemon.get("live_verified_active") and daemon.get("sentinel_live_verified"):
-        daemon_spoken = f"Supervisor and Sentinel are green on PID {sen_pid}"
-    elif daemon.get("supervisor_active"):
-        daemon_spoken = "Heads up, Orbit Supervisor and Sentinel look offline"
-    else:
-        daemon_spoken = "Orbit Supervisor is currently offline"
-
-    unread_non_ci = email_data.get("unread_non_ci_count", 0)
-    urgent_count = email_data.get("urgent", 0)
-    unread_str = f"{unread_non_ci} unread non-CI messages" if unread_non_ci != 1 else "1 unread non-CI message"
-    urgent_spoken = f"and {urgent_count} urgent item needing eyes today" if urgent_count > 0 else "with zero new urgent emergencies"
-    ci_note = ci_reconciled["spoken_note"]
-    temp_c = sys_telem.get("temp_c", 52.0)
-    temp_spoken = f"{temp_c} degrees"
-    ram_spoken = f"{sys_telem.get('ram_pct', 55.0)} percent"
-    recent_projs = proj_radar.get("recently_active", [])
-    root_commits = proj_radar.get("workspace_root_commits_48h", [])
-    active_count = len(recent_projs)
-    projs_spoken = f"{active_count} active repos plus {len(root_commits)} root workspace commits in the last forty-eight hours"
-    ai_list = intel_news.get("ai_innovations", [])
-    world_list = intel_news.get("world_news", [])
-    top_ai = ai_list[0].split(" [")[0].split("(")[0].strip() if ai_list else "AI models running stable"
-    top_world = world_list[0].split(" - ")[0].strip() if world_list else "macro news quiet"
-    vault_count = option_c.get("staged_reports", 0)
-    kyc_note = "awaiting physical ID for KYC payout unlock" if option_c.get("kyc_payout_status") != "VERIFIED" else "KYC verified"
-    gemini_note = (
-        "Gemini Master Briefing synced cleanly"
-        if isinstance(master_brief, dict) and master_brief.get("found")
-        else "Gemini Master Briefing not yet received, running local-only mode"
-    )
-    port_triage = sys_telem.get("port_triage") or {}
-    unexp_cnt = len(port_triage.get("unexpected_listeners", []) or [])
-    port_spoken = f"{unexp_cnt} unexpected listeners" if unexp_cnt > 0 else "zero unexpected open ports"
-
-    spoken_summary = (
-        f"[chuckle] Morning Carson. Nova here with your synced morning briefing. "
-        f"Hardware pulse: CPU is running cool at {temp_spoken}, RAM is at {ram_spoken}, with {port_spoken}. "
-        f"{daemon_spoken}. Over on GitHub, {ci_note}. {gemini_note}. "
-        f"Option C status: {vault_count} verified bounty bundles staged with Spotify Tier-1 ready, Track B checkout ready, {kyc_note}. "
-        f"In your workspace, {projs_spoken}. "
-        f"Mailbox has {unread_str}, {urgent_spoken}. "
-        f"On the AI radar: {top_ai}. World headline: {top_world}. "
-        f"Let's knock out the priority queue."
-    )
-
     latest_state_path = DEFAULT_BRIEFINGS_DIR / "briefing_state_latest.json"
     if latest_state_path.is_file():
         try:
@@ -2357,7 +287,11 @@ def generate_briefing(
 
     if tui or gui:
         try:
-            from briefing_tui import show_briefing_tui
+            try:
+                from scripts.briefing_tui import show_briefing_tui
+            except ImportError:
+                from briefing_tui import show_briefing_tui  # type: ignore[import-not-found]
+
             wt_pid = show_briefing_tui(
                 content=report,
                 spoken_summary=spoken_summary,
@@ -2366,7 +300,7 @@ def generate_briefing(
                 briefing_file=report_path,
             )
             if wt_pid:
-                return
+                return result
         except Exception as tui_err:
             print(f"[!] Windows Terminal TUI launch error: {tui_err}")
 
@@ -2380,15 +314,21 @@ def generate_briefing(
 
     if pause:
         try:
-            from briefing_tui import run_briefing_viewer
+            try:
+                from scripts.briefing_tui import run_briefing_viewer
+            except ImportError:
+                from briefing_tui import run_briefing_viewer  # type: ignore[import-not-found]
+
             run_briefing_viewer(
                 briefing_file=report_path,
                 spoken_summary=spoken_summary,
                 auto_speak=False,
             )
-            return
+            return result
         except Exception:
             pass
+
+    return result
 
 
 def _acquire_briefing_run_mutex() -> Optional[int]:
@@ -2410,23 +350,45 @@ def _acquire_briefing_run_mutex() -> Optional[int]:
         return 1
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Unified Orbit Security & Mailbox Daily Briefing")
     parser.add_argument("--speak", action="store_true", help="Speak the unified debrief aloud in Nova's voice")
     parser.add_argument("--email", action="store_true", help="Dispatch briefing to operator email")
     parser.add_argument("--recipient", type=str, default=None, help="Custom recipient email address")
-    parser.add_argument("--dry-run", action="store_true", help="Generate briefing and state files without email, TTS, or IMAP mutation")
-    parser.add_argument("--pause", action="store_true", help="Run the interactive terminal viewer until Q or Ctrl+W is pressed")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Generate briefing and state files without email, TTS, or IMAP mutation",
+    )
+    parser.add_argument(
+        "--pause",
+        action="store_true",
+        help="Run the interactive terminal viewer until Q or Ctrl+W is pressed",
+    )
     parser.add_argument("--tui", action="store_true", help="Display briefing in a persistent elevated Windows Terminal tab")
-    parser.add_argument("--gui", action="store_true", help="Alias for --tui (opens elevated Windows Terminal briefing tab)")
+    parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="Alias for --tui (opens elevated Windows Terminal briefing tab)",
+    )
     parser.add_argument(
         "--schedule-mode",
         choices=["default", "early"],
         default=os.environ.get("ORBIT_BRIEFING_SCHEDULE_MODE", "default"),
         help="Schedule alignment mode: default (10:15 MST) or early (09:00 MST)",
     )
-    parser.add_argument("--max-retries", type=int, default=None, help="Max Gmail arrival retry count (default: 3 live, 0 dry-run)")
-    parser.add_argument("--retry-interval", type=float, default=300.0, help="Seconds between Gmail arrival retries (default: 300s)")
+    parser.add_argument(
+        "--max-retries",
+        type=int,
+        default=None,
+        help="Max Gmail arrival retry count (default: 3 live, 0 dry-run)",
+    )
+    parser.add_argument(
+        "--retry-interval",
+        type=float,
+        default=300.0,
+        help="Seconds between Gmail arrival retries (default: 300s)",
+    )
     args = parser.parse_args()
 
     mutex_handle = None
@@ -2453,6 +415,7 @@ def main():
         if os.name == "nt" and isinstance(mutex_handle, int) and mutex_handle > 1:
             try:
                 import ctypes
+
                 ctypes.windll.kernel32.CloseHandle(mutex_handle)
             except Exception:
                 pass
