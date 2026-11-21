@@ -14,15 +14,13 @@ import urllib.request
 from pathlib import Path
 from unittest.mock import MagicMock
 
-PROJECT_ROOT = Path("A:/projects/orbit-security") if Path("A:/projects/orbit-security").exists() else Path("C:/AgyHut/projects/orbit-security")
-SRC_DIR = PROJECT_ROOT / "src"
-SCRIPTS_DIR = PROJECT_ROOT / "scripts"
-for p in (str(SRC_DIR), str(SCRIPTS_DIR)):
-    if p not in sys.path:
-        sys.path.insert(0, p)
-
 from orbit_security.vdp_high_signal_detectors import compress_vdp_payload_anchors
-from hunt_hackerone_vdps import _SafeVdpRedirectHandler, resolve_dns_cname_chain_guarded
+from orbit_security.hackerone_vdp_hunter import (
+    HackerOneVdpHunter,
+    VdpProgram,
+    _SafeVdpRedirectHandler,
+    resolve_dns_cname_chain_guarded,
+)
 
 
 def test_compress_vdp_payload_anchors_minified_js():
@@ -138,22 +136,24 @@ def test_resolve_dns_cname_chain_breaks_circular_cname_loop():
 
 
 def test_screen_host_handles_circular_cname_loop_cleanly():
-    """Verify screen_host_non_destructively resolves CNAME via guarded chain and handles cycles safely."""
-    from hunt_hackerone_vdps import screen_host_non_destructively, VdpProgram
-    from unittest.mock import patch
-
+    """Verify HackerOneVdpHunter.screen_target resolves CNAME via guarded chain and handles cycles safely."""
     mock_responses = {
         "sub.target.corp": [{"data": "cname1.target.corp."}],
         "cname1.target.corp": [{"data": "cname2.target.corp."}],
         "cname2.target.corp": [{"data": "cname1.target.corp."}],
     }
 
-    def mock_lookup(host, record_type="CNAME", timeout=5):
-        clean_host = host.rstrip(".").lower()
-        if record_type == "CNAME":
-            ans = mock_responses.get(clean_host, [])
-            return {"Status": 0 if ans else 3, "Answer": ans}
-        return {"Status": 0, "Answer": [{"data": "1.2.3.4"}]}
+    class _FakeDns:
+        def resolve(self, host, record_type="CNAME", timeout=5):
+            clean_host = host.rstrip(".").lower()
+            if record_type == "CNAME":
+                ans = mock_responses.get(clean_host, [])
+                return {"Status": 0 if ans else 3, "Answer": ans}
+            return {"Status": 0, "Answer": [{"data": "1.2.3.4"}]}
+
+    class _FakeHttp:
+        def fetch(self, url, *, headers=None, max_bytes=8192, timeout=5):
+            return (200, {}, "<html>Safe page</html>")
 
     prog = VdpProgram(
         handle="testprog",
@@ -161,15 +161,21 @@ def test_screen_host_handles_circular_cname_loop_cleanly():
         offers_bounties=False,
         submission_state="open",
         i_must_verify_identity_to_submit=False,
-        structured_scopes=[{"id": "1", "asset_identifier": "target.corp", "asset_type": "URL"}],
+        structured_scopes=[
+            {
+                "id": "1",
+                "attributes": {
+                    "asset_identifier": "*.target.corp",
+                    "asset_type": "WILDCARD",
+                    "eligible_for_submission": True,
+                },
+            }
+        ],
         weaknesses=[],
         compliance_headers={},
     )
 
-    with patch("hunt_hackerone_vdps.resolve_dns_doh", side_effect=mock_lookup), \
-         patch("hunt_hackerone_vdps.fetch_http_sample", return_value=(200, {}, "<html>Safe page</html>")):
-        # Must execute without infinite recursion or crashing
-        finding = screen_host_non_destructively(prog, "sub.target.corp")
-        # Should not falsely claim a dangling takeover on an internal circular CNAME loop
-        assert finding is None or finding.finding_type != "dangling_dns_takeover"
+    hunter = HackerOneVdpHunter(http=_FakeHttp(), dns=_FakeDns())
+    finding = hunter.screen_target(prog, "sub.target.corp")
+    assert finding is None or finding.finding_type != "dangling_cname"
 

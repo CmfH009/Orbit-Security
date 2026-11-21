@@ -1,23 +1,19 @@
-"""tests/test_hackerone_vdp_hunter.py: Unit tests for scripts/hunt_hackerone_vdps.py."""
+"""tests/test_hackerone_vdp_hunter.py: Unit & integration tests for orbit_security.hackerone_vdp_hunter and CLI."""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
-import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = PROJECT_ROOT / "scripts"
-if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_DIR))
-
-from hunt_hackerone_vdps import (  # noqa: E402
+from orbit_security.hackerone_vdp_hunter import (
     SENSITIVE_EXPOSURE_PATHS,
+    HackerOneVdpHunter,
     VdpFinding,
     VdpProgram,
+    _reverify_finding_live,
     check_exposed_config_or_git,
     check_open_bucket_listing,
     check_takeover_claimability,
@@ -25,7 +21,6 @@ from hunt_hackerone_vdps import (  # noqa: E402
     evaluate_submission_quality_gate,
     filter_kyc_free_vdp_programs,
     is_duplicate_finding,
-    main,
     match_structured_scope,
     render_vdp_dossier,
     run_vdp_hunt,
@@ -33,6 +28,7 @@ from hunt_hackerone_vdps import (  # noqa: E402
     select_weakness_id,
     submit_vdp_finding,
 )
+from scripts.hunt_hackerone_vdps import main
 
 
 class _MockResponse:
@@ -238,7 +234,7 @@ class TestSubmissionAndDuplicateGuards(unittest.TestCase):
         res_kyc = submit_vdp_finding(kyc_prog, finding, "user", "tok", dry_run=False, existing_reports=[])
         self.assertEqual(res_kyc["status"], "BLOCKED_KYC_REQUIRED")
 
-    @patch("hunt_hackerone_vdps.urllib.request.urlopen")
+    @patch("orbit_security.hackerone_vdp_hunter.urllib.request.urlopen")
     def test_submit_vdp_finding_posts_to_hackerone_when_live_and_kyc_free(self, mock_urlopen):
         mock_urlopen.return_value = _MockResponse(
             {
@@ -358,7 +354,7 @@ class TestSubmissionAndDuplicateGuards(unittest.TestCase):
         self.assertFalse(gate.deterministic_checks["policy_not_excluded"])
 
         clean_prog = self._sample_program()
-        with patch("hunt_hackerone_vdps._reverify_finding_live", return_value=(False, "HTTP drifted to 200 OK")):
+        with patch("orbit_security.hackerone_vdp_hunter._reverify_finding_live", return_value=(False, "HTTP drifted to 200 OK")):
             drifted = evaluate_submission_quality_gate(
                 clean_prog,
                 finding,
@@ -383,7 +379,7 @@ class TestSubmissionAndDuplicateGuards(unittest.TestCase):
         )
         self.assertTrue(ok_cf2)
 
-        with patch("hunt_hackerone_vdps.fetch_http_sample", return_value=(200, {}, "<title>MRL Pipeline Portal</title>")):
+        with patch("orbit_security.hackerone_vdp_hunter.fetch_http_sample", return_value=(200, {}, "<title>MRL Pipeline Portal</title>")):
             ok_az, reason_az = check_takeover_claimability(
                 "Microsoft Azure", "eppdapduiprodnew.azurewebsites.net", "404 Web Site not found"
             )
@@ -416,7 +412,7 @@ class TestSubmissionAndDuplicateGuards(unittest.TestCase):
                 return {"Status": 0, "Answer": [{"type": 5, "data": "deletedapp.centralus.cloudapp.azure.com."}]}
             return {"Status": 3, "Answer": []}
 
-        with patch("hunt_hackerone_vdps.resolve_dns_doh", side_effect=_fake_doh):
+        with patch("orbit_security.hackerone_vdp_hunter.resolve_dns_doh", side_effect=_fake_doh):
             gate = evaluate_submission_quality_gate(
                 prog,
                 nx_finding,
@@ -430,7 +426,7 @@ class TestSubmissionAndDuplicateGuards(unittest.TestCase):
         md, _ = render_vdp_dossier(prog, nx_finding)
         self.assertIn("NXDOMAIN (Status: 3)", md)
 
-    @patch("hunt_hackerone_vdps.urllib.request.urlopen")
+    @patch("orbit_security.hackerone_vdp_hunter.urllib.request.urlopen")
     def test_discover_passive_subdomains_merges_certspotter_and_anubis(self, mock_urlopen):
         def _side_effect(req, timeout=10):
             url = req.full_url
@@ -456,7 +452,7 @@ class TestSubmissionAndDuplicateGuards(unittest.TestCase):
         self.assertIn("X-Acme-VDP: HackerOne-arsoncarson", md)
         self.assertEqual(len(digest), 64)
 
-    @patch("hunt_hackerone_vdps.urllib.request.urlopen")
+    @patch("orbit_security.hackerone_vdp_hunter.urllib.request.urlopen")
     def test_submit_403_moves_dossier_to_blocked_without_polluting_vdp_ready(self, mock_urlopen):
         import io
         import urllib.error
@@ -636,7 +632,7 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
         )
 
     @patch("orbit_security.vdp_recon_sources.shutil.which", return_value=None)
-    @patch("hunt_hackerone_vdps.urllib.request.urlopen")
+    @patch("orbit_security.hackerone_vdp_hunter.urllib.request.urlopen")
     def test_zero_subdomain_ct_lookups_not_cached_and_purge_empty_cache(self, mock_urlopen, _mock_which):
         import time
 
@@ -738,13 +734,32 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
             screened_hosts.append((prog.handle, host))
             return None
 
-        with (
-            patch("hunt_hackerone_vdps.load_hackerone_credentials", return_value=("user", "tok")),
-            patch("hunt_hackerone_vdps.fetch_paginated_h1", side_effect=_fake_fetch_h1),
-            patch("hunt_hackerone_vdps.hydrate_vdp_program", side_effect=_fake_hydrate),
-            patch("hunt_hackerone_vdps.screen_host_non_destructively", side_effect=_fake_screen),
-            tempfile.TemporaryDirectory() as tmpdir,
-        ):
+        class _FakeH1:
+            def fetch_paginated(self, path, auth_header, **kwargs):
+                if "/me/reports" in path:
+                    return []
+                return raw_programs
+
+            def fetch_program_detail(self, handle, auth_header, **kwargs):
+                raise AssertionError("hydrate_program overridden in test")
+
+            def fetch_program_kyc_status(self, handle, **kwargs):
+                return False
+
+            def fetch_program_graphql_gates(self, handle, **kwargs):
+                return {}
+
+            def post_report(self, payload, auth_header, **kwargs):
+                return (201, {}, "")
+
+        hunter = HackerOneVdpHunter(
+            h1=_FakeH1(),
+            credentials_loader=lambda _env: ("user", "tok"),
+        )
+        hunter.hydrate_program = lambda raw_prog, auth_header, **kwargs: _fake_hydrate(raw_prog, auth_header, **kwargs)
+        hunter.screen_target = lambda prog, host, **kwargs: _fake_screen(prog, host)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
             summary = run_vdp_hunt(
                 max_programs=10,
                 workers=1,
@@ -752,6 +767,7 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
                 covered_domains={"portal.explicit.example"},
                 vdp_ready_dir=Path(tmpdir) / "vdp_ready",
                 manifest_path=Path(tmpdir) / "manifest.json",
+                hunter=hunter,
             )
 
         self.assertEqual(summary["programs_with_uncovered_wildcards_scanned"], 1)
@@ -806,20 +822,43 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
             ct_called_roots.append(root)
             return {f"app.{root}"}
 
-        with (
-            patch("hunt_hackerone_vdps.load_hackerone_credentials", return_value=("user", "tok")),
-            patch("hunt_hackerone_vdps.fetch_paginated_h1", side_effect=_fake_fetch_h1),
-            patch("hunt_hackerone_vdps.hydrate_vdp_program", side_effect=_fake_hydrate),
-            patch("hunt_hackerone_vdps.discover_passive_subdomains", side_effect=_fake_ct),
-            patch("hunt_hackerone_vdps.screen_host_non_destructively", return_value=None),
-            tempfile.TemporaryDirectory() as tmpdir,
-        ):
+        class _FakeH1:
+            def fetch_paginated(self, path, auth_header, **kwargs):
+                return _fake_fetch_h1(path, auth_header, **kwargs)
+
+            def fetch_program_detail(self, handle, auth_header, **kwargs):
+                return {}
+
+            def fetch_program_kyc_status(self, handle, **kwargs):
+                return False
+
+            def fetch_program_graphql_gates(self, handle, **kwargs):
+                return {}
+
+            def post_report(self, payload, auth_header, **kwargs):
+                return (201, {}, "")
+
+        class _FakeDiscovery:
+            def discover(self, root, **kwargs):
+                return _fake_ct(root, **kwargs)
+
+        hunter = HackerOneVdpHunter(
+            h1=_FakeH1(),
+            discovery=_FakeDiscovery(),
+            credentials_loader=lambda _env: ("user", "tok"),
+        )
+        hunter.hydrate_program = lambda raw_prog, auth_header, **kwargs: _fake_hydrate(raw_prog, auth_header, **kwargs)
+        hunter.screen_target = lambda prog, host, **kwargs: None
+
+        with tempfile.TemporaryDirectory() as tmpdir:
             summary_filtered = run_vdp_hunt(
                 max_programs=10,
                 workers=1,
                 covered_domains=set(),
+                cache_path=Path(tmpdir) / "ct_cache_1.json",
                 vdp_ready_dir=Path(tmpdir) / "vdp_ready",
                 manifest_path=Path(tmpdir) / "manifest.json",
+                hunter=hunter,
             )
             self.assertEqual(summary_filtered["programs_skipped_signal_gate"], 1)
             self.assertEqual(summary_filtered["programs_with_uncovered_wildcards_scanned"], 1)
@@ -831,8 +870,10 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
                 workers=1,
                 covered_domains=set(),
                 ignore_signal_gate=True,
+                cache_path=Path(tmpdir) / "ct_cache_2.json",
                 vdp_ready_dir=Path(tmpdir) / "vdp_ready",
                 manifest_path=Path(tmpdir) / "manifest.json",
+                hunter=hunter,
             )
             self.assertEqual(summary_ignored["programs_skipped_signal_gate"], 0)
             self.assertEqual(summary_ignored["programs_with_uncovered_wildcards_scanned"], 2)
@@ -853,7 +894,7 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
             "purged_empty_cache_count": 2,
             "purged_empty_cache_roots": ["a.example", "b.example"],
         }
-        with patch("hunt_hackerone_vdps.run_vdp_hunt", return_value=fake_summary) as mock_run:
+        with patch("scripts.hunt_hackerone_vdps.run_vdp_hunt", return_value=fake_summary) as mock_run:
             rc = main(
                 [
                     "--purge-empty-cache",
@@ -872,8 +913,8 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
         self.assertEqual(kwargs["program_handles"], "acme,beta")
         self.assertEqual(kwargs["max_programs"], 0)
 
-    @patch("hunt_hackerone_vdps.time.sleep", return_value=None)
-    @patch("hunt_hackerone_vdps.resolve_dns_doh", return_value={"Status": 0, "Answer": []})
+    @patch("orbit_security.hackerone_vdp_hunter.time.sleep", return_value=None)
+    @patch("orbit_security.hackerone_vdp_hunter.resolve_dns_doh", return_value={"Status": 0, "Answer": []})
     def test_end_to_end_extended_sensitive_exposures_and_quality_gate(self, _mock_doh, _mock_sleep):
         for expected_path in ("/.git/config", "/.svn/entries", "/.DS_Store", "/server-status", "/actuator/mappings"):
             self.assertIn(expected_path, SENSITIVE_EXPOSURE_PATHS)
@@ -924,7 +965,7 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
                         return (200, {}, '{"status":"disabled"}')
                     return (404, {}, "Not Found")
 
-                with patch("hunt_hackerone_vdps.fetch_http_sample", side_effect=_fake_fetch):
+                with patch("orbit_security.hackerone_vdp_hunter.fetch_http_sample", side_effect=_fake_fetch):
                     finding = screen_host_non_destructively(prog, "app.acme.example")
                     self.assertIsNotNone(finding)
                     self.assertEqual(finding.finding_type, expected_type)
@@ -966,8 +1007,8 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
         self.assertTrue(gate_raw.deterministic_checks["evidence_worthy"])
         self.assertTrue(gate_raw.passed, gate_raw.blocking_reasons)
 
-    @patch("hunt_hackerone_vdps.time.sleep", return_value=None)
-    @patch("hunt_hackerone_vdps.resolve_dns_doh", return_value={"Status": 0, "Answer": []})
+    @patch("orbit_security.hackerone_vdp_hunter.time.sleep", return_value=None)
+    @patch("orbit_security.hackerone_vdp_hunter.resolve_dns_doh", return_value={"Status": 0, "Answer": []})
     def test_end_to_end_dangling_referenced_bucket_and_firebase_quality_gate(self, _mock_doh, _mock_sleep):
         prog = self._program_with_all_cwe_weaknesses()
 
@@ -988,7 +1029,7 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
                 return (404, {"Content-Type": "application/xml"}, gcs_404_xml)
             return (404, {}, "Not Found")
 
-        with patch("hunt_hackerone_vdps.fetch_http_sample", side_effect=_fake_fetch_gcs):
+        with patch("orbit_security.hackerone_vdp_hunter.fetch_http_sample", side_effect=_fake_fetch_gcs):
             finding_gcs = screen_host_non_destructively(prog, "portal.acme.example")
             self.assertIsNotNone(finding_gcs)
             self.assertEqual(finding_gcs.finding_type, "dangling_referenced_bucket")
@@ -1012,7 +1053,7 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
                 return (200, {"Content-Type": "application/json"}, '{"users": true, "sessions": true}')
             return (404, {}, "Not Found")
 
-        with patch("hunt_hackerone_vdps.fetch_http_sample", side_effect=_fake_fetch_fb):
+        with patch("orbit_security.hackerone_vdp_hunter.fetch_http_sample", side_effect=_fake_fetch_fb):
             finding_fb = screen_host_non_destructively(prog, "app.acme.example")
             self.assertIsNotNone(finding_fb)
             self.assertEqual(finding_fb.finding_type, "exposed_firebase_db")
@@ -1026,8 +1067,8 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
         self.assertEqual(gate_fb.reverification_passes, 2)
         self.assertEqual(gate_fb.critic_passes, 3)
 
-    @patch("hunt_hackerone_vdps.time.sleep", return_value=None)
-    @patch("hunt_hackerone_vdps.resolve_dns_doh", return_value={"Status": 0, "Answer": []})
+    @patch("orbit_security.hackerone_vdp_hunter.time.sleep", return_value=None)
+    @patch("orbit_security.hackerone_vdp_hunter.resolve_dns_doh", return_value={"Status": 0, "Answer": []})
     def test_end_to_end_cors_credentialed_reflection_quality_gate(self, _mock_doh, _mock_sleep):
         prog = self._program_with_all_cwe_weaknesses()
         seen_origins: list[str] = []
@@ -1049,7 +1090,7 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
                 return (200, {"Content-Type": "application/json"}, '{"user_id": 42, "email": "alice@acme.example"}')
             return (404, {}, "Not Found")
 
-        with patch("hunt_hackerone_vdps.fetch_http_sample", side_effect=_fake_fetch_cors):
+        with patch("orbit_security.hackerone_vdp_hunter.fetch_http_sample", side_effect=_fake_fetch_cors):
             finding = screen_host_non_destructively(prog, "api.acme.example")
             self.assertIsNotNone(finding)
             self.assertEqual(finding.finding_type, "cors_credentialed_reflection")
@@ -1062,8 +1103,8 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
         self.assertEqual(gate.critic_passes, 3)
         self.assertEqual(len(seen_origins), 3)  # 1 initial screen + 2 live reverify runs
 
-    @patch("hunt_hackerone_vdps.time.sleep", return_value=None)
-    @patch("hunt_hackerone_vdps.resolve_dns_doh", return_value={"Status": 0, "Answer": []})
+    @patch("orbit_security.hackerone_vdp_hunter.time.sleep", return_value=None)
+    @patch("orbit_security.hackerone_vdp_hunter.resolve_dns_doh", return_value={"Status": 0, "Answer": []})
     def test_end_to_end_exposed_js_secret_quality_gate(self, _mock_doh, _mock_sleep):
         prog = self._program_with_all_cwe_weaknesses()
         raw_secret = "sk_" + "live_" + "51AbCdEfGhIjKlMnOpQrStUvWxYz987654"
@@ -1075,7 +1116,7 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
                 return (200, {"Content-Type": "application/javascript"}, f'window.STRIPE_KEY = "{raw_secret}";')
             return (404, {}, "Not Found")
 
-        with patch("hunt_hackerone_vdps.fetch_http_sample", side_effect=_fake_fetch_secret):
+        with patch("orbit_security.hackerone_vdp_hunter.fetch_http_sample", side_effect=_fake_fetch_secret):
             finding = screen_host_non_destructively(prog, "app.acme.example")
             self.assertIsNotNone(finding)
             self.assertEqual(finding.finding_type, "exposed_js_secret")
@@ -1092,8 +1133,8 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
         md, _ = render_vdp_dossier(prog, finding)
         self.assertNotIn(raw_secret, md)
 
-    @patch("hunt_hackerone_vdps.time.sleep", return_value=None)
-    @patch("hunt_hackerone_vdps.resolve_dns_doh", return_value={"Status": 0, "Answer": []})
+    @patch("orbit_security.hackerone_vdp_hunter.time.sleep", return_value=None)
+    @patch("orbit_security.hackerone_vdp_hunter.resolve_dns_doh", return_value={"Status": 0, "Answer": []})
     def test_screen_host_spa_catchall_skips_sensitive_paths_except_server_status(self, _mock_doh, _mock_sleep):
         from urllib.parse import urlparse
 
@@ -1111,7 +1152,7 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
                 return (200, {"Content-Type": "text/html"}, "<!doctype html><html><body>SPA Route</body></html>")
             return (404, {}, "Not Found")
 
-        with patch("hunt_hackerone_vdps.fetch_http_sample", side_effect=_fake_spa_404):
+        with patch("orbit_security.hackerone_vdp_hunter.fetch_http_sample", side_effect=_fake_spa_404):
             finding = screen_host_non_destructively(prog, "app.acme.example")
 
         self.assertIsNone(finding)
@@ -1141,15 +1182,15 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
                 )
             return (404, {}, "Not Found")
 
-        with patch("hunt_hackerone_vdps.fetch_http_sample", side_effect=_fake_spa_with_server_status):
+        with patch("orbit_security.hackerone_vdp_hunter.fetch_http_sample", side_effect=_fake_spa_with_server_status):
             status_finding = screen_host_non_destructively(prog, "app.acme.example")
 
         self.assertIsNotNone(status_finding)
         self.assertEqual(status_finding.finding_type, "exposed_server_status")
         self.assertEqual(requested_paths_status, ["/", "/.git/HEAD", "/server-status"])
 
-    @patch("hunt_hackerone_vdps.time.sleep", return_value=None)
-    @patch("hunt_hackerone_vdps.resolve_dns_doh", return_value={"Status": 0, "Answer": []})
+    @patch("orbit_security.hackerone_vdp_hunter.time.sleep", return_value=None)
+    @patch("orbit_security.hackerone_vdp_hunter.resolve_dns_doh", return_value={"Status": 0, "Answer": []})
     def test_screen_host_tarpit_timeout_breaks_sensitive_exposure_loop(self, _mock_doh, _mock_sleep):
         from urllib.parse import urlparse
 
@@ -1167,14 +1208,14 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
                 return (0, {}, "")
             return (404, {}, "Not Found")
 
-        with patch("hunt_hackerone_vdps.fetch_http_sample", side_effect=_fake_tarpit):
+        with patch("orbit_security.hackerone_vdp_hunter.fetch_http_sample", side_effect=_fake_tarpit):
             finding = screen_host_non_destructively(prog, "app.acme.example")
 
         self.assertIsNone(finding)
         self.assertEqual(requested_paths, ["/", "/.git/HEAD", "/.git/config"])
 
-    @patch("hunt_hackerone_vdps.time.sleep", return_value=None)
-    @patch("hunt_hackerone_vdps.resolve_dns_doh", return_value={"Status": 0, "Answer": []})
+    @patch("orbit_security.hackerone_vdp_hunter.time.sleep", return_value=None)
+    @patch("orbit_security.hackerone_vdp_hunter.resolve_dns_doh", return_value={"Status": 0, "Answer": []})
     def test_screen_host_actuator_env_short_circuits_remaining_actuators(self, _mock_doh, _mock_sleep):
         from urllib.parse import urlparse
 
@@ -1196,7 +1237,7 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
                         return env_response
                     return (404, {}, "Not Found")
 
-                with patch("hunt_hackerone_vdps.fetch_http_sample", side_effect=_fake_actuator):
+                with patch("orbit_security.hackerone_vdp_hunter.fetch_http_sample", side_effect=_fake_actuator):
                     finding = screen_host_non_destructively(prog, "app.acme.example")
 
                 self.assertIsNone(finding)
@@ -1212,7 +1253,7 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
 
         self.assertEqual(inspect.signature(run_vdp_hunt).parameters["workers"].default, 12)
         with (
-            patch("hunt_hackerone_vdps.run_vdp_hunt", return_value={"findings_count": 0, "findings": [], "submissions": []}) as mock_cli_run,
+            patch("scripts.hunt_hackerone_vdps.run_vdp_hunt", return_value={"findings_count": 0, "findings": [], "submissions": []}) as mock_cli_run,
             contextlib.redirect_stdout(io.StringIO()),
         ):
             cli_rc = main(["--max-programs", "0", "--json"])
@@ -1276,22 +1317,40 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
                 )
             return None
 
+        class _FakeH1Cap:
+            def fetch_paginated(self, path, auth_header, **kwargs):
+                return _fake_fetch_h1(path, auth_header, **kwargs)
+
+            def fetch_program_detail(self, handle, auth_header, **kwargs):
+                return {}
+
+            def fetch_program_kyc_status(self, handle, **kwargs):
+                return False
+
+            def fetch_program_graphql_gates(self, handle, **kwargs):
+                return {}
+
+            def post_report(self, payload, auth_header, **kwargs):
+                return (201, {}, "")
+
         stderr_buf = io.StringIO()
-        with (
-            patch("hunt_hackerone_vdps.load_hackerone_credentials", return_value=("user", "tok")),
-            patch("hunt_hackerone_vdps.fetch_paginated_h1", side_effect=_fake_fetch_h1),
-            patch("hunt_hackerone_vdps.hydrate_vdp_program", return_value=cap_prog),
-            patch("hunt_hackerone_vdps.screen_host_non_destructively", side_effect=_fake_screen),
-            patch("hunt_hackerone_vdps.submit_vdp_finding", return_value={"status": "QUALITY_GATE_BLOCKED"}),
-            tempfile.TemporaryDirectory() as tmpdir,
-            contextlib.redirect_stderr(stderr_buf),
-        ):
+        hunter_cap = HackerOneVdpHunter(
+            h1=_FakeH1Cap(),
+            credentials_loader=lambda _env: ("user", "tok"),
+            log_stream=stderr_buf,
+        )
+        hunter_cap.hydrate_program = lambda raw_prog, auth_header, **kwargs: cap_prog
+        hunter_cap.screen_target = lambda prog, host, **kwargs: _fake_screen(prog, host)
+        hunter_cap.dispatch_finding = lambda *args, **kwargs: {"status": "QUALITY_GATE_BLOCKED"}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
             summary = run_vdp_hunt(
                 max_programs=10,
                 max_subdomains=1,
                 program_handles="explicit-cap",
                 vdp_ready_dir=Path(tmpdir) / "vdp_ready",
                 manifest_path=Path(tmpdir) / "manifest.json",
+                hunter=hunter_cap,
             )
 
         self.assertEqual(summary["subdomains_screened"], 2)
@@ -1343,10 +1402,8 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
         self.assertFalse(gate.deterministic_checks["policy_not_excluded"])
 
     def test_vercel_cname_rejected_when_vercel_txt_lock_present(self):
-        from hunt_hackerone_vdps import _reverify_finding_live
-
         with patch(
-            "hunt_hackerone_vdps.resolve_dns_doh",
+            "orbit_security.hackerone_vdp_hunter.resolve_dns_doh",
             return_value={"Status": 0, "Answer": [{"type": 16, "data": '"vc-domain-verify=good-vibes-preview.tictac.com,abc"'}]},
         ) as mock_doh:
             claimable, reason = check_takeover_claimability(
@@ -1360,7 +1417,7 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
         mock_doh.assert_called_once_with("_vercel.tictac.com", "TXT", timeout=5)
 
         with patch(
-            "hunt_hackerone_vdps.resolve_dns_doh",
+            "orbit_security.hackerone_vdp_hunter.resolve_dns_doh",
             return_value={"Status": 0, "Answer": []},
         ):
             claimable_unlocked, _ = check_takeover_claimability(
@@ -1400,9 +1457,9 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
             return {"Status": 0, "Answer": []}
 
         with (
-            patch("hunt_hackerone_vdps.resolve_dns_doh", side_effect=_fake_doh),
+            patch("orbit_security.hackerone_vdp_hunter.resolve_dns_doh", side_effect=_fake_doh),
             patch(
-                "hunt_hackerone_vdps.fetch_http_sample",
+                "orbit_security.hackerone_vdp_hunter.fetch_http_sample",
                 return_value=(404, {}, "The deployment could not be found on Vercel."),
             ),
         ):
@@ -1414,7 +1471,6 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
         import contextlib
         import inspect
         import io
-        from hunt_hackerone_vdps import discover_passive_subdomains
 
         self.assertEqual(
             inspect.signature(evaluate_submission_quality_gate).parameters["ollama_timeout"].default,
@@ -1429,7 +1485,7 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
             False,
         )
         with (
-            patch("hunt_hackerone_vdps.run_vdp_hunt", return_value={"findings_count": 0, "findings": [], "submissions": []}) as mock_cli_run,
+            patch("scripts.hunt_hackerone_vdps.run_vdp_hunt", return_value={"findings_count": 0, "findings": [], "submissions": []}) as mock_cli_run,
             contextlib.redirect_stdout(io.StringIO()),
         ):
             self.assertEqual(main(["--max-programs", "0", "--json"]), 0)
@@ -1479,14 +1535,15 @@ class TestVdpReconAndHighSignalIntegration(unittest.TestCase):
 
 
 class TestHackerOneVdpHunterModuleParity(unittest.TestCase):
-    """Verifies that src/orbit_security/hackerone_vdp_hunter.py and scripts/hackerone_vdp_hunter.py
-    exist, expose all requisite screening & RoE symbols, and strictly route through egress_guard."""
+    """Verifies that src/orbit_security/hackerone_vdp_hunter.py owns the real deep implementation,
+    exposes all requisite screening & RoE symbols, and scripts/hunt_hackerone_vdps.py is a thin CLI."""
 
     def test_library_module_exports_and_egress_routing(self):
         import orbit_security.hackerone_vdp_hunter as vdp_mod
-        from orbit_security.egress_guard import _is_bogon_or_internal_ip
 
         # Ensure essential classes and functions are available
+        self.assertTrue(hasattr(vdp_mod, "HackerOneVdpHunter"))
+        self.assertTrue(hasattr(vdp_mod, "VdpHuntConfig"))
         self.assertTrue(hasattr(vdp_mod, "VdpProgram"))
         self.assertTrue(hasattr(vdp_mod, "VdpFinding"))
         self.assertTrue(hasattr(vdp_mod, "filter_kyc_free_vdp_programs"))
@@ -1508,12 +1565,13 @@ class TestHackerOneVdpHunterModuleParity(unittest.TestCase):
         self.assertTrue(vdp_mod._is_bogon_or_internal_ip("100.64.0.1"))
         self.assertFalse(vdp_mod._is_bogon_or_internal_ip("8.8.8.8"))
 
-    def test_scripts_wrapper_delegation(self):
-        import hackerone_vdp_hunter as script_mod
+    def test_thin_cli_adapter_delegation(self):
+        import scripts.hunt_hackerone_vdps as cli_mod
 
-        self.assertTrue(hasattr(script_mod, "main"))
-        self.assertTrue(hasattr(script_mod, "run_vdp_hunt"))
-        self.assertTrue(hasattr(script_mod, "VdpProgram"))
+        self.assertTrue(callable(cli_mod.main))
+        self.assertTrue(callable(cli_mod.build_parser))
+        self.assertIs(cli_mod.run_vdp_hunt, run_vdp_hunt)
+        self.assertFalse((Path(__file__).resolve().parent.parent / "scripts" / "hackerone_vdp_hunter.py").exists())
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ Validates the implementation and security invariants of:
 - Sherlock OSINT runner (src/orbit_security/sherlock_osint.py)
 - VDP high-signal detectors (src/orbit_security/vdp_high_signal_detectors.py)
 - VDP recon sources and safe-host guards (src/orbit_security/vdp_recon_sources.py)
-- HackerOne VDP hunter SSRF and redirect guards (scripts/hunt_hackerone_vdps.py)
+- HackerOne VDP hunter SSRF and redirect guards (src/orbit_security/hackerone_vdp_hunter.py)
 - Bounty vault compiler & secret-scrubbing CORS replay (scripts/bounty_vault_generator.py)
 - Blackboard event pruning and bounded retention (src/orbit_security/blackboard.py)
 """
@@ -53,7 +53,7 @@ from scripts.bounty_vault_generator import (
     classify_finding_tier,
     verify_live_targets,
 )
-from scripts.hunt_hackerone_vdps import (
+from src.orbit_security.hackerone_vdp_hunter import (
     _SafeVdpRedirectHandler,
     fetch_http_sample,
 )

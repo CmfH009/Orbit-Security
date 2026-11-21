@@ -1,4 +1,6 @@
-"""orbit_security.vdp_recon_sources: Multi-source passive recon, safe CT cache, and scope helpers.
+"""orbit_security.vdp_recon_sources: Internal multi-source passive recon, safe CT cache, and scope helpers.
+
+Internal implementation module tucked behind `orbit_security.hackerone_vdp_hunter`.
 
 Provides:
 1. Empty-cache prevention and purging for `data/vdp_ct_cache.json`:
@@ -9,7 +11,8 @@ Provides:
    CertSpotter CT, AnubisDB, AlienVault OTX, Wayback CDX, HackerTarget, RapidDNS,
    fallback/explicit crt.sh, and optional `subfinder` CLI.
 3. Explicit structured scope host extraction (`extract_explicit_scope_hosts`) supporting
-   `URL`, `DOMAIN`, and `WILDCARD` scopes with out-of-scope and SSRF safety filtering.
+   `URL`, `DOMAIN`, and `WILDCARD` scopes with out-of-scope and SSRF safety filtering,
+   plus shared scope normalization/matching (`normalize_scope_host`, `host_matches_scope_pattern`).
 4. Program target-signal eligibility pre-filtering (`is_program_signal_eligible`).
 """
 
@@ -49,7 +52,9 @@ __all__ = [
     "purge_empty_ct_cache_entries",
     "discover_multi_source_subdomains",
     "extract_explicit_scope_hosts",
+    "host_matches_scope_pattern",
     "is_program_signal_eligible",
+    "normalize_scope_host",
 ]
 
 
@@ -523,6 +528,10 @@ def _host_matches_scope_pattern(host: str, asset_type: str, identifier: str) -> 
     if asset_type.upper() == "WILDCARD":
         return clean_host == pattern or clean_host.endswith(f".{pattern}")
     return clean_host == pattern
+
+
+normalize_scope_host = _normalize_scope_identifier
+host_matches_scope_pattern = _host_matches_scope_pattern
 
 
 def extract_explicit_scope_hosts(

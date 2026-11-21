@@ -1,8 +1,9 @@
-"""orbit_security.vdp_high_signal_detectors: High-signal non-destructive VDP detectors.
+"""orbit_security.vdp_high_signal_detectors: Internal high-signal non-destructive VDP detectors.
 
-Provides strict, self-proving checks designed to earn Triaged/Resolved Signal on
-HackerOne VDPs while rejecting HTML/SPA fallback pages, benign macOS metadata,
-static public web assets, and public client-side tokens.
+Internal implementation module tucked behind `orbit_security.hackerone_vdp_hunter`.
+Owns the single source of truth for HTML lookalike detection, static-asset/bucket-key
+filters, exposed VCS/config/status/actuator checks, cloud storage & Firebase probes,
+credentialed CORS evaluation, high-confidence secret scanning, and payload compression.
 """
 
 from __future__ import annotations
@@ -11,21 +12,13 @@ import html as html_lib
 import ipaddress
 import json
 import re
-import sys
-from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 import urllib.parse
 
 try:
     from nova_brain.memory.memorilla import MemorillaCompressor, MemoryAnchor
 except ImportError:
-    try:
-        for _nb_path in (Path("A:/projects/nova-brain/src"), Path("C:/AgyHut/projects/nova-brain/src")):
-            if _nb_path.exists() and str(_nb_path) not in sys.path:
-                sys.path.insert(0, str(_nb_path))
-        from nova_brain.memory.memorilla import MemorillaCompressor, MemoryAnchor
-    except ImportError:
-        from orbit_security.memorilla import MemorillaCompressor, MemoryAnchor
+    from orbit_security.memorilla import MemorillaCompressor, MemoryAnchor
 
 EXTENDED_SENSITIVE_PATHS: Tuple[str, ...] = (
     "/.git/config",
@@ -36,7 +29,8 @@ EXTENDED_SENSITIVE_PATHS: Tuple[str, ...] = (
     "/actuator/beans",
 )
 
-_HTML_LOOKALIKE_RE = re.compile(r"^\s*(?:<!doctype|<html|<head|<body|<script)", re.IGNORECASE)
+HTML_LOOKALIKE_RE = re.compile(r"^\s*(?:<!doctype|<html|<head|<body|<script)", re.IGNORECASE)
+_HTML_LOOKALIKE_RE = HTML_LOOKALIKE_RE
 _HTML_TAG_RE = re.compile(
     r"<(?:!doctype|/?(?:html|head|body|script|style|div|span|p|a|h[1-6]|title|meta|link|ul|li|table|tr|td|th|form|input))(?:\s|>|/)",
     re.IGNORECASE,
@@ -67,7 +61,7 @@ _DS_STORE_SENSITIVE_PATTERNS: Tuple[re.Pattern[str], ...] = (
     re.compile(r"dump", re.IGNORECASE),
 )
 
-_STATIC_PUBLIC_ASSET_EXTS: Tuple[str, ...] = (
+STATIC_PUBLIC_ASSET_EXTS: Tuple[str, ...] = (
     ".css",
     ".js",
     ".mjs",
@@ -89,14 +83,16 @@ _STATIC_PUBLIC_ASSET_EXTS: Tuple[str, ...] = (
     ".mp3",
     ".map",
 )
+_STATIC_PUBLIC_ASSET_EXTS = STATIC_PUBLIC_ASSET_EXTS
 
-_STATIC_PUBLIC_FILENAMES: Tuple[str, ...] = (
+STATIC_PUBLIC_FILENAMES: Tuple[str, ...] = (
     "robots.txt",
     "favicon.ico",
     "sitemap.xml",
 )
+_STATIC_PUBLIC_FILENAMES = STATIC_PUBLIC_FILENAMES
 
-_SENSITIVE_BUCKET_KEY_RE = re.compile(
+SENSITIVE_BUCKET_KEY_RE = re.compile(
     r"(?:\.(?:sql|bak|tar|gz|zip|pem|key|env|log)(?:$|\?)"
     r"|(?:^|[/._-])(?:backup|backups|dump|dumps|secret|secrets|private|internal"
     r"|credential|credentials|password|passwords|token|tokens|invoice|invoices"
@@ -104,6 +100,7 @@ _SENSITIVE_BUCKET_KEY_RE = re.compile(
     r"|audit|config|logs?)(?:$|[/._-]))",
     re.IGNORECASE,
 )
+_SENSITIVE_BUCKET_KEY_RE = SENSITIVE_BUCKET_KEY_RE
 
 # Cloud URL extraction patterns (host suffix anchored to reject lookalike domains like .s3.amazonaws.com.evil.com)
 _S3_VHOST_RE = re.compile(
@@ -495,15 +492,30 @@ def _filter_non_static_bucket_keys(keys: Iterable[str]) -> List[str]:
         if not key:
             continue
         key_low = key.lower()
-        if _SENSITIVE_BUCKET_KEY_RE.search(key_low):
+        if SENSITIVE_BUCKET_KEY_RE.search(key_low):
             interesting.append(key)
             continue
         if key_low.endswith("/"):
             continue
-        if key_low.endswith(_STATIC_PUBLIC_ASSET_EXTS) or key_low.endswith(_STATIC_PUBLIC_FILENAMES):
+        if key_low.endswith(STATIC_PUBLIC_ASSET_EXTS) or key_low.endswith(STATIC_PUBLIC_FILENAMES):
             continue
         interesting.append(key)
     return interesting
+
+
+def is_bucket_listing_non_public(sample_keys: Iterable[str]) -> Tuple[bool, str]:
+    """Reject open buckets containing solely public static web assets to prevent Informative reports."""
+    keys = [str(k).strip() for k in sample_keys if str(k).strip()]
+    if not keys:
+        return False, "Bucket listing contains no object keys."
+    if any(SENSITIVE_BUCKET_KEY_RE.search(k) for k in keys):
+        return True, "Bucket listing contains sensitive/non-static object paths."
+    if all(
+        k.lower().endswith(STATIC_PUBLIC_ASSET_EXTS) or k.lower().endswith(STATIC_PUBLIC_FILENAMES)
+        for k in keys
+    ):
+        return False, "Open bucket exposes only static public web assets (high Informative risk)."
+    return True, "Bucket listing contains non-standard object paths."
 
 
 def evaluate_cloud_reference_response(
