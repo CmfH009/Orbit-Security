@@ -267,6 +267,69 @@ def build_sarif_report(
     }
 
 
+_KEV_IGNORED_PREFIXES = (
+    "docs/",
+    "landing/",
+    "tests/",
+)
+
+_KEV_IGNORED_FILENAMES = (
+    "cisa_kev.py",
+    "llms.txt",
+    "sitemap.xml",
+)
+
+_KEV_IGNORED_SUFFIXES = (
+    ".md",
+    ".rst",
+    ".html",
+    ".htm",
+    ".xml",
+    ".svg",
+)
+
+
+def _is_kev_excluded_path(rel_path: str) -> bool:
+    """Returns True for docs, marketing pages, tests, and threat-intel catalog files."""
+    norm = rel_path.replace("\\", "/").lstrip("./").lower()
+    if not norm:
+        return False
+    if any(norm.startswith(prefix) for prefix in _KEV_IGNORED_PREFIXES):
+        return True
+    name = norm.rsplit("/", 1)[-1]
+    if name in _KEV_IGNORED_FILENAMES:
+        return True
+    if name.endswith(".txt") and not name.startswith("requirements"):
+        return True
+    if any(norm.endswith(ext) for ext in _KEV_IGNORED_SUFFIXES):
+        return True
+    return False
+
+
+def _filter_diff_for_kev(diff_text: str) -> str:
+    """Filters unified git diffs to added lines in non-doc/non-catalog files.
+
+    Plain non-unified diff strings (e.g. PR descriptions or unit-test fixtures)
+    are returned unchanged.
+    """
+    if not diff_text or "diff --git " not in diff_text:
+        return diff_text
+
+    kept_lines: List[str] = []
+    skip_current = False
+    for line in diff_text.splitlines():
+        if line.startswith("diff --git "):
+            parts = line.split()
+            b_path = parts[3][2:] if len(parts) >= 4 and parts[3].startswith("b/") else ""
+            skip_current = _is_kev_excluded_path(b_path)
+            continue
+        if skip_current:
+            continue
+        if line.startswith("+") and not line.startswith("+++"):
+            kept_lines.append(line[1:])
+    return "\n".join(kept_lines)
+
+
 def _collect_git_diff(cwd: Path) -> str:
     """Collects the latest git commit diff if running inside a git repository."""
     try:
@@ -275,6 +338,8 @@ def _collect_git_diff(cwd: Path) -> str:
             cwd=str(cwd),
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=10,
         )
         if res.returncode == 0:
@@ -354,9 +419,10 @@ def run_ci_security_gate(
         vuln_graph_findings = list(graph_res.get("findings", []))
 
     if "cisa-kev" in normalized_types:
-        effective_diff = diff_text if diff_text is not None else _collect_git_diff(
+        raw_diff = diff_text if diff_text is not None else _collect_git_diff(
             target_path if target_path.is_dir() else target_path.parent
         )
+        effective_diff = _filter_diff_for_kev(raw_diff)
         kev_res = auditor.audit_pr_against_cisa_kev(effective_diff)
         cisa_kev_hits = list(kev_res.get("matched_kev_cves", []))
 

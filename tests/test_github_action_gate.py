@@ -135,3 +135,50 @@ def test_render_step_summary_markdown_formats_table():
     assert "audit.html?utm_source=gh_action" in md
     assert "signup.html?tier=growth" in md
     assert "signup.html?tier=growth&utm_source=gh_action" in md
+
+
+def test_cisa_kev_ignores_docs_advisory_catalog_and_deleted_lines(tmp_path: Path):
+    src_dir = tmp_path / "pkg"
+    src_dir.mkdir()
+    (src_dir / "ok.py").write_text("x = 1\n", encoding="utf-8")
+
+    unified_diff = "\n".join([
+        "diff --git a/docs/llms.txt b/docs/llms.txt",
+        "+++ b/docs/llms.txt",
+        "+Live CISA KEV tracking CVE-2026-121481 and CVE-2026-123007",
+        "diff --git a/src/orbit_security/cisa_kev.py b/src/orbit_security/cisa_kev.py",
+        "+++ b/src/orbit_security/cisa_kev.py",
+        '+"cveID": "CVE-2026-121481",',
+        "diff --git a/requirements.txt b/requirements.txt",
+        "+++ b/requirements.txt",
+        "-# old reference to CVE-2021-44228",
+        "+requests==2.32.3",
+    ])
+
+    report = run_ci_security_gate(
+        target_path=src_dir,
+        scan_types=["ast", "cisa-kev"],
+        diff_text=unified_diff,
+    )
+    assert report["passed"] is True
+    assert report["cisa_kev_hits"] == []
+
+
+def test_cisa_kev_still_blocks_added_cve_in_requirements_diff(tmp_path: Path):
+    src_dir = tmp_path / "pkg"
+    src_dir.mkdir()
+    (src_dir / "ok.py").write_text("x = 1\n", encoding="utf-8")
+
+    unified_diff = "\n".join([
+        "diff --git a/requirements.txt b/requirements.txt",
+        "+++ b/requirements.txt",
+        "+log4j-core==2.14.1 # CVE-2021-44228",
+    ])
+
+    report = run_ci_security_gate(
+        target_path=src_dir,
+        scan_types=["ast", "cisa-kev"],
+        diff_text=unified_diff,
+    )
+    assert report["passed"] is False
+    assert "CVE-2021-44228" in report["cisa_kev_hits"]
