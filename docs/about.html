@@ -109,7 +109,7 @@
           "url": "https://cmfh009.github.io/Orbit-Security/about.html",
           "name": "About Orbit Security | Autonomous Perimeter Intelligence",
           "datePublished": "2026-09-26",
-          "dateModified": "2026-10-22",
+          "dateModified": "2026-11-21",
           "about": {"@id": "https://cmfh009.github.io/Orbit-Security/#organization"},
           "breadcrumb": {"@id": "https://cmfh009.github.io/Orbit-Security/about.html#breadcrumb"},
           "speakable": {"@id": "https://cmfh009.github.io/Orbit-Security/about.html#speakable-key-facts"}
@@ -172,6 +172,22 @@
               "acceptedAnswer": {
                 "@type": "Answer",
                 "text": "Orbit Security is used by Shopify Plus Partners, WordPress VIP agencies, Laravel development studios, headless commerce consultancies, and digital agency technical directors managing 15 to 100+ client domains."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is Orbit Security affiliated with Thomas Murray's Orbit platform?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. Orbit Security (developed by Carson Haynes at github.com/CmfH009/Orbit-Security) is an independent external attack-surface and white-label perimeter auditing toolkit for web agencies. It is not affiliated with, endorsed by, or connected to Thomas Murray or its financial risk services."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does Orbit Security require DNS write access or intrusive scanning?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. Orbit Security runs strictly read-only, non-intrusive external checks (public DNS queries, TLS certificate inspection, HTTP security headers, and passive takeover signatures) throttled at 1 request per second per host. It never requests Cloudflare, Route 53, or registrar write credentials; remediation is delivered as copy-paste Fixpack configs under your agency's full control."
               }
             }
           ]
@@ -504,6 +520,26 @@
                     </p>
                 </div>
             </div>
+            <div id="trust-guarantees" class="mt-6 p-5 sm:p-6 rounded-xl bg-slate-900/80 border border-emerald-500/30">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h3 class="text-sm sm:text-base font-bold text-white font-mono">Non-Intrusive Scan &amp; Data Handling Guarantees</h3>
+                    <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">READ-ONLY BY DESIGN</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-300 leading-relaxed">
+                    <div>
+                        <div class="font-semibold text-emerald-400 mb-1">Zero Write Permissions</div>
+                        <p class="text-slate-400">Orbit never asks for Cloudflare, Route 53, GoDaddy, or server write credentials. Remediation is delivered as copy-paste Fixpack configs so your engineers keep 100% change control.</p>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-cyan-400 mb-1">Polite &amp; Safe-Harbor Aligned</div>
+                        <p class="text-slate-400">Strictly external, read-only public perimeter checks throttled to 1 req/sec per host, aligned with RFC 9116 <a href="https://github.com/CmfH009/Orbit-Security/blob/main/SECURITY.md" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:underline">SECURITY.md</a> and our <a href="disclaimer.html" class="text-cyan-400 hover:underline">RFC Disclaimer</a>.</p>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-purple-400 mb-1">Minimal Data Retention</div>
+                        <p class="text-slate-400">Audits inspect only public DNS, TLS, and HTTP response metadata—never client source code or end-user PII. Full terms live in our <a href="privacy.html" class="text-emerald-400 hover:underline">Privacy Policy</a>.</p>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- 7. KEY FACTS -->
@@ -535,6 +571,7 @@
                 <p>• <strong>Headquarters:</strong> United States (Distributed & Cloud-Native)</p>
                 <p>• <strong>Core Focus:</strong> External Attack Surface Management (EASM), Subdomain Takeover Prevention, DMARC Enforcement, White-Label Agency Deliverables</p>
                 <p>• <strong>Founder:</strong> Carson Haynes (<a href="https://x.com/_arsoncode" class="text-emerald-400 hover:underline">@_arsoncode</a>)</p>
+                <p>• <strong>Independent Brand Notice:</strong> Orbit Security (<a href="https://github.com/CmfH009/Orbit-Security" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline">CmfH009/Orbit-Security</a>) is an independent web-agency perimeter auditing project by Carson Haynes and is <strong>not affiliated with Thomas Murray</strong> or its Orbit financial risk platform.</p>
                 <p>• <strong>Contact:</strong> <a href="mailto:carsonmail009@gmail.com" class="text-emerald-400 hover:underline">carsonmail009@gmail.com</a></p>
                 <p>• <strong>Measured, not asserted:</strong> latency, signature coverage and false-positive guards are published with their method, date and limits on the <a href="benchmark/" class="text-emerald-400 hover:underline">Audit Benchmark</a> page. The 10,493% ROI figure above is a business projection, not a measurement.</p>
             </div>
@@ -575,6 +612,12 @@
                     <h3 class="text-base font-bold text-white mb-2">Can agencies white-label the reports under their own brand?</h3>
                     <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
                         Yes. Orbit Security's core agency tiers include complete white-label reporting. PDF audit flipbooks, vulnerability summaries, and remediation work orders can be fully branded with your agency's logo, colors, and direct contact details for seamless client delivery.
+                    </p>
+                </div>
+                <div class="p-5 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <h3 class="text-base font-bold text-white mb-2">Is Orbit Security affiliated with Thomas Murray's Orbit platform?</h3>
+                    <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                        No. Orbit Security (built by Carson Haynes at <a href="https://github.com/CmfH009/Orbit-Security" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline">github.com/CmfH009/Orbit-Security</a>) is an independent external attack-surface and white-label perimeter auditing toolkit for web agencies. It is completely separate from Thomas Murray and its financial risk services.
                     </p>
                 </div>
             </div>

@@ -3198,6 +3198,16 @@ class HackerOneDisclosureGenerator:
             else ("DNS Infrastructure" if vuln.flaw_type in ("subdomain_takeover", "dangling_cname", "takeover", "cname_takeover", "dangling_dns") else "Target Infrastructure")
         )
 
+        from orbit_security.report_verifier import compute_evidence_digest
+
+        evidence_artifact_id = compute_evidence_digest(
+            target=vuln.target_domain,
+            status_code=None,
+            flaw_type=vuln.flaw_type,
+            evidence_snippet=vuln.evidence,
+            provider=vuln.provider or "",
+        )
+
         report_md = f"""# {title}
 
 **Program:** {prog_name} ({vuln.platform.title()})  
@@ -3207,6 +3217,7 @@ class HackerOneDisclosureGenerator:
 **Severity:** `{vuln.severity.value}` (CVSS 3.1: **{vuln.cvss_score}**)  
 **CVSS Vector:** `{vuln.cvss_vector}`  
 **Bounty Viability Grade:** `{vuln.bounty_viability}`  
+**Evidence Artifact ID:** `{evidence_artifact_id}`  
 **Date Discovered:** {vuln.timestamp}  
 
 ---
@@ -3216,6 +3227,7 @@ During an external attack surface and DNS perimeter hygiene assessment under the
 
 - **Vulnerability Category:** `{vuln.flaw_type.replace('_', ' ').title()}`
 - **Affected Provider/Service:** `{provider_display}`
+- **Evidence Artifact ID:** `{evidence_artifact_id}`
 - **Observed Evidence:** {vuln.evidence}
 
 ---
@@ -3282,12 +3294,23 @@ class ResponsibleDisclosureDrafter:
         formatter = BUGCROWD_DISPATCH_TABLE.get(vuln.flaw_type, _format_bc_generic)
         v_type, title, desc, poc, impact = formatter(vuln, target)
 
+        from orbit_security.report_verifier import compute_evidence_digest
+
+        evidence_artifact_id = compute_evidence_digest(
+            target=vuln.target_domain,
+            status_code=None,
+            flaw_type=vuln.flaw_type,
+            evidence_snippet=vuln.evidence,
+            provider=vuln.provider or "",
+        )
+
         return f"""# Bugcrowd Vulnerability Report: {title}
 
 **Target Asset:** `{target}`  
 **Vulnerability Type:** {v_type}  
 **Severity Rating:** {vuln.severity.value} (CVSS v3.1: **{vuln.cvss_score}** - `{vuln.cvss_vector}`)  
 **Bounty Program:** {prog_name} ({vuln.platform.title()})  
+**Evidence Artifact ID:** `{evidence_artifact_id}`  
 **Date Discovered:** {vuln.timestamp}  
 
 ---
