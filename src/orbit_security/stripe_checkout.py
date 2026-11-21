@@ -1,90 +1,49 @@
 """Orbit Security Stripe Self-Service Checkout & Signup Server.
 
-Act II Inbound Automation - the merchant-facing half of Stripe onboarding:
-
-- Maps ``RetainerTier`` to Stripe Price IDs (env-configurable).
-- Creates Stripe Checkout Sessions (``mode=subscription``) for agency signup.
-- Hosts a tiny stdlib ``http.server`` that serves the signup page, accepts
-  form POSTs, creates the Checkout Session, and 302-redirects the browser to
-  Stripe. Routes ``/portal/<agency_id>`` to the generated white-label portal
-  (``docs/portals/<slug>.html``) for the post-payment success redirect.
-
-No external web framework: stdlib ``http.server`` + ``urllib`` only.
+Thin HTTP and function adapter over the deep ``BillingOnboarding`` module
+(``orbit_security.billing_onboarding``). Preserves existing public entrypoints,
+CLI flags, and stdlib ``http.server`` signup/portal/subscription routes.
 """
 
 from __future__ import annotations
 
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import logging
-import os
-import re
-from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
-import urllib.error
+import re
+from typing import Any, Callable, Dict, Optional, Type
 import urllib.parse
-import urllib.request
-
-from dotenv import load_dotenv
 
 from orbit_security.agency_retainer import AgencyRetainerManager, RetainerTier
+from orbit_security.billing_onboarding import (
+    DEFAULT_PRICE_IDS,
+    PROJECT_ROOT,
+    STRIPE_API_BASE,
+    STRIPE_PRICE_ENV,
+    BillingOnboarding,
+    UrllibStripeTransport,
+    get_price_id,
+    resolve_retainer_tier,
+)
 
 logger = logging.getLogger("orbit_security.stripe_checkout")
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-load_dotenv(PROJECT_ROOT / ".env")
+SIGNUP_HTML_PATH = PROJECT_ROOT / "landing" / "signup.html"
+PORTALS_DIR = PROJECT_ROOT / "docs" / "portals"
+LANDING_PORTALS_DIR = PROJECT_ROOT / "landing" / "portals"
+LANDING_ASSETS_DIR = PROJECT_ROOT / "landing" / "assets"
 
-STRIPE_API_BASE = "https://api.stripe.com/v1"
-
-# Env var -> RetainerTier mapping for monthly Stripe Price IDs.
-# Create these prices in Stripe Dashboard (Products > Prices):
-#   Starter $299/mo, Scale $499/mo, Enterprise $999/mo.
-STRIPE_PRICE_ENV: Dict[RetainerTier, str] = {
-    RetainerTier.STARTER: "STRIPE_PRICE_STARTER",
-    RetainerTier.SCALE: "STRIPE_PRICE_SCALE",
-    RetainerTier.ENTERPRISE: "STRIPE_PRICE_ENTERPRISE",
-}
-
-# Fallback placeholder price IDs used when env vars are unset (dev only;
-# live checkout requires real Stripe Price IDs).
-DEFAULT_PRICE_IDS: Dict[RetainerTier, str] = {
-    RetainerTier.STARTER: "price_starter_299_monthly",
-    RetainerTier.SCALE: "price_scale_499_monthly",
-    RetainerTier.ENTERPRISE: "price_enterprise_999_monthly",
-}
-
-# ---------------------------------------------------------------------------
-# Tier -> Price mapping
-# ---------------------------------------------------------------------------
+# Preserve private alias for any callers importing it directly
+_resolve_retainer_tier = resolve_retainer_tier
 
 
-def get_price_id(tier: RetainerTier) -> str:
-    """Resolve the Stripe Price ID for a retainer tier.
-
-    Reads STRIPE_PRICE_STARTER / STRIPE_PRICE_SCALE / STRIPE_PRICE_ENTERPRISE
-    from the environment; falls back to a tier-derived placeholder so the
-    payload shape can be validated offline without a live Stripe account.
-    """
-    env_var = STRIPE_PRICE_ENV[tier]
-    price_id = os.getenv(env_var)
-    if price_id:
-        return price_id
-    return DEFAULT_PRICE_IDS[tier]
-
-
-def _stripe_secret_key() -> str:
-    api_key = os.getenv("STRIPE_SECRET_KEY") or os.getenv("STRIPE_API_KEY")
-    if not api_key:
-        raise RuntimeError(
-            "STRIPE_SECRET_KEY (or STRIPE_API_KEY) is not set. "
-            "Add it to .env (see .env.example)."
-        )
-    return api_key
-
-
-# ---------------------------------------------------------------------------
-# Checkout Session creation
-# ---------------------------------------------------------------------------
+def _build_default_billing(http_open: Optional[Callable[..., Any]] = None) -> BillingOnboarding:
+    """Create a request-scoped BillingOnboarding delegating to process env + urllib."""
+    return BillingOnboarding(
+        stripe_transport=UrllibStripeTransport(http_open=http_open),
+        env_file=None,
+    )
 
 
 def create_checkout_session(
@@ -103,234 +62,73 @@ def create_checkout_session(
     client_reference_id: Optional[str] = None,
     success_url: Optional[str] = None,
     cancel_url: Optional[str] = None,
-    http_open: Optional[Callable] = None,
+    http_open: Optional[Callable[..., Any]] = None,
 ) -> Dict[str, Any]:
-    """Create a Stripe Checkout Session (mode=subscription) for agency signup.
-
-    Returns a dict with at least ``{"id", "url"}`` of the checkout session.
-    Raises ``RuntimeError`` on Stripe API failure.
-
-    ``http_open`` optionally replaces ``urllib.request.urlopen`` for tests
-    (must accept ``(request, timeout=...)`` and return a response-like object
-    with ``.status`` and ``.read()``).
-    """
-    price_id = get_price_id(tier)
-
-    base_url = os.getenv("STRIPE_CHECKOUT_BASE_URL", "http://localhost:8089")
-    slug = agency_id.strip().lower().replace(" ", "-")
-    if success_url is None:
-        success_url = f"{base_url}/portal/{slug}?session_id={{CHECKOUT_SESSION_ID}}"
-    if cancel_url is None:
-        cancel_url = f"{base_url}/canceled"
-
-    metadata: Dict[str, str] = {
-        "agency_id": slug,
-        "agency_name": agency_name,
-        "tier": tier.value,
-        "contact_email": contact_email,
-        "support_email": support_email,
-        "website": website,
-        "primary_color": primary_color,
-        "accent_color": accent_color,
-        "tagline": tagline,
-    }
-    if custom_domain:
-        metadata["custom_domain"] = custom_domain
-    if domain:
-        metadata["domain"] = domain
-    if client_reference_id:
-        metadata["client_reference_id"] = client_reference_id
-
-    body_fields: Dict[str, Any] = {
-        "mode": "subscription",
-        "line_items[0][price]": price_id,
-        "line_items[0][quantity]": "1",
-        "customer_email": contact_email,
-        "success_url": success_url,
-        "cancel_url": cancel_url,
-    }
-    if client_reference_id:
-        body_fields["client_reference_id"] = client_reference_id
-    for key, value in metadata.items():
-        body_fields[f"metadata[{key}]"] = value
-
-    body = urllib.parse.urlencode(body_fields).encode("utf-8")
-    req = urllib.request.Request(
-        f"{STRIPE_API_BASE}/checkout/sessions",
-        data=body,
-        method="POST",
-        headers={
-            "Authorization": f"Bearer {_stripe_secret_key()}",
-            "Content-Type": "application/x-www-form-urlencoded",
-        },
+    """Create a Stripe Checkout Session (mode=subscription) for agency signup."""
+    return _build_default_billing(http_open=http_open).create_checkout_session(
+        agency_id=agency_id,
+        agency_name=agency_name,
+        tier=tier,
+        contact_email=contact_email,
+        website=website,
+        support_email=support_email,
+        primary_color=primary_color,
+        accent_color=accent_color,
+        tagline=tagline,
+        custom_domain=custom_domain,
+        domain=domain,
+        client_reference_id=client_reference_id,
+        success_url=success_url,
+        cancel_url=cancel_url,
     )
-
-    opener = http_open or urllib.request.urlopen
-    try:
-        with opener(req, timeout=30) as resp:
-            if getattr(resp, "status", 200) not in (200, 201):
-                raise RuntimeError(f"Stripe returned HTTP {resp.status}")
-            return json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        body_text = e.read().decode("utf-8", errors="replace")
-        logger.error("Stripe Checkout Session creation failed: %s %s", e.code, body_text)
-        raise RuntimeError(f"Stripe API error {e.code}: {body_text}") from e
-
-
-# ---------------------------------------------------------------------------
-# Subscription lifecycle management (upgrade / downgrade / cancel)
-# ---------------------------------------------------------------------------
-
-
-def _stripe_get(endpoint: str, http_open: Optional[Callable] = None) -> Dict[str, Any]:
-    """GET a Stripe API endpoint and return the parsed JSON body."""
-    opener = http_open or urllib.request.urlopen
-    req = urllib.request.Request(
-        f"{STRIPE_API_BASE}/{endpoint}",
-        method="GET",
-        headers={"Authorization": f"Bearer {_stripe_secret_key()}"},
-    )
-    try:
-        with opener(req, timeout=30) as resp:
-            if getattr(resp, "status", 200) not in (200, 201):
-                raise RuntimeError(f"Stripe returned HTTP {resp.status}")
-            return json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        body_text = e.read().decode("utf-8", errors="replace")
-        logger.error("Stripe GET %s failed: %s %s", endpoint, e.code, body_text)
-        raise RuntimeError(f"Stripe API error {e.code}: {body_text}") from e
-
-
-def _stripe_post(
-    endpoint: str,
-    fields: Optional[Dict[str, Any]] = None,
-    http_open: Optional[Callable] = None,
-) -> Dict[str, Any]:
-    """POST form-encoded fields to a Stripe API endpoint and return parsed JSON."""
-    opener = http_open or urllib.request.urlopen
-    body = urllib.parse.urlencode(fields or {}).encode("utf-8")
-    req = urllib.request.Request(
-        f"{STRIPE_API_BASE}/{endpoint}",
-        data=body,
-        method="POST",
-        headers={
-            "Authorization": f"Bearer {_stripe_secret_key()}",
-            "Content-Type": "application/x-www-form-urlencoded",
-        },
-    )
-    try:
-        with opener(req, timeout=30) as resp:
-            if getattr(resp, "status", 200) not in (200, 201):
-                raise RuntimeError(f"Stripe returned HTTP {resp.status}")
-            return json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        body_text = e.read().decode("utf-8", errors="replace")
-        logger.error("Stripe POST %s failed: %s %s", endpoint, e.code, body_text)
-        raise RuntimeError(f"Stripe API error {e.code}: {body_text}") from e
 
 
 def get_subscription(
-    subscription_id: str, http_open: Optional[Callable] = None
+    subscription_id: str, http_open: Optional[Callable[..., Any]] = None
 ) -> Dict[str, Any]:
     """Retrieve a Stripe Subscription by id."""
-    return _stripe_get(f"subscriptions/{subscription_id}", http_open=http_open)
+    return _build_default_billing(http_open=http_open).get_subscription(subscription_id)
 
 
 def update_subscription(
     subscription_id: str,
     new_tier: RetainerTier,
-    http_open: Optional[Callable] = None,
+    http_open: Optional[Callable[..., Any]] = None,
     proration_behavior: str = "create_prorations",
 ) -> Dict[str, Any]:
-    """Change a subscription's plan to a new retainer tier.
-
-    Updates the subscription's line item to the new tier's Stripe Price ID.
-    Returns the updated Subscription object from Stripe.
-    """
-    price_id = get_price_id(new_tier)
-
-    # Retrieve the subscription to find the subscription item id.
-    sub = get_subscription(subscription_id, http_open=http_open)
-    items = sub.get("items", {}).get("data", [])
-    if not items:
-        raise RuntimeError(f"Subscription {subscription_id} has no line items")
-    item_id = items[0]["id"]
-
-    return _stripe_post(
-        f"subscription_items/{item_id}",
-        {
-            "price": price_id,
-            "proration_behavior": proration_behavior,
-        },
-        http_open=http_open,
+    """Change a subscription's plan to a new retainer tier."""
+    return _build_default_billing(http_open=http_open).update_subscription(
+        subscription_id,
+        new_tier,
+        proration_behavior=proration_behavior,
     )
 
 
 def cancel_subscription(
     subscription_id: str,
-    http_open: Optional[Callable] = None,
+    http_open: Optional[Callable[..., Any]] = None,
     cancel_at_period_end: bool = False,
 ) -> Dict[str, Any]:
-    """Cancel a Stripe Subscription.
-
-    If ``cancel_at_period_end`` is True, the subscription runs until the end
-    of the current billing period then cancels. Otherwise it cancels
-    immediately (prorated).
-    """
-    fields: Dict[str, Any] = {}
-    if cancel_at_period_end:
-        fields["cancel_at_period_end"] = "true"
-    return _stripe_post(
-        f"subscriptions/{subscription_id}/cancel",
-        fields,
-        http_open=http_open,
+    """Cancel a Stripe Subscription immediately or at period end."""
+    return _build_default_billing(http_open=http_open).cancel_subscription(
+        subscription_id,
+        cancel_at_period_end=cancel_at_period_end,
     )
 
 
-# ---------------------------------------------------------------------------
-# Lightweight stdlib HTTP signup server
-# ---------------------------------------------------------------------------
-
-SIGNUP_HTML_PATH = PROJECT_ROOT / "landing" / "signup.html"
-PORTALS_DIR = PROJECT_ROOT / "docs" / "portals"
-LANDING_PORTALS_DIR = PROJECT_ROOT / "landing" / "portals"
-LANDING_ASSETS_DIR = PROJECT_ROOT / "landing" / "assets"
-
-_TIER_ALIASES: Dict[str, RetainerTier] = {
-    "starter": RetainerTier.STARTER,
-    "monitoring": RetainerTier.STARTER,
-    "scale": RetainerTier.SCALE,
-    "growth": RetainerTier.SCALE,
-    "remediation": RetainerTier.SCALE,
-    "enterprise": RetainerTier.ENTERPRISE,
-    "pro": RetainerTier.ENTERPRISE,
-}
-
-
-def _resolve_retainer_tier(raw_tier: str) -> RetainerTier:
-    """Resolve user-facing or canonical tier names to RetainerTier."""
-    normalized = (raw_tier or "").strip()
-    if not normalized:
-        return RetainerTier.SCALE
-    if normalized.lower() in _TIER_ALIASES:
-        return _TIER_ALIASES[normalized.lower()]
-    try:
-        return RetainerTier(normalized)
-    except ValueError:
-        return RetainerTier.SCALE
-
-
 class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
-    """Serves /signup and POST /create-checkout-session for self-service onboarding."""
+    """Thin HTTP adapter serving /signup, /portal/<id>, and subscription endpoints."""
+
+    billing: Optional[BillingOnboarding] = None
 
     def do_GET(self):  # noqa: N802 - http.server override naming
         path = self.path.split("?", 1)[0]
         if path in ("/", "/signup", "/signup.html"):
             self._serve_signup_page()
         elif path.startswith("/assets/"):
-            self._serve_asset(path[len("/assets/"):])
+            self._serve_asset(path[len("/assets/") :])
         elif path.startswith("/portal/"):
-            agency_id = path[len("/portal/"):]
+            agency_id = path[len("/portal/") :]
             self._serve_portal(agency_id)
         elif path == "/canceled":
             self._send_text(
@@ -344,7 +142,7 @@ class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
                 200, {"status": "healthy", "service": "orbit-stripe-checkout"}
             )
         elif path.startswith("/subscription/"):
-            subscription_id = path[len("/subscription/"):]
+            subscription_id = path[len("/subscription/") :]
             self._serve_subscription(subscription_id)
         else:
             self._send_text(404, "Not found", "text/plain")
@@ -391,9 +189,9 @@ class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
 
             agency_id = get("agency_id") or get("agency_name") or "new-agency"
             agency_name = get("agency_name") or agency_id
-            tier = _resolve_retainer_tier(get("tier"))
+            tier = resolve_retainer_tier(get("tier"))
 
-            session = create_checkout_session(
+            kwargs = dict(
                 agency_id=agency_id,
                 agency_name=agency_name,
                 tier=tier,
@@ -407,6 +205,11 @@ class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
                 domain=get("domain") or None,
                 client_reference_id=get("client_reference_id") or agency_id,
             )
+            if self.billing is not None:
+                session = self.billing.create_checkout_session(**kwargs)
+            else:
+                session = create_checkout_session(**kwargs)
+
             checkout_url = session.get("url")
             if not checkout_url:
                 raise RuntimeError("Stripe session missing checkout URL")
@@ -434,11 +237,14 @@ class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
             if not subscription_id:
                 raise RuntimeError("subscription_id is required")
             try:
-                new_tier = RetainerTier(new_tier_str)
-            except ValueError:
-                raise RuntimeError(f"Invalid tier: {new_tier_str or '(missing)'}")
+                new_tier = resolve_retainer_tier(new_tier_str, strict=True)
+            except ValueError as exc:
+                raise RuntimeError(str(exc)) from exc
 
-            result = update_subscription(subscription_id, new_tier)
+            if self.billing is not None:
+                result = self.billing.update_subscription(subscription_id, new_tier)
+            else:
+                result = update_subscription(subscription_id, new_tier)
             self._send_json(
                 200,
                 {
@@ -464,9 +270,14 @@ class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
             if not subscription_id:
                 raise RuntimeError("subscription_id is required")
 
-            result = cancel_subscription(
-                subscription_id, cancel_at_period_end=cancel_at_period_end
-            )
+            if self.billing is not None:
+                result = self.billing.cancel_subscription(
+                    subscription_id, cancel_at_period_end=cancel_at_period_end
+                )
+            else:
+                result = cancel_subscription(
+                    subscription_id, cancel_at_period_end=cancel_at_period_end
+                )
             self._send_json(
                 200,
                 {
@@ -482,7 +293,10 @@ class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
 
     def _serve_subscription(self, subscription_id: str):
         try:
-            sub = get_subscription(subscription_id)
+            if self.billing is not None:
+                sub = self.billing.get_subscription(subscription_id)
+            else:
+                sub = get_subscription(subscription_id)
             self._send_json(
                 200,
                 {
@@ -500,21 +314,31 @@ class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
             self._send_json(502, {"status": "ERROR", "message": str(exc)})
 
     def _serve_signup_page(self):
+        signup_path = (
+            self.billing.signup_html_path
+            if self.billing is not None and self.billing.signup_html_path.is_file()
+            else SIGNUP_HTML_PATH
+        )
         try:
-            html = SIGNUP_HTML_PATH.read_text(encoding="utf-8")
+            html_body = signup_path.read_text(encoding="utf-8")
         except FileNotFoundError:
             self._send_text(500, "signup.html not found on server", "text/html")
             return
-        self._send_text(200, html, "text/html")
+        self._send_text(200, html_body, "text/html")
 
     def _serve_asset(self, rel_asset: str):
         clean_rel = (rel_asset or "").lstrip("/")
         if not clean_rel or ".." in clean_rel or "\\" in clean_rel:
             self._send_text(400, "Invalid asset path", "text/plain")
             return
-        asset_path = (LANDING_ASSETS_DIR / clean_rel).resolve()
+        assets_dir = (
+            self.billing.landing_assets_dir
+            if self.billing is not None and self.billing.landing_assets_dir.is_dir()
+            else LANDING_ASSETS_DIR
+        )
+        asset_path = (assets_dir / clean_rel).resolve()
         try:
-            if not asset_path.is_relative_to(LANDING_ASSETS_DIR.resolve()):
+            if not asset_path.is_relative_to(assets_dir.resolve()):
                 self._send_text(403, "Access denied", "text/plain")
                 return
         except (ValueError, AttributeError):
@@ -545,34 +369,41 @@ class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
         if not re.match(r"^[a-zA-Z0-9_-]+$", agency_id):
             self._send_text(400, "Invalid portal identifier", "text/plain")
             return
-        slug_candidates = []
-        for candidate in (
-            f"{agency_id}.html",
-            f"{agency_id.replace('-', '_')}.html",
-            f"{agency_id.replace('_', '-')}.html",
-        ):
-            if candidate not in slug_candidates:
-                slug_candidates.append(candidate)
 
-        search_dirs = [PORTALS_DIR]
-        default_docs_portals = (PROJECT_ROOT / "docs" / "portals").resolve()
-        if PORTALS_DIR.resolve() == default_docs_portals and LANDING_PORTALS_DIR.is_dir():
-            search_dirs.append(LANDING_PORTALS_DIR)
+        if self.billing is not None:
+            portal_path = self.billing.resolve_portal_path(agency_id)
+            if portal_path is not None:
+                self._send_text(200, portal_path.read_text(encoding="utf-8"), "text/html")
+                return
+        else:
+            slug_candidates = []
+            for candidate in (
+                f"{agency_id}.html",
+                f"{agency_id.replace('-', '_')}.html",
+                f"{agency_id.replace('_', '-')}.html",
+            ):
+                if candidate not in slug_candidates:
+                    slug_candidates.append(candidate)
 
-        for base_dir in search_dirs:
-            resolved_base = base_dir.resolve()
-            for filename in slug_candidates:
-                portal_path = (base_dir / filename).resolve()
-                try:
-                    if not portal_path.is_relative_to(resolved_base):
+            search_dirs = [PORTALS_DIR]
+            default_docs_portals = (PROJECT_ROOT / "docs" / "portals").resolve()
+            if PORTALS_DIR.resolve() == default_docs_portals and LANDING_PORTALS_DIR.is_dir():
+                search_dirs.append(LANDING_PORTALS_DIR)
+
+            for base_dir in search_dirs:
+                resolved_base = base_dir.resolve()
+                for filename in slug_candidates:
+                    portal_path = (base_dir / filename).resolve()
+                    try:
+                        if not portal_path.is_relative_to(resolved_base):
+                            self._send_text(403, "Access denied", "text/plain")
+                            return
+                    except (ValueError, AttributeError):
                         self._send_text(403, "Access denied", "text/plain")
                         return
-                except (ValueError, AttributeError):
-                    self._send_text(403, "Access denied", "text/plain")
-                    return
-                if portal_path.exists():
-                    self._send_text(200, portal_path.read_text(encoding="utf-8"), "text/html")
-                    return
+                    if portal_path.exists():
+                        self._send_text(200, portal_path.read_text(encoding="utf-8"), "text/html")
+                        return
 
         self._send_text(
             404,
@@ -598,14 +429,32 @@ class StripeCheckoutRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def log_message(self, format, *args):
-        # Silence default access logs
         pass
 
 
-def run_checkout_server(host: str = "127.0.0.1", port: int = 8089):
+def make_checkout_request_handler(
+    billing: BillingOnboarding,
+) -> Type[StripeCheckoutRequestHandler]:
+    """Bind a BillingOnboarding instance to a thin StripeCheckoutRequestHandler class."""
+
+    class _BoundCheckoutHandler(StripeCheckoutRequestHandler):
+        pass
+
+    _BoundCheckoutHandler.billing = billing
+    return _BoundCheckoutHandler
+
+
+def run_checkout_server(
+    host: str = "127.0.0.1",
+    port: int = 8089,
+    *,
+    billing: Optional[BillingOnboarding] = None,
+):
     """Starts the standalone Stripe checkout signup HTTP server."""
+    bound_billing = billing if billing is not None else BillingOnboarding(workspace_root=PROJECT_ROOT)
+    handler_cls = make_checkout_request_handler(bound_billing)
     server_address = (host, port)
-    httpd = HTTPServer(server_address, StripeCheckoutRequestHandler)
+    httpd = HTTPServer(server_address, handler_cls)
     logger.info("Orbit Stripe Checkout server listening on %s:%d ...", host, port)
     try:
         httpd.serve_forever()

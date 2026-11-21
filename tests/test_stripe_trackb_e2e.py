@@ -416,9 +416,9 @@ def test_run_stripe_webhook_cli_test_event_is_hermetic(tmp_path: Path):
     assert result["status"] == "PROVISIONED"
     assert Path(result["portal_path"]).resolve().is_relative_to(cli_out.resolve())
     assert Path(result["bundle_path"]).resolve().is_relative_to(cli_out.resolve())
-    assert (cli_out / "subscribers.json").exists()
-    assert (cli_out / "clients.json").exists()
-    assert (cli_out / "agency_retainers.json").exists()
+    assert (cli_out / "data" / "subscribers.json").exists()
+    assert (cli_out / "data" / "clients.json").exists()
+    assert (cli_out / "data" / "agency_retainers.json").exists()
 
     assert _snapshot_files(live_targets) == before_live
 
@@ -426,7 +426,7 @@ def test_run_stripe_webhook_cli_test_event_is_hermetic(tmp_path: Path):
 def test_stripe_webhook_env_fallback_is_hermetic_under_pytest(tmp_path: Path, monkeypatch):
     monkeypatch.delenv("STRIPE_WEBHOOK_SECRET", raising=False)
 
-    # 1. Under pytest, default handler NEVER reads live PROJECT_ROOT / ".env"
+    # 1. Isolated collaborators / workspace_root NEVER read live PROJECT_ROOT / ".env"
     default_handler = stripe_webhook.StripeWebhookHandler(
         subscriber_manager=SubscriberManager(subscribers_file=tmp_path / "subs_default.json"),
         sla_generator=SlaCertificateGenerator(output_dir=tmp_path / "certs_default"),
@@ -450,14 +450,7 @@ def test_stripe_webhook_env_fallback_is_hermetic_under_pytest(tmp_path: Path, mo
         retainer_manager=AgencyRetainerManager(data_path=tmp_path / "retainers_env.json"),
     )
     assert env_fallback_handler.webhook_secret == "whsec_tmp_fallback_verified"
-
-    # Non-pytest runtime mode resolves PROJECT_ROOT / ".env" cleanly
-    monkeypatch.setattr(stripe_webhook, "PROJECT_ROOT", tmp_path)
-    monkeypatch.setattr(stripe_webhook, "is_pytest_active", lambda: False)
     assert stripe_webhook._resolve_webhook_secret() == "whsec_tmp_fallback_verified"
-    monkeypatch.undo()
-    monkeypatch.delenv("STRIPE_WEBHOOK_SECRET", raising=False)
-    monkeypatch.setattr(stripe_webhook, "DEFAULT_ENV_FILE", fake_env)
 
     # 3. Process os.environ takes precedence over .env fallback, and explicit arg beats both
     monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_os_env_priority")

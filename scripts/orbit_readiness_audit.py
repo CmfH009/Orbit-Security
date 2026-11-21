@@ -558,27 +558,13 @@ def _is_within(child: Path, parent: Path) -> bool:
         return False
 
 
-class _HermeticJsonResponse:
-    def __init__(self, payload: Dict[str, Any], status: int = 200):
-        self._body = json.dumps(payload).encode("utf-8")
-        self.status = status
-
-    def read(self) -> bytes:
-        return self._body
-
-    def __enter__(self) -> "_HermeticJsonResponse":
-        return self
-
-    def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> bool:
-        return False
-
-
 def verify_stripe_cutover(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
     """Run a fast hermetic Track B Stripe checkout + webhook provisioning dry-run.
 
-    Executes completely inside a TemporaryDirectory with a stubbed HTTP opener
-    and isolated Blackboard/data stores so zero network calls or writes to live
-    data/* or docs/portals/* occur, and never prints raw secret values.
+    Configures a single ``BillingOnboarding`` module with an isolated
+    ``TemporaryDirectory`` workspace root and ``InMemoryStripeTransport`` so
+    zero network calls, zero global blackboard/env mutations, and zero writes
+    to live ``data/*`` or ``docs/portals/*`` occur.
     """
     t0 = time.perf_counter()
 
@@ -601,65 +587,26 @@ def verify_stripe_cutover(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
     else:
         stripe_key_mode = "other"
 
-    import orbit_security.blackboard as bb_mod
-    from orbit_security.agency_retainer import AgencyRetainerManager, RetainerTier
-    from orbit_security.deal_desk import RetainerDealDeskConcierge
-    from orbit_security.fleet import FleetRegistry
-    from orbit_security.stripe_checkout import create_checkout_session, get_price_id
-    from orbit_security.stripe_webhook import (
-        SlaCertificateGenerator,
-        StripeWebhookHandler,
-        SubscriberManager,
+    from orbit_security.agency_retainer import RetainerTier
+    from orbit_security.billing_onboarding import (
+        BillingOnboarding,
+        InMemoryStripeTransport,
         generate_stripe_signature,
     )
-
-    orig_global_bb = bb_mod._GLOBAL_BLACKBOARD
-    orig_publish_event = bb_mod.publish_event
-    orig_env = {
-        key: os.environ.get(key)
-        for key in ("STRIPE_SECRET_KEY", "STRIPE_API_KEY", "ORBIT_BLACKBOARD_DB", "ORBIT_NOVA_BRAIN_ENABLED")
-    }
 
     temp_ctx = tempfile.TemporaryDirectory(prefix="orbit_cutover_dryrun_")
     try:
         tmp_root = Path(temp_ctx.name)
-        bb_db_path = tmp_root / "blackboard.db"
-        temp_bb = bb_mod.Blackboard(db_path=bb_db_path, nova_brain_url="")
-        bb_mod._GLOBAL_BLACKBOARD = temp_bb
+        sim_webhook_secret = "whsec_orbit_cutover_dryrun_local_only"
+        transport = InMemoryStripeTransport()
+        billing = BillingOnboarding(
+            workspace_root=tmp_root,
+            stripe_transport=transport,
+            stripe_secret_key="sk_test_orbit_cutover_dryrun_000000",
+            webhook_secret=sim_webhook_secret,
+        )
 
-        def _isolated_publish_event(
-            event_type: str,
-            payload: dict,
-            source: str = "orbit",
-            topic: str = "telemetry",
-        ) -> int:
-            return temp_bb.publish(event_type, payload, source=source, topic=topic)
-
-        bb_mod.publish_event = _isolated_publish_event
-        os.environ["ORBIT_BLACKBOARD_DB"] = str(bb_db_path)
-        os.environ["ORBIT_NOVA_BRAIN_ENABLED"] = "0"
-        # Use a fixed local dummy token so no real key ever enters synthetic headers.
-        os.environ["STRIPE_SECRET_KEY"] = "sk_test_orbit_cutover_dryrun_000000"
-        os.environ.pop("STRIPE_API_KEY", None)
-
-        captured_checkout_req: Dict[str, Any] = {}
-
-        def _fake_http_open(req: Any, timeout: int = 20) -> _HermeticJsonResponse:
-            headers = {str(k).lower(): str(v) for k, v in getattr(req, "headers", {}).items()}
-            auth_val = headers.get("authorization", "")
-            raw_data = getattr(req, "data", b"") or b""
-            captured_checkout_req["url"] = str(getattr(req, "full_url", ""))
-            captured_checkout_req["auth_bearer_prefix"] = auth_val[:14]
-            captured_checkout_req["form"] = urllib.parse.parse_qs(raw_data.decode("utf-8"))
-            captured_checkout_req["timeout"] = timeout
-            return _HermeticJsonResponse(
-                {
-                    "id": "cs_test_cutover_dryrun_001",
-                    "url": "https://checkout.stripe.com/c/pay/cs_test_cutover_dryrun_001",
-                }
-            )
-
-        checkout_res = create_checkout_session(
+        checkout_res = billing.create_checkout_session(
             agency_id="cutover-dryrun-agency",
             agency_name="Cutover Dryrun Agency",
             tier=RetainerTier.SCALE,
@@ -667,44 +614,23 @@ def verify_stripe_cutover(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
             website="https://cutover-dryrun.example",
             domain="cutover-dryrun.example",
             client_reference_id="cutover_ref_001",
-            http_open=_fake_http_open,
         )
 
-        expected_price_id = get_price_id(RetainerTier.SCALE)
-        form = captured_checkout_req.get("form", {})
+        expected_price_id = billing.get_price_id(RetainerTier.SCALE)
+        recorded = transport.requests[-1] if transport.requests else {}
+        fields = recorded.get("fields", {})
         checkout_session_fields_verified = (
-            checkout_res.get("id") == "cs_test_cutover_dryrun_001"
-            and checkout_res.get("url") == "https://checkout.stripe.com/c/pay/cs_test_cutover_dryrun_001"
-            and captured_checkout_req.get("url") == "https://api.stripe.com/v1/checkout/sessions"
-            and captured_checkout_req.get("auth_bearer_prefix") == "Bearer sk_test"
-            and form.get("mode") == ["subscription"]
-            and form.get("line_items[0][price]") == [expected_price_id]
-            and form.get("customer_email") == ["cutover@dryrun.example"]
-            and form.get("client_reference_id") == ["cutover_ref_001"]
-            and form.get("metadata[agency_id]") == ["cutover-dryrun-agency"]
-            and form.get("metadata[tier]") == [RetainerTier.SCALE.value]
-            and form.get("metadata[domain]") == ["cutover-dryrun.example"]
-        )
-
-        subscribers_file = tmp_root / "subscribers.json"
-        certs_dir = tmp_root / "certificates"
-        clients_file = tmp_root / "clients.json"
-        retainers_file = tmp_root / "agency_retainers.json"
-        portals_dir = tmp_root / "portals"
-        bundles_dir = tmp_root / "client_bundles"
-        sim_webhook_secret = "whsec_orbit_cutover_dryrun_local_only"
-
-        handler = StripeWebhookHandler(
-            webhook_secret=sim_webhook_secret,
-            subscriber_manager=SubscriberManager(subscribers_file=subscribers_file),
-            sla_generator=SlaCertificateGenerator(output_dir=certs_dir),
-            fleet_registry=FleetRegistry(data_path=clients_file),
-            retainer_manager=AgencyRetainerManager(data_path=retainers_file),
-            deal_desk=RetainerDealDeskConcierge(
-                workspace_root=tmp_root,
-                portals_dir=portals_dir,
-                bundles_dir=bundles_dir,
-            ),
+            bool(checkout_res.get("id"))
+            and str(checkout_res.get("url", "")).startswith("https://checkout.stripe.com/c/pay/")
+            and recorded.get("url") == "https://api.stripe.com/v1/checkout/sessions"
+            and recorded.get("auth_bearer_prefix") == "Bearer sk_test"
+            and fields.get("mode") == "subscription"
+            and fields.get("line_items[0][price]") == expected_price_id
+            and fields.get("customer_email") == "cutover@dryrun.example"
+            and fields.get("client_reference_id") == "cutover_ref_001"
+            and fields.get("metadata[agency_id]") == "cutover-dryrun-agency"
+            and fields.get("metadata[tier]") == RetainerTier.SCALE.value
+            and fields.get("metadata[domain]") == "cutover-dryrun.example"
         )
 
         event_payload = {
@@ -712,7 +638,7 @@ def verify_stripe_cutover(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
             "type": "checkout.session.completed",
             "data": {
                 "object": {
-                    "id": "cs_test_cutover_dryrun_001",
+                    "id": checkout_res["id"],
                     "customer": "cus_cutover_dryrun_001",
                     "subscription": "sub_cutover_dryrun_001",
                     "client_reference_id": "cutover_ref_001",
@@ -735,12 +661,12 @@ def verify_stripe_cutover(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
         }
         payload_bytes = json.dumps(event_payload).encode("utf-8")
         sig_header = generate_stripe_signature(payload_bytes, sim_webhook_secret)
-        webhook_result = handler.handle_webhook(payload_bytes, sig_header)
+        webhook_result = billing.handle_webhook(payload_bytes, sig_header)
 
         webhook_status = str(webhook_result.get("status", ""))
-        sub_raw = _load_json_safe(subscribers_file, [])
+        sub_raw = _load_json_safe(billing.subscribers_file, [])
         subscriber_provisioned = (
-            subscribers_file.is_file()
+            billing.subscribers_file.is_file()
             and isinstance(sub_raw, (list, dict))
             and bool(webhook_result.get("subscriber"))
             and ("cutover@dryrun.example" in json.dumps(sub_raw))
@@ -773,9 +699,9 @@ def verify_stripe_cutover(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
         )
 
         isolated_paths_verified = (
-            _is_within(subscribers_file, tmp_root)
-            and _is_within(clients_file, tmp_root)
-            and _is_within(retainers_file, tmp_root)
+            _is_within(billing.subscribers_file, tmp_root)
+            and _is_within(billing.clients_file, tmp_root)
+            and _is_within(billing.retainers_file, tmp_root)
             and _is_within(sla_path, tmp_root)
             and _is_within(bundle_path, tmp_root)
             and _is_within(portal_path, tmp_root)
@@ -808,13 +734,6 @@ def verify_stripe_cutover(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
             "live_data_untouched": True,
         }
     finally:
-        bb_mod._GLOBAL_BLACKBOARD = orig_global_bb
-        bb_mod.publish_event = orig_publish_event
-        for key, prev_val in orig_env.items():
-            if prev_val is None:
-                os.environ.pop(key, None)
-            else:
-                os.environ[key] = prev_val
         try:
             temp_ctx.cleanup()
         except OSError:

@@ -33,16 +33,11 @@ try:
 except Exception:
     pass
 
-from orbit_security.agency_retainer import AgencyRetainerManager  # noqa: E402
-from orbit_security.deal_desk import RetainerDealDeskConcierge  # noqa: E402
-from orbit_security.fleet import FleetRegistry  # noqa: E402
-from orbit_security.stripe_webhook import (
-    SlaCertificateGenerator,
-    StripeWebhookHandler,
-    SubscriberManager,
+from orbit_security.billing_onboarding import (  # noqa: E402
+    BillingOnboarding,
     generate_stripe_signature,
-    run_webhook_server,
 )
+from orbit_security.stripe_webhook import run_webhook_server  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -53,8 +48,8 @@ logger = logging.getLogger("run_stripe_webhook")
 
 
 def list_subscribers():
-    mgr = SubscriberManager()
-    subs = mgr.list_subscribers()
+    billing = BillingOnboarding(workspace_root=REPO_ROOT)
+    subs = billing.list_subscribers()
     print(f"\n=== Orbit Security Active Subscribers ({len(subs)}) ===")
     if not subs:
         print("No active subscribers in data/subscribers.json.")
@@ -78,7 +73,7 @@ def dispatch_test_event(
     temp_ctx: Optional[tempfile.TemporaryDirectory[str]] = None
 
     if live:
-        handler = StripeWebhookHandler(webhook_secret=test_secret)
+        billing = BillingOnboarding(workspace_root=REPO_ROOT, webhook_secret=test_secret)
         target_root: Optional[Path] = None
     else:
         if output_dir is None:
@@ -87,18 +82,7 @@ def dispatch_test_event(
         else:
             target_root = Path(output_dir).resolve()
             target_root.mkdir(parents=True, exist_ok=True)
-        handler = StripeWebhookHandler(
-            webhook_secret=test_secret,
-            subscriber_manager=SubscriberManager(subscribers_file=target_root / "subscribers.json"),
-            sla_generator=SlaCertificateGenerator(output_dir=target_root / "certificates"),
-            fleet_registry=FleetRegistry(data_path=target_root / "clients.json"),
-            retainer_manager=AgencyRetainerManager(data_path=target_root / "agency_retainers.json"),
-            deal_desk=RetainerDealDeskConcierge(
-                workspace_root=target_root,
-                portals_dir=target_root / "portals",
-                bundles_dir=target_root / "client_bundles",
-            ),
-        )
+        billing = BillingOnboarding(workspace_root=target_root, webhook_secret=test_secret)
 
     event_payload = {
         "id": "evt_test_checkout_local",
@@ -130,8 +114,8 @@ def dispatch_test_event(
     sig_header = generate_stripe_signature(payload_bytes, test_secret)
 
     try:
-        result = handler.handle_webhook(payload_bytes, sig_header)
-        logger.info(f"Test Event Result: {result.get('status')}")
+        result = billing.handle_webhook(payload_bytes, sig_header)
+        logger.info("Test Event Result: %s", result.get("status"))
         if target_root is not None:
             result = dict(result)
             result["isolated_dry_run_root"] = str(target_root)

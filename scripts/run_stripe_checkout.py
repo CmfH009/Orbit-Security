@@ -23,6 +23,7 @@ SRC_DIR = REPO_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from orbit_security.billing_onboarding import BillingOnboarding  # noqa: E402
 from orbit_security.stripe_checkout import run_checkout_server  # noqa: E402
 
 logging.basicConfig(
@@ -43,8 +44,15 @@ def main():
     parser.add_argument(
         "--port", type=int, default=8089, help="Port to listen on (default: 8089)"
     )
+    parser.add_argument(
+        "--workspace-root",
+        type=Path,
+        default=REPO_ROOT,
+        help="Workspace root for portals, signup page, and .env (default: repo root)",
+    )
     args = parser.parse_args()
-    run_checkout_server(host=args.host, port=args.port)
+    billing = BillingOnboarding(workspace_root=args.workspace_root)
+    run_checkout_server(host=args.host, port=args.port, billing=billing)
 
 
 if __name__ == "__main__":

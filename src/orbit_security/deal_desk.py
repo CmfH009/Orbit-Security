@@ -16,7 +16,9 @@ import re
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
+
+from orbit_security.billing_onboarding import resolve_deal_desk_tier_key
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 WORKSPACE_ROOT = Path("A:/") if Path("A:/").exists() else REPO_ROOT.parent
@@ -58,7 +60,9 @@ class RetainerDealDeskConcierge:
         workspace_root: Optional[Path] = None,
         portals_dir: Optional[Path] = None,
         bundles_dir: Optional[Path] = None,
+        event_publisher: Optional[Callable[..., Any]] = None,
     ):
+        self._event_publisher = event_publisher
         if workspace_root:
             self.workspace_root = Path(workspace_root)
             if (self.workspace_root / "docs" / "portals").exists() or (self.workspace_root / "src" / "orbit_security").exists():
@@ -76,6 +80,34 @@ class RetainerDealDeskConcierge:
             self._is_repo_workspace = (self.portals_dir.resolve() == PORTALS_OUTPUT_DIR.resolve())
         self.portals_dir.mkdir(parents=True, exist_ok=True)
         self.bundles_dir.mkdir(parents=True, exist_ok=True)
+
+    def _emit_event(
+        self,
+        event_type: str,
+        payload: Dict[str, Any],
+        *,
+        source: str = "deal_desk",
+        topic: str = "commercial",
+    ) -> None:
+        try:
+            if self._event_publisher is not None:
+                self._event_publisher(
+                    event_type=event_type,
+                    payload=payload,
+                    source=source,
+                    topic=topic,
+                )
+                return
+            from orbit_security.blackboard import publish_event
+
+            publish_event(
+                event_type=event_type,
+                payload=payload,
+                source=source,
+                topic=topic,
+            )
+        except Exception:
+            pass
 
     def generate_portal_for_agency(
         self,
@@ -116,16 +148,7 @@ class RetainerDealDeskConcierge:
         if not is_safe:
             portal_file = (self.portals_dir / f"agency_{int(time.time())}.html").resolve()
 
-        tier_map = {
-            "starter": "monitoring",
-            "monitoring": "monitoring",
-            "scale": "remediation",
-            "growth": "remediation",
-            "remediation": "remediation",
-            "enterprise": "enterprise",
-            "pro": "enterprise",
-        }
-        normalized_tier = tier_map.get(str(tier or "remediation").strip().lower(), "remediation")
+        normalized_tier = resolve_deal_desk_tier_key(tier)
         tier_info = RETAINER_PRICING_TIERS.get(normalized_tier, RETAINER_PRICING_TIERS["remediation"])
         client_dom = primary_client_domain or custom_domain or f"client.{clean_id}.com"
 
@@ -359,25 +382,21 @@ class RetainerDealDeskConcierge:
             if landing_portal_file.parent.exists():
                 landing_portal_file.write_text(portal_html, encoding="utf-8")
 
-        # Publish event to blackboard
-        try:
-            from orbit_security.blackboard import publish_event
-            publish_event(
-                event_type="PORTAL_GENERATED",
-                payload={
-                    "agency_id": clean_id,
-                    "agency_name": agency_name,
-                    "tier": tier,
-                    "portal_path": str(portal_file),
-                    "checkout_url": tier_info["checkout_url"],
-                    "monthly_usd": tier_info["monthly_usd"],
-                    "portfolio_domains": portfolio_domains or []
-                },
-                source="deal_desk",
-                topic="commercial"
-            )
-        except Exception:
-            pass
+        # Publish event to blackboard (or injected event_publisher)
+        self._emit_event(
+            event_type="PORTAL_GENERATED",
+            payload={
+                "agency_id": clean_id,
+                "agency_name": agency_name,
+                "tier": tier,
+                "portal_path": str(portal_file),
+                "checkout_url": tier_info["checkout_url"],
+                "monthly_usd": tier_info["monthly_usd"],
+                "portfolio_domains": portfolio_domains or [],
+            },
+            source="deal_desk",
+            topic="commercial",
+        )
 
         return {
             "ok": True,
@@ -437,23 +456,33 @@ class RetainerDealDeskConcierge:
             output_dir=bundles_target,
         )
 
-        # Broadcast event to blackboard if available
-        try:
-            from orbit_security.blackboard import get_blackboard
-            bb = get_blackboard()
-            bb.publish(
+        # Broadcast event to blackboard (or injected event_publisher)
+        bundle_payload = {
+            "agency_id": agency_id,
+            "bundle_path": result.get("bundle_path"),
+            "sha256": result.get("sha256"),
+            "timestamp": result.get("generated_at"),
+        }
+        if self._event_publisher is not None:
+            self._emit_event(
                 event_type="CLIENT_BUNDLE_GENERATED",
-                data={
-                    "agency_id": agency_id,
-                    "bundle_path": result.get("bundle_path"),
-                    "sha256": result.get("sha256"),
-                    "timestamp": result.get("generated_at"),
-                },
+                payload=bundle_payload,
                 source="deal_desk",
                 topic="commercial",
             )
-        except Exception:
-            pass
+        else:
+            try:
+                from orbit_security.blackboard import get_blackboard
+
+                bb = get_blackboard()
+                bb.publish(
+                    event_type="CLIENT_BUNDLE_GENERATED",
+                    data=bundle_payload,
+                    source="deal_desk",
+                    topic="commercial",
+                )
+            except Exception:
+                pass
 
         return result
 
@@ -549,24 +578,20 @@ class RetainerDealDeskConcierge:
                 f"Best,\nCarson Haynes\nPrincipal Systems Architect"
             )
 
-        # Publish negotiation event to blackboard
-        try:
-            from orbit_security.blackboard import publish_event
-            publish_event(
-                event_type="LEAD_NEGOTIATION_STAGED",
-                payload={
-                    "sender": sender,
-                    "agency_name": raw_agency_name,
-                    "intent": intent,
-                    "tier": tier_key,
-                    "portal_path": portal_path,
-                    "checkout_url": checkout_url
-                },
-                source="deal_desk",
-                topic="commercial"
-            )
-        except Exception:
-            pass
+        # Publish negotiation event to blackboard (or injected event_publisher)
+        self._emit_event(
+            event_type="LEAD_NEGOTIATION_STAGED",
+            payload={
+                "sender": sender,
+                "agency_name": raw_agency_name,
+                "intent": intent,
+                "tier": tier_key,
+                "portal_path": portal_path,
+                "checkout_url": checkout_url,
+            },
+            source="deal_desk",
+            topic="commercial",
+        )
 
         return {
             "ok": True,
