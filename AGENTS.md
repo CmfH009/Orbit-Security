@@ -22,3 +22,8 @@ Orbit Security is an autonomous attack surface sentinel and perimeter auditor bu
 2. **Backend Empirical Verification**: Run `pytest tests/test_opencode_remediation.py tests/test_audit_scoring.py` before committing backend changes.
 3. **Conventional Commits**: Format commit messages as `fix(security): ...`, `feat(landing): ...`, `feat(recon): ...`, etc.
 4. **Quota Preservation**: OpenCode is configured with free-tier and local models (`opencode/deepseek-v4.1-flash-free` or `ollama/orbit-coder:latest`) to preserve API quotas.
+
+## 📚 Domain Docs (On-Demand)
+- **Domain Vocabulary**: `GLOSSARY.md` (use exact terms in specs, code, and PRs)
+- **Architecture Decisions**: `docs/adr/` (read before altering core seams; mint new ADRs on one-way choices)
+- **Review-Only Standards**: `CODING_STANDARDS.md` (load during code review only, not routine implementation)

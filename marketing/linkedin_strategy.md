@@ -4,6 +4,12 @@ A complete blueprint for establishing Carson's authority as Founder & Principal 
 
 ---
 
+## Part 0: Voice & Anti-Slop Guardrails (Mandatory)
+- **Connection Note Character Cap**: Strictly `<= 200` characters (aim for `160–185` chars so it fits LinkedIn's 200-char limit without truncation).
+- **Zero LinkedIn Broetry**: Read `C:\Users\purav\.gemini\config\skills\stop-slop\SKILL.md` before drafting any post or DM. No em-dashes (`—`), no one-sentence-per-line dramatic pauses, no `#HashtagSoup`, no `🥂/🚀/👉` emojis, and no fake engagement bait. Write in Carson's direct first-person engineering voice.
+
+---
+
 ## Part 1: Orbit Security LinkedIn Company Page Setup Blueprint
 
 Create a LinkedIn Company page via [linkedin.com/company/setup/new/](https://www.linkedin.com/company/setup/new/) using your agency email (`carsonmail009@gmail.com`).
