@@ -682,10 +682,13 @@
                             Active perimeter exploits &amp; dangling DNS drift — check client exposure live below.
                         </span>
                     </div>
-                    <div class="advisory-cta-wrap gap-2">
+                    <div class="advisory-cta-wrap gap-2 flex-wrap">
                         <a href="#kev-epss-radar" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-cyan-500/40 text-cyan-300 font-mono text-[11px] font-bold transition-all inline-flex items-center justify-center whitespace-nowrap">
                             KEV Radar &rarr;
                         </a>
+                        <button type="button" id="copyThreatAlertBtn" onclick="copyNovThreatAlert()" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-amber-500/40 text-amber-300 font-mono text-[11px] font-bold transition-all inline-flex items-center justify-center whitespace-nowrap cursor-pointer" title="Copy client-ready NGINX nginx2root &amp; OpenSSL alert email">
+                            📋 Copy Alert
+                        </button>
                         <button type="button" onclick="if(window.setScanTarget){setScanTarget('shopify.com');} const el=document.getElementById('audit-terminal'); if(el){el.scrollIntoView({behavior:'smooth',block:'center'});} const btn=document.getElementById('scanBtn'); if(btn){setTimeout(function(){btn.click();},350);}" class="min-h-[38px] px-3.5 py-1.5 rounded-lg text-slate-950 font-bold text-xs uppercase font-sans tracking-wide transition-all pixel-btn flex items-center justify-center gap-1.5 cursor-pointer" style="background: linear-gradient(90deg, #f59e0b 0%, #10b981 100%); color: #020617; white-space: nowrap;">
                             <span>Scan Perimeter</span>
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
@@ -4373,6 +4376,34 @@ Best regards,
                 }
             });
         }
+
+        function copyNovThreatAlert() {
+            const agency = getActiveAgencyName();
+            const alertText = [
+                'Subject: [Urgent Perimeter Advisory] NGINX (nginx2root) & OpenSSL CVE-2026-121481 Check',
+                '',
+                'Hi [Client Name],',
+                '',
+                `Two critical infrastructure advisories dropped this week — NGINX nginx2root (5 HTTP/2 & HTTP/3 CVEs, CVSS 9.2; patch to 1.30.7/1.31.9) and OpenSSL EVP_EncodeBlock() CVE-2026-121481 (CVSS 9.8).`,
+                '',
+                `Our team at ${agency} is running a passive external perimeter & DNS hygiene sweep across client domains to confirm SSL/TLS exposure, DMARC enforcement, and zero dangling CNAMEs.`,
+                '',
+                'Reply "RUN CHECK" if you want us to send over your executive perimeter scorecard PDF today.',
+                '',
+                `Best,\n${agency}`
+            ].join('\n');
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(alertText).catch(() => {});
+            }
+            if (window.SimpleCat && SimpleCat.playPowerUp) SimpleCat.playPowerUp();
+            const btn = document.getElementById('copyThreatAlertBtn');
+            if (btn) {
+                const orig = btn.textContent;
+                btn.textContent = '✓ Copied Alert!';
+                setTimeout(() => { btn.textContent = orig; }, 2200);
+            }
+        }
+        window.copyNovThreatAlert = copyNovThreatAlert;
 
         function copyClientPitch() {
             const subj = document.getElementById('pitchSubjectDisplay')?.textContent || '';

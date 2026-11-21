@@ -317,11 +317,18 @@
         <div id="leadConfirmation" class="hidden text-xs text-emerald-400 font-mono space-y-2">
           <div id="leadConfirmationMsg">✓ Remediation Fixpack bundle generated and downloaded.</div>
         </div>
-        <div class="pt-1">
+        <div class="pt-1 flex flex-wrap items-center justify-center gap-3">
+          <a
+            id="auditFleetCta"
+            href="fleet.html"
+            class="inline-flex items-center gap-2 min-h-[44px] px-5 py-2.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-300 font-bold text-xs uppercase tracking-wide transition"
+          >
+            Track in Fleet Command &rarr;
+          </a>
           <a
             id="auditSignupCta"
             href="signup.html?tier=growth"
-            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold text-xs uppercase tracking-wide transition"
+            class="inline-flex items-center gap-2 min-h-[44px] px-5 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold text-xs uppercase tracking-wide transition"
           >
             Activate Continuous Monitoring &amp; Portal &rarr;
           </a>
@@ -623,6 +630,10 @@
       if (signupCta) {
         const recommendedTier = score < 70 ? "growth" : "starter";
         signupCta.href = `signup.html?domain=${encodeURIComponent(domain)}&tier=${recommendedTier}`;
+      }
+      const fleetCta = document.getElementById("auditFleetCta");
+      if (fleetCta) {
+        fleetCta.href = `fleet.html?domain=${encodeURIComponent(domain)}`;
       }
       window._lastAuditSnapshot = { domain, score, grade, spfRecord, dmarcRecord, takeovers };
       window._lastBackendFixpack = null;
