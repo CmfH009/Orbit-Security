@@ -20,7 +20,7 @@ from orbit_security.egress_guard import (
     create_guarded_async_httpx_client,
     enforce_egress_or_raise,
 )
-from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES
+from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES, is_ambiguous_cloudfront_error
 from orbit_security.dns_cache import get_orbit_async_resolver
 from orbit_security.network_bonding import create_bonded_http_client
 from orbit_security.scoring import STATIC_HOST_SUFFIXES
@@ -710,6 +710,8 @@ class OrbitSecurityScanner:
                                     resp = await client.get(url)
                                     for fp in sig.fingerprints:
                                         if fp.lower() in resp.text.lower():
+                                            if is_ambiguous_cloudfront_error(sig.name, cname, resp.text):
+                                                continue
                                             return Finding(
                                                 title=f"Dangling CNAME / Subdomain Takeover Risk ({sig.name})",
                                                 severity=Severity.CRITICAL,

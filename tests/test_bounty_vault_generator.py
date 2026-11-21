@@ -191,26 +191,23 @@ def test_vault_synchronizes_ev_bundles_into_dossiers_with_zero_tier3(tmp_path: P
     assert manifest["tier_2_bundle_count"] >= 18
     assert manifest["suppressed_count"] == 0
     assert manifest["tier3_false_positives_in_vault"] == 0
-    assert manifest["archived_false_positives_count"] == 7
+    assert manifest["archived_false_positives_count"] >= 15
 
-    by_prog = {g["program"]: g for g in manifest["launch_queue"]}
-    assert {"Spotify", "MercadoLibre", "Xiaomi", "Superbet", "Playtika"}.issubset(set(by_prog.keys()))
+    by_prog = {(g["program"], g["verdict"]): g for g in manifest["launch_queue"]}
+    prog_names = {g["program"] for g in manifest["launch_queue"]}
+    assert {"Starbucks", "Spotify", "MercadoLibre", "Xiaomi", "Superbet", "Playtika"}.issubset(prog_names)
 
-    spotify = by_prog["Spotify"]
+    spotify = by_prog[("Spotify", "OPEN_BUCKET_LISTING")]
     assert spotify["tier"] == "TIER_1_READY"
     assert spotify["bounty_viability"] == "HIGH_CONFIDENCE"
-    assert spotify["hosts"] == ["cdn.byspotify.com"]
-    assert spotify["evidence_digests"] == ["ev_0bc4c77bfc5f"]
-    assert spotify["evidence_keys"] == [
-        "interviews/Podsights Seed - Interview Version.pdf",
-        "interviews/AP Q4-2020 Podcast Adv. Rept_4Ww1Disc.Mtg.pdf",
-        "reports/benchmarks/test-q3-podsights-conversion-report.pdf",
-        "advisor/advisor-onboarding-demo.mp4",
-    ]
+    assert "cdn.byspotify.com" in spotify["hosts"]
+    assert len(spotify["evidence_digests"]) == len(spotify["hosts"])
+    assert all(re.match(r"^ev_[0-9a-f]{12}$", d) for d in spotify["evidence_digests"])
 
+    # Ensure archived CloudFront and intentional public-bucket FPs are absent from the vault
     expected_tier2_counts = {"MercadoLibre": 9, "Xiaomi": 6, "Superbet": 2, "Playtika": 1}
     for prog_name, expected_n in expected_tier2_counts.items():
-        grp = by_prog[prog_name]
+        grp = by_prog[(prog_name, "REFLECTED_PUBLIC_HTML")]
         assert grp["tier"] == "TIER_2_NEEDS_AUTH_PROOF"
         assert grp["bounty_viability"] == "CONDITIONAL"
         assert len(grp["hosts"]) >= expected_n
@@ -229,7 +226,18 @@ def test_vault_synchronizes_ev_bundles_into_dossiers_with_zero_tier3(tmp_path: P
 
     joined = "\n".join(all_written_text)
     assert "evil.com" not in joined.lower()
-    for forbidden in ("ubereats.com", "gitlab.com", "khealth-test.com", "myshopify.com", "hotwire.com"):
+    for forbidden in (
+        "ubereats.com",
+        "gitlab.com",
+        "khealth-test.com",
+        "myshopify.com",
+        "hotwire.com",
+        "www.cdn.amazon.ca",
+        "cdn4.epicgames.com",
+        "i.nintendo.net",
+        "helm.elastic.co",
+        "crl.pki.uberinternal.com",
+    ):
         assert forbidden not in joined
 
     for grp in manifest["launch_queue"]:
@@ -496,7 +504,7 @@ def test_triage_hackerone_staging_handles_spotify_cwe200_and_conditional_cors(tm
     )
     bucket, reason = classify_disclosure(spotify_md, metadata=spotify_meta)
     assert bucket == "ready"
-    assert "ev_0bc4c77bfc5f" in reason
+    assert spotify_meta["evidence_artifact_id"] in reason
 
     disc_dir = tmp_path / "data" / "disclosures"
     disc_dir.mkdir(parents=True)

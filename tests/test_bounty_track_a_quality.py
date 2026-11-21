@@ -917,3 +917,205 @@ class TestRound4JsSecretFilterAndProgramHygiene:
                     explicit_vulns = sweeper.sweep_program(explicit_prog, audit_graphql=True)
 
         assert explicit_vulns[0].bounty_viability == "HIGH_CONFIDENCE"
+
+
+class TestRound5FalsePositiveHardeningGuards:
+    """TDD guards for CloudFront 403 FP, intentional public buckets, and unauthenticated CORS caps."""
+
+    def test_cloudfront_generic_error_suppressed_while_nxdomain_takeover_kept(self):
+        from orbit_security.cname_takeover import PassiveTakeoverDetector
+
+        sweeper = BountyTakeoverSweeper()
+        cf_403 = (
+            "<HTML><HEAD><TITLE>ERROR: The request could not be satisfied</TITLE></HEAD>"
+            "<BODY><H1>403 ERROR</H1><H2>The request could not be satisfied.</H2></BODY></HTML>"
+        )
+
+        for host, cname in (
+            ("www.cdn.amazon.ca", "djz1tax43w9ei.cloudfront.net"),
+            ("cdn4.epicgames.com", "dy94g1i517q3a.cloudfront.net"),
+            ("i.nintendo.net", "d12345example.cloudfront.net"),
+        ):
+            res = sweeper.check_subdomain_takeover(
+                host,
+                mock_cname=cname,
+                mock_body=cf_403,
+            )
+            assert res is None, f"Generic CloudFront 403 error on {host} must not be flagged as takeover"
+
+            passive = PassiveTakeoverDetector().evaluate_cname(
+                domain=host,
+                cname_target=cname,
+                body_snippet=cf_403,
+            )
+            assert passive is None, f"PassiveTakeoverDetector must suppress generic CloudFront error on {host}"
+
+        # Genuine Azure Traffic Manager NXDOMAIN takeover must still be detected
+        prog = BountyProgram(
+            program_id="starbucks_test",
+            name="Starbucks",
+            platform="hackerone",
+            in_scope=["www.cdn.amazon.ca", "trace-dev.starbucks.com"],
+            bounty_tier="cash",
+        )
+        vulns = sweeper.sweep_program(
+            prog,
+            mock_cnames={
+                "www.cdn.amazon.ca": "djz1tax43w9ei.cloudfront.net",
+                "trace-dev.starbucks.com": "sbux-trace-dev.trafficmanager.net",
+            },
+            mock_bodies={
+                "www.cdn.amazon.ca": cf_403,
+            },
+            mock_nxdomain_domains={"trace-dev.starbucks.com"},
+        )
+        by_host = {v.target_domain: v for v in vulns}
+        assert "www.cdn.amazon.ca" not in by_host
+        assert "trace-dev.starbucks.com" in by_host
+        assert by_host["trace-dev.starbucks.com"].flaw_type == "subdomain_takeover"
+        assert by_host["trace-dev.starbucks.com"].bounty_viability == "HIGH_CONFIDENCE"
+
+    def test_intentional_public_buckets_downgraded_unless_sensitive_keys_proven(self):
+        from orbit_security.cloud_sentinels import CloudBucketTakeoverSentinel
+
+        helm_public_xml = (
+            "<ListBucketResult><Name>helm-elastic</Name>"
+            "<Contents><Key>index.yaml</Key></Contents>"
+            "<Contents><Key>elasticsearch-8.5.1.tgz</Key></Contents>"
+            "</ListBucketResult>"
+        )
+        crl_public_xml = (
+            "<ListBucketResult><Name>uber-crl</Name>"
+            "<Contents><Key>uber-root-ca.crl</Key></Contents>"
+            "<Contents><Key>uber-intermediate.crt</Key></Contents>"
+            "</ListBucketResult>"
+        )
+        sensitive_xml = (
+            "<ListBucketResult><Name>helm-elastic</Name>"
+            "<Contents><Key>index.yaml</Key></Contents>"
+            "<Contents><Key>private/prod_db_backup.sql</Key></Contents>"
+            "</ListBucketResult>"
+        )
+
+        for host, xml in (
+            ("helm.elastic.co", helm_public_xml),
+            ("charts.acme.com", helm_public_xml),
+            ("crl.pki.uberinternal.com", crl_public_xml),
+            ("ocsp.acme.com", crl_public_xml),
+        ):
+            res = CloudBucketTakeoverSentinel.audit_target(
+                target_domain=host,
+                mock_body=xml,
+                mock_status=200,
+            )
+            assert res is not None
+            assert res["bounty_viability"] != "HIGH_CONFIDENCE", (
+                f"Public-by-design bucket {host} without sensitive keys must not be HIGH_CONFIDENCE"
+            )
+            assert res["bounty_viability"] == "INFORMATIONAL_LOW"
+
+        # If sensitive/non-public keys ARE proven, keep HIGH_CONFIDENCE
+        res_sens = CloudBucketTakeoverSentinel.audit_target(
+            target_domain="helm.elastic.co",
+            mock_body=sensitive_xml,
+            mock_status=200,
+        )
+        assert res_sens is not None
+        assert res_sens["bounty_viability"] == "HIGH_CONFIDENCE"
+
+        # Normal non-public-by-design bucket host still stays HIGH_CONFIDENCE
+        res_normal = CloudBucketTakeoverSentinel.audit_target(
+            target_domain="cdn.byspotify.com",
+            mock_body="<ListBucketResult><Name>cdn</Name><Contents><Key>decks/pitch.pdf</Key></Contents></ListBucketResult>",
+            mock_status=200,
+        )
+        assert res_normal is not None
+        assert res_normal["bounty_viability"] == "HIGH_CONFIDENCE"
+
+    def test_unauthenticated_cors_capped_at_conditional_and_static_hosts_suppressed(self):
+        arb_mock = {
+            CorsMisconfigurationSentinel.TEST_ORIGIN: {
+                "access-control-allow-origin": CorsMisconfigurationSentinel.TEST_ORIGIN,
+                "access-control-allow-credentials": "true",
+            }
+        }
+        null_mock = {
+            CorsMisconfigurationSentinel.TEST_ORIGIN: {},
+            CorsMisconfigurationSentinel.NULL_ORIGIN: {
+                "access-control-allow-origin": "null",
+                "access-control-allow-credentials": "true",
+            },
+        }
+
+        # 1. Unauthenticated CORS in CorsMisconfigurationSentinel must NEVER be HIGH_CONFIDENCE
+        res_arb = CorsMisconfigurationSentinel.audit_target("business.paypal.com", mock_responses=arb_mock)
+        assert res_arb is not None
+        assert res_arb["bounty_viability"] == "CONDITIONAL"
+        assert res_arb["severity"] == Severity.MEDIUM
+        assert res_arb["cvss_score"] == 5.4
+
+        res_null = CorsMisconfigurationSentinel.audit_target("amplify.expediagroup.com", mock_responses=null_mock)
+        assert res_null is not None
+        assert res_null["bounty_viability"] == "CONDITIONAL"
+        assert res_null["severity"] == Severity.MEDIUM
+        assert res_null["cvss_score"] == 5.4
+
+        # With explicit authenticated_proof=True, HIGH_CONFIDENCE is permitted
+        res_auth = CorsMisconfigurationSentinel.audit_target(
+            "business.paypal.com",
+            mock_responses=arb_mock,
+            authenticated_proof=True,
+        )
+        assert res_auth is not None
+        assert res_auth["bounty_viability"] == "HIGH_CONFIDENCE"
+
+        # 2. Static/CDN/telemetry hosts downgraded in sentinel and suppressed in sweeper
+        static_hosts = [
+            "assets.yelp.com",
+            "static.yelp.com",
+            "static1.yelp.com",
+            "media.yelp.com",
+            "images.mercadolibre.com.co",
+            "files.stripe.com",
+            "files.trello.com",
+            "fp.coinbase.com",
+        ]
+        for shost in static_hosts:
+            sres = CorsMisconfigurationSentinel.audit_target(shost, mock_responses=arb_mock)
+            assert sres is not None
+            assert sres["bounty_viability"] == "INFORMATIONAL_LOW", f"{shost} must be downgraded to INFORMATIONAL_LOW"
+
+        sweeper = BountyTakeoverSweeper()
+        prog = BountyProgram(
+            program_id="cors_guard",
+            name="CORS Guard",
+            platform="hackerone",
+            in_scope=["api.acme.com"] + static_hosts,
+            bounty_tier="cash",
+        )
+        mock_cors = {
+            h: {
+                CorsMisconfigurationSentinel.TEST_ORIGIN: {
+                    "access-control-allow-origin": CorsMisconfigurationSentinel.TEST_ORIGIN,
+                    "access-control-allow-credentials": "true",
+                    "content-type": "application/json",
+                }
+            }
+            for h in ["api.acme.com"] + static_hosts
+        }
+        mock_bodies = {h: '{"status":"ok"}' for h in ["api.acme.com"] + static_hosts}
+
+        vulns = sweeper.sweep_program(
+            prog,
+            audit_cors=True,
+            mock_cors_responses=mock_cors,
+            mock_bodies=mock_bodies,
+        )
+        by_host = {v.target_domain: v for v in vulns}
+        for shost in static_hosts:
+            assert shost not in by_host, f"Static/CDN/telemetry host {shost} must be suppressed in sweep_program"
+        assert "api.acme.com" in by_host
+        assert by_host["api.acme.com"].bounty_viability == "CONDITIONAL"
+        assert by_host["api.acme.com"].severity == Severity.MEDIUM
+        assert by_host["api.acme.com"].cvss_score == 5.4
+

@@ -18,7 +18,11 @@ import time
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES, SaasSignature
+from orbit_security.signatures import (
+    SAAS_TAKEOVER_SIGNATURES,
+    SaasSignature,
+    is_ambiguous_cloudfront_error,
+)
 
 logger = logging.getLogger("orbit_security.cname_takeover")
 
@@ -86,6 +90,8 @@ class PassiveTakeoverDetector:
             if clean_body:
                 for fp in sig.fingerprints:
                     if fp.lower() in clean_body:
+                        if is_ambiguous_cloudfront_error(sig.name, clean_cname, body_snippet):
+                            continue
                         finding = TakeoverFinding(
                             domain=clean_domain,
                             provider=sig.name,

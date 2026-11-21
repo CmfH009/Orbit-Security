@@ -173,10 +173,20 @@ class TestCorsMisconfigurationSentinel:
         assert res is not None
         assert res["vulnerable"] is True
         assert res["flaw_type"] == "cors_arbitrary_origin_with_credentials"
-        assert res["severity"] == Severity.HIGH
-        assert res["cvss_score"] == 8.1
+        assert res["severity"] == Severity.MEDIUM
+        assert res["cvss_score"] == 5.4
         assert "blindly reflects untrusted Origin" in res["evidence"]
-        assert res["bounty_viability"] == "HIGH_CONFIDENCE"
+        assert res["bounty_viability"] == "CONDITIONAL"
+
+        res_auth = CorsMisconfigurationSentinel.audit_target(
+            target_domain="api.target.com",
+            mock_responses=mock_responses,
+            authenticated_proof=True,
+        )
+        assert res_auth is not None
+        assert res_auth["severity"] == Severity.HIGH
+        assert res_auth["cvss_score"] == 8.1
+        assert res_auth["bounty_viability"] == "HIGH_CONFIDENCE"
 
     def test_audit_cors_null_origin_with_credentials(self):
         mock_responses = {
@@ -195,8 +205,9 @@ class TestCorsMisconfigurationSentinel:
         assert res is not None
         assert res["vulnerable"] is True
         assert res["flaw_type"] == "cors_null_origin_with_credentials"
-        assert res["severity"] == Severity.HIGH
-        assert res["cvss_score"] == 7.1
+        assert res["severity"] == Severity.MEDIUM
+        assert res["cvss_score"] == 5.4
+        assert res["bounty_viability"] == "CONDITIONAL"
         assert "Origin 'null'" in res["evidence"]
 
     def test_audit_cors_wildcard(self):
@@ -334,7 +345,8 @@ class TestBountySweeperCloudIntegration:
         assert gql_vuln.cvss_score == 5.3
 
         cors_vuln = next(v for v in vulns if v.flaw_type == "cors_arbitrary_origin_with_credentials")
-        assert cors_vuln.cvss_score == 8.1
+        assert cors_vuln.cvss_score == 5.4
+        assert cors_vuln.bounty_viability == "CONDITIONAL"
 
 
 class TestPassiveTlsAndEmailSentinels:

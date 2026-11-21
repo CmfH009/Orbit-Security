@@ -33,7 +33,11 @@ from orbit_security.cert_transparency import (
 from orbit_security.dns_cache import get_orbit_sync_resolver
 from orbit_security.models import Severity
 from orbit_security.notifications import BountyAlertPayload, WebhookDispatcher
-from orbit_security.signatures import SAAS_TAKEOVER_SIGNATURES, SaasSignature
+from orbit_security.signatures import (
+    SAAS_TAKEOVER_SIGNATURES,
+    SaasSignature,
+    is_ambiguous_cloudfront_error,
+)
 
 logger = logging.getLogger("orbit_security.bounty_radar")
 
@@ -1570,6 +1574,8 @@ class BountyTakeoverSweeper:
 
             for fp in sig.fingerprints:
                 if fp.lower() in (body or "").lower():
+                    if is_ambiguous_cloudfront_error(sig.name, cname_target, body):
+                        continue
                     # If host presents a valid custom SSL cert matching the target domain,
                     # the domain is actively bound to an authorized tenant in the cloud provider.
                     if mock_body is None and self.is_ssl_cert_bound_to_domain(domain):
@@ -1778,7 +1784,9 @@ class BountyTakeoverSweeper:
         mock_body: Optional[str] = None,
         cors_mock: Optional[Dict[str, Any]] = None,
     ) -> Optional[Dict[str, Any]]:
-        """Filter empty-body CORS telemetry and downgrade public HTML-only root reflection."""
+        """Filter empty-body / static-CDN CORS telemetry and cap unauthenticated CORS at CONDITIONAL."""
+        from orbit_security.cloud_sentinels import is_static_cdn_or_telemetry_host
+
         hdrs: Dict[str, Any] = {}
         if isinstance(cors_mock, dict):
             for entry in cors_mock.values():
@@ -1801,6 +1809,13 @@ class BountyTakeoverSweeper:
         if (body_text is not None and not body_text.strip()) or (raw_len is not None and str(raw_len).strip() == "0"):
             return None
 
+        target_domain = str(cors_res.get("target_domain") or "").strip().lower()
+        authenticated_proof = bool(cors_res.get("authenticated_proof"))
+
+        # Suppress unauthenticated CORS reflection on obvious static/CDN/telemetry hosts
+        if not authenticated_proof and is_static_cdn_or_telemetry_host(target_domain):
+            return None
+
         looks_html = ("text/html" in content_type) or (
             body_text is not None
             and ("<html" in body_text.lower() or "<!doctype html" in body_text.lower())
@@ -1813,9 +1828,27 @@ class BountyTakeoverSweeper:
             qualified["cvss_vector"] = "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N"
             qualified["bounty_viability"] = "CONDITIONAL"
             base_ev = str(cors_res.get("evidence", "")).strip()
-            qualified["evidence"] = (
-                f"{base_ev} [PUBLIC_HTML_ONLY: verify authenticated JSON/API endpoint exposing user data or CSRF tokens before H1 submission]"
-            ).strip()
+            if "[PUBLIC_HTML_ONLY:" not in base_ev:
+                qualified["evidence"] = (
+                    f"{base_ev} [PUBLIC_HTML_ONLY: verify authenticated JSON/API endpoint exposing user data or CSRF tokens before H1 submission]"
+                ).strip()
+            return qualified
+
+        # Cap all unauthenticated CORS reflection hits at CONDITIONAL (TIER_2_NEEDS_AUTH_PROOF)
+        if not authenticated_proof and str(cors_res.get("flaw_type", "")) in {
+            "cors_arbitrary_origin_with_credentials",
+            "cors_null_origin_with_credentials",
+        }:
+            qualified = dict(cors_res)
+            qualified["severity"] = Severity.MEDIUM
+            qualified["cvss_score"] = 5.4
+            qualified["cvss_vector"] = "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N"
+            qualified["bounty_viability"] = "CONDITIONAL"
+            base_ev = str(cors_res.get("evidence", "")).strip()
+            if "[TIER_2_NEEDS_AUTH_PROOF:" not in base_ev and "[PUBLIC_HTML_ONLY:" not in base_ev:
+                qualified["evidence"] = (
+                    f"{base_ev} [TIER_2_NEEDS_AUTH_PROOF: unauthenticated CORS reflection; verify with authenticated session/cookie replay proving sensitive user data exposure]"
+                ).strip()
             return qualified
 
         return cors_res

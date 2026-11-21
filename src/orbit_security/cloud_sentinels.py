@@ -29,6 +29,95 @@ from orbit_security.scanner import is_safe_host
 
 logger = logging.getLogger("orbit_security.cloud_sentinels")
 
+INTENTIONAL_PUBLIC_BUCKET_PREFIXES: Tuple[str, ...] = ("helm", "charts", "crl", "ocsp")
+_STATIC_CDN_TELEMETRY_LABEL_RE = re.compile(r"^(?:assets|static[a-z0-9_-]*|media|images|files|fp)$")
+_SENSITIVE_BUCKET_KEY_EXTENSIONS: Tuple[str, ...] = (
+    ".sql",
+    ".sql.gz",
+    ".bak",
+    ".backup",
+    ".env",
+    ".key",
+    ".dump",
+    ".sqlite",
+    ".db",
+    ".xlsx",
+    ".csv",
+    ".pdf",
+    ".p12",
+    ".pfx",
+    ".jks",
+)
+_SENSITIVE_BUCKET_KEY_KEYWORDS: Tuple[str, ...] = (
+    "secret",
+    "credential",
+    "password",
+    "private",
+    "confidential",
+    "internal",
+    "payroll",
+    "salary",
+    "backup",
+    "dump",
+    "investor",
+    "pitch",
+    "seed",
+    "audit",
+    "finance",
+    "token",
+    "apikey",
+    "api_key",
+)
+
+
+def is_intentional_public_bucket_host(host: str) -> bool:
+    """Return True for hostnames backed by public-by-design chart/PKI buckets (helm.*, charts.*, crl.*, ocsp.*)."""
+    clean = (host or "").strip().lower().rstrip(".")
+    if "://" in clean:
+        clean = urllib.parse.urlparse(clean).hostname or clean
+    clean = clean.split(":")[0]
+    if not clean or "." not in clean:
+        return False
+    first_label = clean.split(".", 1)[0]
+    return first_label in INTENTIONAL_PUBLIC_BUCKET_PREFIXES
+
+
+def has_sensitive_bucket_keys(xml_body: str, host: str = "") -> Tuple[bool, List[str]]:
+    """Inspect XML bucket listing for proven sensitive/non-public object keys."""
+    if not xml_body:
+        return False, []
+    keys = re.findall(r"<Key>(.*?)</Key>", xml_body, re.IGNORECASE)
+    if not keys:
+        return False, []
+    is_pki_host = is_intentional_public_bucket_host(host) and (
+        host.strip().lower().startswith(("crl.", "ocsp."))
+    )
+    matched: List[str] = []
+    for key in keys:
+        key_clean = key.strip()
+        key_low = key_clean.lower()
+        if not key_clean or key_clean.endswith("/"):
+            continue
+        has_ext = any(key_low.endswith(ext) for ext in _SENSITIVE_BUCKET_KEY_EXTENSIONS)
+        if not has_ext and key_low.endswith(".pem") and not is_pki_host:
+            has_ext = True
+        has_kw = any(kw in key_low for kw in _SENSITIVE_BUCKET_KEY_KEYWORDS)
+        if has_ext or has_kw:
+            matched.append(key_clean)
+    return bool(matched), matched
+
+
+def is_static_cdn_or_telemetry_host(host: str) -> bool:
+    """Return True for obvious static/CDN/telemetry hostnames (assets.*, static*.*, media.*, images.*, files.*, fp.*)."""
+    clean = (host or "").strip().lower().rstrip(".")
+    if "://" in clean:
+        clean = urllib.parse.urlparse(clean).hostname or clean
+    clean = clean.split(":")[0]
+    if not clean or "." not in clean:
+        return False
+    first_label = clean.split(".", 1)[0]
+    return bool(_STATIC_CDN_TELEMETRY_LABEL_RE.match(first_label))
+
 
 
 class CloudBucketTakeoverSentinel:
@@ -149,19 +238,39 @@ class CloudBucketTakeoverSentinel:
         # Check for Open Public Bucket Listing (Data Exposure)
         for open_fp in cls.OPEN_LISTING_FINGERPRINTS:
             if open_fp.lower() in body.lower():
+                is_intentional_public = is_intentional_public_bucket_host(target_domain)
+                has_sensitive_keys, matched_keys = has_sensitive_bucket_keys(body, target_domain)
+                if is_intentional_public and not has_sensitive_keys:
+                    sev = Severity.LOW
+                    cvss_score = 3.1
+                    cvss_vector = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+                    viability = "INFORMATIONAL_LOW"
+                    ev_text = (
+                        f"Public cloud storage bucket listing is exposed on '{target_domain}'. "
+                        f"Signature match: '{open_fp}'. "
+                        "[INTENTIONAL_PUBLIC_BUCKET: public-by-design chart/PKI host without proven sensitive object keys]"
+                    )
+                else:
+                    sev = Severity.HIGH
+                    cvss_score = 7.5
+                    cvss_vector = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+                    viability = "HIGH_CONFIDENCE"
+                    ev_text = f"Public cloud storage bucket listing is exposed on '{target_domain}'. Signature match: '{open_fp}'."
+                    if matched_keys:
+                        ev_text += f" Sensitive keys proven: {', '.join(matched_keys[:5])}."
                 result = {
                     "vulnerable": True,
                     "flaw_type": "open_cloud_bucket",
                     "provider": provider or "Cloud Storage",
                     "cname_target": cname_target,
                     "target_domain": target_domain,
-                    "severity": Severity.HIGH,
-                    "cvss_score": 7.5,
-                    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+                    "severity": sev,
+                    "cvss_score": cvss_score,
+                    "cvss_vector": cvss_vector,
                     "cwe_id": "CWE-284: Improper Access Control",
-                    "evidence": f"Public cloud storage bucket listing is exposed on '{target_domain}'. Signature match: '{open_fp}'.",
+                    "evidence": ev_text,
                     "remediation": "Disable public READ permissions on the cloud storage bucket and remove 'AllUsers' / 'AllAuthenticatedUsers' ACL grants.",
-                    "bounty_viability": "HIGH_CONFIDENCE",
+                    "bounty_viability": viability,
                 }
                 break
 
@@ -1112,6 +1221,7 @@ class CorsMisconfigurationSentinel:
         timeout: float = 3.5,
         mock_responses: Optional[Dict[str, Dict[str, str]]] = None,
         blackboard: Any = None,
+        authenticated_proof: bool = False,
     ) -> Optional[Dict[str, Any]]:
         """Audits domain for arbitrary CORS reflection with credentials."""
         host = target_domain.split(":")[0].strip().lower()
@@ -1120,6 +1230,7 @@ class CorsMisconfigurationSentinel:
 
         url = f"https://{host}"
         result: Optional[Dict[str, Any]] = None
+        is_static_cdn = is_static_cdn_or_telemetry_host(host)
 
         # 1. Test Arbitrary Untrusted Origin Reflection
         if mock_responses is not None:
@@ -1141,18 +1252,42 @@ class CorsMisconfigurationSentinel:
                 "strict server-side whitelist before echoing in Access-Control-Allow-Origin. Never enable Access-Control-Allow-Credentials "
                 "for untrusted or dynamic origins."
             )
+            if authenticated_proof:
+                sev, cvss_score, cvss_vec, viability = (
+                    Severity.HIGH,
+                    8.1,
+                    "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N",
+                    "HIGH_CONFIDENCE",
+                )
+            elif is_static_cdn:
+                sev, cvss_score, cvss_vec, viability = (
+                    Severity.LOW,
+                    3.7,
+                    "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                    "INFORMATIONAL_LOW",
+                )
+                evidence += " [STATIC_CDN_TELEMETRY_HOST: unauthenticated CORS reflection on static/CDN/telemetry host]"
+            else:
+                sev, cvss_score, cvss_vec, viability = (
+                    Severity.MEDIUM,
+                    5.4,
+                    "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N",
+                    "CONDITIONAL",
+                )
+                evidence += " [TIER_2_NEEDS_AUTH_PROOF: unauthenticated CORS reflection; verify with authenticated session/cookie replay proving sensitive user data exposure]"
             result = {
                 "vulnerable": True,
                 "flaw_type": "cors_arbitrary_origin_with_credentials",
                 "provider": "API Gateway CORS",
                 "target_domain": target_domain,
-                "severity": Severity.HIGH,
-                "cvss_score": 8.1,
-                "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N",
+                "severity": sev,
+                "cvss_score": cvss_score,
+                "cvss_vector": cvss_vec,
                 "cwe_id": "CWE-942: Permissive Cross-domain Policy with Untrusted Domains",
                 "evidence": evidence,
                 "remediation": remediation,
-                "bounty_viability": "HIGH_CONFIDENCE",
+                "bounty_viability": viability,
+                "authenticated_proof": authenticated_proof,
             }
 
         # 2. Test Null Origin Trust
@@ -1178,18 +1313,42 @@ class CorsMisconfigurationSentinel:
                     "Remove 'null' from trusted origin lists. 'null' origins can be easily generated by sandboxed iframes and "
                     "attacker-controlled data URI contexts."
                 )
+                if authenticated_proof:
+                    sev, cvss_score, cvss_vec, viability = (
+                        Severity.HIGH,
+                        7.1,
+                        "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:L/A:N",
+                        "HIGH_CONFIDENCE",
+                    )
+                elif is_static_cdn:
+                    sev, cvss_score, cvss_vec, viability = (
+                        Severity.LOW,
+                        3.7,
+                        "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                        "INFORMATIONAL_LOW",
+                    )
+                    evidence += " [STATIC_CDN_TELEMETRY_HOST: unauthenticated CORS reflection on static/CDN/telemetry host]"
+                else:
+                    sev, cvss_score, cvss_vec, viability = (
+                        Severity.MEDIUM,
+                        5.4,
+                        "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N",
+                        "CONDITIONAL",
+                    )
+                    evidence += " [TIER_2_NEEDS_AUTH_PROOF: unauthenticated CORS reflection; verify with authenticated session/cookie replay proving sensitive user data exposure]"
                 result = {
                     "vulnerable": True,
                     "flaw_type": "cors_null_origin_with_credentials",
                     "provider": "API Gateway CORS",
                     "target_domain": target_domain,
-                    "severity": Severity.HIGH,
-                    "cvss_score": 7.1,
-                    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:L/A:N",
+                    "severity": sev,
+                    "cvss_score": cvss_score,
+                    "cvss_vector": cvss_vec,
                     "cwe_id": "CWE-942: Permissive Cross-domain Policy with Untrusted Domains",
                     "evidence": evidence,
                     "remediation": remediation,
-                    "bounty_viability": "HIGH_CONFIDENCE",
+                    "bounty_viability": viability,
+                    "authenticated_proof": authenticated_proof,
                 }
 
         # 3. Informational Wildcard with sensitive header
