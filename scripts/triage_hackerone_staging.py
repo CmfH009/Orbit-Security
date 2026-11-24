@@ -60,6 +60,11 @@ def classify_disclosure(
             return "ready", f"Verified credentialed CORS reflection on authenticated endpoint{ev_suffix}"
         return "verify", f"CORS credentials reflected (CONDITIONAL) — requires authenticated endpoint proof{ev_suffix}"
 
+    if flaw_type in {"subdomain_takeover", "client_subdomain_takeover"} or "Subdomain Takeover" in content:
+        if viability in {"HIGH_CONFIDENCE", "VERIFIED"} and "No dangling CNAME" not in content:
+            return "ready", f"Verified dangling subdomain takeover{ev_suffix}"
+        return "verify", f"Subdomain takeover candidate — confirm live dangling CNAME{ev_suffix}"
+
     if "CWE-200" in content:
         return "archive", f"Informational CWE-200 observation without exploit proof{ev_suffix}"
 
@@ -83,6 +88,7 @@ def triage_disclosures(
     categorized: Dict[str, List[Tuple[str, str]]] = {"ready": [], "verify": [], "archive": []}
 
     dest_map = {"ready": ready_dir, "verify": verify_dir, "archive": archive_dir}
+    written_files: Dict[str, set[str]] = {bucket: set() for bucket in dest_map}
     if not dry_run:
         for d in dest_map.values():
             d.mkdir(parents=True, exist_ok=True)
@@ -101,9 +107,18 @@ def triage_disclosures(
         if not dry_run:
             dest = dest_map[bucket]
             shutil.copy2(md, dest / md.name)
+            written_files[bucket].add(md.name)
             zip_path = disc_dir / f"{stem}_bundle.zip"
             if zip_path.is_file():
                 shutil.copy2(zip_path, dest / zip_path.name)
+                written_files[bucket].add(zip_path.name)
+
+    if not dry_run:
+        for bucket, d in dest_map.items():
+            keep = written_files[bucket]
+            for stale in list(d.glob("*.md")) + list(d.glob("*.zip")):
+                if stale.name not in keep:
+                    stale.unlink()
 
     manifest_path = staging_dir / "TRIAGE_MANIFEST.md"
     if not dry_run:

@@ -701,3 +701,115 @@ def test_verify_live_authenticated_cors_poc_replay_local_http_server(tmp_path: P
         server.shutdown()
         server.server_close()
 
+
+def test_triage_classifies_subdomain_takeover_and_prunes_stale_tier_files(tmp_path: Path):
+    data_dir = tmp_path / "data"
+    disc_dir = data_dir / "disclosures"
+    staging_dir = data_dir / "hackerone_staging"
+    disc_dir.mkdir(parents=True)
+
+    # Seed a stale file in 03_out_of_scope_archive to verify cleanup on re-triage
+    stale_archive = staging_dir / "03_out_of_scope_archive"
+    stale_archive.mkdir(parents=True)
+    stale_md = stale_archive / "starbucks_subdomain_takeover_trace_dev_starbucks_com.md"
+    stale_md.write_text("stale", encoding="utf-8")
+
+    _write_synthetic_bundle(
+        disc_dir,
+        "starbucks_subdomain_takeover_trace_dev_starbucks_com",
+        program_id="starbucks",
+        program_name="Starbucks",
+        domain="trace-dev.starbucks.com",
+        flaw_type="subdomain_takeover",
+        viability="HIGH_CONFIDENCE",
+        ev_id="ev_387efa7fba69",
+        raw_evidence="Dangling CNAME confirmed.",
+    )
+    _write_synthetic_bundle(
+        disc_dir,
+        "acme_subdomain_takeover_dev_acme_com",
+        program_id="acme",
+        program_name="Acme",
+        domain="dev.acme.com",
+        flaw_type="subdomain_takeover",
+        viability="CONDITIONAL",
+        ev_id="ev_1234567890ab",
+        raw_evidence="Needs CNAME check.",
+    )
+
+    bucket_ready, _ = classify_disclosure(
+        disc_dir / "starbucks_subdomain_takeover_trace_dev_starbucks_com.md",
+        metadata={"flaw_type": "subdomain_takeover", "bounty_viability": "HIGH_CONFIDENCE", "evidence_artifact_id": "ev_387efa7fba69"},
+    )
+    bucket_verify, _ = classify_disclosure(
+        disc_dir / "acme_subdomain_takeover_dev_acme_com.md",
+        metadata={"flaw_type": "subdomain_takeover", "bounty_viability": "CONDITIONAL", "evidence_artifact_id": "ev_1234567890ab"},
+    )
+    assert bucket_ready == "ready"
+    assert bucket_verify == "verify"
+
+    summary = triage_disclosures(data_dir=data_dir, dry_run=False)
+    assert len(summary["ready"]) == 1
+    assert len(summary["verify"]) == 1
+    assert not stale_md.exists()
+    assert (staging_dir / "01_ready_for_submission" / "starbucks_subdomain_takeover_trace_dev_starbucks_com.md").is_file()
+    assert (staging_dir / "02_needs_session_verification" / "acme_subdomain_takeover_dev_acme_com.md").is_file()
+
+
+def test_verify_live_targets_dangling_takeover_uses_dns_not_cors(monkeypatch):
+    groups = [
+        {
+            "program": "TakeoverTest",
+            "verdict": "DANGLING_TAKEOVER_VERIFIED",
+            "tier": "TIER_1_READY",
+            "hosts": ["dangling.example.com", "mitigated.example.com", "127.0.0.1"],
+            "urls": ["https://dangling.example.com/", "https://mitigated.example.com/", "http://127.0.0.1/"],
+            "bundles": [
+                {"host": "dangling.example.com", "url": "https://dangling.example.com/", "evidence_artifact_id": "ev_111111111111"},
+                {"host": "mitigated.example.com", "url": "https://mitigated.example.com/", "evidence_artifact_id": "ev_222222222222"},
+                {"host": "127.0.0.1", "url": "http://127.0.0.1/", "evidence_artifact_id": "ev_333333333333"},
+            ],
+        }
+    ]
+
+    class _NoHttpClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def get(self, url: str, headers=None):
+            raise AssertionError(f"HTTP GET should not be called for {url}")
+
+    monkeypatch.setattr(bounty_vault_generator, "create_guarded_httpx_client", lambda **kw: _NoHttpClient())
+    monkeypatch.setattr(
+        bounty_vault_generator,
+        "_resolve_live_cname",
+        lambda host, timeout=10.0: "orphan.trafficmanager.net" if host == "dangling.example.com" else None,
+    )
+    monkeypatch.setattr(
+        bounty_vault_generator,
+        "_cname_target_is_nxdomain",
+        lambda cname, timeout=10.0: cname == "orphan.trafficmanager.net",
+    )
+
+    summary = verify_live_targets(groups, timeout=5.0)
+    assert summary["targets_checked"] == 3
+    assert summary["confirmed_live_count"] == 1
+    assert summary["roe_blocked_count"] == 1
+    assert summary["cors_poc_summary"]["cors_bundles_checked"] == 0
+
+    by_host = {r["host"]: r for r in summary["results"]}
+    assert by_host["dangling.example.com"]["status"] == "CONFIRMED_LIVE"
+    assert by_host["dangling.example.com"]["verified_live"] is True
+    assert "cors_poc_replay" not in by_host["dangling.example.com"]
+
+    assert by_host["mitigated.example.com"]["status"] == "CHANGED_OR_MITIGATED"
+    assert by_host["mitigated.example.com"]["verified_live"] is False
+    assert "cors_poc_replay" not in by_host["mitigated.example.com"]
+
+    assert by_host["127.0.0.1"]["status"] == "ROE_BLOCKED"
+    assert by_host["127.0.0.1"]["verified_live"] is False
+
+

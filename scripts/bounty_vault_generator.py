@@ -31,6 +31,7 @@ SRC_DIR = REPO_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from orbit_security.dns_cache import get_orbit_sync_resolver  # noqa: E402
 from orbit_security.egress_guard import EgressViolationError, create_guarded_httpx_client  # noqa: E402
 from orbit_security.scanner import PublicHostOnlyRoE  # noqa: E402
 
@@ -585,6 +586,44 @@ def _analyze_cors_poc_response(
     }
 
 
+def _resolve_live_cname(host: str, timeout: float = 10.0) -> Optional[str]:
+    """Resolves the active CNAME target for a host via Orbit's DNS resolver."""
+    import dns.exception
+    import dns.resolver
+
+    try:
+        resolver = get_orbit_sync_resolver(timeout=timeout)
+        answers = resolver.resolve(host, "CNAME")
+        for rdata in answers:
+            cname = str(getattr(rdata, "target", rdata)).strip().rstrip(".")
+            if cname:
+                return cname
+    except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.resolver.NoNameservers, dns.exception.DNSException):
+        return None
+    except Exception:
+        return None
+    return None
+
+
+def _cname_target_is_nxdomain(cname_target: str, timeout: float = 10.0) -> bool:
+    """Returns True strictly when the CNAME target returns authoritative NXDOMAIN on A/AAAA."""
+    import dns.exception
+    import dns.resolver
+
+    resolver = get_orbit_sync_resolver(timeout=timeout)
+    for rtype in ("A", "AAAA"):
+        try:
+            resolver.resolve(cname_target, rtype)
+            return False
+        except dns.resolver.NXDOMAIN:
+            return True
+        except (dns.resolver.NoAnswer, dns.resolver.NoNameservers, dns.exception.DNSException):
+            continue
+        except Exception:
+            return False
+    return False
+
+
 def verify_live_targets(
     groups: List[Dict[str, Any]],
     *,
@@ -593,7 +632,7 @@ def verify_live_targets(
     auth_cookies: Optional[Any] = None,
     auth_header: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Runs read-only RoE-guarded HTTP GET verification and Tier-2 CORS PoC replay."""
+    """Runs read-only RoE-guarded HTTP GET / DNS verification and Tier-2 CORS PoC replay."""
     roe = roe_engine if roe_engine is not None else PublicHostOnlyRoE()
     cookie_map = _load_auth_cookies_map(auth_cookies)
     results: List[Dict[str, Any]] = []
@@ -612,6 +651,94 @@ def verify_live_targets(
                 url = str(bundle.get("url", "")).strip() or f"https://{host}/"
                 ev_id = str(bundle.get("evidence_artifact_id", "")).strip()
                 headers = {"User-Agent": "OrbitSecurity-PreSubmitCheck/1.0"}
+
+                if verdict == "DANGLING_TAKEOVER_VERIFIED":
+                    if not roe.is_target_permitted(host):
+                        results.append(
+                            {
+                                "program": program,
+                                "host": host,
+                                "url": url,
+                                "evidence_artifact_id": ev_id,
+                                "status_code": None,
+                                "status": "ROE_BLOCKED",
+                                "verified_live": False,
+                                "detail": "[ROE_BLOCKED] Target denied by RoE",
+                            }
+                        )
+                        continue
+                    cname_target = _resolve_live_cname(host, timeout=timeout)
+                    if cname_target is None:
+                        results.append(
+                            {
+                                "program": program,
+                                "host": host,
+                                "url": url,
+                                "evidence_artifact_id": ev_id,
+                                "status_code": None,
+                                "status": "CHANGED_OR_MITIGATED",
+                                "verified_live": False,
+                                "detail": "No active CNAME record (NXDOMAIN/NoAnswer — record removed or mitigated)",
+                            }
+                        )
+                        continue
+                    if _cname_target_is_nxdomain(cname_target, timeout=timeout):
+                        results.append(
+                            {
+                                "program": program,
+                                "host": host,
+                                "url": url,
+                                "evidence_artifact_id": ev_id,
+                                "status_code": None,
+                                "status": "CONFIRMED_LIVE",
+                                "verified_live": True,
+                                "detail": f"Dangling CNAME '{cname_target}' confirmed (NXDOMAIN)",
+                            }
+                        )
+                        continue
+                    try:
+                        resp = client.get(url, headers=headers)
+                        status_code = int(getattr(resp, "status_code", 0) or 0)
+                        results.append(
+                            {
+                                "program": program,
+                                "host": host,
+                                "url": url,
+                                "evidence_artifact_id": ev_id,
+                                "status_code": status_code,
+                                "status": "CHANGED_OR_MITIGATED",
+                                "verified_live": False,
+                                "detail": f"Active CNAME '{cname_target}' resolves; HTTP {status_code}",
+                            }
+                        )
+                    except EgressViolationError as exc:
+                        results.append(
+                            {
+                                "program": program,
+                                "host": host,
+                                "url": url,
+                                "evidence_artifact_id": ev_id,
+                                "status_code": None,
+                                "status": "ROE_BLOCKED",
+                                "verified_live": False,
+                                "detail": f"[{exc.code}] {exc.reason}",
+                            }
+                        )
+                    except Exception as exc:
+                        results.append(
+                            {
+                                "program": program,
+                                "host": host,
+                                "url": url,
+                                "evidence_artifact_id": ev_id,
+                                "status_code": None,
+                                "status": "ERROR",
+                                "verified_live": False,
+                                "detail": f"{type(exc).__name__}: {exc}",
+                            }
+                        )
+                    continue
+
                 auth_cookie_sent = False
                 auth_header_sent = False
                 if is_cors:
@@ -888,6 +1015,10 @@ def build_vault_manifest(
             )
 
         if live_verification is not None:
+            changed_count = sum(
+                1 for r in live_verification.get("results", []) if r.get("status") == "CHANGED_OR_MITIGATED"
+            )
+            cors_sum = live_verification.get("cors_poc_summary", {})
             report_lines.extend(
                 [
                     "",
@@ -895,8 +1026,13 @@ def build_vault_manifest(
                     f"- **Checked UTC:** `{live_verification['checked_utc']}`",
                     f"- **Targets Checked:** {live_verification['targets_checked']}",
                     f"- **Confirmed Live:** {live_verification['confirmed_live_count']}",
+                    f"- **Changed / Mitigated:** {changed_count}",
                     f"- **RoE Blocked:** {live_verification['roe_blocked_count']}",
                     f"- **Errors:** {live_verification['error_count']}",
+                    f"- **CORS Bundles Checked:** {cors_sum.get('cors_bundles_checked', 0)}",
+                    f"- **CORS Reflected:** {cors_sum.get('cors_reflected_count', 0)}",
+                    f"- **Authenticated Replays:** {cors_sum.get('authenticated_replays_count', 0)}",
+                    f"- **Exploitable Auth CORS:** {cors_sum.get('exploitable_auth_cors_count', 0)}",
                 ]
             )
 
