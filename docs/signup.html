@@ -40,8 +40,8 @@
     <link rel="dns-prefetch" href="https://checkout.stripe.com">
 
     <!-- Shared Production Stylesheet -->
-    <link rel="stylesheet" href="assets/styles.min.css?v=20261026v6">
-    <script src="assets/simple_cat.js?v=20261026v6" defer></script>
+    <link rel="stylesheet" href="assets/styles.min.css?v=20261124v9">
+    <script src="assets/simple_cat.js?v=20261124v9" defer></script>
 
     <style>
         html { overflow-x: hidden; color-scheme: dark; }
@@ -180,29 +180,64 @@
 
     <!-- Top Navigation Header -->
     <header class="sticky top-0 z-50 backdrop-blur-md bg-slate-950/90 border-b border-slate-800">
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
-            <a href="index.html" class="flex items-center gap-3 group">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-3">
+            <a href="index.html" class="flex items-center gap-3 group flex-shrink-0">
                 <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/30 transition-all pixel-box-emerald flex-shrink-0">
                     <svg class="w-5 h-5 sm:w-6 sm:h-6 text-slate-950 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.45 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
                 </div>
-                <div>
-                    <span class="text-lg sm:text-xl font-bold tracking-tight text-white font-pixel" style="color:#ffffff;">Orbit Security</span>
-                    <span class="text-[9px] block text-emerald-400 font-arcade uppercase">ONBOARDING // 16-BIT B2B</span>
+                <div class="min-w-0">
+                    <span class="text-sm sm:text-xl font-bold tracking-tight text-white font-pixel whitespace-nowrap" style="color:#ffffff;">Orbit Security</span>
+                    <span class="hidden sm:block text-[9px] text-emerald-400 font-arcade uppercase whitespace-nowrap">ONBOARDING // 16-BIT B2B</span>
                 </div>
             </a>
             
-            <nav class="hidden md:flex items-center gap-3 sm:gap-4 text-xs font-medium text-slate-300" aria-label="Primary Navigation">
-                <a href="audit.html" class="hidden sm:inline-flex hover:text-emerald-400 transition-colors text-cyan-300">DNS Audit</a>
+            <nav class="hidden lg:flex items-center gap-2.5 xl:gap-4 text-xs xl:text-sm font-medium text-slate-300 whitespace-nowrap" aria-label="Primary Navigation">
+                <a href="audit.html" class="hover:text-emerald-400 transition-colors text-cyan-300">DNS Audit</a>
                 <a href="fleet.html" class="hover:text-emerald-400 transition-colors">Fleet</a>
-                <a href="portals/index.html" class="hidden md:inline-flex hover:text-emerald-400 transition-colors">Portals</a>
-                <a href="benchmark/index.html" class="hidden md:inline-flex hover:text-emerald-400 transition-colors">Benchmark</a>
-                <a href="index.html#pricing" class="hidden sm:inline-flex hover:text-emerald-400 transition-colors">Pricing</a>
+                <a href="labs.html" class="hover:text-emerald-400 transition-colors">Labs</a>
+                <a href="portals/index.html" class="hover:text-emerald-400 transition-colors">Portals</a>
+                <a href="benchmark/index.html" class="hover:text-emerald-400 transition-colors">Benchmark</a>
+                <a href="index.html#pricing" class="hover:text-emerald-400 transition-colors">Pricing</a>
                 <a href="about.html" class="hover:text-emerald-400 transition-colors">About</a>
-                <a href="index.html" class="min-h-[40px] px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs text-slate-300 hover:text-white transition-all inline-flex items-center whitespace-nowrap">Home</a>
             </nav>
+
+            <div class="hidden lg:flex items-center gap-1.5 xl:gap-2 flex-shrink-0">
+                <button type="button" id="audio-toggle-btn" onclick="if(window.SimpleCat){SimpleCat.toggleSound();}" class="inline-flex items-center justify-center min-w-[40px] min-h-[40px] px-2.5 py-2 rounded-lg bg-slate-900 border border-slate-700/80 hover:border-emerald-500/50 hover:bg-slate-800 text-slate-300 hover:text-emerald-300 font-mono text-xs transition-all cursor-pointer shadow-sm pixel-btn whitespace-nowrap" title="Toggle 8-Bit Audio SFX (Hotkey: M)" aria-label="Toggle 8-Bit Audio SFX">
+                    <span>🔊</span>
+                </button>
+                <button type="button" id="header-tour-btn" onclick="if(window.SimpleCat){SimpleCat.playPowerUp(); SimpleCat.startTour();}" class="tour-cta-beacon inline-flex items-center gap-1.5 px-2.5 xl:px-3 py-2 min-h-[40px] rounded-lg bg-gradient-to-r from-cyan-500/20 via-emerald-500/15 to-cyan-500/20 hover:from-cyan-400 hover:to-emerald-400 border border-cyan-400/75 text-cyan-200 hover:text-slate-950 font-mono text-xs font-bold tracking-wide transition-all cursor-pointer whitespace-nowrap shadow-[0_0_16px_rgba(6,182,212,0.28)]" title="Take Interactive Guided Tour" aria-label="Take Interactive Guided Tour">
+                    <span class="relative flex h-2 w-2 flex-shrink-0"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-300 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span></span>
+                    <span>Take Tour</span>
+                </button>
+                <a href="index.html" class="min-h-[40px] px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs text-slate-300 hover:text-white transition-all inline-flex items-center whitespace-nowrap">Home</a>
+            </div>
+
+            <div class="flex lg:hidden items-center gap-2 flex-shrink-0">
+                <button type="button" id="mobile-header-tour-btn" onclick="if(window.SimpleCat){SimpleCat.playPowerUp(); SimpleCat.startTour();}" class="tour-cta-beacon inline-flex items-center gap-1.5 min-h-[42px] px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 border border-cyan-400/75 text-cyan-200 font-mono text-xs font-bold whitespace-nowrap cursor-pointer" title="Take Interactive Guided Tour" aria-label="Take Interactive Guided Tour">
+                    <span class="relative flex h-2 w-2 flex-shrink-0"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-300 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span></span>
+                    <span>Tour</span>
+                </button>
+                <button type="button" id="signupMobileMenuBtn" class="min-w-[42px] min-h-[42px] p-2 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-300 hover:text-white flex items-center justify-center cursor-pointer" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="signupMobileMenu">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/></svg>
+                </button>
+            </div>
         </div>
+
+        <nav id="signupMobileMenu" class="hidden lg:hidden bg-slate-950/98 border-b border-emerald-500/40 px-4 py-3 space-y-1" aria-label="Mobile Navigation">
+            <button type="button" onclick="const mb=document.getElementById('signupMobileMenuBtn'); if(mb) mb.click(); if(window.SimpleCat){SimpleCat.playPowerUp(); SimpleCat.startTour();}" class="w-full flex items-center justify-between min-h-[44px] px-3 rounded-lg bg-cyan-500/15 border border-cyan-400/50 text-cyan-200 text-sm font-bold cursor-pointer mb-1">
+                <span>🗺️ Start Interactive Guided Tour</span>
+                <span class="text-[9px] font-arcade bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded border border-cyan-400/40">TOUR</span>
+            </button>
+            <a href="index.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-slate-200 hover:bg-slate-900 hover:text-emerald-400">Home</a>
+            <a href="audit.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-cyan-300 hover:bg-slate-900">Instant DNS Audit</a>
+            <a href="fleet.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-slate-200 hover:bg-slate-900 hover:text-emerald-400">Fleet Command</a>
+            <a href="labs.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-cyan-300 hover:bg-slate-900">Security Labs</a>
+            <a href="portals/index.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-slate-200 hover:bg-slate-900 hover:text-emerald-400">Demo Portals</a>
+            <a href="benchmark/index.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-slate-200 hover:bg-slate-900 hover:text-emerald-400">Benchmark</a>
+            <a href="about.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-slate-200 hover:bg-slate-900 hover:text-emerald-400">About Us</a>
+        </nav>
     </header>
 
     <main class="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
@@ -813,6 +848,14 @@
             const signupFormEl = document.getElementById('signupForm');
             if (signupFormEl) {
                 signupFormEl.addEventListener('submit', submitSignupCheckout);
+            }
+            const mBtn = document.getElementById('signupMobileMenuBtn');
+            const mMenu = document.getElementById('signupMobileMenu');
+            if (mBtn && mMenu) {
+                mBtn.addEventListener('click', () => {
+                    const isHidden = mMenu.classList.toggle('hidden');
+                    mBtn.setAttribute('aria-expanded', isHidden ? 'false' : 'true');
+                });
             }
         }
 

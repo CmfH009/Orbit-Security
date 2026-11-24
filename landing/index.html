@@ -219,11 +219,12 @@
     <link rel="dns-prefetch" href="https://checkout.stripe.com">
     
     <!-- Production Compiled Stylesheet (Zero-Render-Delay, Offline Fonts Vendored) -->
-    <link rel="stylesheet" href="assets/styles.min.css?v=20261124v8">
+    <link rel="preload" as="image" href="assets/orbit_cyber_command_deck.webp" type="image/webp" fetchpriority="high">
+    <link rel="stylesheet" href="assets/styles.min.css?v=20261124v9">
     <!-- Simple Cat 16-Bit Companion & Plain-English Decoder -->
-    <script src="assets/simple_cat.js?v=20261124v8" defer></script>
+    <script src="assets/simple_cat.js?v=20261124v9" defer></script>
     <!-- Orbit Radar Terminal & Ergonomics Engine -->
-    <script src="assets/orbit_radar.js?v=20261124v8" defer></script>
+    <script src="assets/orbit_radar.js?v=20261124v9" defer></script>
 
     <style>
         html { color-scheme: dark; }
@@ -666,15 +667,18 @@
         
         <!-- Atmospheric Command Deck Backdrop (Zero CLS, Off-Main-Thread Async Decode) -->
         <div class="absolute inset-0 pointer-events-none z-0 overflow-hidden flex items-center justify-center">
-            <img src="assets/orbit_cyber_command_deck.jpg" 
-                 alt="" 
-                 aria-hidden="true" 
-                 width="1376" 
-                 height="768" 
-                 loading="eager" 
-                 decoding="async" 
-                 fetchpriority="high"
-                 class="w-full h-full object-cover object-center hero-deck-backdrop">
+            <picture class="w-full h-full">
+                <source srcset="assets/orbit_cyber_command_deck.webp" type="image/webp">
+                <img src="assets/orbit_cyber_command_deck.jpg" 
+                     alt="" 
+                     aria-hidden="true" 
+                     width="1376" 
+                     height="768" 
+                     loading="eager" 
+                     decoding="async" 
+                     fetchpriority="high"
+                     class="w-full h-full object-cover object-center hero-deck-backdrop">
+            </picture>
             <!-- Vignette & Seamless Background Gradients -->
             <div class="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-950/75 to-slate-950 pointer-events-none"></div>
             <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_25%,rgba(6,10,22,0.92)_90%)] pointer-events-none"></div>
@@ -989,12 +993,12 @@
             <div class="livewire-marquee flex-1 min-w-0">
                 <div id="livewireMarqueeTrack" class="livewire-marquee-track flex items-center gap-3">
                     <div id="livewirePrimaryGroup" class="flex items-center gap-2.5 flex-shrink-0">
-                        <a href="labs.html#kev-epss-radar" id="heroThreatChip1" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900/90 hover:bg-rose-500/20 border border-rose-500/40 text-[11px] font-mono text-rose-200 transition-colors whitespace-nowrap">
+                        <a href="labs.html?cve=NGINX-HTTP2-3#kev-epss-radar" data-cve-id="NGINX-HTTP2-3" id="heroThreatChip1" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900/90 hover:bg-rose-500/20 border border-rose-500/40 text-[11px] font-mono text-rose-200 transition-colors whitespace-nowrap cursor-pointer">
                             <span class="px-1 py-0.2 rounded bg-rose-500/20 text-rose-300 text-[9px] font-bold">CVSS 9.2</span>
                             <strong class="text-white">NGINX nginx2root</strong>
                             <span class="text-slate-400">HTTP/2-3</span>
                         </a>
-                        <a href="labs.html#kev-epss-radar" id="heroThreatChip2" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900/90 hover:bg-amber-500/20 border border-amber-500/40 text-[11px] font-mono text-amber-200 transition-colors whitespace-nowrap">
+                        <a href="labs.html?cve=CVE-2026-121481#kev-epss-radar" data-cve-id="CVE-2026-121481" id="heroThreatChip2" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900/90 hover:bg-amber-500/20 border border-amber-500/40 text-[11px] font-mono text-amber-200 transition-colors whitespace-nowrap cursor-pointer">
                             <span class="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold">CVSS 9.8</span>
                             <strong class="text-white">OpenSSL CVE-2026-121481</strong>
                             <span class="text-slate-400">EVP_EncodeBlock</span>
@@ -1018,6 +1022,79 @@
         </div>
     </aside>
 
+    <!-- Live Threat Wire CVE Action Drawer (Workstream 1) -->
+    <div id="threatWireDrawer" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="threatDrawerTitle" onclick="if(event.target===this) closeThreatWireDrawer();">
+        <div class="relative w-full max-w-2xl bg-slate-950 border-2 border-rose-500/60 rounded-2xl shadow-[0_0_50px_rgba(244,63,94,0.28)] overflow-hidden card-glass">
+            <div class="px-5 py-3.5 bg-slate-900/95 border-b border-slate-800 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span id="threatDrawerBadge" class="px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/40 text-rose-300 font-arcade text-[9px] uppercase whitespace-nowrap">CISA KEV</span>
+                    <h3 id="threatDrawerTitle" class="font-mono font-extrabold text-sm sm:text-base text-white truncate">
+                        <span id="threatDrawerCveId">CVE-2024-21887</span>
+                    </h3>
+                    <span id="threatDrawerSource" class="hidden sm:inline-block px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px] whitespace-nowrap">CISA KEV + EPSS</span>
+                </div>
+                <button type="button" id="closeThreatDrawerBtn" onclick="closeThreatWireDrawer()" class="min-w-[40px] min-h-[40px] rounded-lg bg-slate-800 hover:bg-rose-500 hover:text-slate-950 text-slate-300 border border-slate-700 font-mono text-sm font-bold flex items-center justify-center cursor-pointer transition-colors" aria-label="Close CVE advisory drawer">✕</button>
+            </div>
+            <div class="p-5 sm:p-6 space-y-4 max-h-[82dvh] overflow-y-auto">
+                <div class="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                    <div>
+                        <span class="text-slate-400">Affected Stack:</span>
+                        <strong id="threatDrawerStack" class="text-cyan-300 ml-1">Loading...</strong>
+                    </div>
+                    <div class="flex items-center gap-2 text-slate-400">
+                        <span id="threatDrawerDate"></span>
+                        <span id="threatDrawerDue" class="text-amber-300 font-semibold"></span>
+                    </div>
+                </div>
+
+                <div id="threatDrawerEpssWrap" class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+                    <div class="flex items-center justify-between text-xs font-mono">
+                        <span class="text-slate-400">30-Day Weaponization Probability (FIRST EPSS)</span>
+                        <span id="threatDrawerEpssVal" class="text-rose-300 font-bold tabular-nums">--%</span>
+                    </div>
+                    <div class="w-full h-2 rounded-full bg-slate-950 overflow-hidden border border-slate-800">
+                        <div id="threatDrawerEpssBar" class="h-full bg-gradient-to-r from-amber-500 to-rose-500 transition-all duration-300" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <div class="space-y-2 text-xs sm:text-sm">
+                    <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <div class="text-[10px] font-arcade text-slate-400 uppercase mb-1">Vulnerability Summary</div>
+                        <p id="threatDrawerSummary" class="text-slate-200 leading-relaxed"></p>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-emerald-950/20 border border-emerald-500/30">
+                        <div class="text-[10px] font-arcade text-emerald-400 uppercase mb-1">Required Mitigation</div>
+                        <p id="threatDrawerAction" class="text-emerald-100 leading-relaxed"></p>
+                    </div>
+                </div>
+
+                <div class="p-3.5 rounded-xl bg-slate-900/80 border border-cyan-500/30 space-y-2">
+                    <label for="threatDrawerDomainInput" class="block text-[10px] font-arcade text-cyan-300 uppercase">Affected Stack Quick-Check (Hero DoH Radar)</label>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="text" id="threatDrawerDomainInput" placeholder="clientbrand.com" autocomplete="off" autocapitalize="none" spellcheck="false" class="flex-1 min-h-[44px] px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm font-mono text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+                        <button type="button" onclick="scanDomainFromThreatDrawer()" class="min-h-[44px] px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs font-mono whitespace-nowrap cursor-pointer transition-colors">
+                            Scan Domain on Hero Radar &rarr;
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-slate-800">
+                    <button type="button" id="threatDrawerCopyBtn" onclick="copyDrawerCveAdvisory()" class="min-h-[44px] px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-200 font-mono text-xs font-bold cursor-pointer transition-all">
+                        📋 Copy Agency Client Advisory
+                    </button>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <a id="threatDrawerExternalLink" href="#" target="_blank" rel="noopener noreferrer" class="hidden min-h-[44px] px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-mono text-xs font-semibold inline-flex items-center">
+                            GHSA Source &nearr;
+                        </a>
+                        <a id="threatDrawerLabsLink" href="labs.html#kev-epss-radar" class="min-h-[44px] px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs font-mono inline-flex items-center transition-colors">
+                            Inspect in KEV + EPSS Radar &rarr;
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Official 72-Second Studio Explainer Walkthrough -->
     <section id="product-walkthrough" class="scroll-mt-20 py-10 sm:py-14 bg-slate-950/90 border-t border-slate-800/80 relative overflow-hidden">
         <div class="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,rgba(16,185,129,0.10),transparent_70%)] pointer-events-none"></div>
@@ -1040,8 +1117,12 @@
                     <div class="flex items-center gap-2.5">
                         <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
                         <span class="text-xs font-mono font-bold text-white tracking-wide">ORBIT SECURITY // EXPLAINER v4</span>
+                        <span id="explainerActiveChapterBadge" class="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-mono text-[10px] font-bold whitespace-nowrap">CH 1/7 · Local Stakes</span>
                     </div>
-                    <span class="text-[11px] font-mono text-emerald-400/90 font-semibold">1080P &middot; AUDIO + CAPTIONS &middot; 1:12</span>
+                    <div class="flex items-center gap-2.5 text-[11px] font-mono">
+                        <span id="explainerTimeReadout" class="text-cyan-300 font-bold tabular-nums">0:00 / 1:12</span>
+                        <span class="text-emerald-400/90 font-semibold hidden sm:inline">1080P &middot; AUDIO + CAPTIONS</span>
+                    </div>
                 </div>
 
                 <div class="aspect-video relative bg-slate-950">
@@ -1065,15 +1146,20 @@
                     </button>
                 </div>
 
-                <div class="px-4 sm:px-5 py-3 bg-slate-950/90 border-t border-slate-800/90">
-                    <div id="explainerChapterBar" class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar scroll-indicate-x scroll-fade-r scroll-cyber-x">
-                        <button type="button" data-chapter-time="0" onclick="seekOrbitExplainer(0)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-mono text-[11px] font-bold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:00 Local Stakes</button>
-                        <button type="button" data-chapter-time="12.7" onclick="seekOrbitExplainer(12.7)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:12 Montana &middot; DoH</button>
-                        <button type="button" data-chapter-time="24.8" onclick="seekOrbitExplainer(24.8)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:25 Browser PDF</button>
-                        <button type="button" data-chapter-time="33.2" onclick="seekOrbitExplainer(33.2)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:33 KEV + EPSS</button>
-                        <button type="button" data-chapter-time="42.0" onclick="seekOrbitExplainer(42.0)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:42 Takeover Tree</button>
-                        <button type="button" data-chapter-time="50.5" onclick="seekOrbitExplainer(50.5)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:50 GitHub SARIF</button>
-                        <button type="button" data-chapter-time="58.7" onclick="seekOrbitExplainer(58.7)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:59 Benchmarks</button>
+                <div class="relative bg-slate-950/90 border-t border-slate-800/90">
+                    <div class="w-full h-0.5 bg-slate-900 overflow-hidden" aria-hidden="true">
+                        <div id="explainerProgressBar" class="h-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-amber-400 transition-all duration-150" style="width: 0%;"></div>
+                    </div>
+                    <div class="px-4 sm:px-5 py-3">
+                        <div id="explainerChapterBar" class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar scroll-indicate-x scroll-fade-r scroll-cyber-x">
+                            <button type="button" data-chapter-time="0" aria-current="true" onclick="seekOrbitExplainer(0)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-mono text-[11px] font-bold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:00 Local Stakes</button>
+                            <button type="button" data-chapter-time="12.7" onclick="seekOrbitExplainer(12.7)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:12 Montana &middot; DoH</button>
+                            <button type="button" data-chapter-time="24.8" onclick="seekOrbitExplainer(24.8)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:25 Browser PDF</button>
+                            <button type="button" data-chapter-time="33.2" onclick="seekOrbitExplainer(33.2)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:33 KEV + EPSS</button>
+                            <button type="button" data-chapter-time="42.0" onclick="seekOrbitExplainer(42.0)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:42 Takeover Tree</button>
+                            <button type="button" data-chapter-time="50.5" onclick="seekOrbitExplainer(50.5)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:50 GitHub SARIF</button>
+                            <button type="button" data-chapter-time="58.7" onclick="seekOrbitExplainer(58.7)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:59 Benchmarks</button>
+                        </div>
                     </div>
                 </div>
 
@@ -1447,7 +1533,10 @@ Apex Digital Studio</pre>
                         <div class="h-48 sm:h-52 overflow-hidden relative">
                             <div class="radar-sweep-beam absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent pointer-events-none z-10"></div>
                             <div class="absolute inset-0 scanlines pointer-events-none z-10 opacity-50"></div>
-                            <img src="assets/orbit_doh_encrypted_shield.jpg" alt="Astro-Cat Radar Scout &amp; DNS Probe Sentinel" width="1376" height="768" loading="lazy" decoding="async" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
+                            <picture class="w-full h-full">
+                                <source srcset="assets/orbit_doh_encrypted_shield.webp" type="image/webp">
+                                <img src="assets/orbit_doh_encrypted_shield.jpg" alt="Astro-Cat Radar Scout &amp; DNS Probe Sentinel" width="960" height="536" loading="lazy" decoding="async" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
+                            </picture>
                             <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent"></div>
                             
                             <div class="absolute top-3 left-3 px-2 py-0.5 rounded bg-slate-950/90 backdrop-blur-md border border-emerald-500/50 text-[9px] font-arcade text-emerald-400 flex items-center gap-1.5 z-20">
@@ -1496,7 +1585,10 @@ Apex Digital Studio</pre>
                         <div class="h-48 sm:h-52 overflow-hidden relative">
                             <div class="radar-sweep-beam absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-amber-400 to-transparent pointer-events-none z-10"></div>
                             <div class="absolute inset-0 scanlines pointer-events-none z-10 opacity-50"></div>
-                            <img src="assets/orbit_astrocat_laser_sentinel.jpg" alt="Takeover Interceptor &amp; CNAME Takeover Sentinel" width="1376" height="768" loading="lazy" decoding="async" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
+                            <picture class="w-full h-full">
+                                <source srcset="assets/orbit_astrocat_laser_sentinel.webp" type="image/webp">
+                                <img src="assets/orbit_astrocat_laser_sentinel.jpg" alt="Takeover Interceptor &amp; CNAME Takeover Sentinel" width="960" height="536" loading="lazy" decoding="async" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
+                            </picture>
                             <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent"></div>
                             
                             <div class="absolute top-3 left-3 px-2 py-0.5 rounded bg-slate-950/90 backdrop-blur-md border border-amber-500/50 text-[9px] font-arcade text-amber-400 flex items-center gap-1.5 z-20">
@@ -1545,7 +1637,10 @@ Apex Digital Studio</pre>
                         <div class="h-48 sm:h-52 overflow-hidden relative">
                             <div class="radar-sweep-beam absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent pointer-events-none z-10"></div>
                             <div class="absolute inset-0 scanlines pointer-events-none z-10 opacity-50"></div>
-                            <img src="assets/orbit_cats_gatekeeper.jpg" alt="Astro-Cat Spoof Shield Sentinel" width="1376" height="768" loading="lazy" decoding="async" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
+                            <picture class="w-full h-full">
+                                <source srcset="assets/orbit_cats_gatekeeper.webp" type="image/webp">
+                                <img src="assets/orbit_cats_gatekeeper.jpg" alt="Astro-Cat Spoof Shield Sentinel" width="960" height="536" loading="lazy" decoding="async" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
+                            </picture>
                             <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent"></div>
                             
                             <div class="absolute top-3 left-3 px-2 py-0.5 rounded bg-slate-950/90 backdrop-blur-md border border-cyan-500/50 text-[9px] font-arcade text-cyan-400 flex items-center gap-1.5 z-20">
@@ -1594,7 +1689,10 @@ Apex Digital Studio</pre>
                         <div class="h-48 sm:h-52 overflow-hidden relative">
                             <div class="radar-sweep-beam absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-purple-400 to-transparent pointer-events-none z-10"></div>
                             <div class="absolute inset-0 scanlines pointer-events-none z-10 opacity-50"></div>
-                            <img src="assets/orbit_cname_blackhole.jpg" alt="Astro-Cat MX Sentinel" width="1376" height="768" loading="lazy" decoding="async" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
+                            <picture class="w-full h-full">
+                                <source srcset="assets/orbit_cname_blackhole.webp" type="image/webp">
+                                <img src="assets/orbit_cname_blackhole.jpg" alt="Astro-Cat MX Sentinel" width="1280" height="714" loading="lazy" decoding="async" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
+                            </picture>
                             <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent"></div>
                             
                             <div class="absolute top-3 left-3 px-2 py-0.5 rounded bg-slate-950/90 backdrop-blur-md border border-purple-500/50 text-[9px] font-arcade text-purple-400 flex items-center gap-1.5 z-20">
@@ -2527,16 +2625,27 @@ Apex Digital Studio</pre>
             if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
         }
 
+        let lastActiveChapterIndex = 0;
+
+        function formatExplainerTime(seconds) {
+            const s = Math.max(0, Math.floor(Number(seconds) || 0));
+            const mins = Math.floor(s / 60);
+            const rem = s % 60;
+            return `${mins}:${rem < 10 ? '0' : ''}${rem}`;
+        }
+
         function updateExplainerChapterHighlight(currentTime) {
             const btns = Array.from(document.querySelectorAll('.explainer-chapter-btn'));
             if (!btns.length) return;
-            let activeBtn = btns[0];
-            for (const btn of btns) {
+            const cur = Math.max(0, Number(currentTime) || 0);
+            let activeIdx = 0;
+            btns.forEach((btn, idx) => {
                 const t = parseFloat(btn.getAttribute('data-chapter-time') || '0');
-                if (currentTime + 0.25 >= t) {
-                    activeBtn = btn;
+                if (cur + 0.25 >= t) {
+                    activeIdx = idx;
                 }
-            }
+            });
+            const activeBtn = btns[activeIdx];
             for (const btn of btns) {
                 const isActive = btn === activeBtn;
                 btn.classList.toggle('bg-emerald-500/20', isActive);
@@ -2547,8 +2656,38 @@ Apex Digital Studio</pre>
                 btn.classList.toggle('border-slate-700/80', !isActive);
                 btn.classList.toggle('text-slate-300', !isActive);
                 btn.classList.toggle('font-semibold', !isActive);
+                if (isActive) {
+                    btn.setAttribute('aria-current', 'true');
+                } else {
+                    btn.removeAttribute('aria-current');
+                }
+            }
+            if (activeIdx !== lastActiveChapterIndex) {
+                lastActiveChapterIndex = activeIdx;
+                if (activeBtn && typeof activeBtn.scrollIntoView === 'function') {
+                    try {
+                        activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+                    } catch (_) {}
+                }
+            }
+            const badgeEl = document.getElementById('explainerActiveChapterBadge');
+            if (badgeEl && activeBtn) {
+                const rawLabel = activeBtn.textContent.trim().replace(/^\d+:\d+\s*/, '');
+                badgeEl.textContent = `CH ${activeIdx + 1}/${btns.length} · ${rawLabel}`;
+            }
+            const vid = document.getElementById('orbit-explainer-video');
+            const totalDur = (vid && Number.isFinite(vid.duration) && vid.duration > 0) ? vid.duration : 72;
+            const timeEl = document.getElementById('explainerTimeReadout');
+            if (timeEl) {
+                timeEl.textContent = `${formatExplainerTime(cur)} / ${formatExplainerTime(totalDur)}`;
+            }
+            const barEl = document.getElementById('explainerProgressBar');
+            if (barEl) {
+                const pct = Math.max(0, Math.min(100, (cur / totalDur) * 100));
+                barEl.style.width = `${pct.toFixed(1)}%`;
             }
         }
+        window.updateExplainerChapterHighlight = updateExplainerChapterHighlight;
     </script>
 
     <!-- Founder & Systems Architecture Section -->
@@ -2560,7 +2699,10 @@ Apex Digital Studio</pre>
                 <div class="lg:col-span-5 flex flex-col items-center sm:items-start text-center sm:text-left">
                     <div class="relative mb-6">
                         <div class="w-36 h-36 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 p-1 shadow-2xl shadow-emerald-500/25 overflow-hidden group">
-                            <img src="assets/orbit_cats_square.jpg" alt="Carson - Founder Orbit Security" width="144" height="144" loading="lazy" decoding="async" class="w-full h-full object-cover rounded-[14px] transition-transform duration-500 group-hover:scale-105" />
+                            <picture class="w-full h-full">
+                                <source srcset="assets/orbit_cats_square.webp" type="image/webp">
+                                <img src="assets/orbit_cats_square.jpg" alt="Carson - Founder Orbit Security" width="144" height="144" loading="lazy" decoding="async" class="w-full h-full object-cover rounded-[14px] transition-transform duration-500 group-hover:scale-105" />
+                            </picture>
                         </div>
                         <div class="absolute -bottom-2 -right-2 px-3 py-1 rounded-full bg-slate-900 border border-emerald-500/40 text-[11px] font-bold text-emerald-400 flex items-center gap-1.5 shadow-md">
                             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -2641,7 +2783,10 @@ Apex Digital Studio</pre>
                         </div>
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-lg overflow-hidden border border-emerald-500/40 flex-shrink-0 shadow-sm">
-                                <img src="assets/orbit_cats_pounce.jpg" alt="Nova Sentinel" width="40" height="40" loading="lazy" decoding="async" class="w-full h-full object-cover" />
+                                <picture class="w-full h-full">
+                                    <source srcset="assets/orbit_cats_pounce.webp" type="image/webp">
+                                    <img src="assets/orbit_cats_pounce.jpg" alt="Nova Sentinel" width="40" height="40" loading="lazy" decoding="async" class="w-full h-full object-cover" />
+                                </picture>
                             </div>
                             <div class="text-[11px] text-slate-400 leading-tight">
                                 <span class="text-white font-semibold">Nova Sentinel Engine</span><br>
@@ -2900,13 +3045,16 @@ Apex Digital Studio</pre>
                             <div class="absolute inset-0 scanlines pointer-events-none z-10 opacity-40"></div>
 
                             <!-- High-Fidelity Vault Visual Asset -->
-                            <img src="assets/orbit_agency_retainer_vault.jpg" 
-                                 alt="Orbit Security Agency Retainer Vault Interface with Automated White-Label PDF Reports" 
-                                 width="1376" 
-                                 height="768" 
-                                 loading="lazy" 
-                                 decoding="async" 
-                                 class="w-full h-full object-cover object-center group-hover/vault:scale-105 transition-transform duration-700">
+                            <picture class="w-full h-full">
+                                <source srcset="assets/orbit_agency_retainer_vault.webp" type="image/webp">
+                                <img src="assets/orbit_agency_retainer_vault.jpg" 
+                                     alt="Orbit Security Agency Retainer Vault Interface with Automated White-Label PDF Reports" 
+                                     width="1280" 
+                                     height="714" 
+                                     loading="lazy" 
+                                     decoding="async" 
+                                     class="w-full h-full object-cover object-center group-hover/vault:scale-105 transition-transform duration-700">
+                            </picture>
 
                             <!-- Cyber Sheen & Vignette Overlay -->
                             <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/25 to-transparent pointer-events-none"></div>
@@ -2982,17 +3130,22 @@ Apex Digital Studio</pre>
 
                 <!-- Interactive Agency Retainer ROI Calculator -->
                 <div id="roi-calculator" class="scroll-mt-24 mt-6 pt-6 border-t border-slate-800/90 relative z-10">
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4">
-                        <div class="flex items-center gap-2">
+                    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
+                        <div class="flex items-center gap-2 flex-wrap">
                             <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-arcade text-[9px] border border-emerald-500/40">INTERACTIVE SIMULATOR</span>
                             <h4 class="text-base sm:text-lg font-bold text-white">Calculate Your Agency's Exact Retainer Profit</h4>
                         </div>
-                        <span class="text-xs font-mono text-slate-400">Drag sliders to model your monthly recurring margin</span>
+                        <div class="flex flex-wrap items-center gap-1.5 font-mono text-[11px]">
+                            <span class="text-slate-500 mr-1 hidden sm:inline">Presets:</span>
+                            <button type="button" onclick="applyRoiPreset(10, 200, 0)" class="min-h-[34px] px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-emerald-500/20 border border-slate-700 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-300 cursor-pointer transition">Boutique (10 &times; $200)</button>
+                            <button type="button" onclick="applyRoiPreset(25, 250, 0)" class="min-h-[34px] px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-emerald-500/20 border border-slate-700 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-300 cursor-pointer transition">Growth (25 &times; $250)</button>
+                            <button type="button" onclick="applyRoiPreset(60, 350, 0)" class="min-h-[34px] px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-cyan-500/20 border border-slate-700 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-300 cursor-pointer transition">Shopify Fleet (60 &times; $350)</button>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center bg-slate-950/90 p-5 rounded-xl border border-emerald-500/30">
                         <!-- Sliders Column -->
-                        <div class="lg:col-span-7 space-y-5">
+                        <div class="lg:col-span-7 space-y-4">
                             <div>
                                 <div class="flex items-center justify-between text-xs font-mono mb-2">
                                     <label for="roiClientCount" class="text-slate-300">Active Client Domains on Care Plan:</label>
@@ -3019,6 +3172,20 @@ Apex Digital Studio</pre>
                                     <span>$500/mo (Enterprise)</span>
                                 </div>
                             </div>
+
+                            <div>
+                                <div class="flex items-center justify-between text-xs font-mono mb-2">
+                                    <label for="roiLaborMins" class="text-slate-300">Est. Manual Review per Client / mo (@ $75/hr):</label>
+                                    <span id="roiLaborMinsVal" class="px-2.5 py-0.5 rounded bg-amber-500/15 text-amber-300 font-bold text-sm border border-amber-500/40">0 min ($0/mo)</span>
+                                </div>
+                                <input type="range" id="roiLaborMins" min="0" max="45" step="5" value="0" oninput="updateRoiCalculator()" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400" />
+                                <div class="flex justify-between text-[10px] font-mono text-slate-500 mt-1">
+                                    <span>0m (Automated)</span>
+                                    <span>15m (Light QA)</span>
+                                    <span>30m (Consultative)</span>
+                                    <span>45m (High-Touch)</span>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Live Profit Readout Column -->
@@ -3034,13 +3201,40 @@ Apex Digital Studio</pre>
                                 </div>
                             </div>
 
-                            <div class="flex items-center justify-between">
+                            <div class="flex items-center justify-between gap-2">
                                 <div>
-                                    <div class="text-[10px] font-arcade text-emerald-400 uppercase">ANNUAL GROSS RETAINER MARGIN (PRE-LABOR)</div>
+                                    <div class="text-[10px] font-arcade text-emerald-400 uppercase">ANNUAL NET RETAINER MARGIN</div>
                                     <div id="roiAnnualNet" class="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-sans">+$74,292<span class="text-xs font-normal text-slate-300">/yr</span></div>
                                 </div>
                                 <div class="text-right">
                                     <span id="roiMultiplierBadge" class="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 font-mono text-xs font-bold shadow-sm" style="white-space: nowrap; display: inline-block;">1 client covers stack</span>
+                                </div>
+                            </div>
+
+                            <!-- Unit Economics Telemetry Strip -->
+                            <div class="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 space-y-2 text-[11px] font-mono">
+                                <div class="grid grid-cols-3 gap-2 text-center">
+                                    <div>
+                                        <div class="text-[9px] text-slate-500 uppercase">Net Monthly</div>
+                                        <div id="roiNetMonthlyVal" class="text-emerald-300 font-bold tabular-nums">+$6,191/mo</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-[9px] text-slate-500 uppercase">Cost / Site</div>
+                                        <div id="roiCostPerDomainVal" class="text-cyan-300 font-bold tabular-nums">$2.36/site</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-[9px] text-slate-500 uppercase">Break-Even</div>
+                                        <div id="roiBreakEvenVal" class="text-amber-300 font-bold tabular-nums">1 client</div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex items-center justify-between text-[10px] mb-1">
+                                        <span class="text-slate-400">Net Margin %</span>
+                                        <span id="roiMarginPctVal" class="text-emerald-400 font-bold tabular-nums">99.1%</span>
+                                    </div>
+                                    <div class="w-full h-1.5 rounded-full bg-slate-900 overflow-hidden">
+                                        <div id="roiMarginBar" class="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 transition-all duration-200" style="width: 99.1%;"></div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -3053,6 +3247,9 @@ Apex Digital Studio</pre>
                                 <button type="button" onclick="shareOrbitTool('roi-calculator', 'linkedin')" class="min-h-[36px] px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 border border-cyan-500/40 font-bold cursor-pointer transition">in LinkedIn</button>
                                 <button type="button" onclick="shareOrbitTool('roi-calculator', 'native')" class="min-h-[36px] px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-purple-500 hover:text-slate-950 text-purple-300 border border-purple-500/40 font-bold cursor-pointer transition">📤</button>
                             </div>
+                            <p class="text-[10px] text-slate-500 font-mono leading-snug">
+                                Illustrative unit-economics model. Excludes sales acquisition, payment processing, and custom remediation engineering.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -3217,13 +3414,16 @@ Apex Digital Studio</pre>
 
                     <!-- Responsive Panoramic Container -->
                     <div class="aspect-video sm:aspect-[21/9] w-full relative">
-                        <img src="assets/fleet_arena_preview.png" 
-                             alt="Orbit Security Fleet Command Arena Multi-Domain Attack Surface Monitoring Dashboard" 
-                             width="1920" 
-                             height="889" 
-                             loading="lazy" 
-                             decoding="async" 
-                             class="w-full h-full object-cover object-center group-hover/arena:scale-[1.02] transition-transform duration-700">
+                        <picture class="w-full h-full">
+                            <source srcset="assets/fleet_arena_preview.webp" type="image/webp">
+                            <img src="assets/fleet_arena_preview.png" 
+                                 alt="Orbit Security Fleet Command Arena Multi-Domain Attack Surface Monitoring Dashboard" 
+                                 width="1920" 
+                                 height="889" 
+                                 loading="lazy" 
+                                 decoding="async" 
+                                 class="w-full h-full object-cover object-center group-hover/arena:scale-[1.02] transition-transform duration-700">
+                        </picture>
 
                         <!-- Vignette & Specular Glare Overlay -->
                         <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent pointer-events-none"></div>
@@ -3354,7 +3554,7 @@ Apex Digital Studio</pre>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
                 <div class="md:col-span-2">
                     <div class="flex items-center gap-2 mb-3">
-                        <img src="assets/logo.png" alt="Orbit Security Logo" width="24" height="24" class="w-6 h-6 rounded-lg object-contain bg-slate-900 border border-emerald-500/30" />
+                        <img src="assets/logo.png" alt="Orbit Security Logo" width="24" height="24" loading="lazy" decoding="async" class="w-6 h-6 rounded-lg object-contain bg-slate-900 border border-emerald-500/30" />
                         <span class="text-sm font-bold text-white">Orbit Security</span>
                     </div>
                     <p class="max-w-sm text-slate-400 leading-relaxed mb-4">
@@ -4039,12 +4239,26 @@ ${body}`;
         });
 
         // 3. Interactive Agency Retainer ROI Calculator
+        function applyRoiPreset(clients, fee, laborMins = 0) {
+            const cEl = document.getElementById('roiClientCount');
+            const fEl = document.getElementById('roiRetainerFee');
+            const lEl = document.getElementById('roiLaborMins');
+            if (cEl) cEl.value = String(clients);
+            if (fEl) fEl.value = String(fee);
+            if (lEl) lEl.value = String(laborMins);
+            updateRoiCalculator();
+            if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
+        }
+        window.applyRoiPreset = applyRoiPreset;
+
         function updateRoiCalculator() {
             const clients = parseInt(document.getElementById('roiClientCount')?.value || '25', 10);
             const fee = parseInt(document.getElementById('roiRetainerFee')?.value || '250', 10);
+            const laborMins = parseInt(document.getElementById('roiLaborMins')?.value || '0', 10);
 
             const countEl = document.getElementById('roiClientCountVal');
             const feeEl = document.getElementById('roiRetainerFeeVal');
+            const laborEl = document.getElementById('roiLaborMinsVal');
             if (countEl) countEl.textContent = clients + (clients === 1 ? ' Client' : ' Clients');
             if (feeEl) feeEl.textContent = '$' + fee + ' / mo';
 
@@ -4061,13 +4275,19 @@ ${body}`;
                 checkoutUrl = 'https://buy.stripe.com/5kQ14mbg0bnt716a4Qcs802';
             }
 
+            const laborCostMonthly = Math.round(clients * (laborMins / 60) * 75);
+            if (laborEl) laborEl.textContent = `${laborMins} min ($${laborCostMonthly.toLocaleString()}/mo)`;
+
             const grossMonthly = clients * fee;
-            const netMonthly = grossMonthly - orbitCost;
+            const netMonthly = grossMonthly - orbitCost - laborCostMonthly;
             const netAnnual = netMonthly * 12;
-            const breakEvenClients = Math.max(1, Math.ceil(orbitCost / fee));
+            const netFeePerClient = Math.max(1, fee - Math.round((laborMins / 60) * 75));
+            const breakEvenClients = Math.max(1, Math.ceil(orbitCost / netFeePerClient));
             const coverageLabel = breakEvenClients === 1
                 ? '1 client covers stack'
                 : breakEvenClients + ' clients break even';
+            const marginPct = grossMonthly > 0 ? Math.max(0, Math.min(100, (netMonthly / grossMonthly) * 100)) : 0;
+            const costPerDomain = clients > 0 ? (orbitCost / clients).toFixed(2) : orbitCost.toFixed(2);
 
             const grossEl = document.getElementById('roiMonthlyGross');
             const costEl = document.getElementById('roiOrbitCost');
@@ -4075,11 +4295,22 @@ ${body}`;
             const badgeEl = document.getElementById('roiMultiplierBadge');
             const ctaEl = document.getElementById('roiRecommendedCta');
             const ctaTextEl = document.getElementById('roiRecommendedCtaText');
+            const netMonthlyEl = document.getElementById('roiNetMonthlyVal');
+            const costPerDomainEl = document.getElementById('roiCostPerDomainVal');
+            const breakEvenEl = document.getElementById('roiBreakEvenVal');
+            const marginPctEl = document.getElementById('roiMarginPctVal');
+            const marginBarEl = document.getElementById('roiMarginBar');
 
             if (grossEl) grossEl.innerHTML = '$' + grossMonthly.toLocaleString() + '<span class="text-xs font-normal text-slate-400">/mo</span>';
             if (costEl) costEl.textContent = '$' + orbitCost + '/mo (' + tierName + ')';
-            if (annualEl) annualEl.innerHTML = '+$' + netAnnual.toLocaleString() + '<span class="text-xs font-normal text-slate-300">/yr</span>';
+            const annualPrefix = netAnnual >= 0 ? '+$' : '-$';
+            if (annualEl) annualEl.innerHTML = annualPrefix + Math.abs(netAnnual).toLocaleString() + '<span class="text-xs font-normal text-slate-300">/yr</span>';
             if (badgeEl) badgeEl.textContent = coverageLabel;
+            if (netMonthlyEl) netMonthlyEl.textContent = `${netMonthly >= 0 ? '+$' : '-$'}${Math.abs(netMonthly).toLocaleString()}/mo`;
+            if (costPerDomainEl) costPerDomainEl.textContent = `$${costPerDomain}/site`;
+            if (breakEvenEl) breakEvenEl.textContent = `${breakEvenClients} ${breakEvenClients === 1 ? 'client' : 'clients'}`;
+            if (marginPctEl) marginPctEl.textContent = `${marginPct.toFixed(1)}%`;
+            if (marginBarEl) marginBarEl.style.width = `${marginPct.toFixed(1)}%`;
             if (ctaEl) {
                 ctaEl.href = checkoutUrl;
                 if (typeof ctaEl.setAttribute === 'function') ctaEl.setAttribute('href', checkoutUrl);
@@ -4179,11 +4410,62 @@ ${body}`;
                     if (explainerOverlayText) explainerOverlayText.textContent = 'Replay 72s Walkthrough';
                     if (explainerOverlay) explainerOverlay.classList.remove('hidden');
                 });
-                explainerVideo.addEventListener('timeupdate', () => {
-                    updateExplainerChapterHighlight(explainerVideo.currentTime);
+                const syncChapter = () => updateExplainerChapterHighlight(explainerVideo.currentTime);
+                explainerVideo.addEventListener('timeupdate', syncChapter);
+                explainerVideo.addEventListener('seeked', syncChapter);
+                explainerVideo.addEventListener('loadedmetadata', () => {
+                    const tParam = parseFloat(new URLSearchParams(window.location.search).get('t') || '');
+                    if (Number.isFinite(tParam) && tParam >= 0 && tParam <= (explainerVideo.duration || 72)) {
+                        explainerVideo.currentTime = tParam;
+                    }
+                    syncChapter();
                 });
             }
             // Hydrate Live Threat Wire ticker from assets/kev_epss_radar.json + live GitHub Security Advisories
+            const _liveWireById = new Map([
+                ['NGINX-HTTP2-3', {
+                    id: 'NGINX-HTTP2-3',
+                    vendor: 'NGINX',
+                    product: 'HTTP/2 & HTTP/3',
+                    label: 'NGINX nginx2root HTTP/2-3',
+                    badge: 'CVSS 9.2',
+                    tone: 'rose',
+                    detail: 'HTTP/2-3',
+                    date: '2026-11-20',
+                    due_date: 'BOD 26-04',
+                    is_cisa_kev: true,
+                    cvss: 9.2,
+                    epss: 0.91,
+                    percentile: 0.996,
+                    summary: 'Critical NGINX HTTP/2 & HTTP/3 request handling vulnerabilities (nginx2root) allowing remote code execution or privilege escalation on unpatched edge proxies.',
+                    action_required: 'Upgrade NGINX edge instances to 1.30.7 or 1.31.9+ and verify TLS/HTTP3 edge configuration.',
+                    source: 'CISA KEV + EPSS',
+                    external_url: '',
+                    labs_href: 'labs.html?cve=NGINX-HTTP2-3#kev-epss-radar',
+                }],
+                ['CVE-2026-121481', {
+                    id: 'CVE-2026-121481',
+                    vendor: 'OpenSSL',
+                    product: 'EVP_EncodeBlock()',
+                    label: 'OpenSSL CVE-2026-121481',
+                    badge: 'CVSS 9.8',
+                    tone: 'amber',
+                    detail: 'EVP_EncodeBlock',
+                    date: '2026-11-18',
+                    due_date: 'BOD 26-04',
+                    is_cisa_kev: false,
+                    cvss: 9.8,
+                    epss: 0.87,
+                    percentile: 0.992,
+                    summary: 'Critical OpenSSL EVP_EncodeBlock() buffer boundary vulnerability affecting TLS termination and cryptographic encoding pipelines.',
+                    action_required: 'Patch OpenSSL libraries on web & mail gateways and audit external TLS endpoints.',
+                    source: 'Live Wire Advisory',
+                    external_url: '',
+                    labs_href: 'labs.html?cve=CVE-2026-121481#kev-epss-radar',
+                }],
+            ]);
+            let _activeDrawerAlert = null;
+
             function mergeLiveThreatAdvisories(localFeed, ghsaItems) {
                 const byKey = new Map();
                 const pushItem = (entry) => {
@@ -4199,6 +4481,7 @@ ${body}`;
                         ...entry,
                         is_cisa_kev: Boolean(prev.is_cisa_kev || entry.is_cisa_kev),
                         cvss: Math.max(Number(prev.cvss || 0), Number(entry.cvss || 0)),
+                        epss: Math.max(Number(prev.epss || 0), Number(entry.epss || 0)),
                         badge: (prev.is_cisa_kev || entry.is_cisa_kev) ? 'CISA KEV' : (entry.badge || prev.badge),
                         tone: (prev.is_cisa_kev || entry.is_cisa_kev) ? 'rose' : (entry.tone || prev.tone),
                     });
@@ -4223,15 +4506,23 @@ ${body}`;
                     const epssPct = Number(v?.epss || 0) > 0 ? `EPSS ${Math.round(Number(v.epss) * 100)}%` : '';
                     pushItem({
                         id: cveId,
+                        vendor: vendor || 'Infrastructure',
+                        product: product || 'Component',
                         label: label.slice(0, 56),
                         badge: isKev ? 'CISA KEV' : 'CRITICAL',
                         tone: isKev ? 'rose' : 'amber',
                         detail: epssPct || String(v?.vulnerability_name || v?.short_description || '').slice(0, 44),
                         date: String(v?.date_added || '').slice(0, 10),
+                        due_date: String(v?.due_date || '').slice(0, 10),
                         is_cisa_kev: isKev,
                         cvss: isKev ? 9.5 : 9.2,
-                        href: 'labs.html#kev-epss-radar',
-                        external: false,
+                        epss: Number(v?.epss || 0),
+                        percentile: Number(v?.percentile || 0),
+                        summary: String(v?.short_description || v?.vulnerability_name || 'Active perimeter threat tracked in CISA KEV + EPSS.'),
+                        action_required: String(v?.action_required || 'Apply vendor security mitigations immediately.'),
+                        source: 'CISA KEV + EPSS',
+                        external_url: '',
+                        labs_href: `labs.html?cve=${encodeURIComponent(cveId)}#kev-epss-radar`,
                     });
                 }
 
@@ -4241,20 +4532,28 @@ ${body}`;
                     if (!cveId) continue;
                     const cvssScore = Number(adv?.cvss?.score || 0);
                     const pkgName = String(adv?.vulnerabilities?.[0]?.package?.name || '').trim();
-                    const summary = String(adv?.summary || '').trim();
+                    const summary = String(adv?.summary || adv?.description || '').trim();
                     const rawUrl = String(adv?.html_url || '');
                     const safeExternal = rawUrl.startsWith('https://github.com/advisories/');
                     pushItem({
                         id: cveId,
+                        vendor: pkgName || 'GitHub Advisory',
+                        product: adv?.vulnerabilities?.[0]?.package?.ecosystem || 'Package',
                         label: pkgName ? `${pkgName} (${cveId})`.slice(0, 56) : cveId,
                         badge: cvssScore > 0 ? `CVSS ${cvssScore.toFixed(1)}` : 'CRITICAL',
                         tone: cvssScore >= 9.5 ? 'rose' : 'amber',
                         detail: summary.slice(0, 44),
                         date: String(adv?.published_at || '').slice(0, 10),
+                        due_date: '',
                         is_cisa_kev: false,
                         cvss: cvssScore || 9.0,
-                        href: safeExternal ? rawUrl : 'labs.html#kev-epss-radar',
-                        external: safeExternal,
+                        epss: 0,
+                        percentile: 0,
+                        summary: summary || 'Critical GitHub Security Advisory actively monitored on the live wire.',
+                        action_required: 'Upgrade affected package to patched version and verify external perimeter exposure.',
+                        source: 'GitHub Security Advisory',
+                        external_url: safeExternal ? rawUrl : '',
+                        labs_href: `labs.html?cve=${encodeURIComponent(cveId)}#kev-epss-radar`,
                     });
                 }
 
@@ -4272,6 +4571,141 @@ ${body}`;
             }
             window.mergeLiveThreatAdvisories = mergeLiveThreatAdvisories;
 
+            function openThreatWireDrawer(cveId) {
+                const key = String(cveId || '').trim().toUpperCase();
+                const item = _liveWireById.get(key)
+                    || (Array.isArray(window.__orbitLiveWireAlerts) ? window.__orbitLiveWireAlerts.find((x) => String(x.id).toUpperCase() === key) : null)
+                    || _liveWireById.values().next().value;
+                if (!item) return;
+                _activeDrawerAlert = item;
+
+                const drawer = document.getElementById('threatWireDrawer');
+                if (!drawer) return;
+
+                const badgeEl = document.getElementById('threatDrawerBadge');
+                const cveEl = document.getElementById('threatDrawerCveId');
+                const srcEl = document.getElementById('threatDrawerSource');
+                const stackEl = document.getElementById('threatDrawerStack');
+                const dateEl = document.getElementById('threatDrawerDate');
+                const dueEl = document.getElementById('threatDrawerDue');
+                const epssWrap = document.getElementById('threatDrawerEpssWrap');
+                const epssVal = document.getElementById('threatDrawerEpssVal');
+                const epssBar = document.getElementById('threatDrawerEpssBar');
+                const sumEl = document.getElementById('threatDrawerSummary');
+                const actEl = document.getElementById('threatDrawerAction');
+                const labsLink = document.getElementById('threatDrawerLabsLink');
+                const extLink = document.getElementById('threatDrawerExternalLink');
+                const domInput = document.getElementById('threatDrawerDomainInput');
+
+                if (badgeEl) {
+                    badgeEl.textContent = item.badge || 'CRITICAL';
+                    badgeEl.className = item.tone === 'rose'
+                        ? 'px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/40 text-rose-300 font-arcade text-[9px] uppercase whitespace-nowrap'
+                        : 'px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 font-arcade text-[9px] uppercase whitespace-nowrap';
+                }
+                if (cveEl) cveEl.textContent = item.id;
+                if (srcEl) srcEl.textContent = item.source || 'Live Threat Wire';
+                if (stackEl) stackEl.textContent = `${item.vendor || 'Infrastructure'} — ${item.product || 'Component'}`;
+                if (dateEl) dateEl.textContent = item.date ? `Added: ${item.date}` : '';
+                if (dueEl) dueEl.textContent = item.due_date ? `Due: ${item.due_date}` : '';
+                if (epssWrap) {
+                    if (Number(item.epss || 0) > 0) {
+                        epssWrap.classList.remove('hidden');
+                        const pct = (Number(item.epss) * 100).toFixed(1);
+                        if (epssVal) epssVal.textContent = `${pct}% (${(Number(item.percentile || 0) * 100).toFixed(1)}th %ile)`;
+                        if (epssBar) epssBar.style.width = `${Math.max(4, Math.min(100, Number(pct)))}%`;
+                    } else {
+                        epssWrap.classList.add('hidden');
+                    }
+                }
+                if (sumEl) sumEl.textContent = item.summary || item.detail || item.label;
+                if (actEl) actEl.textContent = item.action_required || 'Apply vendor patch and audit external perimeter exposure.';
+                if (labsLink) labsLink.href = item.labs_href || `labs.html?cve=${encodeURIComponent(item.id)}#kev-epss-radar`;
+                if (extLink) {
+                    if (item.external_url && item.external_url.startsWith('https://github.com/advisories/')) {
+                        extLink.href = item.external_url;
+                        extLink.classList.remove('hidden');
+                    } else {
+                        extLink.classList.add('hidden');
+                    }
+                }
+                if (domInput && !domInput.value) {
+                    const heroDom = document.getElementById('targetDomain')?.value?.trim();
+                    if (heroDom) domInput.value = heroDom;
+                }
+
+                drawer.classList.remove('hidden');
+                document.body.classList.add('drawer-open');
+                if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
+            }
+
+            function closeThreatWireDrawer() {
+                const drawer = document.getElementById('threatWireDrawer');
+                if (drawer) drawer.classList.add('hidden');
+                document.body.classList.remove('drawer-open');
+            }
+
+            function copyDrawerCveAdvisory() {
+                const item = _activeDrawerAlert;
+                if (!item) return;
+                const agency = getActiveAgencyName();
+                const epssLine = Number(item.epss || 0) > 0
+                    ? `30-day EPSS exploitation probability: ${(Number(item.epss) * 100).toFixed(1)}%\n`
+                    : '';
+                const text = [
+                    `Subject: [Security Advisory] ${item.id} (${item.vendor} ${item.product}) Perimeter Verification`,
+                    '',
+                    'Hi [Client Name],',
+                    '',
+                    `Our security sentinel at ${agency} is tracking ${item.id} (${item.badge || 'CRITICAL'}) affecting ${item.vendor} ${item.product}.`,
+                    epssLine + `Summary: ${item.summary || item.label}`,
+                    `Recommended Action: ${item.action_required || 'Apply vendor patch immediately.'}`,
+                    '',
+                    'We are verifying your external domain perimeter, SSL/TLS endpoints, and DNS records to confirm zero exposure.',
+                    '',
+                    `Best regards,\n${agency}`,
+                ].join('\n');
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).catch(() => {});
+                }
+                const btn = document.getElementById('threatDrawerCopyBtn');
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = `✓ Copied ${item.id} Advisory!`;
+                    setTimeout(() => { btn.textContent = orig; }, 2200);
+                }
+                if (window.SimpleCat && SimpleCat.playPowerUp) SimpleCat.playPowerUp();
+            }
+
+            function scanDomainFromThreatDrawer() {
+                const domInput = document.getElementById('threatDrawerDomainInput');
+                const heroInput = document.getElementById('targetDomain');
+                const domainVal = (domInput?.value || heroInput?.value || 'clientbrand.com').trim();
+                closeThreatWireDrawer();
+                if (heroInput) {
+                    heroInput.value = domainVal;
+                }
+                const term = document.getElementById('audit-terminal');
+                if (term) term.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (typeof window.handleAuditRequest === 'function') {
+                    window.handleAuditRequest({ preventDefault() {} });
+                }
+            }
+
+            window.openThreatWireDrawer = openThreatWireDrawer;
+            window.closeThreatWireDrawer = closeThreatWireDrawer;
+            window.copyDrawerCveAdvisory = copyDrawerCveAdvisory;
+            window.scanDomainFromThreatDrawer = scanDomainFromThreatDrawer;
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const drawer = document.getElementById('threatWireDrawer');
+                    if (drawer && !drawer.classList.contains('hidden')) {
+                        closeThreatWireDrawer();
+                    }
+                }
+            });
+
             function renderLiveWireTicker(items) {
                 const primary = document.getElementById('livewirePrimaryGroup');
                 const dup = document.getElementById('livewireDupGroup');
@@ -4280,18 +4714,16 @@ ${body}`;
 
                 primary.textContent = '';
                 items.forEach((item, idx) => {
+                    _liveWireById.set(String(item.id).toUpperCase(), item);
                     const a = document.createElement('a');
                     if (idx === 0) a.id = 'heroThreatChip1';
                     if (idx === 1) a.id = 'heroThreatChip2';
-                    a.href = item.href || 'labs.html#kev-epss-radar';
-                    if (item.external) {
-                        a.target = '_blank';
-                        a.rel = 'noopener noreferrer';
-                    }
+                    a.href = item.labs_href || `labs.html?cve=${encodeURIComponent(item.id)}#kev-epss-radar`;
+                    a.dataset.cveId = item.id;
                     const isRose = item.tone === 'rose';
                     a.className = isRose
-                        ? 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900/90 hover:bg-rose-500/20 border border-rose-500/40 text-[11px] font-mono text-rose-200 transition-colors whitespace-nowrap'
-                        : 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900/90 hover:bg-amber-500/20 border border-amber-500/40 text-[11px] font-mono text-amber-200 transition-colors whitespace-nowrap';
+                        ? 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900/90 hover:bg-rose-500/20 border border-rose-500/40 text-[11px] font-mono text-rose-200 transition-colors whitespace-nowrap cursor-pointer'
+                        : 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900/90 hover:bg-amber-500/20 border border-amber-500/40 text-[11px] font-mono text-amber-200 transition-colors whitespace-nowrap cursor-pointer';
 
                     const badge = document.createElement('span');
                     badge.className = isRose
@@ -4332,6 +4764,14 @@ ${body}`;
             (function initHeroThreatRibbon() {
                 const ribbon = document.getElementById('heroThreatRibbon');
                 if (!ribbon) return;
+                ribbon.addEventListener('click', (e) => {
+                    const pill = e.target && e.target.closest ? e.target.closest('a[data-cve-id]') : null;
+                    if (!pill) return;
+                    if (!e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+                        e.preventDefault();
+                        openThreatWireDrawer(pill.dataset.cveId);
+                    }
+                });
                 try {
                     if (sessionStorage.getItem('orbit_threat_ribbon_dismissed') === '1') {
                         ribbon.classList.add('hidden');

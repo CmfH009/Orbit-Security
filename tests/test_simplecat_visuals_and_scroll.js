@@ -545,6 +545,32 @@ test('Top-of-page Tour beacons & relocated animated dynamic Live Threat Wire ver
     assert(docsIndexHtml.includes('tabindex') && docsIndexHtml.includes('livewireDupGroup'), 'Duplicate marquee group must disable tab stops');
 });
 
+test('5-feature upgrade: CVE drawer, unified Tour beacons across all 8 pages, margin model, explainer sync, WebP <picture>', () => {
+    assert(docsIndexHtml.includes('id="threatWireDrawer"') && docsIndexHtml.includes('openThreatWireDrawer'), 'Missing #threatWireDrawer or openThreatWireDrawer');
+    assert(docsIndexHtml.includes('id="explainerActiveChapterBadge"') && docsIndexHtml.includes('id="explainerProgressBar"'), 'Missing explainer chapter badge or progress bar');
+    assert(docsIndexHtml.includes('id="roiLaborMins"') && docsIndexHtml.includes('applyRoiPreset('), 'Missing ROI labor slider or preset buttons');
+    assert(docsIndexHtml.includes('assets/orbit_cyber_command_deck.webp') && docsIndexHtml.includes('<picture'), 'Missing WebP <picture> delivery in index.html');
+
+    const pages = [
+        'index.html',
+        'labs.html',
+        'audit.html',
+        'fleet.html',
+        'signup.html',
+        'about.html',
+        path.join('benchmark', 'index.html'),
+        path.join('portals', 'index.html'),
+    ];
+    for (const rel of pages) {
+        for (const tree of ['landing', 'docs']) {
+            const html = fs.readFileSync(path.join(__dirname, '..', tree, rel), 'utf8');
+            assert(html.includes('id="header-tour-btn"'), `${tree}/${rel} missing #header-tour-btn`);
+            assert(html.includes('id="mobile-header-tour-btn"'), `${tree}/${rel} missing #mobile-header-tour-btn`);
+            assert(html.includes('lg:flex'), `${tree}/${rel} missing lg:flex responsive nav breakpoint`);
+        }
+    }
+});
+
 console.log('========================================');
 console.log(`ALL ${testCount}/${testCount} SIMPLECAT VISUAL & SCROLL TESTS PASSED!`);
 console.log('========================================');

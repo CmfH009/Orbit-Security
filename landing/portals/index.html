@@ -8,7 +8,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https://cmfh009.github.io; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
     <title>Orbit Security | White-Label Agency Partner Portals</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'><path d='M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z'/></svg>">
-    <link rel="stylesheet" href="../assets/styles.min.css?v=20261026v6">
+    <link rel="stylesheet" href="../assets/styles.min.css?v=20261124v9">
     <style>
         html { overflow-x: hidden; color-scheme: dark; }
         body { overflow-x: clip; }
@@ -128,39 +128,74 @@
   ]
 }
     </script>
-    <script src="../assets/simple_cat.js?v=20261026v6" defer></script>
+    <script src="../assets/simple_cat.js?v=20261124v9" defer></script>
 </head>
 <body class="bg-transparent text-slate-100 font-sans antialiased selection:bg-emerald-500 selection:text-white min-h-screen flex flex-col justify-between" style="background-color: #060a16;">
 
     <!-- Header Navigation -->
     <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-            <div class="flex items-center gap-3">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 flex-shrink-0">
                 <a href="../index.html" class="flex items-center gap-3 group">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/30 transition-all border border-emerald-500/40">
-                        <svg class="w-6 h-6 text-slate-950 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/30 transition-all border border-emerald-500/40">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-slate-950 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                         </svg>
                     </div>
                     <div>
-                        <span class="text-xl font-bold tracking-tight text-white font-pixel" style="color:#ffffff;">Orbit Security</span>
-                        <div class="text-[10px] font-arcade text-emerald-400 tracking-wider">AGENCY WHITE-LABEL FLEET PORTALS</div>
+                        <span class="text-base sm:text-xl font-bold tracking-tight text-white font-pixel whitespace-nowrap" style="color:#ffffff;">Orbit Security</span>
+                        <div class="hidden xl:block text-[10px] font-arcade text-emerald-400 tracking-wider whitespace-nowrap">AGENCY WHITE-LABEL FLEET PORTALS</div>
                     </div>
                 </a>
             </div>
-            <nav class="hidden md:flex items-center gap-4 text-xs lg:text-sm font-medium text-slate-300" aria-label="Primary Navigation">
+            <nav class="hidden lg:flex items-center gap-2.5 xl:gap-4 text-xs xl:text-sm font-medium text-slate-300 whitespace-nowrap" aria-label="Primary Navigation">
                 <a href="../index.html" class="hover:text-emerald-400 transition-colors">Home</a>
                 <a href="../audit.html" class="hover:text-emerald-400 transition-colors text-cyan-300">DNS Audit</a>
                 <a href="../fleet.html" class="hover:text-emerald-400 transition-colors">Fleet</a>
+                <a href="../labs.html" class="hover:text-emerald-400 transition-colors">Labs</a>
                 <a href="./index.html" aria-current="page" class="text-emerald-400 font-semibold border-b border-emerald-400 pb-0.5">Portals</a>
                 <a href="../benchmark/index.html" class="hover:text-emerald-400 transition-colors">Benchmark</a>
                 <a href="../index.html#pricing" class="hover:text-emerald-400 transition-colors">Pricing</a>
                 <a href="../about.html" class="hover:text-emerald-400 transition-colors">About</a>
-                <a href="../signup.html" class="min-h-[40px] px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wide bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition shadow-md shadow-emerald-500/20 pixel-btn inline-flex items-center">
+            </nav>
+
+            <div class="hidden lg:flex items-center gap-1.5 xl:gap-2 flex-shrink-0">
+                <button type="button" id="audio-toggle-btn" onclick="if(window.SimpleCat){SimpleCat.toggleSound();}" class="inline-flex items-center justify-center min-w-[40px] min-h-[40px] px-2.5 py-2 rounded-lg bg-slate-900 border border-slate-700/80 hover:border-emerald-500/50 hover:bg-slate-800 text-slate-300 hover:text-emerald-300 font-mono text-xs transition-all cursor-pointer shadow-sm pixel-btn whitespace-nowrap" title="Toggle 8-Bit Audio SFX (Hotkey: M)" aria-label="Toggle 8-Bit Audio SFX">
+                    <span>🔊</span>
+                </button>
+                <button type="button" id="header-tour-btn" onclick="if(window.SimpleCat){SimpleCat.playPowerUp(); SimpleCat.startTour();}" class="tour-cta-beacon inline-flex items-center gap-1.5 px-2.5 xl:px-3 py-2 min-h-[40px] rounded-lg bg-gradient-to-r from-cyan-500/20 via-emerald-500/15 to-cyan-500/20 hover:from-cyan-400 hover:to-emerald-400 border border-cyan-400/75 text-cyan-200 hover:text-slate-950 font-mono text-xs font-bold tracking-wide transition-all cursor-pointer whitespace-nowrap shadow-[0_0_16px_rgba(6,182,212,0.28)]" title="Take Interactive Guided Tour" aria-label="Take Interactive Guided Tour">
+                    <span class="relative flex h-2 w-2 flex-shrink-0"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-300 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span></span>
+                    <span>Take Tour</span>
+                </button>
+                <a href="../signup.html" class="min-h-[40px] px-3 xl:px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wide bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition shadow-md shadow-emerald-500/20 pixel-btn inline-flex items-center whitespace-nowrap">
                     Start Retainer
                 </a>
-            </nav>
+            </div>
+
+            <div class="flex lg:hidden items-center gap-2 flex-shrink-0">
+                <button type="button" id="mobile-header-tour-btn" onclick="if(window.SimpleCat){SimpleCat.playPowerUp(); SimpleCat.startTour();}" class="tour-cta-beacon inline-flex items-center gap-1.5 min-h-[42px] px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 border border-cyan-400/75 text-cyan-200 font-mono text-xs font-bold whitespace-nowrap cursor-pointer" title="Take Interactive Guided Tour" aria-label="Take Interactive Guided Tour">
+                    <span class="relative flex h-2 w-2 flex-shrink-0"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-300 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span></span>
+                    <span>Tour</span>
+                </button>
+                <button type="button" id="portalsMobileMenuBtn" class="min-w-[42px] min-h-[42px] p-2 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-300 hover:text-white flex items-center justify-center cursor-pointer" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="portalsMobileMenu">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/></svg>
+                </button>
+            </div>
         </div>
+
+        <nav id="portalsMobileMenu" class="hidden lg:hidden bg-slate-950/98 border-b border-emerald-500/40 px-4 py-3 space-y-1" aria-label="Mobile Navigation">
+            <button type="button" onclick="const mb=document.getElementById('portalsMobileMenuBtn'); if(mb) mb.click(); if(window.SimpleCat){SimpleCat.playPowerUp(); SimpleCat.startTour();}" class="w-full flex items-center justify-between min-h-[44px] px-3 rounded-lg bg-cyan-500/15 border border-cyan-400/50 text-cyan-200 text-sm font-bold cursor-pointer mb-1">
+                <span>🗺️ Start Interactive Guided Tour</span>
+                <span class="text-[9px] font-arcade bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded border border-cyan-400/40">TOUR</span>
+            </button>
+            <a href="../index.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-slate-200 hover:bg-slate-900 hover:text-emerald-400">Home</a>
+            <a href="../audit.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-cyan-300 hover:bg-slate-900">Instant DNS Audit</a>
+            <a href="../fleet.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-slate-200 hover:bg-slate-900 hover:text-emerald-400">Fleet Command</a>
+            <a href="../labs.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-cyan-300 hover:bg-slate-900">Security Labs</a>
+            <a href="../benchmark/index.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-slate-200 hover:bg-slate-900 hover:text-emerald-400">Benchmark</a>
+            <a href="../about.html" class="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-slate-200 hover:bg-slate-900 hover:text-emerald-400">About Us</a>
+            <a href="../signup.html" class="flex items-center justify-center min-h-[48px] mt-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase tracking-wide">Start Retainer</a>
+        </nav>
     </header>
 
     <!-- Main Showcase Gallery -->
@@ -396,5 +431,17 @@
             </div>
         </div>
     </footer>
+    <script>
+        (function() {
+            const btn = document.getElementById('portalsMobileMenuBtn');
+            const menu = document.getElementById('portalsMobileMenu');
+            if (btn && menu) {
+                btn.addEventListener('click', () => {
+                    const isHidden = menu.classList.toggle('hidden');
+                    btn.setAttribute('aria-expanded', isHidden ? 'false' : 'true');
+                });
+            }
+        })();
+    </script>
 </body>
 </html>

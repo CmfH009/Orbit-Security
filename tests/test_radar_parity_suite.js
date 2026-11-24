@@ -1177,6 +1177,16 @@ async function runTests() {
     const zkHtml = mockDoc.getElementById('zkScorecardRows').innerHTML;
     assert(zkHtml.includes('shopify.com') && zkHtml.includes('example.org') && !zkHtml.includes('not-a-domain'), 'runZeroKnowledgeBatchScorecard renders normalized valid domains only');
 
+    // 30. Shareable ?domain= Parser & URL Builder + KEV Deep-Link
+    assert(sandbox.window.getValidDomainParam('?domain=https://Shopify.com/admin') === 'shopify.com', 'getValidDomainParam normalizes and accepts valid FQDN');
+    assert(sandbox.window.getValidDomainParam('?target=uchicago.edu') === 'uchicago.edu', 'getValidDomainParam accepts target alias');
+    assert(sandbox.window.getValidDomainParam('?domain=localhost') === '', 'getValidDomainParam rejects localhost');
+    assert(sandbox.window.getValidDomainParam('?domain=127.0.0.1') === '', 'getValidDomainParam rejects loopback IP');
+    assert(sandbox.window.getValidDomainParam('?domain=<script>alert(1)</script>') === '', 'getValidDomainParam rejects XSS payload');
+    const shareUrl = sandbox.window.buildShareableRadarUrl('shopify.com', 'Apex Studio');
+    assert(shareUrl.includes('domain=shopify.com') && shareUrl.includes('agency=Apex'), 'buildShareableRadarUrl builds shareable ?domain=&agency= URL');
+    assert(typeof sandbox.window.applyKevDeepLinkFromUrl === 'function', 'applyKevDeepLinkFromUrl is exposed on window');
+
     console.log(`\n========================================`);
     console.log(`ALL ${passed}/${total} AUDIT ENGINE & PDF PARITY TESTS PASSED!`);
     console.log(`========================================`);

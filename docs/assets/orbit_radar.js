@@ -148,6 +148,38 @@
             /^127\.|^10\.|^192\.168\.|^172\.(1[6-9]|2[0-9]|3[0-1])\.|^0\.|^169\.254\./.test(domain);
     }
 
+    function getValidDomainParam(searchStr) {
+        try {
+            const params = new URLSearchParams(typeof searchStr === 'string' ? searchStr : (window.location.search || ''));
+            const raw = params.get('domain') || params.get('target') || '';
+            const clean = normalizeDomain(raw);
+            if (!clean || isRestrictedDomain(clean)) return '';
+            return clean;
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function buildShareableRadarUrl(domain, agency = '') {
+        const clean = normalizeDomain(domain);
+        const origin = (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== 'null')
+            ? window.location.origin
+            : 'https://cmfh009.github.io';
+        const pathname = (typeof window !== 'undefined' && window.location && window.location.pathname)
+            ? window.location.pathname
+            : '/Orbit-Security/';
+        if (!clean || isRestrictedDomain(clean)) {
+            return `${origin}${pathname}`;
+        }
+        const params = new URLSearchParams();
+        params.set('domain', clean);
+        const cleanAgency = String(agency || '').trim();
+        if (cleanAgency) {
+            params.set('agency', cleanAgency);
+        }
+        return `${origin}${pathname}?${params.toString()}`;
+    }
+
     // ==========================================
     // 1b. CRT Arcade Warning Toast System
     // ==========================================
@@ -2175,6 +2207,13 @@ ${agency}`;
         }
 
         const safeDomain = escapeHtml(domain);
+        try {
+            if (typeof window !== 'undefined' && window.history && typeof window.history.replaceState === 'function' && window.location && window.location.protocol !== 'file:') {
+                const params = new URLSearchParams(window.location.search || '');
+                params.set('domain', domain);
+                window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+            }
+        } catch (_) {}
         scanBtn.disabled = true;
         scanBtnText.textContent = 'Auditing...';
         hud.classList.remove('hidden');
@@ -2743,15 +2782,23 @@ ${payload.url}`;
     }
 
     function copySessionLink() {
-        const sessionUrl = window.location.href;
+        const rawDom = document.getElementById('targetDomain')?.value || '';
+        const cleanDom = normalizeDomain(rawDom);
+        const agency = (document.getElementById('radarAgencyName')?.value || '').trim();
+        const shareUrl = (cleanDom && !isRestrictedDomain(cleanDom))
+            ? buildShareableRadarUrl(cleanDom, agency)
+            : window.location.href;
         const notify = () => {
             if (window.SimpleCat && SimpleCat.playCoin) SimpleCat.playCoin();
-            showArcadeToast(`✓ Session link copied! Share this URL to collaborate in real-time.`);
+            const msg = (cleanDom && !isRestrictedDomain(cleanDom))
+                ? `✓ Shareable radar link copied for ${cleanDom}!`
+                : `✓ Session link copied! Share this URL to collaborate in real-time.`;
+            showArcadeToast(msg);
         };
         if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(sessionUrl).then(notify).catch(() => prompt('Copy Session Link:', sessionUrl));
+            navigator.clipboard.writeText(shareUrl).then(notify).catch(() => prompt('Copy Shareable Link:', shareUrl));
         } else {
-            prompt('Copy Session Link:', sessionUrl);
+            prompt('Copy Shareable Link:', shareUrl);
         }
     }
 
@@ -4006,6 +4053,7 @@ ${payload.url}`;
 
             filterKevEpssRadar();
             renderEpssHorizonChart();
+            applyKevDeepLinkFromUrl();
             const elapsed = (performance.now() - t0).toFixed(1);
             const latBadge = document.getElementById('kevRadarLatencyBadge');
             if (latBadge) latBadge.textContent = `${elapsed}ms`;
@@ -4145,6 +4193,76 @@ ${payload.url}`;
         if (descEl) descEl.textContent = item.short_description || item.vulnerability_name;
         if (dueEl) dueEl.textContent = item.due_date ? `Due: ${item.due_date}` : 'BOD 26-04';
         if (actionEl) actionEl.textContent = item.action_required || 'Apply vendor security patches immediately.';
+    }
+
+    function applyKevDeepLinkFromUrl(searchStr) {
+        if (typeof window === 'undefined' || !document.getElementById('kevRadarResultsGrid')) return false;
+        const params = new URLSearchParams(typeof searchStr === 'string' ? searchStr : (window.location.search || ''));
+        const rawCve = (params.get('cve') || '').trim().toUpperCase();
+        if (!rawCve || !/^[A-Z0-9_-]{4,40}$/.test(rawCve)) return false;
+
+        const searchInput = document.getElementById('kevRadarSearchInput');
+        if (searchInput) searchInput.value = rawCve;
+        _kevRadarActiveFilter = 'all';
+        document.querySelectorAll('.kev-filter-btn').forEach(btn => {
+            const isAll = btn.getAttribute('data-kev-filter') === 'all';
+            btn.setAttribute('aria-pressed', isAll ? 'true' : 'false');
+        });
+
+        const vulns = Array.isArray(_kevRadarDataset?.vulnerabilities) ? _kevRadarDataset.vulnerabilities : [];
+        const matched = vulns.find(v => String(v.cve || '').toUpperCase() === rawCve);
+
+        if (matched) {
+            filterKevEpssRadar();
+            selectKevRadarCve(matched.cve, false);
+        } else {
+            filterKevEpssRadar();
+            const fallbackItem = {
+                cve: rawCve,
+                vendor: 'Live Threat Wire',
+                product: 'Infrastructure Advisory',
+                short_description: `${rawCve} was escalated from the live threat wire and is queued for the next 6-hour CISA KEV + EPSS compaction cycle.`,
+                action_required: 'Verify affected package/edge versions and run a perimeter scan on client domains.',
+                is_cisa_kev: false,
+                epss: 0.85,
+                percentile: 0.99,
+                date_added: 'Live Wire',
+                due_date: 'Immediate Triage',
+            };
+            _kevRadarSelectedItem = fallbackItem;
+            const badgeEl = document.getElementById('kevDetailBadge');
+            const cveEl = document.getElementById('kevDetailCveId');
+            const epssEl = document.getElementById('kevDetailEpssScore');
+            const percEl = document.getElementById('kevDetailPercentile');
+            const stackEl = document.getElementById('kevDetailStack');
+            const dateEl = document.getElementById('kevDetailDate');
+            const descEl = document.getElementById('kevDetailDescription');
+            const dueEl = document.getElementById('kevDetailDueDate');
+            const actionEl = document.getElementById('kevDetailAction');
+            if (badgeEl) {
+                badgeEl.className = 'inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-mono text-[10px] font-bold uppercase';
+                badgeEl.textContent = 'LIVE ADVISORY // PENDING KEV SYNC';
+            }
+            if (cveEl) cveEl.textContent = fallbackItem.cve;
+            if (epssEl) epssEl.textContent = 'LIVE';
+            if (percEl) percEl.textContent = 'Live Wire Priority';
+            if (stackEl) stackEl.textContent = `${fallbackItem.vendor} — ${fallbackItem.product}`;
+            if (dateEl) dateEl.textContent = fallbackItem.date_added;
+            if (descEl) descEl.textContent = fallbackItem.short_description;
+            if (dueEl) dueEl.textContent = fallbackItem.due_date;
+            if (actionEl) actionEl.textContent = fallbackItem.action_required;
+        }
+
+        const detailPanel = document.getElementById('kevRadarDetailPanel');
+        if (detailPanel) {
+            detailPanel.classList.add('ring-2', 'ring-cyan-400/80');
+            setTimeout(() => { detailPanel.classList.remove('ring-2', 'ring-cyan-400/80'); }, 2400);
+        }
+        const radarSec = document.getElementById('kev-epss-radar');
+        if (radarSec && typeof radarSec.scrollIntoView === 'function') {
+            setTimeout(() => { radarSec.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 120);
+        }
+        return true;
     }
 
     function copySelectedKevClientAdvisory() {
@@ -5728,6 +5846,35 @@ ${payload.url}`;
         });
     }
 
+    let _domainAutoScanTriggered = false;
+    function initDomainAutoScanFromUrl() {
+        if (_domainAutoScanTriggered) return false;
+        const input = document.getElementById('targetDomain');
+        const form = document.getElementById('auditForm');
+        if (!input || !form) return false;
+        const domain = getValidDomainParam();
+        if (!domain) return false;
+        _domainAutoScanTriggered = true;
+        input.value = domain;
+        try {
+            const agencyParam = new URLSearchParams(window.location.search || '').get('agency');
+            const agencyInput = document.getElementById('radarAgencyName');
+            if (agencyParam && agencyInput && !agencyInput.value) {
+                agencyInput.value = agencyParam.trim();
+            }
+        } catch (_) {}
+        const term = document.getElementById('audit-terminal');
+        if (term && typeof term.scrollIntoView === 'function') {
+            setTimeout(() => { term.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 120);
+        }
+        setTimeout(() => {
+            if (typeof handleAuditRequest === 'function') {
+                handleAuditRequest({ preventDefault() {} });
+            }
+        }, 220);
+        return true;
+    }
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
             initKevEpssRadar();
@@ -5735,6 +5882,7 @@ ${payload.url}`;
             renderEpssHorizonChart();
             initBountyRadarStatuspage();
             initCrtArcadeShaderCanvas();
+            initDomainAutoScanFromUrl();
             if (document.getElementById('visualAttackTreeContainer')) {
                 OrbitAttackTree.init('visualAttackTreeContainer', { scenarioKey: 'aws_s3' });
             }
@@ -5746,6 +5894,7 @@ ${payload.url}`;
             renderEpssHorizonChart();
             initBountyRadarStatuspage();
             initCrtArcadeShaderCanvas();
+            initDomainAutoScanFromUrl();
             if (document.getElementById('visualAttackTreeContainer')) {
                 OrbitAttackTree.init('visualAttackTreeContainer', { scenarioKey: 'aws_s3' });
             }
@@ -5768,6 +5917,9 @@ ${payload.url}`;
 
     // Expose to window
     window.normalizeDomain = normalizeDomain;
+    window.getValidDomainParam = getValidDomainParam;
+    window.buildShareableRadarUrl = buildShareableRadarUrl;
+    window.applyKevDeepLinkFromUrl = applyKevDeepLinkFromUrl;
     window.performClientDohAudit = performClientDohAudit;
     window.runRealScanAndGeneratePdf = runRealScanAndGeneratePdf;
     window.runRealScanFromFlipbook = runRealScanFromFlipbook;

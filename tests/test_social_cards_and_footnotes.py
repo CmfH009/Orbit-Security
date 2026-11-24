@@ -492,3 +492,34 @@ def test_orbit_core_portal_uses_tracked_sample_audit_pdf():
         )
 
 
+def test_webp_cwv_companions_and_optimized_fleet_png():
+    """Verify WebP companions are byte-identical in landing/ and docs/ and fleet_command_center_live.png stays 1920x889 < 500KB."""
+    from PIL import Image
+
+    webp_names = (
+        "orbit_cyber_command_deck.webp",
+        "orbit_doh_encrypted_shield.webp",
+        "orbit_astrocat_laser_sentinel.webp",
+        "orbit_cats_gatekeeper.webp",
+        "orbit_cname_blackhole.webp",
+        "orbit_cats_square.webp",
+        "orbit_cats_pounce.webp",
+        "orbit_agency_retainer_vault.webp",
+        "fleet_arena_preview.webp",
+    )
+    for name in webp_names:
+        l_path = LANDING_DIR / "assets" / name
+        d_path = DOCS_DIR / "assets" / name
+        assert l_path.is_file(), f"Missing {l_path}"
+        assert d_path.is_file(), f"Missing {d_path}"
+        assert l_path.read_bytes() == d_path.read_bytes(), f"WebP drift for {name}"
+
+    fleet_png = LANDING_DIR / "assets" / "fleet_command_center_live.png"
+    assert fleet_png.is_file()
+    assert fleet_png.stat().st_size < 500_000, f"fleet_command_center_live.png too large: {fleet_png.stat().st_size}"
+    with Image.open(fleet_png) as im:
+        assert im.size == (1920, 889)
+        assert im.format == "PNG"
+
+
+
