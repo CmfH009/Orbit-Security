@@ -13,6 +13,8 @@
 
 ## Test Seams
 - Test audit scoring and remediation at public module seams (`tests/test_audit_scoring.py`, `tests/test_opencode_remediation.py`) using realistic payloads rather than asserting internal private helper call counts.
+- **No Silent Capture/Test Polyfills**: Never monkey-patch missing production globals (e.g. `window.normalizeDomain`) inside QA, capture, or test scripts to force an interaction to pass; surface the missing symbol and fix `landing/`.
 
 ## Landing UI & Fixed Overlays
 - **Fixed Overlays & Responsive Bounds**: For `landing/` changes adding fixed overlays, tour spotlights, or floating HUD bars, verify sticky-navbar clearance (`top >= 76px`) and `390×844` mobile viewport bounds visually; string-matching tests in `tests/test_simplecat_visuals_and_scroll.js` alone do not catch geometric clipping.
+- **Content-Match & 1:1 Crop Visual QA**: When visually auditing captured pages or rendered videos, confirm rendered content matches the target section (catching `content-visibility: auto` scroll misfires), inspect 1:1 unscaled crops of text and dark gradients for compression noise/banding, and check transition frames for overlay ghosting.

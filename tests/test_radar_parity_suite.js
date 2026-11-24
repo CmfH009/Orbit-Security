@@ -1161,6 +1161,22 @@ async function runTests() {
     // 28. orbit-core.html Safe Image Protocol Check
     assert(orbitCoreHtml.includes('/^(data:image\\/|https?:\\/\\/|\\.\\.?\\/)/i.test(logo)'), 'orbit-core.html enforces safe image protocol before inserting logo');
 
+    // 29. normalizeDomain & Zero-Knowledge Batch Fleet Scorecard
+    assert(sandbox.window.normalizeDomain('https://Shopify.com/path') === 'shopify.com', 'normalizeDomain strips protocol and path');
+    assert(sandbox.window.normalizeDomain('  uchicago.edu:443 ') === 'uchicago.edu', 'normalizeDomain strips whitespace and port');
+    assert(sandbox.window.normalizeDomain('not a domain') === '', 'normalizeDomain rejects invalid domain string');
+    assert(sandbox.window.normalizeDomain('') === '', 'normalizeDomain handles empty input');
+
+    mockDoc.getElementById('zkFleetDomainsInput').value = 'https://Shopify.com/path\nexample.org, not-a-domain';
+    mockDoc.getElementById('zkScorecardRows').innerHTML = '';
+    mockDoc.getElementById('zkFleetGradeBadge').textContent = '';
+    mockDoc.getElementById('zkFleetSha256Badge').textContent = '';
+    await sandbox.window.runZeroKnowledgeBatchScorecard();
+    assert(mockDoc.getElementById('zkFleetGradeBadge').textContent.includes('FLEET GRADE'), 'runZeroKnowledgeBatchScorecard updates fleet grade badge');
+    assert(mockDoc.getElementById('zkFleetSha256Badge').textContent.startsWith('SHA-256: '), 'runZeroKnowledgeBatchScorecard computes SHA-256 digest');
+    const zkHtml = mockDoc.getElementById('zkScorecardRows').innerHTML;
+    assert(zkHtml.includes('shopify.com') && zkHtml.includes('example.org') && !zkHtml.includes('not-a-domain'), 'runZeroKnowledgeBatchScorecard renders normalized valid domains only');
+
     console.log(`\n========================================`);
     console.log(`ALL ${passed}/${total} AUDIT ENGINE & PDF PARITY TESTS PASSED!`);
     console.log(`========================================`);

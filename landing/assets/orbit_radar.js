@@ -129,6 +129,18 @@
         return domainRegex.test(domain);
     }
 
+    function normalizeDomain(raw) {
+        const clean = String(raw || '')
+            .trim()
+            .toLowerCase()
+            .replace(/^https?:\/\//, '')
+            .replace(/\/.*$/, '')
+            .replace(/:\d+$/, '')
+            .replace(/[^a-z0-9.-]/g, '')
+            .replace(/^\.+|\.+$/g, '');
+        return isValidDomain(clean) ? clean : '';
+    }
+
     function isRestrictedDomain(domain) {
         return domain === 'localhost' ||
             domain.endsWith('.local') ||
@@ -5755,6 +5767,7 @@ ${payload.url}`;
     }
 
     // Expose to window
+    window.normalizeDomain = normalizeDomain;
     window.performClientDohAudit = performClientDohAudit;
     window.runRealScanAndGeneratePdf = runRealScanAndGeneratePdf;
     window.runRealScanFromFlipbook = runRealScanFromFlipbook;
