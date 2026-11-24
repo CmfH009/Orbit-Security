@@ -1108,7 +1108,8 @@ class GraphQLIntrospectionSentinel:
     ) -> Optional[Dict[str, Any]]:
         """Probes common GraphQL endpoints for active schema introspection."""
         host = target_domain.split(":")[0].strip().lower()
-        if not is_safe_host(host):
+        safe = is_safe_host(host) if mock_paths is None else is_safe_host(host, resolve_dns=False)
+        if not safe:
             return None
 
         headers = {
@@ -1241,7 +1242,8 @@ class CorsMisconfigurationSentinel:
     ) -> Optional[Dict[str, Any]]:
         """Audits domain for arbitrary CORS reflection with credentials."""
         host = target_domain.split(":")[0].strip().lower()
-        if not is_safe_host(host):
+        safe = is_safe_host(host) if mock_responses is None else is_safe_host(host, resolve_dns=False)
+        if not safe:
             return None
 
         url = f"https://{host}"

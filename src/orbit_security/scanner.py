@@ -133,7 +133,7 @@ def is_safe_ip(ip_str: str) -> bool:
         return False
 
 
-def is_safe_host(hostname: str) -> bool:
+def is_safe_host(hostname: str, *, resolve_dns: bool = True) -> bool:
     """Validates that a hostname does not resolve to an internal, loopback, or cloud metadata address."""
     if not hostname:
         return False
@@ -153,6 +153,9 @@ def is_safe_host(hostname: str) -> bool:
         return False
     if host.endswith(".local") or host.endswith(".internal") or host.endswith(".localhost"):
         return False
+
+    if not resolve_dns:
+        return True
 
     try:
         addr_info = socket.getaddrinfo(host, None)

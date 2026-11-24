@@ -85,13 +85,35 @@ class CertificateTransparencyMonitor:
         self.offline_fixtures = offline_fixtures or BUILTIN_CT_FALLBACK
         self.offline = offline
         self.known_subdomains: Dict[str, Set[str]] = {}
+        self._cache_sig: Optional[Tuple[int, int]] = None
+        self._cache_data: Optional[Dict[str, Any]] = None
+
+    def _read_cache_dict(self) -> Optional[Dict[str, Any]]:
+        """Reads and caches the CT disk JSON keyed by (mtime_ns, size) to avoid repeated multi-MB parses."""
+        if not self.cache_file.exists():
+            self._cache_sig = None
+            self._cache_data = None
+            return None
+        try:
+            st = self.cache_file.stat()
+            sig = (st.st_mtime_ns, st.st_size)
+            if self._cache_sig == sig and self._cache_data is not None:
+                return self._cache_data
+            data = json.loads(self.cache_file.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                self._cache_sig = sig
+                self._cache_data = data
+                return data
+            return None
+        except Exception:
+            return None
 
     def is_cache_valid(self, domain: str, ttl_seconds: float = 86400.0) -> bool:
         """Checks if cached CT query for domain is fresh."""
-        if not self.cache_file.exists():
+        data = self._read_cache_dict()
+        if not data:
             return False
         try:
-            data = json.loads(self.cache_file.read_text(encoding="utf-8"))
             domain_cache = data.get(domain.lower(), {})
             ts = float(domain_cache.get("timestamp", 0.0))
             return (time.time() - ts) < ttl_seconds
@@ -100,10 +122,10 @@ class CertificateTransparencyMonitor:
 
     def load_from_cache(self, domain: str) -> Optional[List[Dict[str, Any]]]:
         """Loads cached CT query results for domain."""
-        if not self.cache_file.exists():
+        data = self._read_cache_dict()
+        if not data:
             return None
         try:
-            data = json.loads(self.cache_file.read_text(encoding="utf-8"))
             domain_cache = data.get(domain.lower(), {})
             return domain_cache.get("records")
         except Exception:
@@ -127,6 +149,8 @@ class CertificateTransparencyMonitor:
             tmp_cache = self.cache_file.with_suffix(".tmp")
             tmp_cache.write_text(json.dumps(existing, indent=2), encoding="utf-8")
             tmp_cache.replace(self.cache_file)
+            self._cache_sig = None
+            self._cache_data = None
         except Exception as ex:
             logger.debug(f"Failed to save CT cache: {ex}")
 

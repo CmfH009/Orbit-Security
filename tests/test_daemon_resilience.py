@@ -65,18 +65,50 @@ def test_ct_monitor_atomic_cache_save(tmp_path: Path):
     assert data["test.com"]["records"][0]["id"] == 12345
 
 
-def test_bounty_rolling_daemon_offline_sweep_latency():
-    daemon = BountyRollingDaemon(offline=True, enable_ct=True)
+def test_bounty_rolling_daemon_offline_sweep_latency(tmp_path: Path):
+    daemon = BountyRollingDaemon(
+        state_file=tmp_path / "radar_state.json",
+        ct_watermark_file=tmp_path / "ct_watermark.json",
+        ct_cache_file=tmp_path / "ct_cache.json",
+        offline=True,
+        enable_ct=True,
+    )
 
-    start_t = time.time()
-    res = daemon.sweep_program("shopify")
-    elapsed = time.time() - start_t
+    with patch(
+        "socket.getaddrinfo",
+        side_effect=AssertionError("offline sweep must not perform live DNS lookups"),
+    ):
+        start_t = time.time()
+        res = daemon.sweep_program("shopify")
+        elapsed = time.time() - start_t
 
     assert res is not None
     assert res["program_id"] == "shopify"
-    # Prior to our fix, crt.sh network timeouts added 18+ seconds (totaling >25s).
-    # With offline mode active, the full 27-host sweep across 3 wildcard scopes finishes in <10s.
-    assert elapsed < 10.0
+    # With offline mode isolating both DNS lookups and CT cache disk parses,
+    # the full 27-host sweep across 3 wildcard scopes finishes deterministically in <5s.
+    assert elapsed < 5.0
+
+
+def test_is_safe_host_and_cloud_sentinels_skip_dns_when_offline():
+    from orbit_security.cloud_sentinels import (
+        CorsMisconfigurationSentinel,
+        GraphQLIntrospectionSentinel,
+    )
+    from orbit_security.scanner import is_safe_host
+
+    with patch(
+        "socket.getaddrinfo",
+        side_effect=AssertionError("offline safety check must not perform live DNS lookups"),
+    ):
+        assert is_safe_host("127.0.0.1", resolve_dns=False) is False
+        assert is_safe_host("localhost", resolve_dns=False) is False
+        assert is_safe_host("169.254.169.254", resolve_dns=False) is False
+        assert is_safe_host("api.example.com", resolve_dns=False) is True
+
+        assert GraphQLIntrospectionSentinel.audit_target("api.shopify.com", mock_paths={}) is None
+        assert CorsMisconfigurationSentinel.audit_target("api.shopify.com", mock_responses={}) is None
+        assert GraphQLIntrospectionSentinel.audit_target("127.0.0.1", mock_paths={}) is None
+        assert CorsMisconfigurationSentinel.audit_target("localhost", mock_responses={}) is None
 
 
 def test_social_daemon_hardware_governor_path_fallback():

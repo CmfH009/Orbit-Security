@@ -56,6 +56,7 @@ class BountyRollingDaemon:
         programs_path: Optional[Path] = None,
         state_file: Optional[Path] = None,
         ct_watermark_file: Optional[Path] = None,
+        ct_cache_file: Optional[Path] = None,
         offline: bool = False,
         blackboard: Any = None,
         enable_ct: bool = True,
@@ -70,6 +71,7 @@ class BountyRollingDaemon:
         self.prober = BountyActiveProber(state_file=self.state_file, blackboard=self.blackboard)
         self.ct_daemon = ct_daemon or CtStreamDaemon(
             watermark_file=ct_watermark_file,
+            cache_file=ct_cache_file,
             blackboard=self.blackboard,
             offline=self.offline,
         )
