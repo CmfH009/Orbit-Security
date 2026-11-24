@@ -542,6 +542,54 @@ def test_build_agenda_items_surfaces_urgent_emails_when_unread_is_zero():
     assert "2 actionable urgent email item(s)" in items[2]
 
 
+def test_build_agenda_items_skips_closed_vdp_4204024_but_surfaces_open_analyst_vdp():
+    from scripts.daily_briefing import _build_agenda_items
+
+    items_closed = _build_agenda_items(
+        ci_count=0,
+        live_ci={},
+        option_c={"kyc_payout_status": "VERIFIED"},
+        email_data={"unread_non_ci_count": 0, "urgent": 0},
+        daemon={"live_verified_active": True},
+        inbox_q={"failed": 0},
+        post_delta={
+            "vdp_delta": [],
+            "vdp_all": [
+                {
+                    "subject": "[disney] #4204024: Dangling DNS CNAME on test.hulu.com",
+                    "age_hours": 141.0,
+                }
+            ],
+            "work_delta": [],
+        },
+    )
+    assert not any("Waiting on Carson (VDP SLA" in item for item in items_closed)
+
+    items_open = _build_agenda_items(
+        ci_count=0,
+        live_ci={},
+        option_c={"kyc_payout_status": "VERIFIED"},
+        email_data={"unread_non_ci_count": 0, "urgent": 0},
+        daemon={"live_verified_active": True},
+        inbox_q={"failed": 0},
+        post_delta={
+            "vdp_delta": [],
+            "vdp_all": [
+                {
+                    "subject": "[disney] #4204024: Dangling DNS CNAME on test.hulu.com",
+                    "age_hours": 141.0,
+                },
+                {
+                    "subject": "[acme] #9999999: Analyst PoC requested",
+                    "age_hours": 12.5,
+                },
+            ],
+            "work_delta": [],
+        },
+    )
+    assert any("Waiting on Carson (VDP SLA, `12.5h` age)" in item and "#9999999" in item for item in items_open)
+
+
 def test_triage_email_messages_moves_self_replied_thread_to_awaiting_external_reply():
     import datetime
     from types import SimpleNamespace

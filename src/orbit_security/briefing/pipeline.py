@@ -38,6 +38,35 @@ _BRIEFING_CI_LINE_RE = re.compile(
     r"\[(?P<repo>[^\]]+)\]\s*Run\s+(?:failed|cancelled|timed out)\s*:\s*(?P<workflow>.+?)\s*-\s*(?P<branch>[^\s(]+)\s*\((?P<sha>[0-9a-fA-F]{6,40})\)",
     re.IGNORECASE,
 )
+_CLOSED_VDP_REPORT_IDS = frozenset({"4204024", "4204160"})
+_CLOSED_VDP_ADVISORY_STATES = frozenset({"not-applicable", "informative", "resolved", "duplicate", "spam"})
+
+
+def _closed_vdp_report_ids() -> frozenset[str]:
+    """Return known closed/withdrawn HackerOne VDP report IDs from constants and local advisory ledger."""
+    closed = set(_CLOSED_VDP_REPORT_IDS)
+    advisories_path = _REPO_ROOT / "data" / "dispatched_security_advisories.json"
+    if advisories_path.exists():
+        try:
+            payload = json.loads(advisories_path.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                for entry in payload.values():
+                    if not isinstance(entry, dict):
+                        continue
+                    rid = str(entry.get("report_id") or "").strip()
+                    state = str(entry.get("state") or "").strip().lower()
+                    status = str(entry.get("status") or "").strip().upper()
+                    if rid and (state in _CLOSED_VDP_ADVISORY_STATES or status.startswith("CLOSED_")):
+                        closed.add(rid)
+        except Exception:
+            pass
+    return frozenset(closed)
+
+
+def _is_closed_vdp_subject(subject: str, closed_ids: Optional[frozenset[str]] = None) -> bool:
+    """Return True when a VDP email subject references a closed/withdrawn report ID."""
+    ids = closed_ids if closed_ids is not None else _closed_vdp_report_ids()
+    return any(f"#{rid}" in subject for rid in ids)
 
 
 def sanitize_snapshot(snapshot: TelemetrySnapshot) -> TelemetrySnapshot:
@@ -679,16 +708,25 @@ def _build_agenda_items(
     vdp_delta = delta.get("vdp_delta", []) or []
     vdp_all = delta.get("vdp_all", []) or []
     work_delta = delta.get("work_delta", []) or []
+    closed_vdp_ids = _closed_vdp_report_ids()
+    open_vdp_all = [
+        v for v in vdp_all
+        if not _is_closed_vdp_subject(str(v.get("subject", "")), closed_ids=closed_vdp_ids)
+    ]
     if vdp_delta:
         top_vdp = vdp_delta[0]
         agenda_items.append(
             f"Waiting on Carson (VDP Delta): respond to `{top_vdp.get('subject')}` ({top_vdp.get('sender')})."
         )
-    elif any("analyst" in str(v.get("subject", "")).lower() or "4204024" in str(v.get("subject", "")) for v in vdp_all):
-        disney_vdp = next((v for v in vdp_all if "4204024" in str(v.get("subject", ""))), vdp_all[0])
-        agenda_items.append(
-            f"Waiting on Carson (VDP SLA, `{disney_vdp.get('age_hours', 0)}h` age): fulfill HackerOne analyst PoC request on `{disney_vdp.get('subject')}`."
+    else:
+        analyst_vdp = next(
+            (v for v in open_vdp_all if "analyst" in str(v.get("subject", "")).lower()),
+            None,
         )
+        if analyst_vdp is not None:
+            agenda_items.append(
+                f"Waiting on Carson (VDP SLA, `{analyst_vdp.get('age_hours', 0)}h` age): fulfill HackerOne analyst PoC request on `{analyst_vdp.get('subject')}`."
+            )
 
     if work_delta:
         top_work = work_delta[0]
