@@ -328,13 +328,20 @@ def test_cli_status_command():
     assert "Shopify" in result.stdout
 
 
-def test_cli_outside_offpeak_window_without_now_skips_cleanly():
-    """Verifies that running without --now outside off-peak window returns exit code 0."""
-    result = _run_cli()
-    if not OffPeakWindow.is_off_peak():
-        assert result.returncode == 0
-        assert "SKIPPED_OUTSIDE_WINDOW" in result.stdout or "OUTSIDE WINDOW" in result.stdout
-        assert "Tip: Run with --now" in result.stdout
+def test_cli_outside_offpeak_window_without_now_skips_cleanly(monkeypatch, capsys):
+    """Verifies that running without --now outside off-peak window skips cleanly without live scans."""
+    import scripts.run_bounty_radar as run_bounty_radar
+
+    monkeypatch.setattr(
+        OffPeakWindow,
+        "is_off_peak",
+        staticmethod(lambda *args, **kwargs: False),
+    )
+    monkeypatch.setattr(sys, "argv", ["run_bounty_radar.py"])
+    run_bounty_radar.main()
+    stdout = capsys.readouterr().out
+    assert "OUTSIDE WINDOW" in stdout
+    assert "Tip: Run with --now" in stdout
 
 
 def test_cli_single_program_sweep_success(monkeypatch):
