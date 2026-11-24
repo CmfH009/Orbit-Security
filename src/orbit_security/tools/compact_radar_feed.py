@@ -127,14 +127,27 @@ def compact_radar_dataset(
     compact_payload = _build_payload(combined_entries)
     minified_json = json.dumps(compact_payload, separators=(",", ":"))
 
-    # Enforce strict < 250 KB payload budget while preserving all non-KEV high-velocity entries
-    # and the highest-EPSS / newest CISA KEV entries
+    # Enforce strict < 250 KB payload budget while preserving all non-KEV high-velocity entries,
+    # the highest-EPSS KEV entries (index 0+), and the newest 25 CISA KEV entries by date_added.
     if len(minified_json.encode("utf-8")) > max_payload_bytes and len(kev_sorted) > 50:
-        low, high = 50, len(kev_sorted)
-        best_entries = kev_sorted[:50] + non_kev_sorted
+        newest_cves = {
+            e["cve"]
+            for e in sorted(kev_sorted, key=lambda x: x.get("date_added", ""), reverse=True)[:25]
+        }
+        newest_entries = [e for e in kev_sorted if e["cve"] in newest_cves]
+        remaining_kev = [e for e in kev_sorted if e["cve"] not in newest_cves]
+
+        def _select_kev(limit: int) -> List[Dict[str, Any]]:
+            # Always keep top EPSS anchor at index 0 + newest 25 KEVs + fill remainder by EPSS
+            head = remaining_kev[: max(0, limit - len(newest_entries))]
+            selected_ids = {e["cve"] for e in head} | newest_cves
+            return [e for e in kev_sorted if e["cve"] in selected_ids]
+
+        low, high = min(50, len(kev_sorted)), len(kev_sorted)
+        best_entries = _select_kev(low) + non_kev_sorted
         while low <= high:
             mid = (low + high) // 2
-            candidate = kev_sorted[:mid] + non_kev_sorted
+            candidate = _select_kev(mid) + non_kev_sorted
             cand_json = json.dumps(_build_payload(candidate), separators=(",", ":"))
             if len(cand_json.encode("utf-8")) <= max_payload_bytes:
                 best_entries = candidate
@@ -161,13 +174,28 @@ def main():
     parser = argparse.ArgumentParser(description="Compile compacted CISA KEV + EPSS radar dataset")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_FILE, help="Target JSON output path")
     parser.add_argument("--threshold", type=float, default=0.50, help="EPSS score inclusion threshold")
+    parser.add_argument(
+        "--live",
+        action="store_true",
+        help="Force-refresh CISA KEV catalog and newest EPSS scores before compacting",
+    )
     args = parser.parse_args()
 
     from orbit_security.cisa_kev import CisaKevCatalog
     from orbit_security.epss import EpssCorrelator
 
-    kev_catalog = CisaKevCatalog()
+    kev_catalog = CisaKevCatalog(auto_load=not args.live)
+    if args.live:
+        kev_catalog.load_catalog(force_refresh=True)
     epss_correlator = EpssCorrelator()
+
+    if args.live:
+        vulns = list((kev_catalog.catalog_data or {}).get("vulnerabilities", []))
+        newest = sorted(vulns, key=lambda v: v.get("dateAdded", ""), reverse=True)[:15]
+        for entry in newest:
+            cve_id = str(entry.get("cveID", "")).strip().upper()
+            if cve_id:
+                epss_correlator.get_score(cve_id)
 
     compact_radar_dataset(
         cisa_kev_data=kev_catalog.catalog_data or {},

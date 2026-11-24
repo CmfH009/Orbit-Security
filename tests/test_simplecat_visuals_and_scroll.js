@@ -526,6 +526,25 @@ test('Guided Tour polish & Explainer v4 integration verified in simple_cat.js an
     assert(!docsIndexHtml.includes('orbit_astro_cat_gameplay_x'), 'Retired orbit_astro_cat_gameplay_x must be removed from index.html');
 });
 
+test('Top-of-page Tour beacons & relocated animated dynamic Live Threat Wire verified', () => {
+    const docsLabsHtml = fs.readFileSync(path.join(__dirname, '..', 'docs', 'labs.html'), 'utf8');
+    const docsStylesCss = fs.readFileSync(path.join(__dirname, '..', 'docs', 'assets', 'styles.min.css'), 'utf8');
+    assert(docsIndexHtml.includes('id="header-tour-btn"'), 'index.html missing #header-tour-btn');
+    assert(docsIndexHtml.includes('id="mobile-header-tour-btn"'), 'index.html missing #mobile-header-tour-btn');
+    assert(docsLabsHtml.includes('id="header-tour-btn"'), 'labs.html missing #header-tour-btn');
+    assert(docsLabsHtml.includes('id="mobile-header-tour-btn"'), 'labs.html missing #mobile-header-tour-btn');
+    assert(docsStylesCss.includes('.tour-cta-beacon'), 'styles.min.css missing .tour-cta-beacon');
+    assert(docsStylesCss.includes('.livewire-marquee-track'), 'styles.min.css missing .livewire-marquee-track');
+    assert(docsStylesCss.includes('livewireScroll'), 'styles.min.css missing livewireScroll keyframes');
+
+    const h1Idx = docsIndexHtml.indexOf('</h1>');
+    const ribbonIdx = docsIndexHtml.indexOf('id="heroThreatRibbon"');
+    assert(h1Idx > 0 && ribbonIdx > h1Idx, '#heroThreatRibbon must be relocated below Hero </h1>');
+    assert(docsIndexHtml.includes('mergeLiveThreatAdvisories'), 'Missing mergeLiveThreatAdvisories dynamic merger');
+    assert(docsIndexHtml.includes('api.github.com/advisories'), 'Missing live GitHub Security Advisories hydration');
+    assert(docsIndexHtml.includes('tabindex') && docsIndexHtml.includes('livewireDupGroup'), 'Duplicate marquee group must disable tab stops');
+});
+
 console.log('========================================');
 console.log(`ALL ${testCount}/${testCount} SIMPLECAT VISUAL & SCROLL TESTS PASSED!`);
 console.log('========================================');

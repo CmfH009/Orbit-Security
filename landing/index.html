@@ -219,11 +219,11 @@
     <link rel="dns-prefetch" href="https://checkout.stripe.com">
     
     <!-- Production Compiled Stylesheet (Zero-Render-Delay, Offline Fonts Vendored) -->
-    <link rel="stylesheet" href="assets/styles.min.css?v=20261124v7">
+    <link rel="stylesheet" href="assets/styles.min.css?v=20261124v8">
     <!-- Simple Cat 16-Bit Companion & Plain-English Decoder -->
-    <script src="assets/simple_cat.js?v=20261124v7" defer></script>
+    <script src="assets/simple_cat.js?v=20261124v8" defer></script>
     <!-- Orbit Radar Terminal & Ergonomics Engine -->
-    <script src="assets/orbit_radar.js?v=20261124v7" defer></script>
+    <script src="assets/orbit_radar.js?v=20261124v8" defer></script>
 
     <style>
         html { color-scheme: dark; }
@@ -517,11 +517,11 @@
                     <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 p-0.5 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/30 transition-all pixel-box-emerald flex-shrink-0 overflow-hidden">
                         <img src="assets/logo.png" alt="Orbit Security Logo" width="36" height="36" class="w-full h-full object-contain rounded-lg" />
                     </div>
-                    <span class="text-base sm:text-lg font-bold tracking-tight text-white font-pixel" style="color:#ffffff; white-space:nowrap;">Orbit Security</span>
+                    <span class="text-base lg:text-base xl:text-lg font-bold tracking-tight text-white font-pixel" style="color:#ffffff; white-space:nowrap;">Orbit Security</span>
                 </a>
             </div>
             
-            <nav class="hidden md:flex items-center gap-2.5 lg:gap-4 text-xs lg:text-sm font-medium text-slate-300" style="white-space:nowrap;" aria-label="Primary Navigation">
+            <nav class="hidden lg:flex items-center gap-2.5 xl:gap-4 text-xs xl:text-sm font-medium text-slate-300" style="white-space:nowrap;" aria-label="Primary Navigation">
                 <a href="audit.html" class="hover:text-emerald-400 transition-colors text-cyan-300">DNS Audit</a>
                 <a href="fleet.html" class="hover:text-emerald-400 transition-colors flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>Fleet</a>
                 <a href="labs.html" class="hover:text-emerald-400 transition-colors">Labs</a>
@@ -531,7 +531,7 @@
                 <a href="about.html" class="hover:text-emerald-400 transition-colors">About</a>
             </nav>
 
-            <div class="hidden md:flex items-center gap-1.5 flex-shrink-0">
+            <div class="hidden lg:flex items-center gap-1.5 xl:gap-2 flex-shrink-0">
                 <!-- Global Audio SFX Mute/Unmute Toggle Button -->
                 <button type="button" id="audio-toggle-btn" onclick="if(window.SimpleCat){SimpleCat.toggleSound();}" class="inline-flex items-center justify-center min-w-[40px] min-h-[40px] px-2.5 py-2 rounded-lg bg-slate-900 border border-slate-700/80 hover:border-emerald-500/50 hover:bg-slate-800 text-slate-300 hover:text-emerald-300 font-mono text-xs transition-all cursor-pointer shadow-sm pixel-btn whitespace-nowrap" title="Toggle 8-Bit Audio SFX (Hotkey: M)" aria-label="Toggle 8-Bit Audio SFX">
                     <span>🔊</span>
@@ -539,24 +539,34 @@
                 <a href="https://github.com/CmfH009/Orbit-Security" target="_blank" rel="noopener noreferrer" class="hidden xl:inline-flex p-2 min-w-[40px] min-h-[40px] rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white transition-colors items-center justify-center" title="View Source on GitHub" aria-label="GitHub Repository">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
                 </a>
-                <a href="signup.html" class="px-3.5 py-2 min-h-[40px] rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide transition-all shadow-md shadow-emerald-500/20 pixel-btn inline-flex items-center whitespace-nowrap">
+                <button type="button" id="header-tour-btn" onclick="if(window.SimpleCat){SimpleCat.playPowerUp(); SimpleCat.startTour();}" class="tour-cta-beacon inline-flex items-center gap-1.5 px-2.5 xl:px-3 py-2 min-h-[40px] rounded-lg bg-gradient-to-r from-cyan-500/20 via-emerald-500/15 to-cyan-500/20 hover:from-cyan-400 hover:to-emerald-400 border border-cyan-400/75 text-cyan-200 hover:text-slate-950 font-mono text-xs font-bold tracking-wide transition-all cursor-pointer whitespace-nowrap shadow-[0_0_16px_rgba(6,182,212,0.28)]" title="Take the 7-Stop Interactive Guided Tour" aria-label="Take Interactive Guided Tour">
+                    <span class="relative flex h-2 w-2 flex-shrink-0"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-300 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span></span>
+                    <span>Take Tour</span>
+                </button>
+                <a href="signup.html" class="px-3 xl:px-3.5 py-2 min-h-[40px] rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide transition-all shadow-md shadow-emerald-500/20 pixel-btn inline-flex items-center whitespace-nowrap">
                     Start Retainer
                 </a>
             </div>
 
-            <!-- Accessible Mobile Hamburger (Minimum 48x48px Touch Area) -->
-            <button id="mobileMenuBtn" 
-                class="md:hidden min-w-[48px] min-h-[48px] p-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-300 hover:text-white flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/40 cursor-pointer" 
-                aria-label="Toggle navigation menu" 
-                aria-expanded="false" 
-                aria-controls="mobileMenu">
-                <svg id="hamburgerIcon" class="w-6 h-6 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/>
-                </svg>
-                <svg id="closeIcon" class="w-6 h-6 hidden transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-            </button>
+            <!-- Mobile Tour Beacon + Accessible Mobile Hamburger -->
+            <div class="flex lg:hidden items-center gap-2 flex-shrink-0">
+                <button type="button" id="mobile-header-tour-btn" onclick="if(window.SimpleCat){SimpleCat.playPowerUp(); SimpleCat.startTour();}" class="tour-cta-beacon inline-flex items-center gap-1.5 min-h-[42px] px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 border border-cyan-400/75 text-cyan-200 font-mono text-xs font-bold whitespace-nowrap cursor-pointer" title="Take Interactive Guided Tour" aria-label="Take Interactive Guided Tour">
+                    <span class="relative flex h-2 w-2 flex-shrink-0"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-300 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span></span>
+                    <span>Tour</span>
+                </button>
+                <button id="mobileMenuBtn" 
+                    class="min-w-[48px] min-h-[48px] p-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-300 hover:text-white flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/40 cursor-pointer" 
+                    aria-label="Toggle navigation menu" 
+                    aria-expanded="false" 
+                    aria-controls="mobileMenu">
+                    <svg id="hamburgerIcon" class="w-6 h-6 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/>
+                    </svg>
+                    <svg id="closeIcon" class="w-6 h-6 hidden transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
         </div>
 
         <!-- Mobile Drawer Backdrop Overlay -->
@@ -564,8 +574,12 @@
 
         <!-- Mobile Navigation Animated Drawer -->
         <nav id="mobileMenu" 
-            class="fixed top-16 sm:top-20 left-0 right-0 z-50 md:hidden bg-slate-950/98 border-b-2 border-emerald-500/50 backdrop-blur-2xl px-5 pt-3 pb-6 space-y-1 shadow-2xl transition-all duration-300 ease-out transform -translate-y-4 opacity-0 pointer-events-none overflow-y-auto max-h-[calc(100dvh-4rem)] overscroll-contain"
+            class="fixed top-16 sm:top-20 left-0 right-0 z-50 lg:hidden bg-slate-950/98 border-b-2 border-emerald-500/50 backdrop-blur-2xl px-5 pt-3 pb-6 space-y-1 shadow-2xl transition-all duration-300 ease-out transform -translate-y-4 opacity-0 pointer-events-none overflow-y-auto max-h-[calc(100dvh-4rem)] overscroll-contain"
             aria-label="Mobile Navigation">
+            <button type="button" onclick="const mb=document.getElementById('mobileMenuBtn'); if(mb) mb.click(); if(window.SimpleCat){SimpleCat.playPowerUp(); SimpleCat.startTour();}" class="w-full flex items-center justify-between min-h-[48px] px-3.5 rounded-xl bg-cyan-500/15 border border-cyan-400/50 text-cyan-200 hover:bg-cyan-500/25 text-sm font-bold transition-all cursor-pointer mb-2">
+                <span>🗺️ Start Interactive Guided Tour</span>
+                <span class="text-[9px] font-arcade bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded border border-cyan-400/40">7 STOPS</span>
+            </button>
             <a href="#audit-preview" class="flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-slate-200 hover:text-emerald-400 hover:bg-slate-900/80 text-sm font-semibold transition-all">
                 <span>Audit Studio</span>
                 <span class="text-xs text-slate-500 font-mono">01</span>
@@ -673,45 +687,6 @@
         <div class="absolute top-[-100px] inset-x-0 mx-auto w-[700px] max-w-full h-[350px] bg-gradient-to-b from-emerald-500/15 via-cyan-500/10 to-transparent blur-[120px] pointer-events-none rounded-full"></div>
 
         <div class="max-w-5xl mx-auto px-4 sm:px-6 text-center relative z-10">
-            <!-- Live Threat Wire Advisory Ribbon (Auto-Hydrated from assets/kev_epss_radar.json) -->
-            <div id="heroThreatRibbon" class="mb-5 px-3.5 py-2.5 rounded-xl border border-rose-500/40 shadow-lg backdrop-blur-md text-left relative overflow-hidden" style="background: linear-gradient(90deg, rgba(69, 10, 10, 0.78) 0%, rgba(15, 23, 42, 0.95) 58%, rgba(6, 10, 22, 0.96) 100%);">
-                <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-400 animate-pulse"></div>
-                <div class="advisory-flex-row">
-                    <div class="flex flex-wrap items-center gap-2" style="flex: 1 1 0%; min-width: 0;">
-                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-arcade text-[9px] uppercase tracking-wide border border-rose-500/40 flex-shrink-0">
-                            <span class="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping"></span>
-                            <span id="heroThreatBadge">NOV 2026 WIRE</span>
-                        </span>
-                        <a href="labs.html#kev-epss-radar" id="heroThreatChip1" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/90 hover:bg-rose-500/20 border border-rose-500/40 text-[11px] font-mono text-rose-200 transition-colors">
-                            <strong class="text-white">NGINX nginx2root</strong>
-                            <span class="text-rose-400">CVSS 9.2</span>
-                        </a>
-                        <a href="labs.html#kev-epss-radar" id="heroThreatChip2" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/90 hover:bg-amber-500/20 border border-amber-500/40 text-[11px] font-mono text-amber-200 transition-colors">
-                            <strong class="text-white">OpenSSL CVE-2026-121481</strong>
-                            <span class="text-amber-400">CVSS 9.8</span>
-                        </a>
-                        <span id="heroThreatSummary" class="text-xs text-slate-300 font-sans leading-snug">
-                            Active perimeter exploits &amp; dangling DNS drift — check client exposure live below.
-                        </span>
-                    </div>
-                    <div class="advisory-cta-wrap gap-2 flex-wrap">
-                        <a href="labs.html#kev-epss-radar" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-cyan-500/40 text-cyan-300 font-mono text-[11px] font-bold transition-all inline-flex items-center justify-center whitespace-nowrap">
-                            KEV Radar &rarr;
-                        </a>
-                        <button type="button" id="copyThreatAlertBtn" onclick="copyNovThreatAlert()" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-amber-500/40 text-amber-300 font-mono text-[11px] font-bold transition-all inline-flex items-center justify-center whitespace-nowrap cursor-pointer" title="Copy client-ready NGINX nginx2root &amp; OpenSSL alert email">
-                            📋 Copy Alert
-                        </button>
-                        <button type="button" onclick="if(window.setScanTarget){setScanTarget('shopify.com');} const el=document.getElementById('audit-terminal'); if(el){el.scrollIntoView({behavior:'smooth',block:'center'});} const btn=document.getElementById('scanBtn'); if(btn){setTimeout(function(){btn.click();},350);}" class="min-h-[38px] px-3.5 py-1.5 rounded-lg text-slate-950 font-bold text-xs uppercase font-sans tracking-wide transition-all pixel-btn flex items-center justify-center gap-1.5 cursor-pointer" style="background: linear-gradient(90deg, #f59e0b 0%, #10b981 100%); color: #020617; white-space: nowrap;">
-                            <span>Scan Perimeter</span>
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                        </button>
-                        <button type="button" id="dismissThreatRibbonBtn" onclick="const r=document.getElementById('heroThreatRibbon'); if(r){r.classList.add('hidden');} try{sessionStorage.setItem('orbit_threat_ribbon_dismissed','1');}catch(e){}" class="min-w-[36px] min-h-[36px] rounded-lg bg-slate-900/70 hover:bg-slate-800 border border-slate-700/70 text-slate-400 hover:text-white text-xs flex items-center justify-center cursor-pointer transition-colors" aria-label="Dismiss advisory ribbon" title="Dismiss advisory">
-                            ✕
-                        </button>
-                    </div>
-                </div>
-            </div>
-
             <!-- Unified Eyebrow & Live Sentinel Badge -->
             <div class="inline-flex flex-wrap items-center justify-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-emerald-500/40 text-[11px] sm:text-xs font-mono text-slate-300 mb-5 backdrop-blur-md shadow-lg shadow-emerald-500/10">
                 <span class="relative flex h-2 w-2 flex-shrink-0">
@@ -750,14 +725,13 @@
                     <span>Preview White-Label PDF</span>
                 </a>
             </div>
-            <div class="mb-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-mono">
-                <a href="#product-walkthrough" class="text-emerald-300 hover:text-emerald-200 inline-flex items-center gap-1.5 transition-colors">
-                    <span>▶ Watch 72s Product Walkthrough</span>
-                </a>
-                <span class="text-slate-700 hidden sm:inline">•</span>
-                <button type="button" id="hero-start-tour-btn" onclick="if(window.SimpleCat){SimpleCat.startTour();}" class="text-cyan-300 hover:text-cyan-200 inline-flex items-center gap-1.5 cursor-pointer transition-colors">
+            <div class="mb-6 flex flex-wrap items-center justify-center gap-3 text-xs font-mono">
+                <button type="button" id="hero-start-tour-btn" onclick="if(window.SimpleCat){SimpleCat.playPowerUp(); SimpleCat.startTour();}" class="tour-cta-beacon min-h-[38px] px-3.5 py-2 rounded-full bg-cyan-500/15 hover:bg-cyan-400 border border-cyan-400/60 text-cyan-200 hover:text-slate-950 font-bold inline-flex items-center gap-1.5 cursor-pointer transition-all">
                     <span>🗺️ Launch Interactive Guided Tour</span>
                 </button>
+                <a href="#product-walkthrough" class="min-h-[38px] px-3.5 py-2 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 hover:text-emerald-200 inline-flex items-center gap-1.5 transition-colors">
+                    <span>▶ Watch 72s Walkthrough</span>
+                </a>
             </div>
 
             <!-- Interactive Tactical DoH Terminal Widget (Elevated Above Secondary Cards) -->
@@ -999,6 +973,50 @@
             </div>
         </div>
     </section>
+
+    <!-- Relocated Animated Live Threat Wire Ticker (Auto-Hydrated from CISA KEV + Live GitHub Advisories) -->
+    <aside id="heroThreatRibbon" aria-label="Live CVE Threat Wire" class="livewire-strip relative z-20 border-y border-rose-500/35 bg-slate-950/95 backdrop-blur-md overflow-hidden">
+        <div class="livewire-beam-line" aria-hidden="true"></div>
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex flex-col lg:flex-row items-stretch lg:items-center gap-2.5 lg:gap-4">
+            <div class="flex items-center justify-between lg:justify-start gap-2.5 flex-shrink-0">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-rose-500/15 text-rose-300 font-arcade text-[9px] uppercase tracking-wider border border-rose-500/40 whitespace-nowrap">
+                    <span class="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping"></span>
+                    <span id="heroThreatBadge">LIVE WIRE · SYNCING</span>
+                </span>
+                <span id="heroThreatSummary" class="text-[11px] font-mono text-slate-400 hidden xl:inline whitespace-nowrap">1,750+ KEVs tracked</span>
+            </div>
+
+            <div class="livewire-marquee flex-1 min-w-0">
+                <div id="livewireMarqueeTrack" class="livewire-marquee-track flex items-center gap-3">
+                    <div id="livewirePrimaryGroup" class="flex items-center gap-2.5 flex-shrink-0">
+                        <a href="labs.html#kev-epss-radar" id="heroThreatChip1" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900/90 hover:bg-rose-500/20 border border-rose-500/40 text-[11px] font-mono text-rose-200 transition-colors whitespace-nowrap">
+                            <span class="px-1 py-0.2 rounded bg-rose-500/20 text-rose-300 text-[9px] font-bold">CVSS 9.2</span>
+                            <strong class="text-white">NGINX nginx2root</strong>
+                            <span class="text-slate-400">HTTP/2-3</span>
+                        </a>
+                        <a href="labs.html#kev-epss-radar" id="heroThreatChip2" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900/90 hover:bg-amber-500/20 border border-amber-500/40 text-[11px] font-mono text-amber-200 transition-colors whitespace-nowrap">
+                            <span class="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold">CVSS 9.8</span>
+                            <strong class="text-white">OpenSSL CVE-2026-121481</strong>
+                            <span class="text-slate-400">EVP_EncodeBlock</span>
+                        </a>
+                    </div>
+                    <div id="livewireDupGroup" class="livewire-dup-group flex items-center gap-2.5 flex-shrink-0" aria-hidden="true"></div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between lg:justify-end gap-2 flex-shrink-0">
+                <button type="button" id="copyThreatAlertBtn" onclick="copyNovThreatAlert()" class="min-h-[36px] px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-amber-500/40 text-amber-300 font-mono text-[11px] font-bold transition-all inline-flex items-center justify-center whitespace-nowrap cursor-pointer" title="Copy client-ready advisory alert email from live CVEs">
+                    📋 Copy Alert
+                </button>
+                <a href="labs.html#kev-epss-radar" class="min-h-[36px] px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-cyan-500/40 text-cyan-300 font-mono text-[11px] font-bold transition-all inline-flex items-center justify-center whitespace-nowrap">
+                    KEV Radar &rarr;
+                </a>
+                <button type="button" id="dismissThreatRibbonBtn" onclick="const r=document.getElementById('heroThreatRibbon'); if(r){r.classList.add('hidden');} try{sessionStorage.setItem('orbit_threat_ribbon_dismissed','1');}catch(e){}" class="min-w-[36px] min-h-[36px] rounded-lg bg-slate-900/70 hover:bg-slate-800 border border-slate-700/70 text-slate-400 hover:text-white text-xs flex items-center justify-center cursor-pointer transition-colors" aria-label="Dismiss advisory ribbon" title="Dismiss advisory">
+                    ✕
+                </button>
+            </div>
+        </div>
+    </aside>
 
     <!-- Official 72-Second Studio Explainer Walkthrough -->
     <section id="product-walkthrough" class="scroll-mt-20 py-10 sm:py-14 bg-slate-950/90 border-t border-slate-800/80 relative overflow-hidden">
@@ -3918,12 +3936,28 @@ Best regards,
 
         function copyNovThreatAlert() {
             const agency = getActiveAgencyName();
+            const liveAlerts = Array.isArray(window.__orbitLiveWireAlerts) ? window.__orbitLiveWireAlerts.slice(0, 3) : [];
+            const topLines = liveAlerts.length > 0
+                ? liveAlerts.map((item) => {
+                    const sev = item.badge || 'CRITICAL';
+                    const title = item.label || item.id || 'Critical CVE';
+                    const detail = item.detail ? ` — ${item.detail}` : '';
+                    return `• [${sev}] ${title}${detail}${item.date ? ` (${item.date})` : ''}`;
+                })
+                : [
+                    '• [CVSS 9.2] NGINX nginx2root (5 HTTP/2 & HTTP/3 CVEs; patch to 1.30.7/1.31.9)',
+                    '• [CVSS 9.8] OpenSSL EVP_EncodeBlock() CVE-2026-121481'
+                ];
+            const leadSubject = liveAlerts.length > 0
+                ? `${liveAlerts[0].label || liveAlerts[0].id} & Active KEV Perimeter Check`
+                : 'NGINX (nginx2root) & OpenSSL CVE-2026-121481 Check';
             const alertText = [
-                'Subject: [Urgent Perimeter Advisory] NGINX (nginx2root) & OpenSSL CVE-2026-121481 Check',
+                `Subject: [Urgent Perimeter Advisory] ${leadSubject}`,
                 '',
                 'Hi [Client Name],',
                 '',
-                `Two critical infrastructure advisories dropped this week — NGINX nginx2root (5 HTTP/2 & HTTP/3 CVEs, CVSS 9.2; patch to 1.30.7/1.31.9) and OpenSSL EVP_EncodeBlock() CVE-2026-121481 (CVSS 9.8).`,
+                'Critical infrastructure advisories are actively circulating on our threat wire:',
+                ...topLines,
                 '',
                 `Our team at ${agency} is running a passive external perimeter & DNS hygiene sweep across client domains to confirm SSL/TLS exposure, DMARC enforcement, and zero dangling CNAMEs.`,
                 '',
@@ -4149,7 +4183,152 @@ ${body}`;
                     updateExplainerChapterHighlight(explainerVideo.currentTime);
                 });
             }
-            // Hydrate Live Threat Wire ribbon from assets/kev_epss_radar.json
+            // Hydrate Live Threat Wire ticker from assets/kev_epss_radar.json + live GitHub Security Advisories
+            function mergeLiveThreatAdvisories(localFeed, ghsaItems) {
+                const byKey = new Map();
+                const pushItem = (entry) => {
+                    if (!entry || !entry.id) return;
+                    const key = String(entry.id).trim().toUpperCase();
+                    const prev = byKey.get(key);
+                    if (!prev) {
+                        byKey.set(key, entry);
+                        return;
+                    }
+                    byKey.set(key, {
+                        ...prev,
+                        ...entry,
+                        is_cisa_kev: Boolean(prev.is_cisa_kev || entry.is_cisa_kev),
+                        cvss: Math.max(Number(prev.cvss || 0), Number(entry.cvss || 0)),
+                        badge: (prev.is_cisa_kev || entry.is_cisa_kev) ? 'CISA KEV' : (entry.badge || prev.badge),
+                        tone: (prev.is_cisa_kev || entry.is_cisa_kev) ? 'rose' : (entry.tone || prev.tone),
+                    });
+                };
+
+                const localVulns = Array.isArray(localFeed?.vulnerabilities) ? localFeed.vulnerabilities.slice() : [];
+                localVulns.sort((a, b) => {
+                    const da = String(a?.date_added || '');
+                    const db = String(b?.date_added || '');
+                    if (db !== da) return db.localeCompare(da);
+                    return Number(b?.epss || 0) - Number(a?.epss || 0);
+                });
+                for (const v of localVulns.slice(0, 14)) {
+                    const cveId = String(v?.cve || '').trim().toUpperCase();
+                    if (!cveId) continue;
+                    const vendor = String(v?.vendor || '').trim();
+                    const product = String(v?.product || '').trim();
+                    const label = vendor && product && !product.toLowerCase().includes(vendor.toLowerCase())
+                        ? `${vendor} ${product} (${cveId})`
+                        : `${vendor || product || cveId} (${cveId})`;
+                    const isKev = Boolean(v?.is_cisa_kev);
+                    const epssPct = Number(v?.epss || 0) > 0 ? `EPSS ${Math.round(Number(v.epss) * 100)}%` : '';
+                    pushItem({
+                        id: cveId,
+                        label: label.slice(0, 56),
+                        badge: isKev ? 'CISA KEV' : 'CRITICAL',
+                        tone: isKev ? 'rose' : 'amber',
+                        detail: epssPct || String(v?.vulnerability_name || v?.short_description || '').slice(0, 44),
+                        date: String(v?.date_added || '').slice(0, 10),
+                        is_cisa_kev: isKev,
+                        cvss: isKev ? 9.5 : 9.2,
+                        href: 'labs.html#kev-epss-radar',
+                        external: false,
+                    });
+                }
+
+                const liveArr = Array.isArray(ghsaItems) ? ghsaItems : [];
+                for (const adv of liveArr) {
+                    const cveId = String(adv?.cve_id || adv?.ghsa_id || '').trim().toUpperCase();
+                    if (!cveId) continue;
+                    const cvssScore = Number(adv?.cvss?.score || 0);
+                    const pkgName = String(adv?.vulnerabilities?.[0]?.package?.name || '').trim();
+                    const summary = String(adv?.summary || '').trim();
+                    const rawUrl = String(adv?.html_url || '');
+                    const safeExternal = rawUrl.startsWith('https://github.com/advisories/');
+                    pushItem({
+                        id: cveId,
+                        label: pkgName ? `${pkgName} (${cveId})`.slice(0, 56) : cveId,
+                        badge: cvssScore > 0 ? `CVSS ${cvssScore.toFixed(1)}` : 'CRITICAL',
+                        tone: cvssScore >= 9.5 ? 'rose' : 'amber',
+                        detail: summary.slice(0, 44),
+                        date: String(adv?.published_at || '').slice(0, 10),
+                        is_cisa_kev: false,
+                        cvss: cvssScore || 9.0,
+                        href: safeExternal ? rawUrl : 'labs.html#kev-epss-radar',
+                        external: safeExternal,
+                    });
+                }
+
+                return Array.from(byKey.values())
+                    .sort((a, b) => {
+                        const da = String(a.date || '');
+                        const db = String(b.date || '');
+                        if (db !== da) return db.localeCompare(da);
+                        const pa = (a.is_cisa_kev || a.cvss >= 9.0) ? 1 : 0;
+                        const pb = (b.is_cisa_kev || b.cvss >= 9.0) ? 1 : 0;
+                        if (pb !== pa) return pb - pa;
+                        return Number(b.cvss || 0) - Number(a.cvss || 0);
+                    })
+                    .slice(0, 8);
+            }
+            window.mergeLiveThreatAdvisories = mergeLiveThreatAdvisories;
+
+            function renderLiveWireTicker(items) {
+                const primary = document.getElementById('livewirePrimaryGroup');
+                const dup = document.getElementById('livewireDupGroup');
+                const track = document.getElementById('livewireMarqueeTrack');
+                if (!primary || !Array.isArray(items) || items.length === 0) return;
+
+                primary.textContent = '';
+                items.forEach((item, idx) => {
+                    const a = document.createElement('a');
+                    if (idx === 0) a.id = 'heroThreatChip1';
+                    if (idx === 1) a.id = 'heroThreatChip2';
+                    a.href = item.href || 'labs.html#kev-epss-radar';
+                    if (item.external) {
+                        a.target = '_blank';
+                        a.rel = 'noopener noreferrer';
+                    }
+                    const isRose = item.tone === 'rose';
+                    a.className = isRose
+                        ? 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900/90 hover:bg-rose-500/20 border border-rose-500/40 text-[11px] font-mono text-rose-200 transition-colors whitespace-nowrap'
+                        : 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900/90 hover:bg-amber-500/20 border border-amber-500/40 text-[11px] font-mono text-amber-200 transition-colors whitespace-nowrap';
+
+                    const badge = document.createElement('span');
+                    badge.className = isRose
+                        ? 'px-1 py-0.2 rounded bg-rose-500/20 text-rose-300 text-[9px] font-bold'
+                        : 'px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold';
+                    badge.textContent = item.badge || 'CRITICAL';
+                    a.appendChild(badge);
+
+                    const strong = document.createElement('strong');
+                    strong.className = 'text-white';
+                    strong.textContent = item.label || item.id;
+                    a.appendChild(strong);
+
+                    if (item.detail || item.date) {
+                        const meta = document.createElement('span');
+                        meta.className = 'text-slate-400';
+                        meta.textContent = item.detail || item.date;
+                        a.appendChild(meta);
+                    }
+                    primary.appendChild(a);
+                });
+
+                if (dup) {
+                    dup.textContent = '';
+                    Array.from(primary.children).forEach((node) => {
+                        const clone = node.cloneNode(true);
+                        if (clone.id) clone.removeAttribute('id');
+                        clone.setAttribute('tabindex', '-1');
+                        clone.setAttribute('aria-hidden', 'true');
+                        dup.appendChild(clone);
+                    });
+                }
+                if (track) {
+                    track.style.animationDuration = `${Math.max(32, items.length * 5.5)}s`;
+                }
+            }
+
             (function initHeroThreatRibbon() {
                 const ribbon = document.getElementById('heroThreatRibbon');
                 if (!ribbon) return;
@@ -4159,20 +4338,72 @@ ${body}`;
                         return;
                     }
                 } catch (e) {}
-                fetch('assets/kev_epss_radar.json', { cache: 'default' })
+
+                let localFeedData = null;
+                let liveGhsaData = null;
+                const applyRender = () => {
+                    const merged = mergeLiveThreatAdvisories(localFeedData, liveGhsaData);
+                    if (merged.length > 0) {
+                        window.__orbitLiveWireAlerts = merged;
+                        renderLiveWireTicker(merged);
+                    }
+                    const badgeEl = document.getElementById('heroThreatBadge');
+                    const summaryEl = document.getElementById('heroThreatSummary');
+                    if (badgeEl) {
+                        if (Array.isArray(liveGhsaData) && liveGhsaData.length > 0) {
+                            badgeEl.textContent = 'LIVE · CISA KEV + GHSA';
+                        } else if (localFeedData && localFeedData.generated_at) {
+                            badgeEl.textContent = `LIVE WIRE · ${String(localFeedData.generated_at).replace(/\./g, '-')}`;
+                        }
+                    }
+                    if (summaryEl && localFeedData) {
+                        const kevCount = localFeedData.cisa_kev_count || localFeedData.total_tracked || 1750;
+                        summaryEl.textContent = `${kevCount}+ KEVs · ${merged.length} breaking`;
+                    }
+                };
+
+                fetch('assets/kev_epss_radar.json', { cache: 'no-cache' })
                     .then((res) => (res.ok ? res.json() : null))
                     .then((data) => {
-                        if (!data || !Array.isArray(data.vulnerabilities) || data.vulnerabilities.length === 0) return;
-                        const badgeEl = document.getElementById('heroThreatBadge');
-                        const summaryEl = document.getElementById('heroThreatSummary');
-                        if (badgeEl && data.generated_at) {
-                            badgeEl.textContent = `LIVE WIRE · ${String(data.generated_at).replace(/\./g, '-')}`;
-                        }
-                        if (summaryEl && typeof data.total_tracked === 'number') {
-                            summaryEl.textContent = `${data.total_tracked} active CVEs tracked (${data.high_velocity_count || 6} critical Nov alerts) — verify client exposure live below.`;
+                        if (data && Array.isArray(data.vulnerabilities)) {
+                            localFeedData = data;
+                            applyRender();
                         }
                     })
                     .catch(() => {});
+
+                try {
+                    const cachedRaw = sessionStorage.getItem('orbit_livewire_ghsa_v1');
+                    if (cachedRaw) {
+                        const parsed = JSON.parse(cachedRaw);
+                        if (parsed && Array.isArray(parsed.items) && (Date.now() - Number(parsed.ts || 0)) < 900000) {
+                            liveGhsaData = parsed.items;
+                            applyRender();
+                            return;
+                        }
+                    }
+                } catch (e) {}
+
+                const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                const timer = ctrl ? setTimeout(() => ctrl.abort(), 4500) : null;
+                fetch('https://api.github.com/advisories?severity=critical&type=reviewed&per_page=8', {
+                    headers: { 'Accept': 'application/vnd.github+json' },
+                    signal: ctrl ? ctrl.signal : undefined,
+                })
+                    .then((res) => (res.ok ? res.json() : null))
+                    .then((items) => {
+                        if (Array.isArray(items) && items.length > 0) {
+                            liveGhsaData = items;
+                            try {
+                                sessionStorage.setItem('orbit_livewire_ghsa_v1', JSON.stringify({ ts: Date.now(), items }));
+                            } catch (e) {}
+                            applyRender();
+                        }
+                    })
+                    .catch(() => {})
+                    .finally(() => {
+                        if (timer) clearTimeout(timer);
+                    });
             })();
         });
     </script>

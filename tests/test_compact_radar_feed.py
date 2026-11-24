@@ -183,3 +183,52 @@ def test_github_pages_live_radar_showcase_ui_and_asset_parity():
         assert "selectKevRadarCve" in radar_js
 
 
+def test_compact_radar_retains_newest_kevs_under_250kb_budget(tmp_path):
+    """Verify newest CISA KEV entries by dateAdded are preserved even when catalog is truncated."""
+    output_file = tmp_path / "newest_preserved.json"
+    verbose_desc = ("Critical remote execution flaw in network edge appliance management plane. ") * 4
+    vulns = [
+        {
+            "cveID": f"CVE-2025-{1000 + i}",
+            "vendorProject": f"Vendor{i % 20}",
+            "product": f"Gateway{i % 30}",
+            "vulnerabilityName": f"Legacy KEV #{i}",
+            "dateAdded": "2025-01-15",
+            "shortDescription": verbose_desc,
+            "requiredAction": "Apply vendor patch immediately.",
+            "dueDate": "2025-02-01",
+        }
+        for i in range(1500)
+    ]
+    vulns.append({
+        "cveID": "CVE-2026-99901",
+        "vendorProject": "AcmeEdge",
+        "product": "Proxy",
+        "vulnerabilityName": "Breaking 0-Day RCE",
+        "dateAdded": "2026-11-24",
+        "shortDescription": "Actively exploited breaking vulnerability.",
+        "requiredAction": "Patch immediately.",
+        "dueDate": "2026-11-27",
+    })
+    res = compact_radar_dataset(
+        cisa_kev_data={"catalogVersion": "2026.11.24", "vulnerabilities": vulns},
+        epss_data={"CVE-2025-1000": {"epss": "0.95000", "percentile": "0.99900", "date": "2026-11-24"}},
+        output_path=output_file,
+        sync_to_landing=False,
+    )
+    cves = {v["cve"] for v in res["vulnerabilities"]}
+    assert "CVE-2026-99901" in cves
+    assert res["vulnerabilities"][0]["cve"] == "CVE-2025-1000"
+
+
+def test_livewire_refresh_workflow_present_and_configured():
+    """Verify scheduled GitHub Actions workflow refreshes kev_epss_radar.json via compact_radar_feed --live."""
+    repo_root = Path(__file__).resolve().parent.parent
+    wf_path = repo_root / ".github" / "workflows" / "refresh-livewire-cve-feed.yml"
+    assert wf_path.is_file(), "Missing .github/workflows/refresh-livewire-cve-feed.yml"
+    text = wf_path.read_text(encoding="utf-8")
+    assert "cron:" in text
+    assert "compact_radar_feed --live" in text
+    assert "sync_landing_to_docs.py --check" in text
+
+

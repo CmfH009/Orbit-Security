@@ -74,9 +74,9 @@
     <link rel="preconnect" href="https://cloudflare-dns.com" crossorigin>
     <link rel="preconnect" href="https://dns.google" crossorigin>
 
-    <link rel="stylesheet" href="assets/styles.min.css?v=20261124v7">
-    <script src="assets/simple_cat.js?v=20261124v7" defer></script>
-    <script src="assets/orbit_radar.js?v=20261124v7" defer></script>
+    <link rel="stylesheet" href="assets/styles.min.css?v=20261124v8">
+    <script src="assets/simple_cat.js?v=20261124v8" defer></script>
+    <script src="assets/orbit_radar.js?v=20261124v8" defer></script>
 
     <style>
         html {
@@ -198,11 +198,11 @@
                     <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 p-0.5 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/30 transition-all pixel-box-emerald flex-shrink-0 overflow-hidden">
                         <img src="assets/logo.png" alt="Orbit Security Logo" width="36" height="36" class="w-full h-full object-contain rounded-lg" />
                     </div>
-                    <span class="text-base sm:text-lg font-bold tracking-tight text-white font-pixel" style="color:#ffffff; white-space:nowrap;">Orbit Security</span>
+                    <span class="text-base lg:text-base xl:text-lg font-bold tracking-tight text-white font-pixel" style="color:#ffffff; white-space:nowrap;">Orbit Security</span>
                 </a>
             </div>
 
-            <nav class="hidden md:flex items-center gap-2.5 lg:gap-4 text-xs lg:text-sm font-medium text-slate-300" style="white-space:nowrap;" aria-label="Primary Navigation">
+            <nav class="hidden lg:flex items-center gap-2.5 xl:gap-4 text-xs xl:text-sm font-medium text-slate-300" style="white-space:nowrap;" aria-label="Primary Navigation">
                 <a href="audit.html" class="hover:text-emerald-400 transition-colors text-cyan-300">DNS Audit</a>
                 <a href="fleet.html" class="hover:text-emerald-400 transition-colors flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>Fleet</a>
                 <a href="labs.html" aria-current="page" class="text-emerald-400 font-semibold border-b border-emerald-400 pb-0.5">Labs</a>
@@ -212,24 +212,34 @@
                 <a href="about.html" class="hover:text-emerald-400 transition-colors">About</a>
             </nav>
 
-            <div class="hidden md:flex items-center gap-1.5 flex-shrink-0">
+            <div class="hidden lg:flex items-center gap-1.5 xl:gap-2 flex-shrink-0">
                 <button type="button" id="audio-toggle-btn" onclick="if(window.SimpleCat){SimpleCat.toggleSound();}" class="inline-flex items-center justify-center min-w-[40px] min-h-[40px] px-2.5 py-2 rounded-lg bg-slate-900 border border-slate-700/80 hover:border-emerald-500/50 hover:bg-slate-800 text-slate-300 hover:text-emerald-300 font-mono text-xs transition-all cursor-pointer shadow-sm pixel-btn whitespace-nowrap" title="Toggle 8-Bit Audio SFX (Hotkey: M)" aria-label="Toggle 8-Bit Audio SFX">
                     <span>🔊</span>
                 </button>
                 <a href="https://github.com/CmfH009/Orbit-Security" target="_blank" rel="noopener noreferrer" class="hidden xl:inline-flex p-2 min-w-[40px] min-h-[40px] rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white transition-colors items-center justify-center" title="View Source on GitHub" aria-label="GitHub Repository">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
                 </a>
-                <a href="signup.html" class="px-3.5 py-2 min-h-[40px] rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide transition-all shadow-md shadow-emerald-500/20 pixel-btn inline-flex items-center whitespace-nowrap">
+                <button type="button" id="header-tour-btn" onclick="if(window.SimpleCat){SimpleCat.playPowerUp(); SimpleCat.startTour();}" class="tour-cta-beacon inline-flex items-center gap-1.5 px-2.5 xl:px-3 py-2 min-h-[40px] rounded-lg bg-gradient-to-r from-cyan-500/20 via-emerald-500/15 to-cyan-500/20 hover:from-cyan-400 hover:to-emerald-400 border border-cyan-400/75 text-cyan-200 hover:text-slate-950 font-mono text-xs font-bold tracking-wide transition-all cursor-pointer whitespace-nowrap shadow-[0_0_16px_rgba(6,182,212,0.28)]" title="Take the Interactive Labs Tour" aria-label="Take Interactive Guided Tour">
+                    <span class="relative flex h-2 w-2 flex-shrink-0"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-300 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span></span>
+                    <span>Take Tour</span>
+                </button>
+                <a href="signup.html" class="px-3 xl:px-3.5 py-2 min-h-[40px] rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide transition-all shadow-md shadow-emerald-500/20 pixel-btn inline-flex items-center whitespace-nowrap">
                     Start Retainer
                 </a>
             </div>
 
-            <button type="button" id="labsMobileMenuBtn" class="md:hidden min-w-[48px] min-h-[48px] p-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="labsMobileMenu">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/></svg>
-            </button>
+            <div class="flex lg:hidden items-center gap-2 flex-shrink-0">
+                <button type="button" id="mobile-header-tour-btn" onclick="if(window.SimpleCat){SimpleCat.playPowerUp(); SimpleCat.startTour();}" class="tour-cta-beacon inline-flex items-center gap-1.5 min-h-[42px] px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 border border-cyan-400/75 text-cyan-200 font-mono text-xs font-bold whitespace-nowrap cursor-pointer" title="Take Interactive Guided Tour" aria-label="Take Interactive Guided Tour">
+                    <span class="relative flex h-2 w-2 flex-shrink-0"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-300 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span></span>
+                    <span>Tour</span>
+                </button>
+                <button type="button" id="labsMobileMenuBtn" class="min-w-[48px] min-h-[48px] p-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="labsMobileMenu">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/></svg>
+                </button>
+            </div>
         </div>
 
-        <nav id="labsMobileMenu" class="hidden md:hidden bg-slate-950/98 border-b-2 border-emerald-500/50 px-5 pt-3 pb-6 space-y-1 shadow-2xl" aria-label="Mobile Navigation">
+        <nav id="labsMobileMenu" class="hidden lg:hidden bg-slate-950/98 border-b-2 border-emerald-500/50 px-5 pt-3 pb-6 space-y-1 shadow-2xl" aria-label="Mobile Navigation">
             <a href="index.html" class="flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-slate-200 hover:text-emerald-400 hover:bg-slate-900/80 text-sm font-semibold transition-all">
                 <span>Main Overview</span>
                 <span class="text-xs text-slate-500 font-mono">00</span>

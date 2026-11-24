@@ -244,7 +244,7 @@
     }
 
     function updateSoundToggleButtons() {
-        const fullLabels = soundEnabled ? `<span>🔊</span> <span>AUDIO: ON</span>` : `<span>🔇</span> <span>AUDIO: OFF</span>`;
+        const fullLabels = soundEnabled ? `<span>🔊</span> <span class="audio-label-text">AUDIO: ON</span>` : `<span>🔇</span> <span class="audio-label-text">AUDIO: OFF</span>`;
         const miniLabels = soundEnabled ? `<span>🔊</span> <span>SFX</span>` : `<span>🔇</span> <span>SFX</span>`;
         const touchLabels = soundEnabled ? `<span>🔊 Audio: ON</span>` : `<span>🔇 Audio: OFF</span>`;
 
@@ -6096,7 +6096,7 @@
         btn.id = "audio-toggle-btn";
         btn.setAttribute("data-sound-alias", "sound-toggle-btn");
         btn.className = "text-[11px] font-mono px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/40 transition-colors flex items-center gap-1.5 cursor-pointer";
-        btn.innerHTML = soundEnabled ? `<span>🔊</span> <span>AUDIO: ON</span>` : `<span>🔇</span> <span>AUDIO: OFF</span>`;
+        btn.innerHTML = soundEnabled ? `<span>🔊</span> <span class="audio-label-text">AUDIO: ON</span>` : `<span>🔇</span> <span class="audio-label-text">AUDIO: OFF</span>`;
         btn.title = "Toggle 8-Bit Retro Audio SFX (Hotkey: M)";
 
         btn.addEventListener("click", () => {
