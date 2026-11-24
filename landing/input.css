@@ -82,7 +82,7 @@
 }
 
 /* Stacking Order Guarantee: Ensure page content is always above background canvas */
-main, footer {
+main, section, footer {
   position: relative;
   z-index: 10;
 }

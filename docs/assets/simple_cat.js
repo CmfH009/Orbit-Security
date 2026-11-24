@@ -1626,6 +1626,7 @@
         bubbleEl.className = "astro-bubble hidden";
         bubbleEl.innerHTML = `
             <div id="astro-bubble-tail" class="astro-bubble-tail-down"></div>
+            <div id="tour-progress-track" class="tour-progress-track hidden"><div id="tour-progress-bar" class="tour-progress-bar" style="width:0%"></div></div>
             <div class="astro-bubble-header">
                 <span class="astro-bubble-title" id="astro-bubble-title">ASTRO-CAT // COMMS</span>
                 <button id="astro-bubble-close" class="astro-bubble-close" title="Dismiss">✕</button>
@@ -1637,12 +1638,15 @@
             <div id="astro-tour-controls" class="hidden mt-2 pt-1.5 border-t border-emerald-500/30 flex flex-col gap-1.5">
                 <div class="flex items-center justify-between gap-2">
                     <div id="tour-step-pips" class="flex items-center gap-1.5"></div>
-                    <span id="tour-step-counter" class="text-[9px] font-mono text-slate-400">1/6</span>
+                    <div class="flex items-center gap-2">
+                        <span id="tour-kbd-hint" class="tour-kbd-hint">← / → · ESC</span>
+                        <span id="tour-step-counter" class="text-[9px] font-mono text-slate-400">1/7</span>
+                    </div>
                 </div>
                 <div class="flex items-center justify-between gap-1.5">
-                    <button type="button" id="tour-prev-btn" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-200 font-mono text-[10px] font-bold cursor-pointer transition-all">← Back</button>
+                    <button type="button" id="tour-prev-btn" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-200 font-mono text-[10px] font-bold cursor-pointer transition-all">← Back</button>
                     <button type="button" id="tour-next-btn" class="flex-1 px-2.5 py-1 rounded bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-mono text-[10px] font-bold cursor-pointer transition-all shadow-sm">Next ➔</button>
-                    <button type="button" id="tour-exit-btn" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-[10px] cursor-pointer transition-all">✕ Exit</button>
+                    <button type="button" id="tour-exit-btn" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-[10px] cursor-pointer transition-all">✕ Exit</button>
                 </div>
                 <a id="tour-action-btn" href="#" class="hidden w-full px-2.5 py-1.5 rounded bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/60 text-cyan-200 font-mono text-[10px] font-bold text-center transition-all">Continue in Security Labs →</a>
             </div>
@@ -2101,6 +2105,10 @@
         if (bubbleClose) {
             bubbleClose.addEventListener("click", (e) => {
                 e.stopPropagation();
+                if (copilot.state === 'tour') {
+                    exitSiteTour();
+                    return;
+                }
                 hideSpeechBubble();
             });
         }
@@ -2111,6 +2119,7 @@
                 clearTimeout(copilot.speechTimer);
             });
             bubbleEl.addEventListener("mouseleave", () => {
+                if (copilot.state === 'tour') return;
                 clearTimeout(copilot.speechTimer);
                 copilot.speechTimer = setTimeout(() => {
                     hideSpeechBubble();
@@ -2169,7 +2178,12 @@
                 }
             }
             if (copilot.state === 'tour' && !inEditable) {
-                if (e.key === "ArrowRight" || e.key === "Enter") {
+                if (e.key === "ArrowRight") {
+                    e.preventDefault();
+                    nextTourStep();
+                    return;
+                }
+                if (e.key === "Enter" && !['A', 'BUTTON'].includes(activeTag)) {
                     e.preventDefault();
                     nextTourStep();
                     return;
@@ -2508,40 +2522,80 @@
     // =========================================================================
     // 6. ASTRO-CAT GUIDED SITE TOUR (TACTICAL SPOTLIGHT + PAGE-AWARE ROUTES)
     // =========================================================================
+    function getHeaderClearance() {
+        const hdr = document.querySelector("header");
+        const hdrH = hdr ? hdr.getBoundingClientRect().height : 80;
+        return Math.max(76, Math.round((hdrH || 80) + 14));
+    }
+
     const TOUR_STEPS = [
         {
             targetId: "audit-terminal",
-            title: "1/6 🛰️ PASSIVE DOH RADAR",
+            focusSelector: "#audit-terminal",
+            align: "center",
+            icon: "🛰️",
+            label: "PASSIVE DOH RADAR",
+            title: "1/7 🛰️ PASSIVE DOH RADAR",
             text: "RFC 8484 DNS-over-HTTPS audits run 100% inside your browser—zero backend storage, deterministic DMARC/SPF/CNAME grading, and instant co-branded PDFs.",
+            btnText: "Next: 72s Video ➔"
+        },
+        {
+            targetId: "product-walkthrough",
+            focusSelector: "#explainer-player-card",
+            align: "top",
+            icon: "🎬",
+            label: "72-SECOND WALKTHROUGH",
+            title: "2/7 🎬 72-SECOND WALKTHROUGH",
+            text: "Watch the studio briefing or jump straight to any chapter—browser DoH audits, co-branded PDFs, KEV + EPSS radar, takeover trees, and GitHub SARIF.",
             btnText: "Next: Sentinels ➔"
         },
         {
             targetId: "sentinels",
-            title: "2/6 🛡️ AUTONOMOUS SENTINELS",
+            focusSelector: "#sentinels > div",
+            align: "top",
+            icon: "🛡️",
+            label: "AUTONOMOUS SENTINELS",
+            title: "3/7 🛡️ AUTONOMOUS SENTINELS",
             text: "Passive sentinels continuously inspect DNS records, dangling CNAMEs, SPF deliverability, and DMARC spoofing before attackers strike.",
             btnText: "Next: Security Labs ➔"
         },
         {
             targetId: "security-labs",
-            title: "3/6 🧪 INTERACTIVE SECURITY LABS",
+            focusSelector: "#security-labs > div",
+            align: "top",
+            icon: "🧪",
+            label: "INTERACTIVE SECURITY LABS",
+            title: "4/7 🧪 INTERACTIVE SECURITY LABS",
             text: "Jump into client-side sandboxes for CISA KEV + EPSS prioritization, 52-provider Subdomain Takeover PoCs, and multi-domain Fleet scoring.",
+            btnText: "Next: Simple Cat ➔"
+        },
+        {
+            targetId: "simple-cat",
+            focusSelector: "#simple-cat > div",
+            align: "top",
+            icon: "🐱",
+            label: "SIMPLE CAT JARGON DECODER",
+            title: "5/7 🐱 SIMPLE CAT JARGON DECODER",
+            text: "Translates DMARC, DNSSEC, HSTS, and takeover risks into plain-English analogies that non-technical clients immediately understand.",
             btnText: "Next: CI/CD Proof ➔"
         },
         {
             targetId: "open-source-proof",
-            title: "4/6 ⚙️ OPEN-SOURCE & CI/CD PROOF",
+            focusSelector: "#open-source-proof > div",
+            align: "top",
+            icon: "⚙️",
+            label: "OPEN-SOURCE & CI/CD PROOF",
+            title: "6/7 ⚙️ OPEN-SOURCE & CI/CD PROOF",
             text: "Add CmfH009/Orbit-Security@v1 to GitHub Actions to emit SARIF 2.1.0 findings straight into GitHub Code Scanning, backed by reproducible benchmarks.",
-            btnText: "Next: Jargon Decoder ➔"
-        },
-        {
-            targetId: "simple-cat",
-            title: "5/6 🐱 SIMPLE CAT JARGON DECODER",
-            text: "Translates DMARC, DNSSEC, HSTS, and takeover risks into plain-English analogies that non-technical clients immediately understand.",
             btnText: "Next: Pricing ➔"
         },
         {
             targetId: "pricing",
-            title: "6/6 💎 TRANSPARENT AGENCY PRICING",
+            focusSelector: "#pricing > div",
+            align: "top",
+            icon: "💎",
+            label: "TRANSPARENT AGENCY PRICING",
+            title: "7/7 💎 TRANSPARENT AGENCY PRICING",
             text: "Self-serve browser audits stay free forever—with straightforward optional fleet tiers when agencies want automated monitoring and white-label portals.",
             btnText: "🎉 Finish Tour!",
             actionLabel: "Continue Tour in Security Labs →",
@@ -2554,18 +2608,30 @@
         labs: [
             {
                 targetId: "kev-epss-radar",
+                focusSelector: "#kev-epss-radar > div",
+                align: "top",
+                icon: "📡",
+                label: "CISA KEV + EPSS RADAR",
                 title: "1/3 📡 CISA KEV + EPSS RADAR",
                 text: "1,750+ Known Exploited Vulnerabilities pre-joined with FIRST 30-day EPSS weaponization scores—searchable in <5ms completely offline in-browser.",
                 btnText: "Next: Takeover Lab ➔"
             },
             {
                 targetId: "takeover-poc-playground",
+                focusSelector: "#takeover-poc-playground",
+                align: "top",
+                icon: "🎯",
+                label: "SUBDOMAIN TAKEOVER LAB",
                 title: "2/3 🎯 SUBDOMAIN TAKEOVER LAB",
                 text: "Simulate 52 cloud provider signatures across 76 CNAME fingerprints with an animated 5-node attack tree and copy-paste DNS remediation.",
                 btnText: "Next: Fleet Portal ➔"
             },
             {
                 targetId: "fleet-sentinel-cockpit",
+                focusSelector: "#fleet-sentinel-cockpit",
+                align: "top",
+                icon: "🛰️",
+                label: "ZERO-KNOWLEDGE FLEET",
                 title: "3/3 🛰️ ZERO-KNOWLEDGE FLEET",
                 text: "Audit multiple domains in one batch with WebCrypto SHA-256 signed JSON exports—zero domain lists ever leave your browser.",
                 btnText: "🎉 Finish Labs Tour!",
@@ -2577,7 +2643,18 @@
 
     let currentTourStep = 0;
     let tourSettleRaf = null;
+    let tourPostSettleTimer = null;
+    let tourMorphTimer = null;
     let tourScrollBound = false;
+
+    function resolveTourFocusElement(step) {
+        if (!step) return null;
+        if (step.focusSelector) {
+            const focused = document.querySelector(step.focusSelector);
+            if (focused) return focused;
+        }
+        return step.targetId ? document.getElementById(step.targetId) : null;
+    }
 
     function resolveActiveTourSteps() {
         const pageKey = detectOrbitPageKey();
@@ -2591,6 +2668,10 @@
             const label = heading ? heading.textContent.trim().slice(0, 48) : sec.id;
             discovered.push({
                 targetId: sec.id,
+                focusSelector: `#${sec.id} > div`,
+                align: "top",
+                icon: "🛰️",
+                label: label.toUpperCase(),
                 title: `${discovered.length + 1}/? 🛰️ ${label.toUpperCase()}`,
                 text: `Inspecting ${label} on this page. Use Back / Next or arrow keys to step through active sections.`,
                 btnText: "Next ➔"
@@ -2611,8 +2692,10 @@
         return [
             {
                 targetId: null,
+                icon: "🛰️",
+                label: "ORBIT TOUR ROUTE",
                 title: "1/1 🛰️ ORBIT TOUR ROUTE",
-                text: "The full 6-stop guided tour runs on the main Radar homepage and Security Labs. Jump right back to start it!",
+                text: "The full guided tour runs on the main Radar homepage and Security Labs. Jump right back to start it!",
                 btnText: "🎉 Done",
                 actionLabel: "Launch Main Guided Tour →",
                 actionHref: homeHref
@@ -2622,11 +2705,23 @@
 
     function hideTourSpotlight() {
         const spot = document.getElementById("astro-tour-spotlight");
-        if (spot) spot.classList.add("hidden");
+        if (spot) {
+            spot.classList.add("hidden");
+            spot.classList.remove("spotlight-step-morph");
+        }
         copilot.tourTargetEl = null;
+        copilot.tourSpotRect = null;
         if (tourSettleRaf !== null) {
             cancelAnimationFrame(tourSettleRaf);
             tourSettleRaf = null;
+        }
+        if (tourPostSettleTimer !== null) {
+            clearTimeout(tourPostSettleTimer);
+            tourPostSettleTimer = null;
+        }
+        if (tourMorphTimer !== null) {
+            clearTimeout(tourMorphTimer);
+            tourMorphTimer = null;
         }
     }
 
@@ -2635,13 +2730,23 @@
         if (!spot) return;
         if (copilot.state !== 'tour' || !copilot.tourTargetEl) {
             spot.classList.add("hidden");
+            copilot.tourSpotRect = null;
             return;
         }
         const rect = copilot.tourTargetEl.getBoundingClientRect();
-        const pad = 10;
-        const viewTop = Math.max(78, rect.top - pad);
+        const headerClear = getHeaderClearance();
+        const isMobile = window.innerWidth < 640;
+        const bubbleEl = document.getElementById("astro-speech-bubble");
+        const bubbleH = (bubbleEl && !bubbleEl.classList.contains("hidden")) ? (bubbleEl.offsetHeight || 200) : 200;
+        const pad = isMobile ? 6 : 12;
+        const minSpotTop = Math.max(headerClear + 10, 96);
+        const maxSpotBottom = isMobile
+            ? Math.max(minSpotTop + 100, window.innerHeight - bubbleH - 26)
+            : (window.innerHeight - 16);
+
+        const viewTop = Math.max(minSpotTop, rect.top - pad);
         const viewLeft = Math.max(10, rect.left - pad);
-        const maxBottom = Math.min(window.innerHeight - 10, rect.bottom + pad);
+        const maxBottom = Math.min(maxSpotBottom, rect.bottom + pad);
         const maxRight = Math.min(window.innerWidth - 10, rect.right + pad);
         const clampedW = Math.max(120, maxRight - viewLeft);
         const clampedH = Math.max(80, maxBottom - viewTop);
@@ -2652,26 +2757,25 @@
         spot.style.height = `${Math.round(clampedH)}px`;
         spot.classList.remove("hidden");
 
-        // Gently keep Astro-Cat parked clear of the spotlight center without overriding smooth glide
-        const preferRight = window.innerWidth > 640;
-        if (preferRight) {
-            const idealX = viewLeft + clampedW + 24 < window.innerWidth - 110
-                ? viewLeft + clampedW + 24
-                : Math.max(24, viewLeft - 96);
-            const idealY = Math.max(84, Math.min(window.innerHeight - 160, viewTop + 24));
-            copilot.tourTargetX = Math.min(window.innerWidth - 95, Math.max(24, idealX));
-            copilot.tourTargetY = idealY;
-        } else {
-            copilot.tourTargetX = 20;
-            copilot.tourTargetY = viewTop > window.innerHeight * 0.48 ? 96 : Math.min(window.innerHeight - 160, viewTop + Math.min(clampedH, 240));
-        }
+        copilot.tourSpotRect = {
+            top: viewTop,
+            left: viewLeft,
+            right: viewLeft + clampedW,
+            bottom: viewTop + clampedH,
+            width: clampedW,
+            height: clampedH
+        };
     }
 
     function bindTourSpotlightTracking() {
         if (tourScrollBound) return;
         tourScrollBound = true;
         window.addEventListener("scroll", () => {
-            if (copilot.state === 'tour') syncTourSpotlight();
+            if (copilot.state === 'tour') {
+                const spot = document.getElementById("astro-tour-spotlight");
+                if (spot) spot.classList.remove("spotlight-step-morph");
+                syncTourSpotlight();
+            }
         }, { passive: true });
         window.addEventListener("resize", () => {
             if (copilot.state === 'tour') syncTourSpotlight();
@@ -2682,8 +2786,11 @@
         if (copilot.state === 'docked') {
             launchAstroCatIntoZeroG();
         }
+        closeTouchDrawer();
         clearActiveGameModes('tour');
         bindTourSpotlightTracking();
+        document.body.classList.add("astro-tour-active");
+        void document.body.offsetHeight;
         copilot.state = 'tour';
         copilot.tourSteps = resolveActiveTourSteps();
         const tourBtn = document.getElementById("hud-tour-btn");
@@ -2705,11 +2812,27 @@
         }
         currentTourStep = stepIndex;
         const step = steps[stepIndex];
-        const targetEl = step.targetId ? document.getElementById(step.targetId) : null;
-        copilot.tourTargetEl = targetEl;
+        const focusEl = resolveTourFocusElement(step);
+        copilot.tourTargetEl = focusEl;
 
-        if (targetEl) {
-            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const dynamicTitle = step.icon && step.label
+            ? `${stepIndex + 1}/${steps.length} ${step.icon} ${step.label}`
+            : step.title;
+
+        const headerH = document.querySelector("header")?.getBoundingClientRect().height || 80;
+        const isMobile = window.innerWidth < 640;
+        const topOffset = Math.max(88, Math.round(headerH + 26));
+        const bottomReserve = isMobile ? 255 : 28;
+
+        if (focusEl) {
+            const rect = focusEl.getBoundingClientRect();
+            const docTop = rect.top + window.scrollY;
+            const availH = Math.max(200, window.innerHeight - topOffset - bottomReserve);
+            let desiredScrollY = Math.max(0, docTop - topOffset);
+            if (step.align === 'center' && rect.height <= availH - 20) {
+                desiredScrollY = Math.max(0, docTop - topOffset - Math.round((availH - rect.height) / 2));
+            }
+            window.scrollTo({ top: desiredScrollY, behavior: 'smooth' });
         }
 
         const targetX = window.innerWidth > 640 ? Math.min(window.innerWidth - 220, Math.max(80, window.innerWidth * 0.7)) : 24;
@@ -2719,30 +2842,22 @@
 
         const spotLabel = document.getElementById("astro-spotlight-label");
         if (spotLabel) {
-            spotLabel.textContent = step.title.replace(/^\d+\/\d+\s*/, '');
+            spotLabel.textContent = step.label || dynamicTitle.replace(/^\d+\/\d+\s*/, '');
         }
 
-        // Track smooth-scroll settling for ~650ms so spotlight & glide target stay locked
-        if (tourSettleRaf !== null) cancelAnimationFrame(tourSettleRaf);
-        const startTs = performance.now();
-        const settleTick = (now) => {
-            if (copilot.state !== 'tour') return;
-            syncTourSpotlight();
-            if (now - startTs < 680) {
-                tourSettleRaf = requestAnimationFrame(settleTick);
-            } else {
-                tourSettleRaf = null;
-            }
-        };
-        syncTourSpotlight();
-        tourSettleRaf = requestAnimationFrame(settleTick);
+        const progressTrack = document.getElementById("tour-progress-track");
+        const progressBar = document.getElementById("tour-progress-bar");
+        if (progressTrack) progressTrack.classList.remove("hidden");
+        if (progressBar) {
+            progressBar.style.width = `${Math.round(((stepIndex + 1) / steps.length) * 100)}%`;
+        }
 
         spawnSparks(copilot.x + 32, copilot.y + 54, 8, '#38bdf8');
         playThruster();
         playChirp();
 
         const bubbleTitle = document.getElementById("astro-bubble-title");
-        if (bubbleTitle) bubbleTitle.textContent = step.title;
+        if (bubbleTitle) bubbleTitle.textContent = dynamicTitle;
 
         const prevBtn = document.getElementById("tour-prev-btn");
         if (prevBtn) prevBtn.disabled = (stepIndex === 0);
@@ -2778,7 +2893,50 @@
             }
         }
 
-        showSpeechBubble(step.text, 60000, true, step.title);
+        const bubbleEl = document.getElementById("astro-speech-bubble");
+        if (bubbleEl) bubbleEl.classList.add("astro-bubble-tour");
+        showSpeechBubble(step.text, 0, true, dynamicTitle);
+
+        const spot = document.getElementById("astro-tour-spotlight");
+        if (spot) {
+            spot.classList.add("spotlight-step-morph");
+            if (tourMorphTimer !== null) clearTimeout(tourMorphTimer);
+            tourMorphTimer = setTimeout(() => {
+                spot.classList.remove("spotlight-step-morph");
+                tourMorphTimer = null;
+            }, 260);
+        }
+
+        if (tourSettleRaf !== null) cancelAnimationFrame(tourSettleRaf);
+        if (tourPostSettleTimer !== null) clearTimeout(tourPostSettleTimer);
+        const startTs = performance.now();
+        const settleTick = (now) => {
+            if (copilot.state !== 'tour') return;
+            syncTourSpotlight();
+            if (now - startTs < 750) {
+                tourSettleRaf = requestAnimationFrame(settleTick);
+            } else {
+                tourSettleRaf = null;
+            }
+        };
+        syncTourSpotlight();
+        tourSettleRaf = requestAnimationFrame(settleTick);
+
+        if (focusEl) {
+            tourPostSettleTimer = setTimeout(() => {
+                tourPostSettleTimer = null;
+                if (copilot.state !== 'tour' || !copilot.tourTargetEl) return;
+                const r = copilot.tourTargetEl.getBoundingClientRect();
+                const availNow = Math.max(200, window.innerHeight - topOffset - bottomReserve);
+                const expectedTop = (step.align === 'center' && r.height <= availNow - 20)
+                    ? topOffset + Math.round((availNow - r.height) / 2)
+                    : topOffset;
+                if (Math.abs(r.top - expectedTop) > 50) {
+                    window.scrollTo({ top: Math.max(0, window.scrollY + r.top - expectedTop), behavior: 'auto' });
+                }
+                syncTourSpotlight();
+            }, 780);
+        }
     }
 
     function prevTourStep() {
@@ -2794,10 +2952,15 @@
     function finishSiteTour() {
         clearActiveGameModes();
         hideTourSpotlight();
+        document.body.classList.remove("astro-tour-active");
         setVisorMood('happy', 3200);
         copilot.state = 'floating';
         const tourControls = document.getElementById("astro-tour-controls");
         if (tourControls) tourControls.classList.add("hidden");
+        const progressTrack = document.getElementById("tour-progress-track");
+        if (progressTrack) progressTrack.classList.add("hidden");
+        const bubbleEl = document.getElementById("astro-speech-bubble");
+        if (bubbleEl) bubbleEl.classList.remove("astro-bubble-tour");
 
         const catBody = document.getElementById("astro-cat-body");
         if (catBody) {
@@ -2815,10 +2978,15 @@
     function exitSiteTour() {
         clearActiveGameModes();
         hideTourSpotlight();
+        document.body.classList.remove("astro-tour-active");
         setVisorMood('normal');
         copilot.state = 'floating';
         const tourControls = document.getElementById("astro-tour-controls");
         if (tourControls) tourControls.classList.add("hidden");
+        const progressTrack = document.getElementById("tour-progress-track");
+        if (progressTrack) progressTrack.classList.add("hidden");
+        const bubbleEl = document.getElementById("astro-speech-bubble");
+        if (bubbleEl) bubbleEl.classList.remove("astro-bubble-tour");
         hideSpeechBubble();
         playPurr();
     }
@@ -2870,10 +3038,15 @@
 
         // 4. Tour Mode cleanup
         if (keepMode !== 'tour') {
+            document.body.classList.remove("astro-tour-active");
             const tourHudBtn = document.getElementById("hud-tour-btn");
             if (tourHudBtn) tourHudBtn.classList.remove("astro-hud-btn-active");
             const tourControls = document.getElementById("astro-tour-controls");
             if (tourControls) tourControls.classList.add("hidden");
+            const progressTrack = document.getElementById("tour-progress-track");
+            if (progressTrack) progressTrack.classList.add("hidden");
+            const bubbleEl = document.getElementById("astro-speech-bubble");
+            if (bubbleEl) bubbleEl.classList.remove("astro-bubble-tour");
             const actionBtn = document.getElementById("tour-action-btn");
             if (actionBtn) actionBtn.classList.add("hidden");
             hideTourSpotlight();
@@ -5712,33 +5885,57 @@
 
                 // Render Independent Fixed Speech Bubble (Never tilts, zero collision with HUD or cat)
                 if (bubbleVisible) {
-                    let bubbleX = (copilot.x + 32) - (bubbleW / 2);
-                    bubbleX = Math.max(16, Math.min(window.innerWidth - bubbleW - 16, bubbleX));
-
-                    let bubbleY;
                     const tail = document.getElementById("astro-bubble-tail");
+                    const minBubbleY = getHeaderClearance();
+                    let bubbleX;
+                    let bubbleY;
 
-                    if (visualY >= bubbleH + 32) {
-                        // Sufficient clearance above Astro-Cat
-                        if (visualY > window.innerHeight - 130) {
-                            // Cat is near bottom edge, HUD is flipped above cat (-44px), place bubble above the HUD
-                            bubbleY = visualY - 48 - bubbleH - 14;
+                    if (copilot.state === 'tour') {
+                        const sr = copilot.tourSpotRect;
+                        const isMobile = window.innerWidth < 640;
+                        if (isMobile) {
+                            bubbleX = 12;
+                            bubbleY = Math.max(minBubbleY, window.innerHeight - bubbleH - 14);
+                            copilot.tourTargetX = Math.max(16, window.innerWidth - 84);
+                            copilot.tourTargetY = Math.max(minBubbleY, bubbleY - 62);
+                        } else if (sr && (window.innerWidth - sr.right >= bubbleW + 18)) {
+                            bubbleX = sr.right + 14;
+                            bubbleY = Math.max(minBubbleY + 72, Math.min(window.innerHeight - bubbleH - 20, sr.top + 48));
+                            copilot.tourTargetX = bubbleX + Math.round(bubbleW / 2) - 32;
+                            copilot.tourTargetY = Math.max(minBubbleY, bubbleY - 72);
                         } else {
-                            // Normal: bubble sits cleanly above the cat
-                            bubbleY = visualY - bubbleH - 16;
+                            bubbleX = Math.max(16, window.innerWidth - bubbleW - 22);
+                            bubbleY = Math.max(minBubbleY + 72, window.innerHeight - bubbleH - 22);
+                            copilot.tourTargetX = bubbleX + bubbleW - 76;
+                            copilot.tourTargetY = Math.max(minBubbleY, bubbleY - 72);
                         }
-                        if (tail) tail.className = "astro-bubble-tail-down";
+                        if (tail) {
+                            tail.className = "astro-bubble-tail-up";
+                            const tailLeft = Math.max(18, Math.min(bubbleW - 18, (copilot.x + 32) - bubbleX));
+                            tail.style.left = `${tailLeft}px`;
+                        }
                     } else {
-                        // Not enough space above Astro-Cat: place bubble below the cat (HUD is flipped above)
-                        bubbleY = visualY + 72;
-                        if (tail) tail.className = "astro-bubble-tail-up";
-                    }
+                        bubbleX = (copilot.x + 32) - (bubbleW / 2);
+                        bubbleX = Math.max(16, Math.min(window.innerWidth - bubbleW - 16, bubbleX));
 
-                    bubbleY = Math.max(12, Math.min(window.innerHeight - bubbleH - 12, bubbleY));
+                        if (visualY >= bubbleH + 32 + minBubbleY) {
+                            if (visualY > window.innerHeight - 130) {
+                                bubbleY = visualY - 48 - bubbleH - 14;
+                            } else {
+                                bubbleY = visualY - bubbleH - 16;
+                            }
+                            if (tail) tail.className = "astro-bubble-tail-down";
+                        } else {
+                            bubbleY = visualY + 72;
+                            if (tail) tail.className = "astro-bubble-tail-up";
+                        }
 
-                    if (tail) {
-                        const tailLeft = Math.max(18, Math.min(bubbleW - 18, (copilot.x + 32) - bubbleX));
-                        tail.style.left = `${tailLeft}px`;
+                        bubbleY = Math.max(minBubbleY, Math.min(window.innerHeight - bubbleH - 12, bubbleY));
+
+                        if (tail) {
+                            const tailLeft = Math.max(18, Math.min(bubbleW - 18, (copilot.x + 32) - bubbleX));
+                            tail.style.left = `${tailLeft}px`;
+                        }
                     }
                     bubble.style.transform = `translate3d(${bubbleX}px, ${bubbleY}px, 0px)`;
                 }
@@ -5787,19 +5984,21 @@
                     const spot = document.getElementById("astro-tour-spotlight");
                     if (spot && !spot.classList.contains("hidden")) {
                         const sr = spot.getBoundingClientRect();
-                        const targetX = Math.max(sr.left, Math.min(sr.right, catVisorX));
-                        const targetY = Math.max(sr.top, Math.min(sr.bottom, catVisorY));
-                        fxCtx.save();
-                        fxCtx.beginPath();
-                        fxCtx.moveTo(catVisorX, catVisorY);
-                        fxCtx.lineTo(targetX, targetY);
-                        fxCtx.strokeStyle = 'rgba(16, 185, 129, 0.55)';
-                        fxCtx.lineWidth = 1.75;
-                        fxCtx.setLineDash([5, 5]);
-                        fxCtx.shadowColor = '#10b981';
-                        fxCtx.shadowBlur = 8;
-                        fxCtx.stroke();
-                        fxCtx.restore();
+                        if (sr.width > 0 && sr.height > 0 && sr.bottom > getHeaderClearance() && sr.top < window.innerHeight) {
+                            const targetX = Math.max(sr.left, Math.min(sr.right, catVisorX));
+                            const targetY = Math.max(sr.top, Math.min(sr.bottom, catVisorY));
+                            fxCtx.save();
+                            fxCtx.beginPath();
+                            fxCtx.moveTo(catVisorX, catVisorY);
+                            fxCtx.lineTo(targetX, targetY);
+                            fxCtx.strokeStyle = 'rgba(16, 185, 129, 0.55)';
+                            fxCtx.lineWidth = 1.75;
+                            fxCtx.setLineDash([5, 5]);
+                            fxCtx.shadowColor = '#10b981';
+                            fxCtx.shadowBlur = 8;
+                            fxCtx.stroke();
+                            fxCtx.restore();
+                        }
                     }
                 }
 
@@ -6325,6 +6524,61 @@
             }
 
             /* Tactical Guided Tour Spotlight & Progress Pips */
+            body.astro-tour-active section {
+                content-visibility: visible !important;
+            }
+            body.astro-tour-active #simple-cat-dock {
+                opacity: 0 !important;
+                pointer-events: none !important;
+                transform: translateY(20px) scale(0.95) !important;
+            }
+            .astro-bubble.astro-bubble-tour {
+                width: 312px;
+                max-width: calc(100vw - 24px);
+                padding: 12px 14px;
+                box-shadow: 0 20px 50px rgba(2, 6, 23, 0.85), 0 0 32px rgba(16, 185, 129, 0.35), 4px 4px 0px #064e3b;
+            }
+            @media (max-width: 639px) {
+                .astro-bubble.astro-bubble-tour {
+                    width: calc(100vw - 24px) !important;
+                    max-width: none !important;
+                    padding: 12px 14px;
+                }
+                #tour-prev-btn, #tour-next-btn, #tour-exit-btn {
+                    min-height: 42px;
+                }
+            }
+            .tour-progress-track {
+                height: 3px;
+                background: rgba(30, 41, 59, 0.9);
+                border-radius: 9999px;
+                overflow: hidden;
+                margin-bottom: 8px;
+            }
+            .tour-progress-track.hidden {
+                display: none !important;
+            }
+            .tour-progress-bar {
+                height: 100%;
+                background: linear-gradient(90deg, #10b981, #22d3ee);
+                transition: width 0.3s ease;
+            }
+            .tour-kbd-hint {
+                display: none;
+                font-family: monospace;
+                font-size: 9px;
+                color: #64748b;
+                letter-spacing: 0.03em;
+            }
+            @media (min-width: 640px) {
+                .tour-kbd-hint {
+                    display: inline;
+                }
+            }
+            #tour-prev-btn, #tour-next-btn, #tour-exit-btn {
+                white-space: nowrap;
+                min-height: 34px;
+            }
             #astro-tour-spotlight {
                 position: fixed !important;
                 pointer-events: none !important;
@@ -6332,8 +6586,15 @@
                 border-radius: 16px;
                 border: 2px solid rgba(16, 185, 129, 0.85);
                 box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.72), 0 0 28px rgba(16, 185, 129, 0.45);
-                transition: top 0.28s ease, left 0.28s ease, width 0.28s ease, height 0.28s ease, opacity 0.22s ease;
+                animation: spotlightPulse 2.8s ease-in-out infinite;
                 box-sizing: border-box;
+            }
+            #astro-tour-spotlight.spotlight-step-morph {
+                transition: top 0.24s cubic-bezier(0.22, 1, 0.36, 1), left 0.24s cubic-bezier(0.22, 1, 0.36, 1), width 0.24s cubic-bezier(0.22, 1, 0.36, 1), height 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+            }
+            @keyframes spotlightPulse {
+                0%, 100% { box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.72), 0 0 24px rgba(16, 185, 129, 0.38); }
+                50% { box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.72), 0 0 36px rgba(16, 185, 129, 0.65); }
             }
             #astro-tour-spotlight.hidden {
                 display: none !important;
@@ -6696,22 +6957,18 @@
 
     // Master 0% CPU Idle Governor & Audio Context Lifecycle
     function handleVisibilityOrFocusChange() {
-        const vid = document.getElementById("astrocat-gameplay-video");
+        const vid = document.getElementById("orbit-explainer-video");
         if (document.hidden) {
             suspendAudio();
             stopBgAnimation();
             stopCopilotAnimation();
             if (vid && !vid.paused) {
-                try { vid.pause(); vid._wasPlayingBeforeHide = true; } catch (e) {}
+                try { vid.pause(); } catch (e) {}
             }
         } else {
             if (soundEnabled) resumeAudio();
             startBgAnimation();
             startCopilotAnimation();
-            if (vid && vid._wasPlayingBeforeHide) {
-                try { vid.play().catch(() => {}); } catch (e) {}
-                vid._wasPlayingBeforeHide = false;
-            }
         }
     }
 

@@ -14,7 +14,7 @@ Orbit Security is an autonomous attack surface sentinel and perimeter auditor bu
 - **AST Code Sentinel**: Static symbol and import hygiene in `src/orbit_security/ast_sentinel.py` (with `--auto-fix`)
 - **Landing & GitHub Pages (`landing/` -> `docs/`)**: When editing any HTML, CSS, JS, or media in `landing/`:
   1. Edit `landing/` only (never `docs/` directly); rebuild Tailwind v4 CSS with `npm run build:css` (`landing/input.css` -> `landing/assets/styles.min.css`).
-  2. Sync to `docs/` with `npm run sync:docs` (preserve `>=96` shared files; keep `landing/assets/orbit_cats_pounce.jpg` at `1024x1024` `>100KB` for X/Meta ad gates and OG images `>=1200x630`).
+  2. Sync to `docs/` with `npm run sync:docs` (preserve `>=87` shared files; keep `landing/assets/orbit_cats_pounce.jpg` at `1024x1024` `>100KB` for X/Meta ad gates and OG images `>=1200x630`).
   3. Verify with `npm run check:landing` before committing.
 
 ## ⚡ Execution Invariants

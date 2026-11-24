@@ -747,23 +747,19 @@ html_content = '''<!DOCTYPE html>
             <div class="mt-12 sm:mt-14 max-w-4xl mx-auto bg-slate-900/90 border border-emerald-500/30 rounded-2xl overflow-hidden shadow-2xl shadow-emerald-500/10 backdrop-blur-sm card-glass">
                 <div class="px-6 py-4 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
                     <div class="flex items-center gap-2.5">
-                        <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-                        <span class="text-xs font-mono font-bold text-white tracking-wide">REC ● // LIVE MISSION FEED</span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span class="text-xs font-mono font-bold text-white tracking-wide">ORBIT SECURITY // EXPLAINER v4</span>
                     </div>
-                    <span class="text-[11px] font-mono text-emerald-400/90">ZERO-DRIFT TELEMETRY // 10s TRANSMISSION</span>
+                    <span class="text-[11px] font-mono text-emerald-400/90">1080P &middot; AUDIO + CAPTIONS &middot; 1:12</span>
                 </div>
                 <div class="aspect-video relative bg-slate-950">
                     <video 
-                        class="w-full h-full object-cover" 
+                        class="w-full h-full object-contain bg-slate-950" 
                         controls 
-                        muted 
-                        loop 
                         playsinline 
                         preload="none"
-                        poster="assets/orbit_cats_radar.jpg">
-                        <source src="assets/orbit_security_ad_video.webm" type="video/webm">
-                        <source src="assets/orbit_security_ad_video_web.mp4" type="video/mp4">
-                        <source src="assets/orbit_security_ad_video.mp4" type="video/mp4">
+                        poster="assets/orbit_security_explainer_v4_poster.jpg">
+                        <source src="assets/orbit_security_explainer_v4.mp4" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
                 </div>

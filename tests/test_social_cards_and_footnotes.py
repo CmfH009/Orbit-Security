@@ -242,7 +242,7 @@ def test_docs_parity_intact():
     }
 
     shared_keys = set(landing_files.keys()) & set(docs_files.keys())
-    assert len(shared_keys) >= 95, f"Expected at least 95 shared files, found {len(shared_keys)}"
+    assert len(shared_keys) >= 87, f"Expected at least 87 shared files, found {len(shared_keys)}"
 
     mismatches = []
     for rel in sorted(shared_keys):
@@ -447,4 +447,34 @@ def test_astro_cat_guided_tour_and_scan_reactor():
         assert "Instant MRR boost!" not in cat_js, f"Stale hype copy found in {base_dir.name}/assets/simple_cat.js"
         assert "SimpleCat.reactToScan(audit)" in radar_js, f"Missing reactToScan hook in {base_dir.name}/assets/orbit_radar.js"
         assert "SimpleCat.setVisorMood('radar'" in radar_js, f"Missing visor mood hook in {base_dir.name}/assets/orbit_radar.js"
+
+
+def test_explainer_v4_and_retired_legacy_videos():
+    """Verify orbit_security_explainer_v4.mp4 + poster exist in landing/ and docs/ and legacy videos are retired."""
+    retired = (
+        "orbit_security_ad_video.mp4",
+        "orbit_security_ad_video.webm",
+        "orbit_security_ad_video_web.mp4",
+        "orbit_astro_cat_gameplay_x.mp4",
+        "orbit_montage_master.mp4",
+        "orbit_teardown_master.mp4",
+        "orbit_boast_roast_2026.mp4",
+        "orbit_cat_ad_final.mp4",
+        "orbit_cat_continuous_32s.mp4",
+        "orbit_cat_continuous_32s_final.mp4",
+        "orbit_cat_humor_ad.mp4",
+    )
+    for base_dir in (LANDING_DIR, DOCS_DIR):
+        assets_dir = base_dir / "assets"
+        assert (assets_dir / "orbit_security_explainer_v4.mp4").is_file()
+        assert (assets_dir / "orbit_security_explainer_v4_poster.jpg").is_file()
+        for legacy in retired:
+            assert not (assets_dir / legacy).exists(), f"Retired video {legacy} still exists in {assets_dir}"
+
+        idx_html = (base_dir / "index.html").read_text(encoding="utf-8")
+        assert 'id="orbit-explainer-video"' in idx_html
+        assert "assets/orbit_security_explainer_v4.mp4" in idx_html
+        assert "assets/orbit_security_explainer_v4_poster.jpg" in idx_html
+        for legacy in retired:
+            assert legacy not in idx_html, f"Retired video reference {legacy} found in {base_dir.name}/index.html"
 

@@ -111,7 +111,7 @@ class TestVerifyLandingPagesEncodingStress(unittest.TestCase):
 
         report = sync_mod.compare(REPO_ROOT / "landing", REPO_ROOT / "docs")
         self.assertEqual(report["mismatched"], [], f"Drift between landing/ and docs/: {report['mismatched']}")
-        self.assertGreaterEqual(len(report["identical"]), 96)
+        self.assertGreaterEqual(len(report["identical"]), 87)
 
         for tree in (REPO_ROOT / "landing", REPO_ROOT / "docs"):
             self.assertTrue((tree / ".nojekyll").is_file(), f"Missing .nojekyll in {tree}")

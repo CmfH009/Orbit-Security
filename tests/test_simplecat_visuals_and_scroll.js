@@ -140,8 +140,8 @@ test('Astro-Cat Copilot HUD clamps horizontal offset to prevent off-screen clipp
     assert(docsCatJs.includes('catCenterX + hudHalfWidth > window.innerWidth - 12'), 'Missing right edge HUD clamping');
 });
 
-test('Astro-Cat Speech Bubble strictly clamps bubbleY within viewport boundaries', () => {
-    assert(docsCatJs.includes('bubbleY = Math.max(12, Math.min(window.innerHeight - bubbleH - 12, bubbleY));'), 'Speech bubble missing Y viewport clamping');
+test('Astro-Cat Speech Bubble strictly clamps bubbleY within viewport boundaries and clears sticky header', () => {
+    assert(docsCatJs.includes('bubbleY = Math.max(minBubbleY, Math.min(window.innerHeight - bubbleH - 12, bubbleY));'), 'Speech bubble missing header-safe Y viewport clamping');
 });
 
 // 6. PUBLIC API & SCROLL OBSERVER EXPORTS
@@ -511,6 +511,19 @@ test('Live Scan Reactor, Visor Moods, and Page/Section-Aware Quips wired across 
     assert(docsCatJs.includes('reactToScan: reactToScan'), 'Missing reactToScan public export');
     assert(docsRadarJs.includes('SimpleCat.reactToScan(audit)'), 'orbit_radar.js must call SimpleCat.reactToScan(audit)');
     assert(docsRadarJs.includes("SimpleCat.setVisorMood('radar'"), 'orbit_radar.js must pulse visor radar mood');
+});
+
+test('Guided Tour polish & Explainer v4 integration verified in simple_cat.js and index.html', () => {
+    assert(docsCatJs.includes('body.astro-tour-active section'), 'Missing astro-tour-active content-visibility override');
+    assert(docsCatJs.includes('content-visibility: visible !important'), 'Missing content-visibility: visible during tour');
+    assert(docsCatJs.includes('id="tour-progress-bar"'), 'Missing #tour-progress-bar in speech bubble');
+    assert(docsCatJs.includes('product-walkthrough'), 'Tour must include product-walkthrough step');
+    assert(docsCatJs.includes("if (copilot.state === 'tour') return;"), 'mouseleave must not auto-dismiss active tour');
+    assert(docsCatJs.includes("if (copilot.state === 'tour') {\r\n                    exitSiteTour();\r\n                    return;\r\n                }") || docsCatJs.includes("if (copilot.state === 'tour') {\n                    exitSiteTour();\n                    return;\n                }"), 'bubbleClose must exit tour cleanly');
+    assert(docsIndexHtml.includes('id="orbit-explainer-video"'), 'index.html missing #orbit-explainer-video');
+    assert(docsIndexHtml.includes('orbit_security_explainer_v4.mp4'), 'index.html missing orbit_security_explainer_v4.mp4');
+    assert(!docsIndexHtml.includes('orbit_security_ad_video'), 'Retired orbit_security_ad_video must be removed from index.html');
+    assert(!docsIndexHtml.includes('orbit_astro_cat_gameplay_x'), 'Retired orbit_astro_cat_gameplay_x must be removed from index.html');
 });
 
 console.log('========================================');

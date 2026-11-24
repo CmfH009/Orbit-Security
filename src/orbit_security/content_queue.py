@@ -40,6 +40,7 @@ class ContentQueue:
             return None
         candidates = [
             self.root / "landing" / "assets" / filename,
+            self.root / "marketing" / "assets" / filename,
             self.root / "data" / "generated_media" / filename,
             self.root / "data" / "generated_videos" / filename,
             Path.home() / "Downloads" / filename,
@@ -326,6 +327,7 @@ class ContentQueue:
             except Exception as e:
                 logger.error(f"Error synthesizing dynamic video: {e}")
                 for vid_candidate in [
+                    "orbit_security_explainer_v4.mp4",
                     "orbit_astro_cat_gameplay_x.mp4",
                     "orbit_montage_master.mp4",
                     "orbit_teardown_master.mp4",

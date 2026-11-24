@@ -358,6 +358,7 @@ class CreativeEngine:
         """Looks for an asset file in landing/assets or data/generated_*."""
         candidates = [
             self.root / "landing" / "assets" / filename,
+            self.root / "marketing" / "assets" / filename,
             self.root / "data" / "generated_media" / filename,
             self.root / "data" / "generated_videos" / filename,
             Path.home() / "Downloads" / filename,

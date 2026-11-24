@@ -219,11 +219,11 @@
     <link rel="dns-prefetch" href="https://checkout.stripe.com">
     
     <!-- Production Compiled Stylesheet (Zero-Render-Delay, Offline Fonts Vendored) -->
-    <link rel="stylesheet" href="assets/styles.min.css?v=20261026v6">
+    <link rel="stylesheet" href="assets/styles.min.css?v=20261124v7">
     <!-- Simple Cat 16-Bit Companion & Plain-English Decoder -->
-    <script src="assets/simple_cat.js?v=20261026v6" defer></script>
+    <script src="assets/simple_cat.js?v=20261124v7" defer></script>
     <!-- Orbit Radar Terminal & Ergonomics Engine -->
-    <script src="assets/orbit_radar.js?v=20261026v6" defer></script>
+    <script src="assets/orbit_radar.js?v=20261124v7" defer></script>
 
     <style>
         html { color-scheme: dark; }
@@ -247,6 +247,14 @@
         #sentinels, #security-labs, #features, #simple-cat, #founder, #open-source-proof, #faq, #legal, #pricing {
             content-visibility: auto;
             contain-intrinsic-size: 1px 600px;
+        }
+        body.astro-tour-active section {
+            content-visibility: visible !important;
+        }
+        body.astro-tour-active #simple-cat-dock {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transform: translateY(20px) scale(0.95) !important;
         }
         body.drawer-open #simple-cat-dock {
             display: none !important;
@@ -742,6 +750,15 @@
                     <span>Preview White-Label PDF</span>
                 </a>
             </div>
+            <div class="mb-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-mono">
+                <a href="#product-walkthrough" class="text-emerald-300 hover:text-emerald-200 inline-flex items-center gap-1.5 transition-colors">
+                    <span>▶ Watch 72s Product Walkthrough</span>
+                </a>
+                <span class="text-slate-700 hidden sm:inline">•</span>
+                <button type="button" id="hero-start-tour-btn" onclick="if(window.SimpleCat){SimpleCat.startTour();}" class="text-cyan-300 hover:text-cyan-200 inline-flex items-center gap-1.5 cursor-pointer transition-colors">
+                    <span>🗺️ Launch Interactive Guided Tour</span>
+                </button>
+            </div>
 
             <!-- Interactive Tactical DoH Terminal Widget (Elevated Above Secondary Cards) -->
             <div id="audit-terminal" class="max-w-3xl mx-auto mb-8 bg-slate-950/90 border-2 border-emerald-500/80 rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden card-glass-emerald relative group">
@@ -977,6 +994,78 @@
                         <div class="font-arcade text-[10px] font-bold text-white truncate">MX Sentinel</div>
                         <div class="text-[11px] font-mono text-slate-400 truncate">Null-MX &amp; gateway guard</div>
                         <div class="mt-1.5 pt-1 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono"><span class="text-slate-500">Gateway</span><span class="text-purple-400 font-bold">Null-MX</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Official 72-Second Studio Explainer Walkthrough -->
+    <section id="product-walkthrough" class="scroll-mt-20 py-10 sm:py-14 bg-slate-950/90 border-t border-slate-800/80 relative overflow-hidden">
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,rgba(16,185,129,0.10),transparent_70%)] pointer-events-none"></div>
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 relative z-10">
+            <div class="text-center max-w-2xl mx-auto mb-7 sm:mb-9">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-emerald-500/40 text-emerald-400 text-[10px] font-arcade uppercase tracking-wider mb-3">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span>STUDIO WALKTHROUGH // 1:12</span>
+                </div>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-2.5 tracking-tight">
+                    See Orbit Security in 72 Seconds
+                </h2>
+                <p class="text-slate-400 text-xs sm:text-sm leading-relaxed">
+                    Browser-native DoH DNS audits, co-branded client PDFs, CISA KEV + EPSS labs, and GitHub SARIF gates—walked through end to end.
+                </p>
+            </div>
+
+            <div id="explainer-player-card" class="bg-slate-900/95 border-2 border-emerald-500/40 rounded-2xl overflow-hidden shadow-2xl shadow-emerald-500/10 backdrop-blur-sm card-glass-emerald">
+                <div class="px-4 sm:px-6 py-3 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between flex-wrap gap-2">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span class="text-xs font-mono font-bold text-white tracking-wide">ORBIT SECURITY // EXPLAINER v4</span>
+                    </div>
+                    <span class="text-[11px] font-mono text-emerald-400/90 font-semibold">1080P &middot; AUDIO + CAPTIONS &middot; 1:12</span>
+                </div>
+
+                <div class="aspect-video relative bg-slate-950">
+                    <video id="orbit-explainer-video"
+                           class="w-full h-full object-contain bg-slate-950"
+                           controls
+                           playsinline
+                           preload="none"
+                           poster="assets/orbit_security_explainer_v4_poster.jpg">
+                        <source src="assets/orbit_security_explainer_v4.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+
+                    <button type="button"
+                            id="explainerPlayOverlay"
+                            onclick="playOrbitExplainer()"
+                            class="absolute inset-0 m-auto w-fit h-fit min-h-[48px] px-5 py-3 rounded-full bg-slate-950/90 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 border-2 border-emerald-400/80 font-mono text-xs sm:text-sm font-bold shadow-[0_0_30px_rgba(16,185,129,0.45)] backdrop-blur-md flex items-center gap-2.5 cursor-pointer transition-all z-20 pixel-btn"
+                            aria-label="Play 72-second Orbit Security Walkthrough">
+                        <span id="explainerPlayOverlayIcon">▶</span>
+                        <span id="explainerPlayOverlayText">Play 72s Walkthrough (With Audio)</span>
+                    </button>
+                </div>
+
+                <div class="px-4 sm:px-5 py-3 bg-slate-950/90 border-t border-slate-800/90">
+                    <div id="explainerChapterBar" class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar scroll-indicate-x scroll-fade-r scroll-cyber-x">
+                        <button type="button" data-chapter-time="0" onclick="seekOrbitExplainer(0)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-mono text-[11px] font-bold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:00 Local Stakes</button>
+                        <button type="button" data-chapter-time="12.7" onclick="seekOrbitExplainer(12.7)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:12 Montana &middot; DoH</button>
+                        <button type="button" data-chapter-time="24.8" onclick="seekOrbitExplainer(24.8)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:25 Browser PDF</button>
+                        <button type="button" data-chapter-time="33.2" onclick="seekOrbitExplainer(33.2)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:33 KEV + EPSS</button>
+                        <button type="button" data-chapter-time="42.0" onclick="seekOrbitExplainer(42.0)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:42 Takeover Tree</button>
+                        <button type="button" data-chapter-time="50.5" onclick="seekOrbitExplainer(50.5)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:50 GitHub SARIF</button>
+                        <button type="button" data-chapter-time="58.7" onclick="seekOrbitExplainer(58.7)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:59 Benchmarks</button>
+                    </div>
+                </div>
+
+                <div class="px-4 sm:px-6 py-3 bg-slate-950/70 border-t border-slate-900 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+                    <button type="button" onclick="if(window.SimpleCat){SimpleCat.startTour();}" class="text-cyan-300 hover:text-cyan-200 font-bold cursor-pointer transition-colors">
+                        🗺️ Launch Interactive Guided Tour &rarr;
+                    </button>
+                    <div class="flex flex-wrap items-center gap-4">
+                        <a href="#audit-terminal" class="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors">Try Free 5s Radar &uarr;</a>
+                        <a href="labs.html" class="text-slate-300 hover:text-white font-semibold transition-colors">Open Security Labs &rarr;</a>
                     </div>
                 </div>
             </div>
@@ -1605,39 +1694,6 @@ Apex Digital Studio</pre>
                     </div>
                 </div>
             </div>
-
-            <!-- Official Video Ad Broadcast with Bandwidth-Saving Preload="none" -->
-            <div class="mt-12 sm:mt-14 max-w-4xl mx-auto bg-slate-900/90 border border-emerald-500/30 rounded-2xl overflow-hidden shadow-2xl shadow-emerald-500/10 backdrop-blur-sm card-glass">
-                <div class="px-6 py-4 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
-                    <div class="flex items-center gap-2.5">
-                        <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-                        <span class="text-xs font-mono font-bold text-white tracking-wide">REC ● // LIVE MISSION FEED</span>
-                    </div>
-                    <span class="text-[11px] font-mono text-emerald-400/90">ZERO-DRIFT TELEMETRY // 10s TRANSMISSION</span>
-                </div>
-                <div class="aspect-video relative bg-slate-950">
-                    <video 
-                        class="w-full h-full object-cover" 
-                        controls 
-                        muted 
-                        loop 
-                        playsinline 
-                        preload="none"
-                        poster="assets/orbit_cats_radar.jpg">
-                        <source src="assets/orbit_security_ad_video.webm" type="video/webm">
-                        <source src="assets/orbit_security_ad_video_web.mp4" type="video/mp4">
-                        <source src="assets/orbit_security_ad_video.mp4" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                </div>
-                <div class="px-6 py-3 bg-slate-950/60 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
-                    <span>Published across official advertising channels on X (@_arsoncode) and Meta.</span>
-                    <a href="https://x.com/_arsoncode" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1">
-                        View on X
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                    </a>
-                </div>
-            </div>
         </div>
     </section>
 
@@ -1722,7 +1778,7 @@ Apex Digital Studio</pre>
     </section>
 
     <!-- Agency Features Grid (6-Card Modular Architecture) -->
-    <section id="features" class="scroll-mt-20 py-10 sm:py-12 max-w-6xl mx-auto px-4 sm:px-6 border-t border-slate-800/80">
+    <section id="features" class="scroll-mt-20 py-10 sm:py-12 max-w-6xl mx-auto px-4 sm:px-6 border-t border-slate-800/80 relative z-10">
         <div class="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
             <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-900 border border-emerald-500/40 text-emerald-400 font-arcade text-[10px] uppercase mb-3 pixel-btn cursor-pointer" onclick="if(window.SimpleCat) SimpleCat.playBlip()">
                 <span>★ QUEST LOG: AGENCY REVENUE ENGINE ★</span>
@@ -2204,7 +2260,7 @@ Apex Digital Studio</pre>
             <div class="text-center max-w-3xl mx-auto mb-10 sm:mb-12">
                 <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border-2 border-emerald-500/60 text-emerald-400 text-xs font-pixel mb-4 shadow-[0_0_20px_rgba(16,185,129,0.25)] pixel-btn cursor-pointer" onclick="if(window.SimpleCat) SimpleCat.playPowerUp()">
                     <span class="text-base">🐱</span>
-                    <span>SIMPLE CAT // INTERACTIVE LAYMAN DECODER &amp; GAMEPLAY FEED</span>
+                    <span>SIMPLE CAT // INTERACTIVE LAYMAN DECODER</span>
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
                 </div>
                 <h2 class="text-3xl sm:text-5xl font-extrabold text-white mb-4 tracking-tight">
@@ -2219,109 +2275,7 @@ Apex Digital Studio</pre>
                 </p>
             </div>
 
-            <!-- 2. Gameplay Video Showcase Player (16:9 Cyber Glass Retro Monitor Bezel) -->
-            <div class="mb-12 sm:mb-16 max-w-4xl mx-auto">
-                <div class="relative bg-slate-900/95 border-2 border-emerald-500/50 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(16,185,129,0.2)] card-glass-emerald">
-                    
-                    <!-- Retro Corner Rivets / Brackets -->
-                    <div class="absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-emerald-400 z-30 pointer-events-none"></div>
-                    <div class="absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-emerald-400 z-30 pointer-events-none"></div>
-                    <div class="absolute bottom-2 left-2 w-3.5 h-3.5 border-b-2 border-l-2 border-cyan-400 z-30 pointer-events-none"></div>
-                    <div class="absolute bottom-2 right-2 w-3.5 h-3.5 border-b-2 border-r-2 border-cyan-400 z-30 pointer-events-none"></div>
-
-                    <!-- CRT Header Bezel -->
-                    <div class="px-4 sm:px-6 py-3 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between flex-wrap gap-2">
-                        <div class="flex items-center gap-2.5">
-                            <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-                            <span class="text-xs font-mono font-bold text-white tracking-wide">REC ● // ASTRO-CAT AUTOPILOT MISSION</span>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <span class="text-[10px] font-arcade px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hidden xs:inline-block">CRT CH.04 // GAMEPLAY RECON</span>
-                            <span class="text-[10px] font-mono text-emerald-400/90 font-bold">1080P 60FPS // 16:9 FEED</span>
-                        </div>
-                    </div>
-
-                    <!-- 16:9 Video Canvas Container with Scanline Overlay -->
-                    <div class="aspect-video relative bg-slate-950 overflow-hidden group">
-                        <!-- High-Performance Video Element (Lazy-loaded via IntersectionObserver) -->
-                        <video id="astrocat-gameplay-video" 
-                               class="w-full h-full object-cover" 
-                               muted 
-                               loop 
-                               playsinline 
-                               preload="none" 
-                               poster="assets/orbit_cats_radar.jpg">
-                            <source src="assets/orbit_astro_cat_gameplay_x.mp4" type="video/mp4">
-                            Your browser does not support the video tag.
-                        </video>
-
-                        <!-- Scanline & Vignette Overlay (Pointer-Events-None) -->
-                        <div class="absolute inset-0 pointer-events-none z-10" 
-                             style="background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%), radial-gradient(circle at center, transparent 60%, rgba(2, 6, 23, 0.6) 100%); background-size: 100% 4px, 100% 100%; opacity: 0.75;"></div>
-
-                        <!-- Top-Right Cyber Glass Glare Sheen -->
-                        <div class="absolute top-0 right-0 w-1/2 h-full pointer-events-none z-10 bg-gradient-to-bl from-cyan-400/10 via-transparent to-transparent opacity-60"></div>
-
-                        <!-- Tactical HUD Control Overlay (Always accessible on hover or mobile tap) -->
-                        <div class="absolute inset-x-0 bottom-0 p-3 sm:p-4 bg-gradient-to-t from-slate-950/95 via-slate-950/60 to-transparent z-20 flex items-center justify-between gap-3 opacity-95 group-hover:opacity-100 transition-opacity">
-                            <div class="flex items-center gap-2">
-                                <!-- Play / Pause Toggle Button -->
-                                <button type="button" 
-                                        id="videoPlayPauseBtn" 
-                                        onclick="toggleAstroVideoPlayback()" 
-                                        class="min-h-[48px] min-w-[48px] px-4 py-2.5 rounded-xl bg-slate-900/90 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/50 text-emerald-400 font-mono text-xs font-bold transition-all flex items-center justify-center gap-2 pixel-btn cursor-pointer shadow-lg"
-                                        aria-label="Play or Pause Gameplay Video">
-                                    <span id="videoPlayIcon">❚❚</span>
-                                    <span id="videoPlayText" class="hidden xs:inline">PAUSE</span>
-                                </button>
-
-                                <!-- Audio Mute / Unmute Toggle Button -->
-                                <button type="button" 
-                                        id="videoAudioToggleBtn" 
-                                        onclick="toggleAstroVideoSound()" 
-                                        class="min-h-[48px] min-w-[48px] px-4 py-2.5 rounded-xl bg-slate-900/90 hover:bg-cyan-500 hover:text-slate-950 border border-cyan-500/50 text-cyan-400 font-mono text-xs font-bold transition-all flex items-center justify-center gap-2 pixel-btn cursor-pointer shadow-lg"
-                                        aria-label="Toggle Video Sound">
-                                    <span id="videoAudioIcon">🔇</span>
-                                    <span id="videoAudioText" class="hidden xs:inline">MUTED</span>
-                                </button>
-                            </div>
-
-                            <!-- Live Mission Status Badge & Fullscreen Button -->
-                            <div class="flex items-center gap-2.5">
-                                <div class="px-2.5 py-1 rounded-md bg-slate-900/80 border border-emerald-500/30 text-[10px] font-mono text-emerald-300 hidden sm:flex items-center gap-1.5">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                                    <span>ZERO-G RADAR PATROL</span>
-                                </div>
-                                <button type="button" 
-                                        id="videoFullscreenBtn" 
-                                        onclick="toggleAstroVideoFullscreen()" 
-                                        class="min-h-[48px] min-w-[48px] p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500 text-slate-300 hover:text-emerald-400 transition-all flex items-center justify-center cursor-pointer pixel-btn" 
-                                        aria-label="Toggle Fullscreen" 
-                                        title="Fullscreen">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Bezel Footer Diagnostics Bar -->
-                    <div class="px-4 sm:px-6 py-2.5 bg-slate-950/90 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400 font-mono">
-                        <div class="flex items-center gap-2 text-[11px]">
-                            <span class="text-emerald-400 font-bold">SYS.STATUS:</span>
-                            <span>Astro-Cat Copilot active &bull; Click video to pause/resume &bull; Press 'M' for Audio</span>
-                        </div>
-                        <button type="button" 
-                                onclick="if(window.SimpleCat) SimpleCat.launchZeroG()" 
-                                class="text-cyan-400 hover:text-cyan-300 font-bold text-[11px] flex items-center gap-1 cursor-pointer">
-                            <span>Launch Zero-G Cat</span>
-                            <span class="font-arcade">&rarr;</span>
-                        </button>
-                    </div>
-
-                </div>
-            </div>
-
-            <!-- 3. Interactive Decoder Cards (8 High-Impact Security Topics) -->
+            <!-- 2. Interactive Decoder Cards (8 High-Impact Security Topics) -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
                 
                 <!-- Card 1: DMARC -->
@@ -2533,47 +2487,48 @@ Apex Digital Studio</pre>
                 .replace(/'/g, '&#039;');
         }
 
-        function toggleAstroVideoPlayback() {
-            const vid = document.getElementById('astrocat-gameplay-video');
-            const icon = document.getElementById('videoPlayIcon');
-            const text = document.getElementById('videoPlayText');
+        function playOrbitExplainer() {
+            const vid = document.getElementById('orbit-explainer-video');
             if (!vid) return;
-
-            if (vid.paused) {
-                vid.play();
-                if (icon) icon.textContent = '❚❚';
-                if (text) text.textContent = 'PAUSE';
-                if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
-            } else {
-                vid.pause();
-                if (icon) icon.textContent = '▶';
-                if (text) text.textContent = 'PLAY';
-                if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
+            if (vid.ended || vid.currentTime >= (vid.duration || 71.9) - 0.3) {
+                vid.currentTime = 0;
             }
-        }
-
-        function toggleAstroVideoSound() {
-            const vid = document.getElementById('astrocat-gameplay-video');
-            const icon = document.getElementById('videoAudioIcon');
-            const text = document.getElementById('videoAudioText');
-            if (!vid) return;
-
-            vid.muted = !vid.muted;
-            if (icon) icon.textContent = vid.muted ? '🔇' : '🔊';
-            if (text) text.textContent = vid.muted ? 'MUTED' : 'UNMUTED';
+            vid.muted = false;
+            vid.play().catch(() => {});
             if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
         }
 
-        function toggleAstroVideoFullscreen() {
-            const vid = document.getElementById('astrocat-gameplay-video');
+        function seekOrbitExplainer(seconds) {
+            const vid = document.getElementById('orbit-explainer-video');
             if (!vid) return;
-            if (window.SimpleCat && SimpleCat.playChirp) SimpleCat.playChirp();
+            const target = Number(seconds) || 0;
+            vid.currentTime = target;
+            updateExplainerChapterHighlight(target);
+            vid.muted = false;
+            vid.play().catch(() => {});
+            if (window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
+        }
 
-            if (!document.fullscreenElement) {
-                if (vid.requestFullscreen) vid.requestFullscreen();
-                else if (vid.webkitRequestFullscreen) vid.webkitRequestFullscreen();
-            } else {
-                if (document.exitFullscreen) document.exitFullscreen();
+        function updateExplainerChapterHighlight(currentTime) {
+            const btns = Array.from(document.querySelectorAll('.explainer-chapter-btn'));
+            if (!btns.length) return;
+            let activeBtn = btns[0];
+            for (const btn of btns) {
+                const t = parseFloat(btn.getAttribute('data-chapter-time') || '0');
+                if (currentTime + 0.25 >= t) {
+                    activeBtn = btn;
+                }
+            }
+            for (const btn of btns) {
+                const isActive = btn === activeBtn;
+                btn.classList.toggle('bg-emerald-500/20', isActive);
+                btn.classList.toggle('border-emerald-500/50', isActive);
+                btn.classList.toggle('text-emerald-300', isActive);
+                btn.classList.toggle('font-bold', isActive);
+                btn.classList.toggle('bg-slate-900', !isActive);
+                btn.classList.toggle('border-slate-700/80', !isActive);
+                btn.classList.toggle('text-slate-300', !isActive);
+                btn.classList.toggle('font-semibold', !isActive);
             }
         }
     </script>
@@ -2885,7 +2840,7 @@ Apex Digital Studio</pre>
     </section>
 
     <!-- Pricing Section (B2B SaaS Clarity with Unit Economics - Bottom Conversion Centerpiece) -->
-    <section id="pricing" class="scroll-mt-20 py-10 sm:py-12 bg-slate-900/40 border-t border-slate-800">
+    <section id="pricing" class="scroll-mt-20 py-10 sm:py-12 bg-slate-900/40 border-t border-slate-800 relative z-10">
         <div class="max-w-6xl mx-auto px-4 sm:px-6">
             <div class="text-center max-w-2xl mx-auto mb-8">
                 <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-900 border border-emerald-500/40 text-emerald-400 font-arcade text-[10px] uppercase mb-3 pixel-btn cursor-pointer" onclick="if(window.SimpleCat) SimpleCat.playBlip()">
@@ -2975,7 +2930,7 @@ Apex Digital Studio</pre>
                                 <div class="text-[9px] font-arcade text-emerald-400 uppercase mb-1">5 Clients Enrolled</div>
                                 <div class="text-xl sm:text-2xl font-extrabold text-emerald-400 font-sans">$15,000<span class="text-xs text-slate-300 font-normal">/yr</span></div>
                                 <div class="text-xs text-emerald-300 font-mono mt-0.5 font-semibold">+$14,292/yr Net</div>
-                                <p class="text-[10px] text-slate-400 mt-1 leading-snug">2,018% ROI with zero extra engineer payroll or manual report drafting.</p>
+                                <p class="text-[10px] text-slate-400 mt-1 leading-snug">Illustrative projection: 5 care plans at $250/mo with zero extra engineer payroll or manual report drafting.</p>
                             </div>
 
                             <!-- 10 Clients Tier -->
@@ -4179,18 +4134,20 @@ ${body}`;
             if (window.SimpleCat && SimpleCat.initScrollIndicators) {
                 setTimeout(SimpleCat.initScrollIndicators, 200);
             }
-            const gameplayVideo = document.getElementById('astrocat-gameplay-video');
-            if (gameplayVideo && 'IntersectionObserver' in window) {
-                const vidObs = new IntersectionObserver((entries) => {
-                    entries.forEach((entry) => {
-                        if (entry.isIntersecting) {
-                            gameplayVideo.play().catch(() => {});
-                        } else if (!gameplayVideo.paused) {
-                            gameplayVideo.pause();
-                        }
-                    });
-                }, { threshold: 0.25 });
-                vidObs.observe(gameplayVideo);
+            const explainerVideo = document.getElementById('orbit-explainer-video');
+            const explainerOverlay = document.getElementById('explainerPlayOverlay');
+            const explainerOverlayText = document.getElementById('explainerPlayOverlayText');
+            if (explainerVideo) {
+                explainerVideo.addEventListener('play', () => {
+                    if (explainerOverlay) explainerOverlay.classList.add('hidden');
+                });
+                explainerVideo.addEventListener('ended', () => {
+                    if (explainerOverlayText) explainerOverlayText.textContent = 'Replay 72s Walkthrough';
+                    if (explainerOverlay) explainerOverlay.classList.remove('hidden');
+                });
+                explainerVideo.addEventListener('timeupdate', () => {
+                    updateExplainerChapterHighlight(explainerVideo.currentTime);
+                });
             }
             // Hydrate Live Threat Wire ribbon from assets/kev_epss_radar.json
             (function initHeroThreatRibbon() {
