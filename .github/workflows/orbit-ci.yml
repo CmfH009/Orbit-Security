@@ -84,6 +84,12 @@ jobs:
       - name: Run Radar Client Audit & Telemetry JS Parity Suite
         run: node tests/test_radar_parity_suite.js
 
+      - name: Run SimpleCat Visuals & Horizontal Scroll Suite
+        run: node tests/test_simplecat_visuals_and_scroll.js
+
+      - name: Verify Landing & Docs Pages
+        run: python scripts/verify_landing_pages.py
+
       - name: AST Code Sentinel & CISA KEV PR Security Gate
         run: |
           python scripts/github_action_entrypoint.py \
@@ -117,6 +123,8 @@ jobs:
               "/",
               "/about.html",
               "/fleet.html",
+              "/labs.html",
+              "/benchmark/index.html",
               "/signup.html",
               "/ghostdns/index.html",
               "/portals/index.html",

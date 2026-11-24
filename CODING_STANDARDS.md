@@ -13,3 +13,6 @@
 
 ## Test Seams
 - Test audit scoring and remediation at public module seams (`tests/test_audit_scoring.py`, `tests/test_opencode_remediation.py`) using realistic payloads rather than asserting internal private helper call counts.
+
+## Landing UI & Fixed Overlays
+- **Fixed Overlays & Responsive Bounds**: For `landing/` changes adding fixed overlays, tour spotlights, or floating HUD bars, verify sticky-navbar clearance (`top >= 76px`) and `390×844` mobile viewport bounds visually; string-matching tests in `tests/test_simplecat_visuals_and_scroll.js` alone do not catch geometric clipping.
