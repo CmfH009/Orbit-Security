@@ -1,7 +1,7 @@
 {
   "id": "gamified-showcase-2026-11",
   "name": "Gamified Tools & Arcade Defense Showcase",
-  "created_at_utc": "2026-11-03T12:19:05.937225+00:00",
+  "created_at_utc": "2026-11-24T09:18:01.984986+00:00",
   "limit": 280,
   "url_weight": 23,
   "publish_policy": {
@@ -15,7 +15,7 @@
       "type": "thread",
       "position": 1,
       "text": "Most cybersecurity sites are corporate snoozefests: stock photos of padlocks and sales forms.\n\nWe turned perimeter recon into an interactive cyber arcade.\n\nZero backend servers. Pure browser-native weaponization.\n\nWhat we shipped: \ud83e\uddf5\ud83d\udc47\nhttps://cmfh009.github.io/Orbit-Security/",
-      "media_path": "C:\\AgyHut\\projects\\orbit-security\\docs\\assets\\orbit_montage_master.mp4",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\docs\\assets\\orbit_security_explainer_v4.mp4",
       "media_type": "video",
       "pillar": "break_and_fix",
       "notes": "Why traditional infosec landing pages fail vs browser-native weaponization."
@@ -65,7 +65,7 @@
       "type": "thread",
       "position": 6,
       "text": "5/ Arcade Defense Mode\n\nHit #arcadeDefense and the site transforms into an 8-bit arcade canvas shooter.\n\nYour orbital turret defends against all 16 perimeter threats (dangling CNAMEs, SPF overflows, spoofed MX).\n\nPilot the turret live:\nhttps://cmfh009.github.io/Orbit-Security/#arcadeDefense",
-      "media_path": "C:\\AgyHut\\projects\\orbit-security\\docs\\assets\\orbit_astro_cat_gameplay_x.mp4",
+      "media_path": "C:\\AgyHut\\projects\\orbit-security\\docs\\assets\\orbit_security_explainer_v4.mp4",
       "media_type": "video",
       "pillar": "gamification",
       "notes": "Full canvas shooter turning scan threats into incoming orbital invaders."

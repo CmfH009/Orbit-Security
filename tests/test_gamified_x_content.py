@@ -85,6 +85,9 @@ def test_media_assets_exist(post):
     attachment = post.get("attachment")
     assert attachment is not None, f"Post [{post['id']}] has no media attachment specified"
     p = Path(attachment)
+    assert p.name not in {"orbit_montage_master.mp4", "orbit_astro_cat_gameplay_x.mp4"}, (
+        f"Post [{post['id']}] references retired video: {p.name}"
+    )
     assert p.exists(), f"Post [{post['id']}] media file missing on disk: {attachment}"
     assert p.stat().st_size > 0, f"Post [{post['id']}] media file is 0 bytes: {attachment}"
 
@@ -176,15 +179,16 @@ def test_draft_manager_integration(tmp_path):
         count = int(count_str)
         assert count <= X_LIMIT, f"Found violating character count in DRAFTS.md: {count}/280"
 
-    # Verify media assets staged into data/drafts/media/
+    # Verify media assets staged into data/drafts/media/ or resolved from canonical docs/assets/
     media_dir = REPO_ROOT / "data" / "drafts" / "media"
     assert media_dir.exists()
     for p in ALL_POSTS:
         att = p.get("attachment")
         if att:
             staged_file = media_dir / Path(att).name
-            assert staged_file.exists(), f"Draft media missing from data/drafts/media/: {staged_file}"
-            assert staged_file.stat().st_size > 0, f"Draft media is empty: {staged_file}"
+            resolved = staged_file if staged_file.exists() else Path(att)
+            assert resolved.exists(), f"Draft media missing from data/drafts/media/ and canonical path: {att}"
+            assert resolved.stat().st_size > 0, f"Draft media is empty: {resolved}"
 
 
 def test_social_draft_weighted_character_count():

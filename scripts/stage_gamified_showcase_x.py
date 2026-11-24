@@ -114,7 +114,7 @@ MASTER_THREAD_POSTS: List[Dict[str, Any]] = [
         "type": "thread",
         "title": "Tweet 1: The Hook (Zero-Server Cyber Arcade)",
         "description": "Why traditional infosec landing pages fail vs browser-native weaponization.",
-        "attachment": str(REPO_ROOT / "docs" / "assets" / "orbit_montage_master.mp4"),
+        "attachment": str(REPO_ROOT / "docs" / "assets" / "orbit_security_explainer_v4.mp4"),
         "media_type": "video",
         "pillar": "break_and_fix",
         "text": """Most cybersecurity sites are corporate snoozefests: stock photos of padlocks and sales forms.
@@ -204,7 +204,7 @@ Infosec doesn't have to be sterile. 🐱"""
         "type": "thread",
         "title": "Tweet 6: 16-Threat Arcade Defense Mode",
         "description": "Full canvas shooter turning scan threats into incoming orbital invaders.",
-        "attachment": str(REPO_ROOT / "docs" / "assets" / "orbit_astro_cat_gameplay_x.mp4"),
+        "attachment": str(REPO_ROOT / "docs" / "assets" / "orbit_security_explainer_v4.mp4"),
         "media_type": "video",
         "pillar": "gamification",
         "text": """5/ Arcade Defense Mode
@@ -572,20 +572,25 @@ def stage_to_drafts() -> Tuple[int, Path]:
     staged_count = 0
     now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
+    MAX_STAGE_COPY_BYTES = 20 * 1024 * 1024
     for p in ALL_POSTS:
         pid = p["id"]
         attachment = p.get("attachment")
         staged_media_path = attachment
         if attachment and Path(attachment).exists():
             src_file = Path(attachment)
-            dest_file = media_dir / src_file.name
-            if not dest_file.exists():
-                try:
-                    shutil.copy2(src_file, dest_file)
-                except Exception:
-                    pass
-            if dest_file.exists():
-                staged_media_path = str(dest_file.resolve())
+            if src_file.stat().st_size > MAX_STAGE_COPY_BYTES:
+                # Reference large canonical docs/assets videos directly instead of duplicating them in data/drafts/media/.
+                staged_media_path = str(src_file.resolve())
+            else:
+                dest_file = media_dir / src_file.name
+                if not dest_file.exists():
+                    try:
+                        shutil.copy2(src_file, dest_file)
+                    except Exception:
+                        pass
+                if dest_file.exists():
+                    staged_media_path = str(dest_file.resolve())
 
         weighted_chars = x_standard_weighted_length(p["text"])
 

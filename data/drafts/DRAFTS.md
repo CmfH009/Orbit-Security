@@ -3,7 +3,7 @@
 > **Agent-Assisted Local Staging Mode**  
 > Review, copy, and publish high-signal posts manually. Zero automated browser calls or risk to your account.
 
-**Last Refreshed:** `2026-11-03 12:19:05 UTC`  
+**Last Refreshed:** `2026-11-24 09:18:01 UTC`  
 **Total Drafts:** 17 | **Ready to Post:** 14 | **Published:** 3
 
 ---
@@ -121,7 +121,7 @@ https://cmfh009.github.io/Orbit-Security/
 - **Draft ID:** `gamified-thread-1`
 - **Pillar:** `break_and_fix` | **Asset Type:** `VIDEO`
 - **Characters:** `257/280`
-- **Media Attachment:** [orbit_montage_master.mp4](file:///C:/AgyHut/projects/orbit-security/data/drafts/media/orbit_montage_master.mp4)
+- **Media Attachment:** [orbit_security_explainer_v4.mp4](file:///C:/AgyHut/projects/orbit-security/docs/assets/orbit_security_explainer_v4.mp4)
 
 ```text
 Most cybersecurity sites are corporate snoozefests: stock photos of padlocks and sales forms.
@@ -231,7 +231,7 @@ Infosec doesn't have to be sterile. 🐱
 - **Draft ID:** `gamified-thread-6`
 - **Pillar:** `gamification` | **Asset Type:** `VIDEO`
 - **Characters:** `259/280`
-- **Media Attachment:** [orbit_astro_cat_gameplay_x.mp4](file:///C:/AgyHut/projects/orbit-security/data/drafts/media/orbit_astro_cat_gameplay_x.mp4)
+- **Media Attachment:** [orbit_security_explainer_v4.mp4](file:///C:/AgyHut/projects/orbit-security/docs/assets/orbit_security_explainer_v4.mp4)
 
 ```text
 5/ Arcade Defense Mode

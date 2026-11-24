@@ -478,3 +478,17 @@ def test_explainer_v4_and_retired_legacy_videos():
         for legacy in retired:
             assert legacy not in idx_html, f"Retired video reference {legacy} found in {base_dir.name}/index.html"
 
+
+def test_orbit_core_portal_uses_tracked_sample_audit_pdf():
+    """Verify landing/ and docs/ portals/orbit-core.html link to tracked sample_audit.pdf with zero gitignored PDFs."""
+    for base_dir in (LANDING_DIR, DOCS_DIR):
+        assert (base_dir / "sample_audit.pdf").is_file(), f"Missing {base_dir.name}/sample_audit.pdf"
+        portal_html = (base_dir / "portals" / "orbit-core.html").read_text(encoding="utf-8")
+        assert "data/generated_audits/" not in portal_html, (
+            f"Gitignored data/generated_audits/ link found in {base_dir.name}/portals/orbit-core.html"
+        )
+        assert portal_html.count('href="../sample_audit.pdf"') == 3, (
+            f"Expected 3 ../sample_audit.pdf links in {base_dir.name}/portals/orbit-core.html"
+        )
+
+
