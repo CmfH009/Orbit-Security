@@ -392,9 +392,15 @@ def test_adversarial_claim_methodology_footnotes_rigor():
                 f"Missing signature methodology grounding in {path}"
             )
 
-            # 5. Grounding of retainer ROI claim with exact arithmetic
-            assert "10,493%" in content and "$75,000/yr" in content and "$708/yr" in content and "$74,292/yr" in content, (
-                f"Missing ROI methodology metrics (10,493%, $75,000/yr, $708/yr, $74,292/yr) in {path}"
+            # 5. Grounding of illustrative retainer economics model with exact arithmetic
+            assert (
+                "Projection only" in content
+                and "$75,000/yr" in content
+                and "$708/yr" in content
+                and "$74,292/yr" in content
+                and "Orbit Growth tier" in content
+            ), (
+                f"Missing illustrative retainer methodology metrics (Projection only, $75,000/yr, $708/yr, $74,292/yr, Orbit Growth tier) in {path}"
             )
 
             # 6. Benchmark hyperlink reachability check

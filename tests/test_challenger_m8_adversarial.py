@@ -251,6 +251,11 @@ def test_claim_methodology_footnotes_rigor():
             has_52_sigs = "52" in content and ("signature" in content.lower() or "provider" in content.lower())
             assert has_52_sigs, f"Missing '52 signatures' coverage claim grounding in {base_label}/{rel_page}"
 
-            # 5. Retainer ROI claim grounding (10,493% ROI)
-            assert "10,493%" in content, f"Missing '10,493%' ROI benchmark citation in {base_label}/{rel_page}"
+            # 5. Retainer unit-economics grounding (illustrative projection, not measured customer ROI)
+            assert (
+                "$75,000/yr" in content
+                and "$708/yr" in content
+                and "$74,292/yr" in content
+                and "Projection only" in content
+            ), f"Missing illustrative retainer economics citation in {base_label}/{rel_page}"
 

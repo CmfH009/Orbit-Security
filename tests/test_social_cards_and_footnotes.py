@@ -210,8 +210,13 @@ def test_dated_methodology_footnotes_present():
             f"Missing 52 provider signature coverage grounding in {rel_path}"
         )
 
-        # Retainer ROI grounding (10,493%)
-        assert "10,493%" in content, f"Missing 10,493% retainer ROI methodology grounding in {rel_path}"
+        # Retainer unit-economics grounding (illustrative projection, not measured customer ROI)
+        assert (
+            "$75,000/yr" in content
+            and "$708/yr" in content
+            and "$74,292/yr" in content
+            and "Projection only" in content
+        ), f"Missing illustrative retainer economics methodology grounding in {rel_path}"
 
 
 def test_docs_parity_intact():
@@ -260,4 +265,21 @@ def test_all_public_pages_have_exactly_one_canonical_tag():
             f"Expected exactly 1 canonical tag in {rel_path}, found {len(canonical_links)}: "
             f"{[c.get('href') for c in canonical_links]}"
         )
+
+
+def test_public_pages_avoid_inflated_traction_and_roi_claims():
+    """Verify public landing and docs pages avoid inflated traction or ROI claims."""
+    forbidden_tokens = (
+        "10,493%",
+        "Orbit Security is used by",
+        "premier digital agencies",
+        ">Active SLA<",
+    )
+    for base_dir in (LANDING_DIR, DOCS_DIR):
+        for rel_path in ("about.html", "index.html", "fleet.html", "portals/index.html"):
+            content = (base_dir / rel_path).read_text(encoding="utf-8")
+            for token in forbidden_tokens:
+                assert token not in content, (
+                    f"Inflated claim token {token!r} found in {base_dir.name}/{rel_path}"
+                )
 

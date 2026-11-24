@@ -144,7 +144,7 @@ Orbit Security is an autonomous perimeter intelligence and attack surface manage
 
 - Name: Orbit Security (Orbit Security Operations)
 - Tagline: Autonomous Perimeter Intelligence
-- Founded: 2026, United States
+- Founded: 2026, Missoula, Montana, United States
 - Founder: Carson Haynes, Founder and Lead Systems Engineer (https://x.com/_arsoncode)
 - Type: Defensive, passive perimeter reconnaissance and attack surface hygiene
 - Scope: External client perimeter only; not a replacement for internal vulnerability scanning
