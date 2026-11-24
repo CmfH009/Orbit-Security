@@ -6,10 +6,11 @@
     <meta name="theme-color" content="#0b0f19">
     <meta name="color-scheme" content="dark">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https://cmfh009.github.io; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
-    <title>StealthBridge SDK | Commercial Anti-Detection Browser Automation Library</title>
-    <meta name="description" content="High-performance Python & TypeScript SDK for humanized browser automation, Cloudflare Turnstile bypass, and desktop session hooking.">
+    <title>StealthBridge Verification | Orbit Security Read-Only DOM &amp; Browser Audit Architecture</title>
+    <meta name="description" content="Read-only, RoE-guarded browser and DOM verification architecture inside Orbit Security for authorized perimeter auditing and SPA header inspection.">
     <link rel="icon" href="../favicon.ico">
     <link rel="stylesheet" href="../assets/styles.min.css?v=20261026v6">
+    <script src="../assets/simple_cat.js?v=20261026v6" defer></script>
     <style>
         html { overflow-x: hidden; color-scheme: dark; }
         body {
@@ -34,9 +35,9 @@
       "@type": "WebPage",
       "@id": "https://cmfh009.github.io/Orbit-Security/stealthbridge/index.html#webpage",
       "url": "https://cmfh009.github.io/Orbit-Security/stealthbridge/index.html",
-      "name": "StealthBridge SDK | Commercial Anti-Detection Browser Automation Library",
+      "name": "StealthBridge Verification | Orbit Security Read-Only DOM & Browser Audit Architecture",
       "datePublished": "2026-10-02",
-      "dateModified": "2026-10-26",
+      "dateModified": "2026-11-23",
       "isPartOf": {
         "@id": "https://cmfh009.github.io/Orbit-Security/#website"
       },
@@ -50,10 +51,10 @@
     {
       "@type": "SoftwareApplication",
       "@id": "https://cmfh009.github.io/Orbit-Security/stealthbridge/index.html#app",
-      "name": "StealthBridge SDK",
-      "applicationCategory": "DeveloperApplication",
+      "name": "Orbit Security StealthBridge Verification",
+      "applicationCategory": "SecurityApplication",
       "operatingSystem": "Windows, Linux, macOS",
-      "description": "High-performance Python & TypeScript SDK for humanized browser automation, Cloudflare Turnstile bypass, and desktop session hooking.",
+      "description": "Read-only, RoE-guarded browser and DOM verification architecture inside Orbit Security for authorized perimeter auditing and SPA header inspection.",
       "url": "https://cmfh009.github.io/Orbit-Security/stealthbridge/index.html",
       "publisher": {
         "@id": "https://cmfh009.github.io/Orbit-Security/#organization"
@@ -75,7 +76,7 @@
         {
           "@type": "ListItem",
           "position": 2,
-          "name": "StealthBridge SDK",
+          "name": "StealthBridge Verification",
           "item": "https://cmfh009.github.io/Orbit-Security/stealthbridge/index.html#webpage"
         }
       ]
@@ -86,19 +87,28 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- Header Navigation -->
+    <!-- Unified Header Navigation -->
     <header class="border-b border-gray-800 bg-[#0d1322]/90 backdrop-blur sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
-            <div class="flex items-center gap-2 min-w-0">
-                <span class="text-xl flex-shrink-0">🥷</span>
-                <span class="text-base sm:text-lg font-black tracking-wide text-white whitespace-nowrap">Stealth<span class="text-indigo-400">Bridge</span> SDK</span>
-                <span class="hidden sm:inline-block text-xs px-2 py-0.5 rounded bg-indigo-950 text-indigo-400 border border-indigo-800/60 font-mono">v1.2.0</span>
-            </div>
+            <a href="../index.html" class="flex items-center gap-2 min-w-0">
+                <span class="text-xl flex-shrink-0">🛡️</span>
+                <span class="text-base sm:text-lg font-black tracking-wide text-white whitespace-nowrap">Orbit <span class="text-emerald-400">StealthBridge</span></span>
+                <span class="hidden sm:inline-block text-xs px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60 font-mono">READ-ONLY</span>
+            </a>
+
+            <nav class="hidden md:flex items-center gap-4 text-xs lg:text-sm font-medium text-gray-300" aria-label="Primary Navigation">
+                <a href="../index.html" class="hover:text-emerald-400 transition-colors">Home</a>
+                <a href="../audit.html" class="hover:text-emerald-400 transition-colors">DNS Audit</a>
+                <a href="../fleet.html" class="hover:text-emerald-400 transition-colors">Fleet</a>
+                <a href="../portals/index.html" class="hover:text-emerald-400 transition-colors">Portals</a>
+                <a href="../benchmark/index.html" class="hover:text-emerald-400 transition-colors">Benchmark</a>
+                <a href="../index.html#pricing" class="hover:text-emerald-400 transition-colors">Pricing</a>
+                <a href="../about.html" class="hover:text-emerald-400 transition-colors">About</a>
+            </nav>
+
             <div class="flex items-center gap-3 flex-shrink-0">
-                <a href="#quickstart" class="hidden md:inline text-xs font-semibold text-gray-300 hover:text-white whitespace-nowrap">Quick Start</a>
-                <a href="#pricing" class="hidden md:inline text-xs font-semibold text-gray-300 hover:text-white whitespace-nowrap">Commercial License ($49/seat)</a>
-                <a href="https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800" class="px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow whitespace-nowrap">
-                    Get License Key
+                <a href="../signup.html" class="px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-lg text-xs font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400 shadow whitespace-nowrap">
+                    Start Retainer
                 </a>
             </div>
         </div>
@@ -107,99 +117,85 @@
     <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
         <!-- Hero Section -->
         <section class="text-center max-w-4xl mx-auto pt-6">
-            <div class="inline-block px-3 py-1 rounded-full text-xs font-mono text-indigo-400 bg-indigo-950/60 border border-indigo-800/50 mb-4">
-                Zero Headless Leaks • Authentic TLS Fingerprints • Natural Jitter
+            <div class="inline-block px-3 py-1 rounded-full text-xs font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 mb-4">
+                RoE-Guarded • Read-Only Inspection • CFAA §1030 Safe Harbor
             </div>
             <h1 class="text-4xl sm:text-5xl font-black text-white tracking-tight">
-                Automate Browsers Like Real Humans. <br/>
-                <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Zero Cloudflare Turnstile Blocks.</span>
+                Read-Only DOM &amp; SPA Verification. <br/>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">Built Strictly for Authorized Audits.</span>
             </h1>
             <p class="mt-4 text-base text-gray-400 max-w-2xl mx-auto">
-                Tired of Playwright getting blocked by Cloudflare, DataDome, and PerimeterX? StealthBridge hooks directly into your active taskbar browser session with authentic hardware fingerprints, cubic Bézier cursor movements, and natural cognitive typing delays.
+                Orbit Security's passive verification layer inspects public HTTP headers, client-side JavaScript bundles, and authorized single-page application DOM states under strict <code class="text-emerald-300 font-mono">PublicHostOnlyRoE</code> boundaries—never exploiting targets or bypassing access controls.
             </p>
         </section>
 
         <!-- Python Code Quick Start -->
         <section id="quickstart" class="max-w-4xl mx-auto">
-            <div class="flex items-center justify-between mb-3">
-                <h2 class="text-xl font-bold text-white">Python Quick Start</h2>
-                <span class="text-xs font-mono text-gray-400">pip install stealthbridge</span>
+            <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <h2 class="text-xl font-bold text-white">Python Source Install &amp; Safe-Harbor Usage</h2>
+                <span class="text-xs font-mono text-gray-400">pip install "orbit-security @ git+https://github.com/CmfH009/Orbit-Security.git"</span>
             </div>
             <div class="rounded-2xl overflow-hidden shadow-2xl">
-                <pre class="p-6 text-xs sm:text-sm text-gray-300 font-mono overflow-x-auto leading-relaxed"><code><span class="text-indigo-400">from</span> orbit_security.stealth_bridge_sdk <span class="text-indigo-400">import</span> StealthSession, StealthBridgeConfig
+                <pre class="p-6 text-xs sm:text-sm text-gray-300 font-mono overflow-x-auto leading-relaxed"><code><span class="text-emerald-400">from</span> orbit_security.scanner <span class="text-emerald-400">import</span> PublicHostOnlyRoE, create_guarded_httpx_client
 
-<span class="text-gray-500"># 1. Initialize configuration with authentic taskbar browser hook</span>
-config = StealthBridgeConfig(
-    seat_license_key=<span class="text-emerald-400">"STEALTH-PRO-XXXX"</span>,
-    humanize_latency=True,
-    base_typing_delay_ms=45.0,
-    typing_jitter_ms=30.0,
-    auto_solve_turnstile=True,
+<span class="text-gray-500"># 1. Enforce read-only public-host Rules of Engagement (SSRF &amp; private-IP guard)</span>
+roe = PublicHostOnlyRoE(
+    allowed_hosts=[<span class="text-emerald-400">"example.com"</span>],
+    requests_per_second=1.0,
 )
 
-<span class="text-gray-500"># 2. Attach to browser session with authentic cookies & TLS state</span>
-session = StealthSession(config=config)
-session.connect()
-
-<span class="text-gray-500"># 3. Navigate securely with zero webdriver leaks</span>
-session.navigate(<span class="text-emerald-400">"https://target-service.com/login"</span>)
-
-<span class="text-gray-500"># 4. Organic Bézier cursor movement and natural typing cadence</span>
-session.human_click(target_coords=(340.0, 480.0))
-duration = session.human_type(<span class="text-emerald-400">"hello@company.com"</span>)
-print(f<span class="text-emerald-400">"Typed naturally in {duration}s"</span>)
-
-<span class="text-gray-500"># 5. Turnstile challenges solved automatically</span>
-dom = <span class="text-emerald-400">"&lt;div class='cf-turnstile'&gt;&lt;/div&gt;"</span>
-session.handle_turnstile_if_present(dom)</code></pre>
+<span class="text-gray-500"># 2. Inspect public response headers &amp; passive DNS/TLS metadata safely</span>
+<span class="text-emerald-400">with</span> create_guarded_httpx_client(roe_engine=roe) <span class="text-emerald-400">as</span> client:
+    resp = client.get(<span class="text-emerald-400">"https://example.com/"</span>)
+    print(resp.status_code, resp.headers.get(<span class="text-emerald-400">"strict-transport-security"</span>))</code></pre>
             </div>
         </section>
 
-        <!-- Pricing Section -->
+        <!-- Included in Core Platform Section -->
         <section id="pricing" class="max-w-4xl mx-auto pt-8 border-t border-gray-800">
             <div class="text-center mb-8">
-                <h2 class="text-2xl font-bold text-white">Commercial Seat Licenses</h2>
-                <p class="text-xs text-gray-400 mt-1">Deploy locally on developer machines or scale across enterprise worker fleets.</p>
+                <h2 class="text-2xl font-bold text-white">Included in Orbit Security</h2>
+                <p class="text-xs text-gray-400 mt-1">No separate add-on fee. Read-only verification ships in the open-source CLI and all agency retainer tiers.</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="p-6 rounded-2xl bg-[#0e1628] border border-gray-800 flex flex-col justify-between">
                     <div>
-                        <div class="text-xs font-bold uppercase tracking-wider text-gray-400">Developer Seat</div>
+                        <div class="text-xs font-bold uppercase tracking-wider text-gray-400">Open-Source CLI</div>
                         <div class="mt-3 flex items-baseline gap-2">
-                            <span class="text-3xl font-black text-white font-mono">$49</span>
-                            <span class="text-xs text-gray-400">/ seat / month</span>
+                            <span class="text-3xl font-black text-white font-mono">MIT</span>
+                            <span class="text-xs text-gray-400">/ GitHub source</span>
                         </div>
-                        <p class="text-xs text-gray-400 mt-2">For solo developers building resilient web scrapers & automated agents.</p>
+                        <p class="text-xs text-gray-400 mt-2">Run passive perimeter checks, SARIF 2.1.0 CI gates, and RoE-guarded HTTP header inspection locally.</p>
                         <ul class="mt-4 space-y-2 text-xs text-gray-300">
-                            <li>✓ Active Taskbar Browser Session Hook</li>
-                            <li>✓ Cubic Bézier Cursor & Jitter Typing</li>
-                            <li>✓ Cloudflare Turnstile Auto-Solver</li>
-                            <li>✓ Local WebSocket CDP Support (:9222)</li>
+                            <li>✓ PublicHostOnlyRoE SSRF &amp; rate-limit guard</li>
+                            <li>✓ 52 takeover signatures / 76 CNAME fingerprints</li>
+                            <li>✓ Composite GitHub Action (SARIF 2.1.0)</li>
+                            <li>✓ Zero private-network probing</li>
                         </ul>
                     </div>
-                    <a href="https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800" class="mt-6 block w-full py-2.5 rounded-lg text-center text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition">
-                        Purchase Developer Seat ($49/mo)
+                    <a href="https://github.com/CmfH009/Orbit-Security" target="_blank" rel="noopener noreferrer" class="mt-6 block w-full py-2.5 rounded-lg text-center text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition">
+                        View Source on GitHub
                     </a>
                 </div>
 
-                <div class="p-6 rounded-2xl bg-[#0e1628] border border-indigo-800/40 flex flex-col justify-between shadow-lg">
+                <div class="p-6 rounded-2xl bg-[#0e1628] border border-emerald-800/40 flex flex-col justify-between shadow-lg">
                     <div>
-                        <div class="text-xs font-bold uppercase tracking-wider text-indigo-400">Enterprise Fleet</div>
+                        <div class="text-xs font-bold uppercase tracking-wider text-emerald-400">Agency Retainer Plans</div>
                         <div class="mt-3 flex items-baseline gap-2">
-                            <span class="text-3xl font-black text-white font-mono">$99</span>
-                            <span class="text-xs text-gray-400">/ team / month</span>
+                            <span class="text-3xl font-black text-white font-mono">$29–$99</span>
+                            <span class="text-xs text-gray-400">/ agency / month</span>
                         </div>
-                        <p class="text-xs text-gray-400 mt-2">Unlimited developer seats with dedicated residential proxy rotation.</p>
+                        <p class="text-xs text-gray-400 mt-2">Automated white-label PDF reports, Fixpack configs, and client threat portals.</p>
                         <ul class="mt-4 space-y-2 text-xs text-gray-300">
-                            <li>✓ Unlimited Developer Seats</li>
-                            <li>✓ Premium Residential Proxy Pool Routing</li>
-                            <li>✓ DataDome & Akamai Advanced Solvers</li>
-                            <li>✓ Priority 24/7 SLA Engineering Support</li>
+                            <li>✓ Starter ($29/mo), Growth ($59/mo), Pro ($99/mo)</li>
+                            <li>✓ Co-branded white-label PDFs &amp; portals</li>
+                            <li>✓ Copy-paste DNS &amp; Nginx Fixpacks</li>
+                            <li>✓ 30-day money-back guarantee</li>
                         </ul>
                     </div>
-                    <a href="https://buy.stripe.com/5kQ14mbg0bnt716a4Qcs802" class="mt-6 block w-full py-2.5 rounded-lg text-center text-xs font-bold text-black bg-indigo-400 hover:bg-indigo-300 transition">
-                        Purchase Enterprise Fleet ($99/mo)
+                    <a href="../index.html#pricing" class="mt-6 block w-full py-2.5 rounded-lg text-center text-xs font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400 transition">
+                        Explore Agency Plans
                     </a>
                 </div>
             </div>
@@ -207,7 +203,15 @@ session.handle_turnstile_if_present(dom)</code></pre>
     </main>
 
     <footer class="border-t border-gray-800 py-6 text-center text-xs text-gray-500">
-        © 2026 StealthBridge SDK (Orbit Security Inc). All Rights Reserved.
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <span>© 2026 Orbit Security. Independent perimeter security tooling by Carson Haynes (Missoula, MT).</span>
+            <div class="flex items-center gap-4">
+                <a href="../index.html" class="hover:text-emerald-400">Home</a>
+                <a href="../disclaimer.html" class="hover:text-emerald-400">Safe Harbor</a>
+                <a href="../privacy.html" class="hover:text-emerald-400">Privacy</a>
+                <a href="../terms.html" class="hover:text-emerald-400">Terms</a>
+            </div>
+        </div>
     </footer>
 </body>
 </html>

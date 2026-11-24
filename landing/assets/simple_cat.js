@@ -45,7 +45,7 @@
                 { term: "Identified Mail", meaning: "Proof that the email wasn't opened, changed, or forged on its journey." }
             ],
             analogy: "Back in medieval times, kings stamped hot red wax with their signet ring onto every envelope. If an enemy spy intercepted the messenger and altered the king's orders, the wax seal would shatter! DKIM is a digital wax seal. When your server sends an email, it stamps it with a secret mathematical code. The recipient's mail provider checks the seal. If anyone tampered with a single word or link in transit, the seal breaks and the email is rejected.",
-            walletRisk: "Along with SPF and DMARC, DKIM is the third leg of the email deliverability stool. Missing DKIM means failing Google's 2024+ bulk sender authentication rules, cutting your deliverability by up to 40%.",
+            walletRisk: "Along with SPF and DMARC, DKIM is the third leg of the email deliverability stool. Missing DKIM means failing Google's 2024+ bulk sender authentication rules, leading to spam-folder placement or rejected mail across major consumer inboxes.",
             howToFix: "Click 'Generate DKIM' inside Google Workspace or Microsoft 365, then paste the generated CNAME record into your DNS provider."
         },
         cname: {
@@ -59,7 +59,7 @@
             ],
             analogy: "Imagine you rented Locker #42 at the train station and put a forwarding notice: 'All my packages should go to Locker #42.' Later, you stop paying for the locker and walk away, but forget to remove the forwarding notice! A teenage hacker walks by, pays $5 to rent Locker #42, and now all your incoming packages and secret letters go straight into their hands. On the web, if your DNS points 'promo.yourclient.com' to an old cancelled Shopify or Unbounce page, a hacker can register that exact name in 30 seconds and control your client's official domain!",
             walletRisk: "Attackers use hijacked subdomains to put up fake credit card checkout forms, spread malware, or post illicit content on your client's trusted domain. It can trigger Google Safe Browsing blacklists and destroy an agency's retainer relationship overnight.",
-            howToFix: "Regularly audit all DNS records. If a SaaS service (Unbounce, Webflow, Shopify, GitHub) is no longer active, immediately delete the CNAME pointer from DNS. Orbit scans 20+ SaaS platforms 24/7 to catch dangling pointers instantly."
+            howToFix: "Regularly audit all DNS records. If a SaaS service (Unbounce, Webflow, Shopify, GitHub) is no longer active, immediately delete the CNAME pointer from DNS. Orbit checks 52 provider signatures across 76 CNAME fingerprints to flag dangling pointers automatically."
         },
         hsts: {
             title: "HSTS: The Armored Truck",
@@ -107,7 +107,7 @@
                 { term: "Drift", meaning: "The gradual, unnoticed decay over time as settings age and people forget what was created." }
             ],
             analogy: "Remember that landing page your marketing team spun up two Black Fridays ago for a seasonal contest? The developer created 'blackfriday.client.com'. The holiday ended, the marketing manager switched jobs, and the credit card expired. But the DNS record is STILL pointing out there! Over months and years, your client's web perimeter drifts like an abandoned boat with a loose anchor. Attackers rarely try to kick down the reinforced front door; they find the forgotten basement window.",
-            walletRisk: "Over 80% of security breaches happen on forgotten, unmonitored subdomains and legacy staging servers. When one gets hacked, the agency is held responsible.",
+            walletRisk: "Forgotten, unmonitored subdomains and legacy staging servers are one of the most common ways attackers bypass hardened main sites. When one gets hacked, the agency is held responsible.",
             howToFix: "Schedule automated monthly perimeter scans with Orbit Fleet Sentinel. We continuously catalog every subdomain and alert you the second an unmaintained record appears."
         },
         csp: {
@@ -131,7 +131,7 @@
                 { term: "Message Identification", meaning: "Proof that your brand genuinely sent the email." }
             ],
             analogy: "Ever notice how official emails from CNN, Apple, or Chase have their crisp company logo displayed right next to the subject line in Gmail and Apple Mail? That's BIMI! It's like Twitter's blue checkmark, but for your client's email inbox. To earn it, you must have 100% perfect DMARC and SPF policies.",
-            walletRisk: "Without BIMI, emails show a generic grey circle letter. With BIMI, emails get up to 39% higher open rates and instill immediate confidence when sending proposals and invoices.",
+            walletRisk: "Without BIMI, emails show a generic grey circle letter. With BIMI, your verified brand logo appears beside your messages, reinforcing trust when sending proposals and invoices.",
             howToFix: "First, enforce DMARC with 'p=quarantine' or 'p=reject'. Next, host an SVG tiny-P/S logo and add a DNS TXT record for 'default._bimi.yourdomain.com'."
         },
         mta_sts: {
@@ -169,7 +169,7 @@
                 { term: "Extensions", meaning: "Modern upgrade layers added to legacy 1980s internet routing protocols." }
             ],
             analogy: "Imagine an impostor sneaks into the telephone company and replaces the phone number of Chase Bank with their own burner phone. When you dial Chase, the impostor answers and asks for your PIN! That is 'DNS Cache Poisoning'. Standard DNS lookups have zero signatures. DNSSEC is like having a licensed government notary stamp an embossed holographic seal onto every page of the phonebook. If a hacker tries to reroute your visitors to a clone website, the browser spots the missing seal and instantly refuses to load.",
-            walletRisk: "Attackers poison DNS caches at coffee shops or ISPs to redirect your client's ecommerce checkout traffic to a replica phishing site. Customers enter credit cards, funds vanish, and your client faces $100,000+ in fraud chargebacks and brand destruction.",
+            walletRisk: "Attackers poison DNS caches at coffee shops or ISPs to redirect your client's ecommerce checkout traffic to a replica phishing site. Customers enter credit cards, funds vanish, and your client faces severe fraud chargebacks, credential theft, and lasting brand damage.",
             howToFix: "It takes 2 minutes: Log into your domain registrar (Cloudflare, GoDaddy, Namecheap) and click 'Enable DNSSEC'. The registrar generates a DS record that links with your parent registry (.com / .io). Orbit scans your DS record status and cryptographic validation daily."
         },
         mx: {
@@ -195,8 +195,8 @@
                 { term: "Takeover", meaning: "Serving malicious code, cookies, or forms directly under your client's trusted SSL padlock." }
             ],
             analogy: "Imagine you built a luxury guest house on your property, put a key under the mat, and rented it to a tenant on Airbnb. Six months later, the tenant moves out, but you never change the locks or take down the listing! A squatter moves into your guest house, throws wild parties, sells counterfeit goods on your lawn, and tells the neighbors they are your business partner. Because the guest house sits on your official land, everyone trusts them! In web security, if an old DNS record points to a deleted Webflow, AWS S3 bucket, Shopify store, or GitHub Page, an attacker can claim that bucket for $0 and host phishing attacks directly under your client's URL.",
-            walletRisk: "Because hijacked subdomains inherit root domain cookies and carry the client's trusted SSL certificate, attackers steal authentication tokens, bypass Single Sign-On (SSO), and launch spear-phishing campaigns that bypass all corporate spam filters. Remediation and legal cleanup averages $45,000+ per incident.",
-            howToFix: "Audit all DNS records quarterly or use continuous automated monitoring. When tearing down a landing page, marketing campaign, or staging site on AWS/Webflow/Shopify, delete the DNS CNAME record FIRST before deleting the cloud account. Orbit monitors 20+ cloud provider fingerprints 24/7 and alerts you within 60 seconds of an orphaned pointer."
+            walletRisk: "Because hijacked subdomains inherit root domain cookies and carry the client's trusted SSL certificate, attackers steal authentication tokens, bypass Single Sign-On (SSO), and launch spear-phishing campaigns that bypass all corporate spam filters. Incident response, breach disclosure, and domain cleanup can quickly turn into a costly agency crisis.",
+            howToFix: "Audit all DNS records quarterly or use continuous automated monitoring. When tearing down a landing page, marketing campaign, or staging site on AWS/Webflow/Shopify, delete the DNS CNAME record FIRST before deleting the cloud account. Orbit checks 52 provider signatures across 76 CNAME fingerprints on automated sweeps and alerts your team when an orphaned pointer appears."
         }
     };
 
@@ -1434,7 +1434,7 @@
         "Purr-fect! 0 dangling CNAMEs on my radar! 🐾",
         "DMARC p=reject is my personal blast shield! 🛡️",
         "Zero-G maneuver complete! Toss me again! 🚀",
-        "80% of leaks hide in old Black Friday subdomains! ⚠️",
+        "Forgotten Black Friday subdomains are attacker catnip! ⚠️",
         "Click 🎯 LASER below to test my orbital thrusters!",
         "Click 👾 PATROL to zap rogue DNS threats!",
         "Monthly PDF audits make client retainers invincible! 💼",

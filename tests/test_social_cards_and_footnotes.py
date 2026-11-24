@@ -283,3 +283,95 @@ def test_public_pages_avoid_inflated_traction_and_roi_claims():
                     f"Inflated claim token {token!r} found in {base_dir.name}/{rel_path}"
                 )
 
+
+def test_top_level_pages_have_no_broken_links_or_hash_anchors():
+    """Verify every relative href and #anchor across all 13 top-level pages resolves cleanly."""
+    top_pages = (
+        "index.html",
+        "audit.html",
+        "fleet.html",
+        "about.html",
+        "signup.html",
+        "portals/index.html",
+        "ghostdns/index.html",
+        "stealthbridge/index.html",
+        "benchmark/index.html",
+        "terms.html",
+        "privacy.html",
+        "refunds.html",
+        "disclaimer.html",
+    )
+    for base_dir in (LANDING_DIR, DOCS_DIR):
+        ids_by_page = {}
+        soups_by_page = {}
+        for rel_path in top_pages:
+            page_path = base_dir / rel_path
+            assert page_path.is_file(), f"Missing top-level page: {page_path}"
+            soup = BeautifulSoup(page_path.read_text(encoding="utf-8"), "html.parser")
+            soups_by_page[rel_path] = soup
+            ids_by_page[rel_path] = {el.get("id") for el in soup.find_all(id=True)}
+
+        for rel_path, soup in soups_by_page.items():
+            page_dir = (base_dir / rel_path).parent
+            for a in soup.find_all("a", href=True):
+                href = a["href"].strip()
+                if not href or href.startswith(("http://", "https://", "mailto:", "javascript:", "tel:", "data:")):
+                    continue
+                if href.startswith("#"):
+                    anchor = href[1:]
+                    if anchor:
+                        assert anchor in ids_by_page[rel_path], (
+                            f"Broken anchor {href} in {base_dir.name}/{rel_path}"
+                        )
+                    continue
+                path_part, _, anchor = href.partition("#")
+                path_part = path_part.split("?")[0]
+                target = (page_dir / path_part).resolve()
+                if target.is_dir():
+                    target = target / "index.html"
+                assert target.exists(), f"Broken relative link {href} in {base_dir.name}/{rel_path}"
+                if anchor:
+                    target_rel = target.relative_to(base_dir.resolve()).as_posix()
+                    if target_rel in ids_by_page:
+                        assert anchor in ids_by_page[target_rel], (
+                            f"Broken cross-page anchor {href} in {base_dir.name}/{rel_path}"
+                        )
+
+
+def test_slice1_defensive_and_copy_hygiene():
+    """Verify Slice 1 typo/fact-check fixes, defensive stealthbridge copy, and persistent simple_cat.js."""
+    top_pages = (
+        "index.html",
+        "audit.html",
+        "fleet.html",
+        "about.html",
+        "signup.html",
+        "portals/index.html",
+        "ghostdns/index.html",
+        "stealthbridge/index.html",
+        "benchmark/index.html",
+        "terms.html",
+        "privacy.html",
+        "refunds.html",
+        "disclaimer.html",
+    )
+    for base_dir in (LANDING_DIR, DOCS_DIR):
+        sb_text = (base_dir / "stealthbridge/index.html").read_text(encoding="utf-8")
+        for bad in ("Turnstile", "DataDome", "PerimeterX", "$49", "Orbit Security Inc"):
+            assert bad not in sb_text, f"Offensive/inaccurate token {bad!r} in {base_dir.name}/stealthbridge/index.html"
+
+        idx_text = (base_dir / "index.html").read_text(encoding="utf-8")
+        for bad in ("`dns.google`", 'href="#flipbook"', "ORBIT-SENTINEL v2.4", "pure profit"):
+            assert bad not in idx_text, f"Unfixed token {bad!r} in {base_dir.name}/index.html"
+
+        fleet_text = (base_dir / "fleet.html").read_text(encoding="utf-8")
+        for bad in ("`@_arsoncode`", "1P: CARSON"):
+            assert bad not in fleet_text, f"Unfixed token {bad!r} in {base_dir.name}/fleet.html"
+
+        audit_text = (base_dir / "audit.html").read_text(encoding="utf-8")
+        assert "orbit-security.io" not in audit_text, f"Unowned sample domain in {base_dir.name}/audit.html"
+
+        for rel_path in top_pages:
+            page_text = (base_dir / rel_path).read_text(encoding="utf-8")
+            assert "simple_cat.js" in page_text, f"Missing simple_cat.js in {base_dir.name}/{rel_path}"
+

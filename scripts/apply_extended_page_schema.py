@@ -138,13 +138,13 @@ EXTENDED_PAGES = {
     # 1 Product / SDK Page
     "stealthbridge/index.html": {
         "canonical": f"{BASE}/stealthbridge/index.html",
-        "description": "High-performance Python & TypeScript SDK for humanized browser automation, Cloudflare Turnstile bypass, and desktop session hooking.",
+        "description": "Read-only, RoE-guarded browser and DOM verification architecture inside Orbit Security for authorized perimeter auditing and SPA header inspection.",
         "nodes": [
             {
                 "@type": "WebPage",
                 "@id": f"{BASE}/stealthbridge/index.html#webpage",
                 "url": f"{BASE}/stealthbridge/index.html",
-                "name": "StealthBridge SDK | Commercial Anti-Detection Browser Automation Library",
+                "name": "StealthBridge Verification | Orbit Security Read-Only DOM & Browser Audit Architecture",
                 "datePublished": "2026-10-02",
                 "dateModified": LASTMOD,
                 "isPartOf": {"@id": SITE},
@@ -154,10 +154,10 @@ EXTENDED_PAGES = {
             {
                 "@type": "SoftwareApplication",
                 "@id": f"{BASE}/stealthbridge/index.html#app",
-                "name": "StealthBridge SDK",
-                "applicationCategory": "DeveloperApplication",
+                "name": "Orbit Security StealthBridge Verification",
+                "applicationCategory": "SecurityApplication",
                 "operatingSystem": "Windows, Linux, macOS",
-                "description": "High-performance Python & TypeScript SDK for humanized browser automation, Cloudflare Turnstile bypass, and desktop session hooking.",
+                "description": "Read-only, RoE-guarded browser and DOM verification architecture inside Orbit Security for authorized perimeter auditing and SPA header inspection.",
                 "url": f"{BASE}/stealthbridge/index.html",
                 "publisher": {"@id": ORG},
                 "isPartOf": {"@id": SITE},
@@ -167,7 +167,7 @@ EXTENDED_PAGES = {
                 "@id": f"{BASE}/stealthbridge/index.html#breadcrumb",
                 "itemListElement": [
                     {"@type": "ListItem", "position": 1, "name": "Home", "item": SITE},
-                    {"@type": "ListItem", "position": 2, "name": "StealthBridge SDK", "item": f"{BASE}/stealthbridge/index.html#webpage"},
+                    {"@type": "ListItem", "position": 2, "name": "StealthBridge Verification", "item": f"{BASE}/stealthbridge/index.html#webpage"},
                 ],
             },
         ],
