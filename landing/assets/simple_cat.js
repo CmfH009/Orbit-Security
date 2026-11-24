@@ -1621,6 +1621,10 @@
                     <button type="button" id="dock-audio-btn" class="text-[10px] font-mono font-bold text-slate-400 hover:text-emerald-300 hover:underline flex items-center gap-0.5 cursor-pointer" title="Toggle 8-Bit Audio SFX">
                         <span>🔊 SFX</span>
                     </button>
+                    <span class="text-slate-600 text-[10px]">•</span>
+                    <button type="button" id="dock-deck-btn" aria-expanded="false" aria-controls="station-touch-drawer" class="text-[10px] font-mono font-bold text-cyan-300 hover:text-cyan-200 hover:underline flex items-center gap-0.5 cursor-pointer" title="Toggle Command Deck (CRT Scanlines & Keyboard Shortcuts)">
+                        <span>⚙️ Deck</span>
+                    </button>
                     <button type="button" id="dock-laser-stop-btn" class="hidden text-[10px] font-mono font-bold text-rose-400 hover:text-rose-300 hover:underline cursor-pointer animate-pulse ml-0.5">
                         <span>🛑 Stop Laser</span>
                     </button>
@@ -1629,18 +1633,18 @@
         `;
         document.body.appendChild(dockEl);
 
-        // 6. Mobile Touchscreen Action Drawer (Drawer that pops up above dock)
+        // 6. Expandable Glassmorphic Command Deck Drawer (Desktop + Mobile, pops up above dock)
         const touchDrawerEl = document.createElement("div");
         touchDrawerEl.id = "station-touch-drawer";
-        touchDrawerEl.className = "hidden fixed bottom-24 right-4 max-w-[300px] w-[calc(100vw-32px)] bg-slate-950/98 border-2 border-emerald-500 rounded-2xl p-4 shadow-[0_0_35px_rgba(16,185,129,0.5)] z-50 flex flex-col gap-2.5 backdrop-blur-xl";
-        touchDrawerEl.style.cssText = "box-shadow: 4px 4px 0px #064e3b; bottom: max(96px, calc(env(safe-area-inset-bottom, 16px) + 80px));";
+        touchDrawerEl.className = "hidden fixed bottom-24 right-4 sm:right-6 rounded-2xl p-4 z-50 flex flex-col gap-3 backdrop-blur-2xl overflow-y-auto";
+        touchDrawerEl.style.cssText = "width: min(356px, calc(100vw - 24px)); max-width: 356px; background: linear-gradient(180deg, rgba(15, 23, 42, 0.92) 0%, rgba(6, 10, 22, 0.97) 100%); border: 1.5px solid rgba(16, 185, 129, 0.55); box-shadow: inset 0 1px 1px rgba(255,255,255,0.12), 0 20px 45px -12px rgba(0,0,0,0.85), 0 0 30px rgba(16,185,129,0.28); bottom: max(96px, calc(env(safe-area-inset-bottom, 16px) + 80px)); right: max(12px, env(safe-area-inset-right, 16px)); max-height: calc(100dvh - 120px);";
         touchDrawerEl.innerHTML = `
-            <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-800/90">
                 <div class="flex items-center gap-2">
                     <span class="text-lg">🛰️</span>
                     <div>
-                        <div class="text-[10px] font-arcade text-emerald-400 tracking-wider">ORBIT L4 STATION</div>
-                        <div class="text-[9px] font-mono text-slate-400">ASTRO-CAT COMPANION</div>
+                        <div class="text-[10px] font-arcade text-emerald-400 tracking-wider">ORBIT L4 COMMAND DECK</div>
+                        <div class="text-[9px] font-mono text-slate-400">ASTRO-CAT &amp; VISUAL CONTROLS</div>
                     </div>
                 </div>
                 <button type="button" id="touch-drawer-close" class="text-slate-400 hover:text-white font-arcade text-xs min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg border border-slate-700 bg-slate-900 cursor-pointer">✕</button>
@@ -1673,6 +1677,23 @@
                 </button>
                 <button type="button" id="touch-rec-btn" class="col-span-2 min-h-[46px] px-3 py-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/50 text-rose-300 font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95">
                     <span>📹 Record Clip for X</span>
+                </button>
+            </div>
+
+            <div id="command-deck-controls" class="pt-2.5 border-t border-slate-800/90 space-y-2.5">
+                <div class="flex items-center gap-2.5 p-2 rounded-xl bg-slate-950/75 border border-slate-800/90">
+                    <canvas id="crt-arcade-shader-canvas" width="160" height="44" class="rounded-lg border border-emerald-500/40 bg-slate-950 flex-shrink-0"></canvas>
+                    <div class="min-w-0 flex-1">
+                        <div class="text-[10px] font-bold text-white leading-tight">32-Bit CRT Scanlines</div>
+                        <span id="crtShaderStatusBadge" class="inline-block mt-1 px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-[9px] leading-tight">ACTIVE // PHOSPHOR SCANLINES ON</span>
+                    </div>
+                </div>
+                <button type="button" id="crtShaderToggleBtn" aria-pressed="true" class="w-full min-h-[46px] px-3 py-2 rounded-xl bg-slate-900/90 hover:bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-mono text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95">
+                    Disable CRT Scanlines
+                </button>
+                <button type="button" id="cmd-shortcuts-btn" class="w-full min-h-[46px] px-3 py-2 rounded-xl bg-slate-900/90 hover:bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-bold flex items-center justify-between cursor-pointer transition-all active:scale-95">
+                    <span class="flex items-center gap-2"><span>⌨️</span><span>Keyboard Shortcuts</span></span>
+                    <kbd class="px-1.5 py-0.5 rounded bg-slate-950 border border-emerald-500/40 text-[10px] text-emerald-400">[?]</kbd>
                 </button>
             </div>
         `;
@@ -1805,12 +1826,34 @@
 
         // Close touch drawer on outside pointerdown
         window.addEventListener("pointerdown", (e) => {
-            if (!e.target.closest('#station-touch-drawer') && !e.target.closest('#space-station-pod')) {
+            if (!e.target.closest('#station-touch-drawer') && !e.target.closest('#space-station-pod') && !e.target.closest('#dock-deck-btn')) {
                 closeTouchDrawer();
             }
         });
 
         // Desktop Dock buttons
+        const dockDeck = document.getElementById("dock-deck-btn");
+        if (dockDeck) {
+            dockDeck.addEventListener("click", (e) => {
+                e.stopPropagation();
+                toggleTouchDrawer();
+            });
+        }
+        const crtToggle = document.getElementById("crtShaderToggleBtn");
+        if (crtToggle) {
+            crtToggle.addEventListener("click", (e) => {
+                e.stopPropagation();
+                toggleCommandDeckCrt();
+            });
+        }
+        const cmdShortcuts = document.getElementById("cmd-shortcuts-btn");
+        if (cmdShortcuts) {
+            cmdShortcuts.addEventListener("click", (e) => {
+                e.stopPropagation();
+                closeTouchDrawer();
+                openCommandDeckShortcuts();
+            });
+        }
         const dockLaunch = document.getElementById("dock-launch-btn");
         if (dockLaunch) {
             dockLaunch.addEventListener("click", () => {
@@ -2125,20 +2168,150 @@
         showSpeechBubble("Purrrrr... Station shields 100%! All orbital sensors nominal! 🐾", 4500, false, "ORBIT STATION // COMMS");
     }
 
+    function syncCommandDeckCrtUi() {
+        const enabled = typeof localStorage !== "undefined" ? localStorage.getItem("orbit_crt_lines_enabled") !== "false" : true;
+        if (document.body) {
+            document.body.classList.toggle("crt-lines-disabled", !enabled);
+        }
+        const scanlinesEl = document.getElementById("retro-scanlines");
+        if (scanlinesEl) {
+            scanlinesEl.style.display = enabled ? "block" : "none";
+        }
+        const btn = document.getElementById("crtShaderToggleBtn");
+        if (btn) {
+            btn.setAttribute("aria-pressed", enabled ? "true" : "false");
+            btn.textContent = enabled ? "Disable CRT Scanlines" : "Enable CRT Scanlines";
+        }
+        const badge = document.getElementById("crtShaderStatusBadge");
+        if (badge) {
+            badge.textContent = enabled ? "ACTIVE // PHOSPHOR SCANLINES ON" : "PAUSED // CLEAN MODE (LINES OFF)";
+            badge.className = enabled
+                ? "inline-block mt-1 px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-[9px] truncate max-w-full"
+                : "inline-block mt-1 px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400 font-mono text-[9px] truncate max-w-full";
+        }
+        const canvas = document.getElementById("crt-arcade-shader-canvas");
+        if (canvas && canvas.getContext && typeof window.initCrtArcadeShaderCanvas !== "function") {
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+                ctx.fillStyle = "#020617";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                if (enabled) {
+                    ctx.fillStyle = "rgba(16, 185, 129, 0.18)";
+                    for (let y = 0; y < canvas.height; y += 3) {
+                        ctx.fillRect(0, y, canvas.width, 1);
+                    }
+                    ctx.strokeStyle = "#10b981";
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    for (let x = 0; x < canvas.width; x += 4) {
+                        const y = (canvas.height / 2) + Math.sin(x * 0.15) * 10;
+                        if (x === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.stroke();
+                }
+            }
+        }
+    }
+
+    function toggleCommandDeckCrt() {
+        if (typeof window.toggleCrtArcadeShader === "function") {
+            window.toggleCrtArcadeShader();
+            syncCommandDeckCrtUi();
+            return;
+        }
+        const currentlyEnabled = typeof localStorage !== "undefined" ? localStorage.getItem("orbit_crt_lines_enabled") !== "false" : true;
+        const nextEnabled = !currentlyEnabled;
+        try {
+            localStorage.setItem("orbit_crt_lines_enabled", nextEnabled ? "true" : "false");
+        } catch (e) {}
+        playBlip();
+        syncCommandDeckCrtUi();
+    }
+
+    function ensureKeyboardHudModal() {
+        let modal = document.getElementById("keyboardHudModal");
+        if (modal) return modal;
+        modal = document.createElement("div");
+        modal.id = "keyboardHudModal";
+        modal.className = "fixed inset-0 hidden items-center justify-center p-4 transition-all";
+        modal.style.cssText = "z-index: 999999 !important; background-color: rgba(4, 8, 18, 0.90); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);";
+        modal.setAttribute("aria-modal", "true");
+        modal.setAttribute("role", "dialog");
+        modal.setAttribute("aria-labelledby", "hudTitle");
+        modal.innerHTML = `
+            <div class="p-6 rounded-2xl max-w-lg w-full relative text-left" style="background: #0b1329; border: 2px solid rgba(16, 185, 129, 0.7); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95), 0 0 30px rgba(16, 185, 129, 0.25);">
+                <div class="flex items-center justify-between pb-3 border-b border-emerald-500/30">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">⌨️</span>
+                        <h3 id="hudTitle" class="font-pixel text-emerald-400 text-sm tracking-wide">KEYBOARD COMMAND CENTER</h3>
+                    </div>
+                    <button type="button" id="fallbackHudCloseBtn" class="text-slate-400 hover:text-white font-arcade text-xs min-w-[48px] min-h-[48px] px-3 py-2 rounded bg-slate-900 border border-slate-700 cursor-pointer flex items-center justify-center" aria-label="Close modal">✕ ESC</button>
+                </div>
+                <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs font-mono">
+                    <div class="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800"><span class="text-slate-300">Section Down</span><kbd class="px-2 py-0.5 rounded bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold">j</kbd></div>
+                    <div class="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800"><span class="text-slate-300">Section Up</span><kbd class="px-2 py-0.5 rounded bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold">k</kbd></div>
+                    <div class="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800"><span class="text-slate-300">Focus Radar Scan</span><kbd class="px-2 py-0.5 rounded bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold">s</kbd></div>
+                    <div class="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800"><span class="text-slate-300">Simple Cat Decoder</span><kbd class="px-2 py-0.5 rounded bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold">c</kbd></div>
+                    <div class="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800"><span class="text-slate-300">Toggle Audio Mute</span><kbd class="px-2 py-0.5 rounded bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold">m</kbd></div>
+                    <div class="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800"><span class="text-slate-300">Jump to Pricing</span><kbd class="px-2 py-0.5 rounded bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold">p</kbd></div>
+                    <div class="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800"><span class="text-slate-300">Fleet Arena Live</span><kbd class="px-2 py-0.5 rounded bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold">f</kbd></div>
+                    <div class="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800"><span class="text-slate-300">Close Overlay / Menu</span><kbd class="px-2 py-0.5 rounded bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold">Esc</kbd></div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const closeModal = () => {
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+            document.body.classList.remove("modal-open");
+        };
+        const closeBtn = document.getElementById("fallbackHudCloseBtn");
+        if (closeBtn) closeBtn.addEventListener("click", closeModal);
+        modal.addEventListener("click", (e) => {
+            if (e.target === modal) closeModal();
+        });
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && !modal.classList.contains("hidden")) closeModal();
+        });
+        return modal;
+    }
+
+    function openCommandDeckShortcuts() {
+        if (typeof window.showKeyboardHud === "function" && document.getElementById("keyboardHudModal")) {
+            window.showKeyboardHud();
+            return;
+        }
+        const modal = ensureKeyboardHudModal();
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+        document.body.classList.add("modal-open");
+        playBlip();
+    }
+
     function toggleTouchDrawer() {
         const drawer = document.getElementById("station-touch-drawer");
+        const deckBtn = document.getElementById("dock-deck-btn");
         if (!drawer) return;
         if (drawer.classList.contains("hidden")) {
             drawer.classList.remove("hidden");
+            if (deckBtn) deckBtn.setAttribute("aria-expanded", "true");
+            syncCommandDeckCrtUi();
+            if (typeof window.initCrtArcadeShaderCanvas === "function") {
+                window.initCrtArcadeShaderCanvas();
+            }
             playHoverTick();
         } else {
             drawer.classList.add("hidden");
+            if (deckBtn) deckBtn.setAttribute("aria-expanded", "false");
         }
     }
 
     function closeTouchDrawer() {
         const drawer = document.getElementById("station-touch-drawer");
+        const deckBtn = document.getElementById("dock-deck-btn");
         if (drawer) drawer.classList.add("hidden");
+        if (deckBtn) deckBtn.setAttribute("aria-expanded", "false");
     }
 
     // =========================================================================
@@ -5357,6 +5530,10 @@
                 pointer-events: none !important;
                 transform: translateY(24px) scale(0.95) !important;
             }
+            body.modal-open #station-touch-drawer,
+            body.drawer-open #station-touch-drawer {
+                display: none !important;
+            }
 
             /* Space Station Docking Pod */
             #space-station-pod {
@@ -5861,7 +6038,8 @@
         getAstroCatSVG: getAstroCatSVG,
         getSpaceStationSVG: getSpaceStationSVG,
         bindHelperChips: bindTactileInteractions,
-        initBackground: initArcadeBackground
+        initBackground: initArcadeBackground,
+        toggleCommandDeck: toggleTouchDrawer
     };
 
     // Ensure backwards-compatible alias directly on object
@@ -5945,6 +6123,7 @@
         createSoundToggle();
         ensureArcadeDefenseDOM();
         updateSoundToggleButtons();
+        syncCommandDeckCrtUi();
         bindTactileInteractions();
         initAllScrollIndicators();
 

@@ -168,10 +168,13 @@ def test_github_pages_live_radar_showcase_ui_and_asset_parity():
 
     for tree in ("landing", "docs"):
         index_html = (repo_root / tree / "index.html").read_text(encoding="utf-8")
-        assert 'id="kev-epss-radar"' in index_html
-        assert 'id="kevRadarSearchInput"' in index_html
-        assert 'id="kevRadarResultsGrid"' in index_html
-        assert 'id="kevRadarDetailPanel"' in index_html
+        assert 'href="labs.html#kev-epss-radar"' in index_html
+
+        labs_html = (repo_root / tree / "labs.html").read_text(encoding="utf-8")
+        assert 'id="kev-epss-radar"' in labs_html
+        assert 'id="kevRadarSearchInput"' in labs_html
+        assert 'id="kevRadarResultsGrid"' in labs_html
+        assert 'id="kevRadarDetailPanel"' in labs_html
 
         radar_js = (repo_root / tree / "assets" / "orbit_radar.js").read_text(encoding="utf-8")
         assert "assets/kev_epss_radar.json" in radar_js

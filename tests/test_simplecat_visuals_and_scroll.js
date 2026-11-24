@@ -476,6 +476,21 @@ test('docs/assets/orbit_radar.js and landing/assets/orbit_radar.js have 100% SHA
     assert.strictEqual(hDocs, hLanding, `orbit_radar.js drift: docs=${hDocs} landing=${hLanding}`);
 });
 
+test('docs/labs.html and landing/labs.html have 100% SHA-256 parity', () => {
+    const hDocs = sha256(path.join(__dirname, '..', 'docs', 'labs.html'));
+    const hLanding = sha256(path.join(__dirname, '..', 'landing', 'labs.html'));
+    assert.strictEqual(hDocs, hLanding, `labs.html drift: docs=${hDocs} landing=${hLanding}`);
+});
+
+test('Expandable Command Deck drawer (#dock-deck-btn, CRT Scanlines, [?] Shortcuts) wired in simple_cat.js', () => {
+    assert(docsCatJs.includes('id="dock-deck-btn"'), 'Missing #dock-deck-btn in desktop station deck');
+    assert(docsCatJs.includes('id="command-deck-controls"'), 'Missing #command-deck-controls in drawer');
+    assert(docsCatJs.includes('id="crt-arcade-shader-canvas"'), 'Missing #crt-arcade-shader-canvas in Command Deck');
+    assert(docsCatJs.includes('id="crtShaderToggleBtn"'), 'Missing #crtShaderToggleBtn in Command Deck');
+    assert(docsCatJs.includes('id="crtShaderStatusBadge"'), 'Missing #crtShaderStatusBadge in Command Deck');
+    assert(docsCatJs.includes('id="cmd-shortcuts-btn"'), 'Missing #cmd-shortcuts-btn in Command Deck');
+});
+
 console.log('========================================');
 console.log(`ALL ${testCount}/${testCount} SIMPLECAT VISUAL & SCROLL TESTS PASSED!`);
 console.log('========================================');

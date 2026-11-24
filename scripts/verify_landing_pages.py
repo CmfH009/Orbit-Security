@@ -166,6 +166,7 @@ def verify_directory(dir_path, name):
         "signup.html",
         "audit.html",
         "fleet.html",
+        "labs.html",
         "about.html",
         "benchmark/index.html",
         "ghostdns/index.html",

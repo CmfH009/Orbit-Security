@@ -291,16 +291,19 @@ def test_projects_12_and_19_epss_horizon_and_bounty_statuspage_ui(tmp_path):
     root = Path(__file__).resolve().parent.parent
     landing_html = (root / "landing" / "index.html").read_text(encoding="utf-8")
     docs_html = (root / "docs" / "index.html").read_text(encoding="utf-8")
+    landing_labs = (root / "landing" / "labs.html").read_text(encoding="utf-8")
+    docs_labs = (root / "docs" / "labs.html").read_text(encoding="utf-8")
     landing_js = (root / "landing" / "assets" / "orbit_radar.js").read_text(encoding="utf-8")
     docs_js = (root / "docs" / "assets" / "orbit_radar.js").read_text(encoding="utf-8")
 
-    # Project #12: EPSS Probability Horizon Visualizer Widget
-    assert 'id="epss-horizon-visualizer"' in landing_html
+    # Project #12: EPSS Probability Horizon Visualizer Widget (relocated to labs.html)
+    assert 'id="epss-horizon-visualizer"' in landing_labs
     assert "function renderEpssHorizonChart" in landing_js
 
-    # Project #19: Public Bug Bounty Radar Statuspage on GitHub Pages
-    assert 'id="bounty-radar-statuspage"' in landing_html
+    # Project #19: Public Bug Bounty Radar Statuspage on GitHub Pages (relocated to labs.html)
+    assert 'id="bounty-radar-statuspage"' in landing_labs
     assert "function initBountyRadarStatuspage" in landing_js
 
+    assert landing_labs == docs_labs
     assert landing_html == docs_html
     assert landing_js == docs_js

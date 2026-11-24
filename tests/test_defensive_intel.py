@@ -496,11 +496,14 @@ def test_takeover_playground_and_zk_scorecard_web_ui_parity():
     root = Path(__file__).resolve().parent.parent
     landing_html = (root / "landing" / "index.html").read_text(encoding="utf-8")
     docs_html = (root / "docs" / "index.html").read_text(encoding="utf-8")
+    landing_labs = (root / "landing" / "labs.html").read_text(encoding="utf-8")
+    docs_labs = (root / "docs" / "labs.html").read_text(encoding="utf-8")
     landing_js = (root / "landing" / "assets" / "orbit_radar.js").read_text(encoding="utf-8")
     docs_js = (root / "docs" / "assets" / "orbit_radar.js").read_text(encoding="utf-8")
 
-    assert 'id="takeover-poc-playground"' in landing_html
-    assert 'id="zk-agency-scorecard"' in landing_html
+    assert 'id="takeover-poc-playground"' in landing_labs
+    assert 'id="zk-agency-scorecard"' in landing_labs
+    assert landing_labs == docs_labs
     assert landing_html == docs_html
 
     assert "function runTakeoverPocSimulation" in landing_js

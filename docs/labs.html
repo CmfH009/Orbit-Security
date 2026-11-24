@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#060a16">
+    <meta name="color-scheme" content="dark">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https://cmfh009.github.io; connect-src 'self' http://127.0.0.1:* http://localhost:* https://dns.google https://cloudflare-dns.com https://buy.stripe.com https://checkout.stripe.com https://*.run.app https://discord.com https://*.lhr.life https://raw.githubusercontent.com https://api.github.com; object-src 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com https://buy.stripe.com;">
+    <title>Orbit Security Labs | CISA KEV + EPSS Radar, Takeover PoC &amp; Zero-Knowledge Fleet Cockpit</title>
+    <meta name="description" content="Interactive passive security labs: query 1,750+ CISA KEV + FIRST EPSS CVEs in &lt;5ms, simulate dangling CNAME subdomain takeovers across 52 providers, and run zero-knowledge in-browser fleet audits.">
+    <meta name="author" content="Carson Haynes | Founder, Orbit Security">
+    <link rel="canonical" href="https://cmfh009.github.io/Orbit-Security/labs.html">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Orbit Security">
+    <meta property="og:url" content="https://cmfh009.github.io/Orbit-Security/labs.html">
+    <meta property="og:title" content="Orbit Security Labs | CISA KEV + EPSS Radar, Takeover PoC &amp; Zero-Knowledge Fleet Cockpit">
+    <meta property="og:description" content="Interactive passive security labs: query 1,750+ CISA KEV + FIRST EPSS CVEs in &lt;5ms, simulate dangling CNAME subdomain takeovers across 52 providers, and run zero-knowledge in-browser fleet audits.">
+    <meta property="og:image" content="https://cmfh009.github.io/Orbit-Security/assets/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Orbit Security Labs — interactive threat intelligence, subdomain takeover simulator, and zero-knowledge fleet cockpit.">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@_arsoncode">
+    <meta name="twitter:creator" content="@_arsoncode">
+    <meta name="twitter:url" content="https://cmfh009.github.io/Orbit-Security/labs.html">
+    <meta name="twitter:title" content="Orbit Security Labs | CISA KEV + EPSS Radar, Takeover PoC &amp; Zero-Knowledge Fleet Cockpit">
+    <meta name="twitter:description" content="Interactive passive security labs: query 1,750+ CISA KEV + FIRST EPSS CVEs in &lt;5ms, simulate dangling CNAME subdomain takeovers across 52 providers, and run zero-knowledge in-browser fleet audits.">
+    <meta name="twitter:image" content="https://cmfh009.github.io/Orbit-Security/assets/og-image.png">
+    <meta name="twitter:image:alt" content="Orbit Security Labs — interactive threat intelligence, subdomain takeover simulator, and zero-knowledge fleet cockpit.">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebPage",
+          "@id": "https://cmfh009.github.io/Orbit-Security/labs.html#webpage",
+          "url": "https://cmfh009.github.io/Orbit-Security/labs.html",
+          "name": "Orbit Security Labs | CISA KEV + EPSS Radar, Takeover PoC & Zero-Knowledge Fleet Cockpit",
+          "datePublished": "2026-11-23",
+          "dateModified": "2026-11-23",
+          "inLanguage": "en",
+          "isPartOf": { "@id": "https://cmfh009.github.io/Orbit-Security/#website" },
+          "about": { "@id": "https://cmfh009.github.io/Orbit-Security/#organization" },
+          "breadcrumb": { "@id": "https://cmfh009.github.io/Orbit-Security/labs.html#breadcrumb" }
+        },
+        {
+          "@type": "WebApplication",
+          "@id": "https://cmfh009.github.io/Orbit-Security/labs.html#app",
+          "name": "Orbit Security Interactive Threat & Takeover Labs",
+          "applicationCategory": "SecurityApplication",
+          "operatingSystem": "Any (browser)",
+          "description": "Free client-side CISA KEV + FIRST EPSS intelligence radar, interactive dangling CNAME subdomain takeover simulator, and zero-knowledge DoH fleet scorecard.",
+          "url": "https://cmfh009.github.io/Orbit-Security/labs.html",
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+          "publisher": { "@id": "https://cmfh009.github.io/Orbit-Security/#organization" }
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": "https://cmfh009.github.io/Orbit-Security/labs.html#breadcrumb",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://cmfh009.github.io/Orbit-Security/" },
+            { "@type": "ListItem", "position": 2, "name": "Security Labs", "item": "https://cmfh009.github.io/Orbit-Security/labs.html" }
+          ]
+        }
+      ]
+    }
+    </script>
+
+    <link rel="icon" href="favicon.ico">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'><path d='M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z'/></svg>">
+    <link rel="preconnect" href="https://cloudflare-dns.com" crossorigin>
+    <link rel="preconnect" href="https://dns.google" crossorigin>
+
+    <link rel="stylesheet" href="assets/styles.min.css?v=20261026v6">
+    <script src="assets/simple_cat.js?v=20261026v6" defer></script>
+    <script src="assets/orbit_radar.js?v=20261026v6" defer></script>
+
+    <style>
+        html {
+            color-scheme: dark;
+            overflow-x: hidden;
+            scrollbar-gutter: stable;
+            width: 100%;
+            -webkit-text-size-adjust: 100%;
+        }
+        body {
+            overflow-x: clip;
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+            position: relative;
+            background-color: #060a16;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .scroll-indicate-x {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            scroll-behavior: smooth;
+        }
+        .scroll-fade-r {
+            mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%) !important;
+            -webkit-mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%) !important;
+        }
+        .scroll-fade-l {
+            mask-image: linear-gradient(to right, transparent 0%, black 32px, black 100%) !important;
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 32px, black 100%) !important;
+        }
+        .scroll-fade-both {
+            mask-image: linear-gradient(to right, transparent 0%, black 32px, black calc(100% - 32px), transparent 100%) !important;
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 32px, black calc(100% - 32px), transparent 100%) !important;
+        }
+        .scroll-cyber-x {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(16, 185, 129, 0.4) rgba(15, 23, 42, 0.6);
+        }
+        .scroll-cyber-x::-webkit-scrollbar { height: 4px; }
+        .scroll-cyber-x::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); border-radius: 9999px; }
+        .scroll-cyber-x::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.4); border-radius: 9999px; }
+        .scroll-cyber-x::-webkit-scrollbar-thumb:hover { background: rgba(16, 185, 129, 0.8); }
+        .font-arcade { font-family: 'Press Start 2P', monospace, cursive; }
+        .font-pixel { font-family: 'Silkscreen', monospace; }
+        .card-glass {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(6, 10, 22, 0.90) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.1), 0 12px 35px -10px rgba(2, 6, 23, 0.8);
+            backdrop-filter: blur(16px);
+        }
+        .card-glass-emerald {
+            border-color: rgba(16, 185, 129, 0.35);
+            box-shadow: inset 0 1px 1px 0 rgba(16, 185, 129, 0.2), 0 12px 35px -8px rgba(16, 185, 129, 0.18);
+        }
+        .card-glass-cyan {
+            border-color: rgba(6, 182, 212, 0.35);
+            box-shadow: inset 0 1px 1px 0 rgba(6, 182, 212, 0.2), 0 12px 35px -8px rgba(6, 182, 212, 0.18);
+        }
+        .card-glass-purple {
+            border-color: rgba(168, 85, 247, 0.35);
+            box-shadow: inset 0 1px 1px 0 rgba(168, 85, 247, 0.2), 0 12px 35px -8px rgba(168, 85, 247, 0.18);
+        }
+        .card-glass-amber {
+            border-color: rgba(245, 158, 11, 0.35);
+            box-shadow: inset 0 1px 1px 0 rgba(245, 158, 11, 0.2), 0 12px 35px -8px rgba(245, 158, 11, 0.18);
+        }
+        .pixel-box-emerald {
+            box-shadow: 4px 4px 0px #064e3b;
+            border: 2px solid #10b981;
+        }
+        .pixel-btn {
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3), 0 2px 4px rgba(0, 0, 0, 0.4);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+        }
+        .pixel-btn:hover {
+            box-shadow: 0 0 16px rgba(16, 185, 129, 0.35);
+            border-color: #34d399;
+        }
+        .pixel-btn:active { transform: translateY(1px); }
+        .scanlines {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
+            background-size: 100% 4px;
+        }
+        body.crt-lines-disabled .scanlines {
+            background: none !important;
+            background-image: none !important;
+        }
+        body.crt-lines-disabled #retro-scanlines { display: none !important; }
+        #simple-cat-dock {
+            position: fixed !important;
+            bottom: max(16px, env(safe-area-inset-bottom, 16px)) !important;
+            right: max(16px, env(safe-area-inset-right, 16px)) !important;
+            left: auto !important;
+            top: auto !important;
+            z-index: 45 !important;
+            display: flex !important;
+            align-items: center !important;
+            transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        body.drawer-open #simple-cat-dock,
+        body.modal-open #simple-cat-dock {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transform: translateY(24px) scale(0.95) !important;
+        }
+        header nav a { padding: 0 5px; white-space: nowrap; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-emerald-500 selection:text-white" style="background-color: #060a16;">
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-50 backdrop-blur-md bg-slate-950/90 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <a href="index.html" class="flex items-center gap-2 group">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 p-0.5 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/30 transition-all pixel-box-emerald flex-shrink-0 overflow-hidden">
+                        <img src="assets/logo.png" alt="Orbit Security Logo" width="36" height="36" class="w-full h-full object-contain rounded-lg" />
+                    </div>
+                    <span class="text-base sm:text-lg font-bold tracking-tight text-white font-pixel" style="color:#ffffff; white-space:nowrap;">Orbit Security</span>
+                </a>
+            </div>
+
+            <nav class="hidden md:flex items-center gap-2.5 lg:gap-4 text-xs lg:text-sm font-medium text-slate-300" style="white-space:nowrap;" aria-label="Primary Navigation">
+                <a href="audit.html" class="hover:text-emerald-400 transition-colors text-cyan-300">DNS Audit</a>
+                <a href="fleet.html" class="hover:text-emerald-400 transition-colors flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>Fleet</a>
+                <a href="labs.html" aria-current="page" class="text-emerald-400 font-semibold border-b border-emerald-400 pb-0.5">Labs</a>
+                <a href="portals/index.html" class="hover:text-emerald-400 transition-colors">Portals</a>
+                <a href="benchmark/index.html" class="hover:text-emerald-400 transition-colors">Benchmark</a>
+                <a href="index.html#pricing" class="hover:text-emerald-400 transition-colors font-semibold text-white">Pricing</a>
+                <a href="about.html" class="hover:text-emerald-400 transition-colors">About</a>
+            </nav>
+
+            <div class="hidden md:flex items-center gap-1.5 flex-shrink-0">
+                <button type="button" id="audio-toggle-btn" onclick="if(window.SimpleCat){SimpleCat.toggleSound();}" class="inline-flex items-center justify-center min-w-[40px] min-h-[40px] px-2.5 py-2 rounded-lg bg-slate-900 border border-slate-700/80 hover:border-emerald-500/50 hover:bg-slate-800 text-slate-300 hover:text-emerald-300 font-mono text-xs transition-all cursor-pointer shadow-sm pixel-btn whitespace-nowrap" title="Toggle 8-Bit Audio SFX (Hotkey: M)" aria-label="Toggle 8-Bit Audio SFX">
+                    <span>🔊</span>
+                </button>
+                <a href="https://github.com/CmfH009/Orbit-Security" target="_blank" rel="noopener noreferrer" class="hidden xl:inline-flex p-2 min-w-[40px] min-h-[40px] rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white transition-colors items-center justify-center" title="View Source on GitHub" aria-label="GitHub Repository">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+                </a>
+                <a href="signup.html" class="px-3.5 py-2 min-h-[40px] rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide transition-all shadow-md shadow-emerald-500/20 pixel-btn inline-flex items-center whitespace-nowrap">
+                    Start Retainer
+                </a>
+            </div>
+
+            <button type="button" id="labsMobileMenuBtn" class="md:hidden min-w-[48px] min-h-[48px] p-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="labsMobileMenu">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/></svg>
+            </button>
+        </div>
+
+        <nav id="labsMobileMenu" class="hidden md:hidden bg-slate-950/98 border-b-2 border-emerald-500/50 px-5 pt-3 pb-6 space-y-1 shadow-2xl" aria-label="Mobile Navigation">
+            <a href="index.html" class="flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-slate-200 hover:text-emerald-400 hover:bg-slate-900/80 text-sm font-semibold transition-all">
+                <span>Main Overview</span>
+                <span class="text-xs text-slate-500 font-mono">00</span>
+            </a>
+            <a href="audit.html" class="flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-cyan-300 hover:bg-slate-900/80 text-sm font-semibold transition-all">
+                <span>Instant DNS Audit</span>
+                <span class="text-[9px] font-arcade bg-cyan-500/10 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/20">FREE</span>
+            </a>
+            <a href="fleet.html" class="flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-emerald-400 hover:bg-slate-900/80 text-sm font-semibold transition-all">
+                <span>Fleet Arena</span>
+                <span class="text-[9px] font-arcade bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">LIVE</span>
+            </a>
+            <a href="labs.html" class="flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-emerald-300 bg-slate-900/90 text-sm font-semibold transition-all">
+                <span>Security Labs</span>
+                <span class="text-[9px] font-arcade bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/30">ACTIVE</span>
+            </a>
+            <a href="portals/index.html" class="flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-slate-200 hover:text-emerald-400 hover:bg-slate-900/80 text-sm font-semibold transition-all">
+                <span>Demo Portals</span>
+                <span class="text-xs text-slate-500 font-mono">03</span>
+            </a>
+            <a href="benchmark/index.html" class="flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-slate-200 hover:text-cyan-300 hover:bg-slate-900/80 text-sm font-semibold transition-all">
+                <span>Open Benchmark</span>
+                <span class="text-xs text-slate-500 font-mono">04</span>
+            </a>
+            <a href="about.html" class="flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-slate-200 hover:text-emerald-400 hover:bg-slate-900/80 text-sm font-semibold transition-all">
+                <span>About Orbit Security</span>
+                <span class="text-xs text-slate-500 font-mono">05</span>
+            </a>
+            <button type="button" id="sound-toggle-btn" onclick="if(window.SimpleCat){SimpleCat.toggleSound();}" class="w-full flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-900/80 text-sm font-semibold transition-all cursor-pointer">
+                <span class="flex items-center gap-2"><span>🔊</span><span>Audio SFX (Mute/Unmute)</span></span>
+                <span class="text-[9px] font-arcade bg-slate-800 text-emerald-400 px-2 py-0.5 rounded border border-slate-700">TOGGLE (M)</span>
+            </button>
+            <a href="signup.html" class="flex items-center justify-center min-h-[48px] mt-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase tracking-wide">
+                Start Agency Retainer
+            </a>
+        </nav>
+    </header>
+
+    <main class="flex-1 relative z-10">
+        <!-- Compact Labs Hero -->
+        <section class="relative pt-8 sm:pt-10 pb-8 border-b border-slate-800/80 overflow-hidden">
+            <div class="absolute inset-0 cyber-grid pointer-events-none z-0"></div>
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 text-center relative z-10 space-y-4">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-emerald-500/40 text-emerald-400 text-[10px] font-arcade uppercase tracking-wider">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span>ORBIT SECURITY LABS // 100% CLIENT-SIDE SANDBOX</span>
+                </div>
+                <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
+                    Interactive Threat Intelligence &amp; <span style="background: linear-gradient(90deg, #34d399 0%, #67e8f9 50%, #fcd34d 100%); -webkit-background-clip: text; background-clip: text; color: transparent;">Takeover Labs</span>
+                </h1>
+                <p class="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto">
+                    Query CISA KEV + FIRST EPSS advisories, trace 5-step dangling CNAME takeovers, and run zero-knowledge in-browser DoH fleet scorecards with zero server retention.
+                </p>
+                <div class="flex flex-wrap items-center justify-center gap-2.5 pt-1 text-xs font-mono">
+                    <a href="#kev-epss-radar" class="min-h-[44px] px-4 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-300 font-bold inline-flex items-center gap-1.5 transition-all">
+                        <span>🛰️ KEV + EPSS Radar</span>
+                    </a>
+                    <a href="#takeover-poc-playground" class="min-h-[44px] px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 font-bold inline-flex items-center gap-1.5 transition-all">
+                        <span>👻 Takeover PoC &amp; Attack Tree</span>
+                    </a>
+                    <a href="#fleet-sentinel-cockpit" class="min-h-[44px] px-4 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 font-bold inline-flex items-center gap-1.5 transition-all">
+                        <span>🔐 ZK Fleet &amp; Statuspage</span>
+                    </a>
+                    <a href="index.html" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white font-bold inline-flex items-center gap-1.5 transition-all">
+                        <span>&larr; Main Overview</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+    <section id="kev-epss-radar" class="scroll-mt-20 py-12 sm:py-16 bg-slate-950/90 border-t border-slate-800/80 relative overflow-hidden">
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,rgba(6,182,212,0.10),transparent_70%)] pointer-events-none"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+            <!-- Section Header -->
+            <div class="text-center max-w-3xl mx-auto mb-8 sm:mb-10">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border-2 border-cyan-500/60 text-cyan-400 text-[10px] font-arcade uppercase tracking-wider mb-3 shadow-[0_0_20px_rgba(6,182,212,0.20)] pixel-btn cursor-pointer" onclick="if(window.SimpleCat) SimpleCat.playBlip()">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                    <span>LIVE THREAT TELEMETRY // CISA KEV + FIRST EPSS FUSION</span>
+                </div>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-3 tracking-tight">
+                    Interactive CISA KEV &amp; <span class="bg-gradient-to-r from-cyan-400 via-emerald-300 to-teal-400 bg-clip-text text-transparent">EPSS Intelligence Radar</span>
+                </h2>
+                <p class="text-slate-400 text-sm sm:text-base leading-relaxed">
+                    Query <strong class="text-slate-200">1,750+ Known Exploited Vulnerabilities</strong> pre-joined with 30-day <strong class="text-cyan-300">FIRST EPSS weaponization probability percentiles</strong>. Render client-side in <code id="kevRadarLatencyBadge" class="text-emerald-400 font-mono text-xs bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">&lt;5ms</code> and export 1-click agency client advisories.
+                </p>
+            </div>
+
+            <!-- Radar Command Deck Container -->
+            <div class="rounded-2xl bg-slate-900/90 border-2 border-cyan-500/40 shadow-2xl overflow-hidden card-glass-cyan">
+                <!-- Top Telemetry KPI Bar -->
+                <div class="px-5 sm:px-6 py-4 bg-slate-950/90 border-b border-slate-800 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+                        <div>
+                            <div class="text-[10px] font-mono text-slate-400 uppercase">Total Tracked CVEs</div>
+                            <div id="kevRadarTotalCount" class="text-lg sm:text-xl font-extrabold text-white font-mono">473</div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono text-[10px] font-bold">SYNCED</span>
+                    </div>
+                    <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+                        <div>
+                            <div class="text-[10px] font-mono text-slate-400 uppercase">CISA KEV Catalog</div>
+                            <div id="kevRadarKevCount" class="text-lg sm:text-xl font-extrabold text-red-400 font-mono">1,756</div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded bg-red-500/10 border border-red-500/30 text-red-400 font-mono text-[10px] font-bold">WEAPONIZED</span>
+                    </div>
+                    <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+                        <div>
+                            <div class="text-[10px] font-mono text-slate-400 uppercase">30-Day High Velocity</div>
+                            <div id="kevRadarVelocityCount" class="text-lg sm:text-xl font-extrabold text-amber-400 font-mono">6</div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-[10px] font-bold">EPSS &ge; 50%</span>
+                    </div>
+                    <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+                        <div>
+                            <div class="text-[10px] font-mono text-slate-400 uppercase">Catalog Snapshot</div>
+                            <div id="kevRadarVersionBadge" class="text-sm sm:text-base font-bold text-emerald-400 font-mono">2026.11.20</div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-[10px] font-bold">&lt;250 KB</span>
+                    </div>
+                </div>
+
+                <!-- Search & Tactical Filter Controls -->
+                <div class="p-4 sm:p-6 bg-slate-950/60 border-b border-slate-800 space-y-4">
+                    <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+                        <div class="relative flex-1">
+                            <input
+                                type="search"
+                                id="kevRadarSearchInput"
+                                oninput="filterKevEpssRadar()"
+                                placeholder="Search CVE ID, vendor, product, or flaw (e.g. CVE-2024-21887, Ivanti, Fortinet, Next.js, Apache)..."
+                                aria-label="Search CISA KEV and EPSS Intelligence Radar"
+                                class="w-full min-h-[48px] pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 focus:border-cyan-400 focus:outline-none text-sm text-white font-mono placeholder:text-slate-500"
+                            />
+                            <svg class="w-4 h-4 text-cyan-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </div>
+                        <div class="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 no-scrollbar scroll-indicate-x" role="group" aria-label="Threat Tier Filters">
+                            <button type="button" onclick="setKevRadarFilter('all')" id="kevFilterBtn-all" data-kev-filter="all" class="kev-filter-btn min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 cursor-pointer whitespace-nowrap">All Tracked</button>
+                            <button type="button" onclick="setKevRadarFilter('kev_critical')" id="kevFilterBtn-kev_critical" data-kev-filter="kev_critical" class="kev-filter-btn min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap">🔥 Critical KEV + EPSS</button>
+                            <button type="button" onclick="setKevRadarFilter('high_velocity')" id="kevFilterBtn-high_velocity" data-kev-filter="high_velocity" class="kev-filter-btn min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap">⚡ Predictive Pre-KEV</button>
+                            <button type="button" onclick="setKevRadarFilter('recent_2026')" id="kevFilterBtn-recent_2026" data-kev-filter="recent_2026" class="kev-filter-btn min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap">📅 2026 Additions</button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Vendor Chips -->
+                    <div class="flex items-center gap-2 flex-wrap text-xs font-mono">
+                        <span class="text-slate-400 text-[11px]">Quick Stack Filter:</span>
+                        <button type="button" onclick="quickSearchKevRadar('Ivanti')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-cyan-300 cursor-pointer transition-colors">Ivanti</button>
+                        <button type="button" onclick="quickSearchKevRadar('Fortinet')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-cyan-300 cursor-pointer transition-colors">Fortinet</button>
+                        <button type="button" onclick="quickSearchKevRadar('Cisco')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-cyan-300 cursor-pointer transition-colors">Cisco</button>
+                        <button type="button" onclick="quickSearchKevRadar('Palo Alto')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-cyan-300 cursor-pointer transition-colors">Palo Alto</button>
+                        <button type="button" onclick="quickSearchKevRadar('Apache')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-cyan-300 cursor-pointer transition-colors">Apache</button>
+                        <button type="button" onclick="quickSearchKevRadar('Atlassian')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-cyan-300 cursor-pointer transition-colors">Atlassian</button>
+                        <button type="button" onclick="quickSearchKevRadar('Citrix')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-cyan-300 cursor-pointer transition-colors">Citrix</button>
+                        <button type="button" onclick="quickSearchKevRadar('WordPress')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-cyan-300 cursor-pointer transition-colors">WordPress</button>
+                        <button type="button" onclick="quickSearchKevRadar('')" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-400 hover:text-white cursor-pointer transition-colors">Reset</button>
+                        <span id="kevRadarMatchSummary" class="ml-auto text-[11px] text-emerald-400 font-semibold">Showing top weaponized advisories</span>
+                    </div>
+                </div>
+
+                <!-- Main Split View: Results Grid + Interactive Triage & Advisory Drawer -->
+                <div class="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    <!-- Left 7 Cols: Live Filtered CVE Cards -->
+                    <div id="kevRadarResultsGrid" class="lg:col-span-7 space-y-3 max-h-[520px] overflow-y-auto pr-1 scroll-cyber-x">
+                        <div class="p-4 rounded-xl bg-slate-950/90 border border-slate-800 text-xs font-mono text-slate-300 flex items-center justify-between">
+                            <span>Initializing compacted CISA KEV + EPSS intelligence feed...</span>
+                            <span class="text-cyan-400 animate-pulse">SYNCING</span>
+                        </div>
+                    </div>
+
+                    <!-- Right 5 Cols: Selected CVE Tactical Remediation & Agency Advisory Generator -->
+                    <div id="kevRadarDetailPanel" class="lg:col-span-5 p-5 rounded-2xl bg-slate-950/95 border-2 border-emerald-500/40 space-y-4 sticky top-24">
+                        <div class="flex items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                            <div>
+                                <div id="kevDetailBadge" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-500/20 border border-red-500/40 text-red-400 font-mono text-[10px] font-bold uppercase">
+                                    CISA KEV // ACTIVE EXPLOIT
+                                </div>
+                                <h3 id="kevDetailCveId" class="text-xl font-extrabold text-white font-mono mt-1">CVE-2024-21887</h3>
+                            </div>
+                            <div class="text-right font-mono">
+                                <div class="text-[10px] text-slate-400 uppercase">30-Day EPSS</div>
+                                <div id="kevDetailEpssScore" class="text-lg font-extrabold text-cyan-400">94.2%</div>
+                                <div id="kevDetailPercentile" class="text-[10px] text-emerald-400">99.1th Percentile</div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2 text-xs">
+                            <div class="flex items-center justify-between text-slate-400 font-mono">
+                                <span>Target Stack: <strong id="kevDetailStack" class="text-white">Ivanti &mdash; Connect Secure</strong></span>
+                                <span id="kevDetailDate" class="text-amber-400">Added: 2024-01-12</span>
+                            </div>
+                            <p id="kevDetailDescription" class="text-slate-300 leading-relaxed bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                                A command injection vulnerability in web components of Ivanti Connect Secure and Ivanti Policy Secure allows an authenticated administrator to send specially crafted requests and execute arbitrary commands.
+                            </p>
+                        </div>
+
+                        <div class="p-3.5 rounded-xl bg-emerald-950/25 border border-emerald-500/30 space-y-1.5 text-xs">
+                            <div class="font-mono text-[10px] font-bold text-emerald-400 uppercase flex items-center justify-between">
+                                <span>Mandatory Remediation Directive</span>
+                                <span id="kevDetailDueDate" class="text-slate-400">BOD 26-04</span>
+                            </div>
+                            <p id="kevDetailAction" class="text-slate-200 font-mono text-[11px] leading-relaxed">
+                                Apply mitigations per vendor instructions or discontinue use of the product if mitigations are unavailable.
+                            </p>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-800 space-y-2">
+                            <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                                <span>Agency Client Retainer Advisory:</span>
+                                <span class="text-cyan-400">Co-Branded Ready</span>
+                            </div>
+                            <button type="button" id="btnCopyKevAdvisory" onclick="copySelectedKevClientAdvisory()" class="w-full min-h-[46px] px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wide transition-all shadow-lg shadow-emerald-500/20 pixel-btn flex items-center justify-center gap-2 cursor-pointer">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                <span id="btnCopyKevAdvisoryText">Copy Client CVE Advisory Email</span>
+                            </button>
+                            <div class="flex flex-wrap items-center gap-2 pt-1">
+                                <button type="button" onclick="shareOrbitTool('kev-radar', 'x')" class="flex-1 min-h-[40px] px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-bold cursor-pointer transition">
+                                    𝕏 Post CVE Alert
+                                </button>
+                                <button type="button" onclick="shareOrbitTool('kev-radar', 'linkedin')" class="min-h-[40px] px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-emerald-500 hover:text-slate-950 text-emerald-300 border border-emerald-500/40 font-mono text-xs font-bold cursor-pointer transition">
+                                    in LinkedIn
+                                </button>
+                                <button type="button" onclick="shareOrbitTool('kev-radar', 'native')" class="min-h-[40px] px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-purple-500 hover:text-slate-950 text-purple-300 border border-purple-500/40 font-mono text-xs font-bold cursor-pointer transition">
+                                    📤 Share
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="takeover-poc-playground" data-alias="takeoverPocPlayground" class="relative z-10 scroll-mt-20 py-10 sm:py-12 max-w-6xl mx-auto px-4 sm:px-6 border-t border-slate-800/80">
+        <!-- Feature 2: Interactive Visual Attack Tree & Takeover Simulator -->
+        <div id="visualAttackTreeContainer" class="mb-8 rounded-2xl bg-slate-900/90 border-2 border-red-500/40 p-4 sm:p-6 shadow-2xl card-glass-red space-y-4">
+            <noscript>
+                <div class="p-4 rounded-xl bg-slate-950 border border-red-500/30 text-slate-300 font-mono text-xs space-y-2">
+                    <div class="text-red-400 font-bold uppercase tracking-wider">Visual Attack Tree // Subdomain Takeover Sequence</div>
+                    <ol class="list-decimal list-inside space-y-1 text-slate-400">
+                        <li><strong class="text-white">Victim Visitor:</strong> Requests branded subdomain (<code>subdomain.agencyclient.com</code>).</li>
+                        <li><strong class="text-white">Authoritative DNS:</strong> Traverses CNAME pointer to multi-tenant cloud service.</li>
+                        <li><strong class="text-white">Abandoned Cloud Endpoint:</strong> Cloud service returns 404, NoSuchBucket, or NXDOMAIN.</li>
+                        <li><strong class="text-white">Threat Actor:</strong> Reclaims orphaned cloud resource at $0 cost and injects payload.</li>
+                        <li><strong class="text-white">Weaponized Execution:</strong> Delivers exploit under authentic SSL certificate with session cookie theft.</li>
+                    </ol>
+                </div>
+            </noscript>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-stretch">
+            <!-- Left 6 Cols: Project #7 Interactive Subdomain Takeover PoC Playground -->
+            <div class="relative z-10 lg:col-span-6 bg-slate-900/85 rounded-2xl border-2 border-amber-500/40 p-5 sm:p-6 shadow-2xl card-glass-amber flex flex-col justify-between space-y-5">
+                <div class="space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-950 border border-amber-500/40 text-amber-400 font-arcade text-[9px] uppercase rounded">
+                            <span>👻 DANGLING CNAME TAKEOVER POC SANDBOX</span>
+                        </div>
+                        <span class="px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-[10px] font-bold">100% PASSIVE SAFE HARBOR</span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight">Interactive Subdomain Takeover Playground</h2>
+                        <p class="text-xs sm:text-sm text-slate-400 mt-1">
+                            Simulate dangling DNS CNAME pointers against 52 vulnerable cloud SaaS providers across 76 CNAME fingerprints (AWS S3, GitHub Pages, Vercel, Shopify, Azure) and generate non-destructive verification &amp; remediation playbooks.
+                        </p>
+                    </div>
+
+                    <!-- 1-Click Cloud Provider Presets -->
+                    <div class="space-y-1.5">
+                        <div class="text-[11px] font-mono text-slate-400 uppercase font-bold">1-Click Vulnerable SaaS Scenarios:</div>
+                        <div class="flex flex-wrap gap-1.5">
+                            <button type="button" onclick="loadTakeoverPreset('aws_s3')" class="px-2.5 py-1.5 rounded-lg bg-slate-950 hover:bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono text-[11px] cursor-pointer transition">AWS S3 (NoSuchBucket)</button>
+                            <button type="button" onclick="loadTakeoverPreset('github_pages')" class="px-2.5 py-1.5 rounded-lg bg-slate-950 hover:bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono text-[11px] cursor-pointer transition">GitHub Pages</button>
+                            <button type="button" onclick="loadTakeoverPreset('vercel')" class="px-2.5 py-1.5 rounded-lg bg-slate-950 hover:bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono text-[11px] cursor-pointer transition">Vercel</button>
+                            <button type="button" onclick="loadTakeoverPreset('shopify')" class="px-2.5 py-1.5 rounded-lg bg-slate-950 hover:bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono text-[11px] cursor-pointer transition">Shopify</button>
+                            <button type="button" onclick="loadTakeoverPreset('azure_nxdomain')" class="px-2.5 py-1.5 rounded-lg bg-slate-950 hover:bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono text-[11px] cursor-pointer transition">Azure (NXDOMAIN)</button>
+                            <button type="button" onclick="loadTakeoverPreset('safe_cloudflare')" class="px-2.5 py-1.5 rounded-lg bg-slate-950 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono text-[11px] cursor-pointer transition">Protected CDN</button>
+                        </div>
+                    </div>
+
+                    <!-- Custom Scenario Inputs -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <label for="pocSubdomainInput" class="block font-mono text-[11px] text-slate-400 mb-1">Client Subdomain</label>
+                            <input id="pocSubdomainInput" type="text" value="media.client-store.com" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-amber-400">
+                        </div>
+                        <div>
+                            <label for="pocCnameInput" class="block font-mono text-[11px] text-slate-400 mb-1">Dangling CNAME Target</label>
+                            <input id="pocCnameInput" type="text" value="orphaned-client-media.s3.amazonaws.com" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-amber-300 font-mono text-xs focus:outline-none focus:border-amber-400">
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <label for="pocFingerprintInput" class="font-mono text-[11px] text-slate-400">Passive HTTP Response Fingerprint / NXDOMAIN</label>
+                            <label class="inline-flex items-center gap-1.5 text-[11px] font-mono text-amber-400 cursor-pointer">
+                                <input id="pocNxdomainCheckbox" type="checkbox" onchange="runTakeoverPocSimulation()" class="rounded border-slate-700 bg-slate-950 text-amber-500">
+                                <span>DNS NXDOMAIN</span>
+                            </label>
+                        </div>
+                        <input id="pocFingerprintInput" type="text" value="<Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist</Message></Error>" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-300 font-mono text-xs focus:outline-none focus:border-amber-400">
+                    </div>
+
+                    <!-- Simulated PoC Output Console -->
+                    <div id="pocSimulationOutput" class="p-4 rounded-xl bg-slate-950/95 border border-amber-500/40 space-y-2.5 font-mono text-xs">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                            <span id="pocVerdictBadge" class="px-2 py-0.5 rounded bg-red-500/20 border border-red-500/50 text-red-400 font-bold text-[10px]">CRITICAL // AWS S3 TAKEOVER CONFIRMED</span>
+                            <span id="pocCvssBadge" class="text-amber-400 font-bold text-[11px]">CVSS 8.2 (HIGH/CRIT)</span>
+                        </div>
+                        <div class="text-[11px] text-slate-300 space-y-1">
+                            <div><span class="text-slate-500">$</span> <span id="pocDigCommand" class="text-cyan-300">dig +short CNAME media.client-store.com</span> &rarr; <span id="pocCnameResolved" class="text-amber-300">orphaned-client-media.s3.amazonaws.com</span></div>
+                            <div><span class="text-slate-500">Fingerprint:</span> <span id="pocMatchedFingerprint" class="text-red-300">NoSuchBucket</span></div>
+                        </div>
+                        <div id="pocRemediationBox" class="p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-[11px] text-emerald-300 leading-relaxed">
+                            Remediation: Immediately remove the dangling CNAME record from your DNS zone or claim the matching S3 bucket before third-party registration.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 pt-2">
+                    <button type="button" onclick="runTakeoverPocSimulation()" class="flex-1 min-h-[44px] px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wide cursor-pointer transition shadow-lg shadow-amber-500/20">
+                        Simulate PoC Trace
+                    </button>
+                    <button type="button" onclick="copyTakeoverRemediation()" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-amber-300 border border-amber-500/40 font-mono text-xs font-bold cursor-pointer transition">
+                        Copy DNS Fix Ticket
+                    </button>
+                    <button type="button" onclick="shareOrbitTool('takeover-poc', 'x')" class="min-h-[44px] px-3 py-2 rounded-xl bg-slate-950 hover:bg-amber-500 hover:text-slate-950 text-amber-300 border border-amber-500/40 font-mono text-xs font-bold cursor-pointer transition">
+                        𝕏 Share
+                    </button>
+                    <button type="button" onclick="shareOrbitTool('takeover-poc', 'native')" class="min-h-[44px] px-3 py-2 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 text-emerald-300 border border-emerald-500/40 font-mono text-xs font-bold cursor-pointer transition">
+                        📤
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right 6 Cols: Project #12 EPSS 30-Day Probability Horizon Visualizer -->
+            <div id="epss-horizon-visualizer" class="relative z-10 lg:col-span-6 bg-slate-900/85 rounded-2xl border-2 border-purple-500/40 p-5 sm:p-6 shadow-2xl card-glass-purple flex flex-col justify-between space-y-4">
+                <div class="space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-950 border border-purple-500/40 text-purple-300 font-arcade text-[9px] uppercase rounded">
+                            <span>📈 EPSS 30-DAY PROBABILITY HORIZON</span>
+                        </div>
+                        <span class="px-2.5 py-1 rounded bg-purple-500/10 border border-purple-500/30 text-purple-300 font-mono text-[10px] font-bold">FIRST.ORG TELEMETRY</span>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-extrabold text-white tracking-tight">EPSS Exploitation Probability Horizon</h3>
+                        <p class="text-xs text-slate-400 mt-1">
+                            Visualizes 30-day exploitation probability against global percentile rankings across top CISA KEV &amp; predictive EPSS advisories.
+                        </p>
+                    </div>
+                    <div id="epssHorizonChartCanvas" class="p-4 rounded-xl bg-slate-950/95 border border-purple-500/30 space-y-2.5 font-mono text-xs">
+                        <div class="text-slate-400 text-[11px]">Rendering EPSS probability distribution horizon...</div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-800">
+                    <span>Red Zone: EPSS &ge; 50% (Critical Velocity)</span>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="renderEpssHorizonChart()" class="px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-purple-500/20 text-purple-300 border border-purple-500/40 cursor-pointer transition">Refresh Horizon</button>
+                        <button type="button" onclick="shareOrbitTool('epss-horizon', 'x')" class="px-2.5 py-1.5 rounded-lg bg-slate-950 hover:bg-purple-500 hover:text-slate-950 text-purple-300 border border-purple-500/40 font-bold cursor-pointer transition">𝕏 Share</button>
+                        <button type="button" onclick="shareOrbitTool('epss-horizon', 'native')" class="px-2.5 py-1.5 rounded-lg bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 border border-cyan-500/40 font-bold cursor-pointer transition">📤</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="fleet-sentinel-cockpit" class="relative z-10 scroll-mt-20 py-10 sm:py-12 max-w-6xl mx-auto px-4 sm:px-6 border-t border-slate-800/80">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-stretch">
+            <!-- Left 6 Cols: Project #9 Zero-Knowledge Agency Security Scorecard Portal -->
+            <div id="zk-agency-scorecard" class="relative z-10 lg:col-span-6 bg-slate-900/85 rounded-2xl border-2 border-cyan-500/40 p-5 sm:p-6 shadow-2xl card-glass-cyan flex flex-col justify-between space-y-5">
+                <div class="space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-950 border border-cyan-500/40 text-cyan-400 font-arcade text-[9px] uppercase rounded">
+                            <span>🔐 ZERO-KNOWLEDGE AGENCY SCORECARD</span>
+                        </div>
+                        <span class="px-2.5 py-1 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-mono text-[10px] font-bold">ZERO SERVER STORAGE</span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight">Zero-Knowledge Fleet Scorecard Portal</h2>
+                        <p class="text-xs sm:text-sm text-slate-400 mt-1">
+                            Audit a multi-domain client portfolio 100% inside your browser via encrypted DNS-over-HTTPS (<code class="text-cyan-300 font-mono">dns.google</code> &amp; <code class="text-cyan-300 font-mono">cloudflare-dns.com</code>). Zero client domains or results ever touch an external backend server.
+                        </p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                            <label for="zkFleetDomainsInput">Client Portfolio Domains (comma or newline separated):</label>
+                            <span id="zkFleetGradeBadge" class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold">FLEET READY</span>
+                        </div>
+                        <textarea id="zkFleetDomainsInput" rows="3" class="w-full p-3 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-cyan-400" placeholder="shopify.com, github.com, example.com">shopify.com, github.com, cloudflare.com</textarea>
+                    </div>
+
+                    <!-- Scorecard Results Table -->
+                    <div id="zkScorecardResultsContainer" class="p-4 rounded-xl bg-slate-950/95 border border-cyan-500/30 space-y-3 font-mono text-xs">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+                            <div>
+                                <span class="text-slate-400 text-[10px] uppercase block">R1-R5 Exploitability-Aware Fleet Score</span>
+                                <span id="zkFleetSummaryScore" class="text-base font-extrabold text-white">Click "Run Zero-Knowledge Batch Audit" below</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-slate-500 text-[10px] uppercase block">SHA-256 Verification Digest</span>
+                                <span id="zkFleetSha256Badge" class="text-[10px] text-cyan-400">In-Memory Ephemeral Mode</span>
+                            </div>
+                        </div>
+                        <div id="zkScorecardRows" class="space-y-1.5 max-h-[175px] overflow-y-auto pr-1 text-[11px] text-slate-300">
+                            <div class="text-slate-400 py-2">
+                                Ready to evaluate client domains using R1-R5 exploitability floor/ceiling scoring rules directly in WebCrypto + DoH memory.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 pt-2">
+                    <button type="button" id="btnRunZkScorecard" onclick="runZeroKnowledgeBatchScorecard()" class="flex-1 min-h-[44px] px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-bold text-xs uppercase tracking-wide cursor-pointer transition shadow-lg shadow-cyan-500/20">
+                        Run Zero-Knowledge Batch Audit
+                    </button>
+                    <button type="button" onclick="exportZeroKnowledgeScorecardJson()" class="min-h-[44px] px-4 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-bold cursor-pointer transition">
+                        Export Signed JSON
+                    </button>
+                    <button type="button" onclick="shareOrbitTool('zk-scorecard', 'x')" class="min-h-[44px] px-3 py-2 rounded-xl bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-bold cursor-pointer transition">
+                        𝕏 Share
+                    </button>
+                    <button type="button" onclick="shareOrbitTool('zk-scorecard', 'native')" class="min-h-[44px] px-3 py-2 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 text-emerald-300 border border-emerald-500/40 font-mono text-xs font-bold cursor-pointer transition">
+                        📤
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right 6 Cols: Project #19 Public Bug Bounty Radar Statuspage -->
+            <div id="bounty-radar-statuspage" class="relative z-10 lg:col-span-6 bg-slate-900/85 rounded-2xl border-2 border-emerald-500/40 p-5 sm:p-6 shadow-2xl card-glass-emerald flex flex-col justify-between space-y-4">
+                <div class="space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 bg-slate-950 border border-emerald-500/40 text-emerald-400 font-arcade text-[9px] uppercase rounded">
+                            <span>🛰️ PUBLIC BUG BOUNTY RADAR STATUSPAGE</span>
+                        </div>
+                        <span id="bountyStatusOperationalBadge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-[10px] font-bold">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            ALL SENTINELS OPERATIONAL
+                        </span>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-extrabold text-white tracking-tight">Autonomous Perimeter Sentinel Statuspage</h3>
+                        <p class="text-xs text-slate-400 mt-1">
+                            Live telemetry across monitored public bug bounty scopes (Shopify, GitHub, Cloudflare, GitLab, Fastly), CT Log Stream Daemons, and Safe-Harbor Governance gates.
+                        </p>
+                    </div>
+                    <div id="bountyStatuspageGrid" class="p-4 rounded-xl bg-slate-950/95 border border-emerald-500/30 space-y-2 font-mono text-xs">
+                        <div class="text-slate-400 text-[11px]">Loading sentinel statuspage telemetry...</div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-800">
+                    <span>Outreach Freeze: <strong class="text-emerald-400">ENFORCED (LOCKED)</strong></span>
+                    <span class="text-cyan-400">RFC 9116 Safe Harbor Compliant</span>
+                </div>
+            </div>
+        </div>
+    </section>
+    </main>
+
+    <!-- Compact Footer -->
+    <footer class="py-8 bg-slate-950 border-t border-slate-900 text-slate-400 text-xs relative z-10">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+                <img src="assets/logo.png" alt="Orbit Security Logo" width="20" height="20" class="w-5 h-5 rounded object-contain bg-slate-900 border border-emerald-500/30" />
+                <span class="font-bold text-white">Orbit Security</span>
+                <span class="text-slate-600">|</span>
+                <span>Passive RFC 8484 Client-Side Labs</span>
+            </div>
+            <div class="flex flex-wrap items-center justify-center gap-4 font-mono text-[11px]">
+                <a href="index.html" class="hover:text-emerald-400 transition-colors">Home</a>
+                <a href="benchmark/index.html" class="hover:text-cyan-400 transition-colors">Benchmark</a>
+                <a href="about.html" class="hover:text-emerald-400 transition-colors">About</a>
+                <a href="terms.html" class="hover:text-emerald-400 transition-colors">Terms</a>
+                <a href="privacy.html" class="hover:text-emerald-400 transition-colors">Privacy</a>
+                <a href="refunds.html" class="hover:text-emerald-400 transition-colors">Refunds</a>
+                <a href="disclaimer.html" class="hover:text-emerald-400 transition-colors">Disclaimer</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+        window.escapeHtml = window.escapeHtml || escapeHtml;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (document.getElementById('visualAttackTreeContainer') && window.OrbitAttackTree && typeof OrbitAttackTree.init === 'function') {
+                OrbitAttackTree.init('visualAttackTreeContainer', { scenarioKey: 'aws_s3' });
+            }
+        });
+
+        (function initLabsMobileDrawer() {
+            const btn = document.getElementById('labsMobileMenuBtn');
+            const menu = document.getElementById('labsMobileMenu');
+            if (!btn || !menu) return;
+            function setOpen(open) {
+                menu.classList.toggle('hidden', !open);
+                btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+                document.body.classList.toggle('drawer-open', open);
+            }
+            btn.addEventListener('click', () => setOpen(menu.classList.contains('hidden')));
+            menu.querySelectorAll('a').forEach((link) => {
+                link.addEventListener('click', () => setOpen(false));
+            });
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !menu.classList.contains('hidden')) setOpen(false);
+            });
+        })();
+    </script>
+</body>
+</html>

@@ -2626,22 +2626,22 @@ ${agency}`;
             'kev-radar': {
                 title: 'Orbit Security — Interactive CISA KEV + FIRST EPSS Threat Radar',
                 text: `🛰️ Exploring 1,750+ CISA Known Exploited Vulnerabilities fused with 30-day FIRST EPSS weaponization probabilities in <5ms client-side on @OrbitSecurity:`,
-                url: `${baseUrl}#kev-epss-radar`
+                url: `${baseUrl}labs.html#kev-epss-radar`
             },
             'zk-scorecard': {
                 title: 'Orbit Security — Zero-Knowledge Fleet Scorecard Portal',
                 text: `🔐 Audited a multi-domain client portfolio 100% in-browser via encrypted DNS-over-HTTPS + WebCrypto SHA-256 verification (zero server storage) on @OrbitSecurity:`,
-                url: `${baseUrl}#zk-agency-scorecard`
+                url: `${baseUrl}labs.html#zk-agency-scorecard`
             },
             'takeover-poc': {
                 title: 'Orbit Security — Interactive Dangling CNAME Subdomain Takeover Sandbox',
                 text: `👻 Simulating passive dangling CNAME subdomain takeover signatures (AWS S3, GitHub Pages, Vercel, Shopify) with instant DNS remediation playbooks on @OrbitSecurity:`,
-                url: `${baseUrl}#takeover-poc-playground`
+                url: `${baseUrl}labs.html#takeover-poc-playground`
             },
             'epss-horizon': {
                 title: 'Orbit Security — EPSS 30-Day Exploitation Probability Horizon',
                 text: `📈 Visualizing 30-day CVE exploitation probability horizons against global FIRST.org percentile telemetry on @OrbitSecurity:`,
-                url: `${baseUrl}#epss-horizon-visualizer`
+                url: `${baseUrl}labs.html#epss-horizon-visualizer`
             },
             'simple-cat': {
                 title: 'Orbit Security — Simple Cat Plain-English Cyber Decoder',
@@ -5187,8 +5187,8 @@ ${payload.url}`;
                             <button type="button" onclick="if(window.SimpleCat) SimpleCat.explain('cname')" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 font-pixel text-[11px] cursor-pointer">
                                 🐱 Ask Simple Cat
                             </button>
-                            <a href="#takeover-poc-playground" class="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 text-xs font-bold cursor-pointer transition">
-                                Open in Playground &darr;
+                            <a href="labs.html#takeover-poc-playground" class="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 text-xs font-bold cursor-pointer transition">
+                                Open in Labs Playground &rarr;
                             </a>
                         </div>
                     </div>

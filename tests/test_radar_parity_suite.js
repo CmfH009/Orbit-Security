@@ -539,10 +539,17 @@ async function runTests() {
     assert(simpleCatJs.includes('function isMobileOrTouchDevice()'), 'simple_cat.js defines isMobileOrTouchDevice()');
     assert(simpleCatJs.includes('function showClipSavedShareBanner('), 'simple_cat.js defines showClipSavedShareBanner() with native phone share');
 
-    // Verify landing/index.html and landing/ghostdns/index.html have share buttons across all free tools
+    // Verify landing/index.html, landing/labs.html, and landing/ghostdns/index.html have share buttons across all free tools
     const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'landing', 'index.html'), 'utf8');
-    for (const tk of toolKeys) {
+    const labsHtml = fs.readFileSync(path.join(__dirname, '..', 'landing', 'labs.html'), 'utf8');
+    const indexToolKeys = ['radar', 'audit-studio', 'pitch-drawer', 'simple-cat', 'legal-rider', 'roi-calculator'];
+    const labsToolKeys = ['kev-radar', 'zk-scorecard', 'takeover-poc', 'epss-horizon'];
+    for (const tk of indexToolKeys) {
         assert(indexHtml.includes(`shareOrbitTool('${tk}'`), `landing/index.html includes social share button for '${tk}'`);
+    }
+    for (const tk of labsToolKeys) {
+        assert(labsHtml.includes(`shareOrbitTool('${tk}'`), `landing/labs.html includes social share button for '${tk}'`);
+        assert(sandbox.window.buildOrbitToolSharePayload(tk).url.includes('labs.html#'), `buildOrbitToolSharePayload('${tk}') routes to labs.html`);
     }
     const ghostDnsHtml = fs.readFileSync(path.join(__dirname, '..', 'landing', 'ghostdns', 'index.html'), 'utf8');
     assert(ghostDnsHtml.includes("shareGhostDnsTool('x')"), 'landing/ghostdns/index.html includes X share button');
@@ -658,10 +665,11 @@ async function runTests() {
     const longHtml = mockDoc.getElementById('visualAttackTreeContainer').innerHTML;
     assert(longHtml.includes('..'), 'Long subdomain is safely truncated with ellipsis');
 
-    // Verify Takeover Playground HTML in landing/index.html includes the visual attack tree elements & noscript
-    assert(indexHtml.includes('visualAttackTreeContainer'), 'landing/index.html includes visual attack tree container');
+    // Verify Takeover Playground HTML in landing/labs.html includes the visual attack tree elements & noscript
+    assert(labsHtml.includes('visualAttackTreeContainer'), 'landing/labs.html includes visual attack tree container');
+    assert(labsHtml.includes('OrbitAttackTree'), 'landing/labs.html integrates OrbitAttackTree engine');
     assert(indexHtml.includes('OrbitAttackTree'), 'landing/index.html integrates OrbitAttackTree engine');
-    assert(indexHtml.includes('<noscript>') && indexHtml.includes('Visual Attack Tree // Subdomain Takeover Sequence'), 'landing/index.html includes accessible noscript attack tree fallback');
+    assert(labsHtml.includes('<noscript>') && labsHtml.includes('Visual Attack Tree // Subdomain Takeover Sequence'), 'landing/labs.html includes accessible noscript attack tree fallback');
 
     // ==========================================
     // Testing Scenario 10: Interactive White-Label Portal Customizer Sandbox

@@ -246,13 +246,19 @@ def test_project_21_crt_arcade_shader_canvas_web_ui_parity():
     root = Path(__file__).resolve().parent.parent
     landing_html = (root / "landing" / "index.html").read_text(encoding="utf-8")
     docs_html = (root / "docs" / "index.html").read_text(encoding="utf-8")
+    landing_labs = (root / "landing" / "labs.html").read_text(encoding="utf-8")
+    docs_labs = (root / "docs" / "labs.html").read_text(encoding="utf-8")
+    landing_cat_js = (root / "landing" / "assets" / "simple_cat.js").read_text(encoding="utf-8")
+    docs_cat_js = (root / "docs" / "assets" / "simple_cat.js").read_text(encoding="utf-8")
     landing_js = (root / "landing" / "assets" / "orbit_radar.js").read_text(encoding="utf-8")
     docs_js = (root / "docs" / "assets" / "orbit_radar.js").read_text(encoding="utf-8")
 
-    assert 'id="crt-arcade-shader-canvas"' in landing_html
+    assert 'id="crt-arcade-shader-canvas"' in landing_cat_js
     assert "function initCrtArcadeShaderCanvas" in landing_js
     assert "function toggleCrtArcadeShader" in landing_js
     assert landing_html == docs_html
+    assert landing_labs == docs_labs
+    assert landing_cat_js == docs_cat_js
     assert landing_js == docs_js
 
 

@@ -25,6 +25,12 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://cmfh009.github.io/Orbit-Security/labs.html</loc>
+    <lastmod>2026-11-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://cmfh009.github.io/Orbit-Security/signup.html</loc>
     <lastmod>2026-11-06</lastmod>
     <changefreq>monthly</changefreq>

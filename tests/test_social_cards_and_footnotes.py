@@ -290,6 +290,7 @@ def test_top_level_pages_have_no_broken_links_or_hash_anchors():
         "index.html",
         "audit.html",
         "fleet.html",
+        "labs.html",
         "about.html",
         "signup.html",
         "portals/index.html",
@@ -344,6 +345,7 @@ def test_slice1_defensive_and_copy_hygiene():
         "index.html",
         "audit.html",
         "fleet.html",
+        "labs.html",
         "about.html",
         "signup.html",
         "portals/index.html",
@@ -374,4 +376,49 @@ def test_slice1_defensive_and_copy_hygiene():
         for rel_path in top_pages:
             page_text = (base_dir / rel_path).read_text(encoding="utf-8")
             assert "simple_cat.js" in page_text, f"Missing simple_cat.js in {base_dir.name}/{rel_path}"
+
+
+def test_slice2_labs_split_open_source_proof_and_command_deck():
+    """Verify Slice 2: labs.html split, #security-labs previews, #open-source-proof, slim #legal, and Command Deck."""
+    for base_dir in (LANDING_DIR, DOCS_DIR):
+        idx_text = (base_dir / "index.html").read_text(encoding="utf-8")
+        labs_text = (base_dir / "labs.html").read_text(encoding="utf-8")
+        cat_js = (base_dir / "assets/simple_cat.js").read_text(encoding="utf-8")
+
+        for lab_id in (
+            'id="kev-epss-radar"',
+            'id="takeover-poc-playground"',
+            'id="fleet-sentinel-cockpit"',
+            'id="zk-agency-scorecard"',
+            'id="bounty-radar-statuspage"',
+            'id="epss-horizon-visualizer"',
+            'id="visualAttackTreeContainer"',
+        ):
+            assert lab_id in labs_text, f"Missing {lab_id} in {base_dir.name}/labs.html"
+
+        for moved_id in (
+            'id="kev-epss-radar"',
+            'id="takeover-poc-playground"',
+            'id="fleet-sentinel-cockpit"',
+        ):
+            assert moved_id not in idx_text, f"Moved section {moved_id} still on {base_dir.name}/index.html"
+
+        assert 'id="security-labs"' in idx_text
+        assert 'href="labs.html#kev-epss-radar"' in idx_text
+        assert 'href="labs.html#takeover-poc-playground"' in idx_text
+        assert 'href="labs.html#fleet-sentinel-cockpit"' in idx_text
+
+        assert 'id="open-source-proof"' in idx_text
+        for token in ("CmfH009/Orbit-Security@v1", "SARIF 2.1.0", "1,900+", "benchmark/index.html"):
+            assert token in idx_text, f"Missing {token!r} in {base_dir.name}/index.html #open-source-proof"
+
+        assert 'id="legal"' in idx_text
+        assert 'id="copy-rider-btn"' in idx_text
+        assert 'id="legal-tab-terms"' not in idx_text
+        for legal_href in ('href="terms.html"', 'href="privacy.html"', 'href="disclaimer.html"', 'href="refunds.html"'):
+            assert legal_href in idx_text
+
+        assert 'onclick="showKeyboardHud()"' not in idx_text
+        for deck_id in ('id="dock-deck-btn"', 'id="crtShaderToggleBtn"', 'id="crt-arcade-shader-canvas"', 'id="cmd-shortcuts-btn"'):
+            assert deck_id in cat_js, f"Missing {deck_id} in {base_dir.name}/assets/simple_cat.js"
 
