@@ -23,6 +23,7 @@ import json
 import os
 import re
 import sys
+import urllib.parse
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -490,40 +491,156 @@ def render_remediation_dossier(
     return "\n".join(lines)
 
 
-def _load_auth_cookies_map(auth_cookies: Optional[Any]) -> Dict[str, str]:
-    """Load optional per-host/program session cookies from a dict, JSON path, or inline string."""
-    raw = auth_cookies if auth_cookies is not None else os.environ.get("ORBIT_CORS_AUTH_COOKIES")
-    if not raw:
+def _load_host_map(
+    raw: Optional[Any],
+    *,
+    env_var: Optional[str] = None,
+    section_key: Optional[str] = None,
+    allow_global_fallback: bool = True,
+) -> Dict[str, str]:
+    """Load optional per-host/program mapping from a dict, JSON path, inline JSON, or plain string."""
+    effective = raw if raw is not None else (os.environ.get(env_var) if env_var else None)
+    if not effective:
         return {}
-    if isinstance(raw, dict):
-        return {str(k).strip().lower(): str(v).strip() for k, v in raw.items() if str(v).strip()}
-    if isinstance(raw, Path):
-        data = json.loads(raw.read_text(encoding="utf-8"))
+    if isinstance(effective, dict):
+        data: Any = effective
+        if section_key and isinstance(data.get(section_key), dict):
+            data = data[section_key]
+        return {str(k).strip().lower(): str(v).strip() for k, v in data.items() if str(v).strip()}
+    if isinstance(effective, Path):
+        data = json.loads(effective.read_text(encoding="utf-8"))
         if isinstance(data, dict):
+            if section_key and isinstance(data.get(section_key), dict):
+                data = data[section_key]
             return {str(k).strip().lower(): str(v).strip() for k, v in data.items() if str(v).strip()}
         return {}
-    text = str(raw).strip()
+    text = str(effective).strip()
     if not text:
         return {}
     maybe_path = Path(text)
     if maybe_path.is_file():
         data = json.loads(maybe_path.read_text(encoding="utf-8"))
         if isinstance(data, dict):
+            if section_key and isinstance(data.get(section_key), dict):
+                data = data[section_key]
             return {str(k).strip().lower(): str(v).strip() for k, v in data.items() if str(v).strip()}
         return {}
     if text.startswith("{"):
         data = json.loads(text)
         if isinstance(data, dict):
+            if section_key and isinstance(data.get(section_key), dict):
+                data = data[section_key]
             return {str(k).strip().lower(): str(v).strip() for k, v in data.items() if str(v).strip()}
         return {}
-    return {"*": text}
+    return {"*": text} if allow_global_fallback else {}
+
+
+def _load_auth_cookies_map(auth_cookies: Optional[Any]) -> Dict[str, str]:
+    """Load optional per-host/program session cookies from a dict, JSON path, or inline string."""
+    return _load_host_map(
+        auth_cookies,
+        env_var="ORBIT_CORS_AUTH_COOKIES",
+        section_key="auth_cookies",
+        allow_global_fallback=True,
+    )
+
+
+def _load_auth_headers_map(auth_header: Optional[Any]) -> Dict[str, str]:
+    """Load optional per-host/program Authorization headers from a dict, JSON path, or inline string."""
+    return _load_host_map(
+        auth_header,
+        env_var="ORBIT_CORS_AUTH_HEADER",
+        section_key="auth_headers",
+        allow_global_fallback=True,
+    )
+
+
+def _load_endpoints_map(endpoints: Optional[Any]) -> Dict[str, str]:
+    """Load optional per-host authenticated endpoint overrides from a dict or JSON file."""
+    return _load_host_map(
+        endpoints,
+        env_var="ORBIT_CORS_ENDPOINTS",
+        section_key="endpoints",
+        allow_global_fallback=False,
+    )
+
+
+def _load_auth_config(auth_config: Optional[Any]) -> Dict[str, Any]:
+    """Load a unified auth verification config JSON file or dict."""
+    if not auth_config:
+        return {}
+    if isinstance(auth_config, dict):
+        data = auth_config
+    elif isinstance(auth_config, Path):
+        data = json.loads(auth_config.read_text(encoding="utf-8"))
+    else:
+        text = str(auth_config).strip()
+        if not text:
+            return {}
+        maybe_path = Path(text)
+        if maybe_path.is_file():
+            data = json.loads(maybe_path.read_text(encoding="utf-8"))
+        elif text.startswith("{"):
+            data = json.loads(text)
+        else:
+            raise ValueError(f"Auth config file not found: {text}")
+    if not isinstance(data, dict):
+        return {}
+    return {
+        "auth_cookies": data.get("auth_cookies") or None,
+        "auth_headers": data.get("auth_headers") or None,
+        "endpoints": data.get("endpoints") or None,
+        "researcher_header": str(data.get("researcher_header") or "").strip() or None,
+    }
+
+
+def _resolve_bundle_endpoint(
+    bundle: Dict[str, Any],
+    group: Dict[str, Any],
+    endpoints_map: Dict[str, str],
+) -> str:
+    """Resolve the target URL for a bundle, validating strictly host-scoped endpoint overrides."""
+    host = str(bundle.get("host", "")).strip()
+    default_url = str(bundle.get("url", "")).strip() or f"https://{host}/"
+    override = str(endpoints_map.get(host.lower(), "") or "").strip()
+    if not override:
+        return default_url
+    if override.startswith("/"):
+        return f"https://{host}{override}"
+    if override.startswith(("http://", "https://")):
+        parsed = urllib.parse.urlparse(override)
+        if (parsed.hostname or "").lower() != host.lower():
+            raise ValueError(f"Cross-host endpoint override rejected for {host}: {override}")
+        return override
+    raise ValueError(f"Invalid endpoint override for {host}: {override}")
+
+
+def _parse_researcher_header(raw: Optional[str]) -> Optional[Tuple[str, str]]:
+    """Parse and validate an optional RoE researcher identification header ('Name: Value')."""
+    if not raw:
+        return None
+    text = str(raw).strip()
+    if not text:
+        return None
+    if "\r" in text or "\n" in text:
+        raise ValueError("Researcher header must not contain CR/LF characters")
+    if ":" not in text:
+        raise ValueError(f"Researcher header must use 'Name: Value' format: {text!r}")
+    name, value = text.split(":", 1)
+    name = name.strip()
+    value = value.strip()
+    if not name or not value:
+        raise ValueError(f"Researcher header name and value must be non-empty: {text!r}")
+    if name.lower() in {"host", "origin", "cookie", "authorization"}:
+        raise ValueError(f"Researcher header cannot override reserved header '{name}'")
+    return name, value
 
 
 def _resolve_bundle_auth(
     bundle: Dict[str, Any],
     group: Dict[str, Any],
     cookie_map: Dict[str, str],
-    default_auth_header: Optional[str],
+    default_auth_header: Optional[Any],
 ) -> Tuple[str, str]:
     host = str(bundle.get("host", "")).strip().lower()
     prog_id = str(group.get("program_id", "")).strip().lower()
@@ -537,9 +654,20 @@ def _resolve_bundle_auth(
         or cookie_map.get("*", "")
         or cookie_map.get("default", "")
     )
+    if isinstance(default_auth_header, dict):
+        header_map = default_auth_header
+    elif isinstance(default_auth_header, str) and default_auth_header.strip():
+        header_map = {"*": default_auth_header.strip()}
+    else:
+        header_map = {}
+
     auth_hdr = (
         str(bundle.get("auth_header", "")).strip()
-        or (default_auth_header.strip() if default_auth_header else "")
+        or header_map.get(host, "")
+        or header_map.get(prog_id, "")
+        or header_map.get(prog_name, "")
+        or header_map.get("*", "")
+        or header_map.get("default", "")
         or os.environ.get("ORBIT_CORS_AUTH_HEADER", "").strip()
     )
     return cookie, auth_hdr
@@ -630,16 +758,31 @@ def verify_live_targets(
     timeout: float = 10.0,
     roe_engine: Optional[Any] = None,
     auth_cookies: Optional[Any] = None,
-    auth_header: Optional[str] = None,
+    auth_header: Optional[Any] = None,
+    endpoints: Optional[Any] = None,
+    researcher_header: Optional[str] = None,
+    program_filter: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """Runs read-only RoE-guarded HTTP GET / DNS verification and Tier-2 CORS PoC replay."""
     roe = roe_engine if roe_engine is not None else PublicHostOnlyRoE()
     cookie_map = _load_auth_cookies_map(auth_cookies)
+    auth_header_map = _load_auth_headers_map(auth_header)
+    endpoints_map = _load_endpoints_map(endpoints)
+    parsed_researcher = _parse_researcher_header(researcher_header)
+    filter_set = {
+        tok.strip().lower()
+        for item in (program_filter or [])
+        for tok in str(item).split(",")
+        if tok.strip()
+    }
     results: List[Dict[str, Any]] = []
 
     with create_guarded_httpx_client(roe_engine=roe, timeout=timeout) as client:
         for grp in groups:
             program = grp["program"]
+            program_id = str(grp.get("program_id", "")).strip().lower()
+            if filter_set and program_id not in filter_set and program.lower() not in filter_set:
+                continue
             verdict = grp["verdict"]
             is_cors = verdict in {"REFLECTED_PUBLIC_HTML", "AUTHENTICATED_CORS_SENSITIVE"}
             bundles = grp.get("bundles") or [
@@ -648,9 +791,11 @@ def verify_live_targets(
             ]
             for bundle in bundles:
                 host = str(bundle.get("host", "")).strip()
-                url = str(bundle.get("url", "")).strip() or f"https://{host}/"
+                url = _resolve_bundle_endpoint(bundle, grp, endpoints_map)
                 ev_id = str(bundle.get("evidence_artifact_id", "")).strip()
                 headers = {"User-Agent": "OrbitSecurity-PreSubmitCheck/1.0"}
+                if parsed_researcher is not None:
+                    headers[parsed_researcher[0]] = parsed_researcher[1]
 
                 if verdict == "DANGLING_TAKEOVER_VERIFIED":
                     if not roe.is_target_permitted(host):
@@ -743,7 +888,7 @@ def verify_live_targets(
                 auth_header_sent = False
                 if is_cors:
                     headers["Origin"] = UNTRUSTED_POC_ORIGIN
-                    cookie_val, auth_val = _resolve_bundle_auth(bundle, grp, cookie_map, auth_header)
+                    cookie_val, auth_val = _resolve_bundle_auth(bundle, grp, cookie_map, auth_header_map)
                     if cookie_val:
                         headers["Cookie"] = cookie_val
                         auth_cookie_sent = True
@@ -826,7 +971,7 @@ def verify_live_targets(
                     )
 
     cors_items = [r for r in results if "cors_poc_replay" in r]
-    return {
+    summary: Dict[str, Any] = {
         "mode": "live_verified",
         "checked_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "targets_checked": len(results),
@@ -847,6 +992,37 @@ def verify_live_targets(
         },
         "results": results,
     }
+    if filter_set:
+        summary["program_filter"] = sorted(filter_set)
+    return summary
+
+
+def _build_auth_template(groups: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Builds a gitignored starter template for host-scoped Tier-2 CORS proof verification."""
+    cors_hosts = sorted(
+        {
+            str(b.get("host", "")).strip()
+            for grp in groups
+            if grp.get("verdict") in {"REFLECTED_PUBLIC_HTML", "AUTHENTICATED_CORS_SENSITIVE"}
+            for b in (grp.get("bundles") or [])
+            if str(b.get("host", "")).strip()
+        }
+    )
+    endpoints = {
+        h: ("/2010-04-01/Accounts.json" if h == "api.twilio.com" else "/")
+        for h in cors_hosts
+    }
+    return {
+        "_instructions": (
+            "Copy to data/hackerone_staging/auth_verify.local.json (gitignored), fill in ONLY the host(s) "
+            "you created a dedicated test account for, run with --verify-live --program <id> --auth-config "
+            "data/hackerone_staging/auth_verify.local.json, then delete auth_verify.local.json after verification."
+        ),
+        "researcher_header": "",
+        "auth_cookies": {h: "" for h in cors_hosts},
+        "auth_headers": {h: "" for h in cors_hosts},
+        "endpoints": endpoints,
+    }
 
 
 def build_vault_manifest(
@@ -859,10 +1035,21 @@ def build_vault_manifest(
     verify_live: bool = False,
     live_timeout: float = 10.0,
     auth_cookies: Optional[Any] = None,
-    auth_header: Optional[str] = None,
+    auth_header: Optional[Any] = None,
+    endpoints: Optional[Any] = None,
+    researcher_header: Optional[str] = None,
+    program_filter: Optional[List[str]] = None,
+    auth_config: Optional[Any] = None,
+    write_auth_template: bool = False,
     roe_engine: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Compiles staged disclosures (or a verification matrix) into launch queues and readiness reports."""
+    cfg = _load_auth_config(auth_config)
+    eff_auth_cookies = auth_cookies if auth_cookies is not None else cfg.get("auth_cookies")
+    eff_auth_header = auth_header if auth_header is not None else cfg.get("auth_headers")
+    eff_endpoints = endpoints if endpoints is not None else cfg.get("endpoints")
+    eff_researcher_header = researcher_header if researcher_header is not None else cfg.get("researcher_header")
+
     archived_fp_count = 0
     if disclosures_dir is not None:
         source_label = "data/disclosures"
@@ -910,8 +1097,11 @@ def build_vault_manifest(
             groups,
             timeout=live_timeout,
             roe_engine=roe_engine,
-            auth_cookies=auth_cookies,
-            auth_header=auth_header,
+            auth_cookies=eff_auth_cookies,
+            auth_header=eff_auth_header,
+            endpoints=eff_endpoints,
+            researcher_header=eff_researcher_header,
+            program_filter=program_filter,
         )
         live_by_host = {r["host"]: r for r in live_verification["results"]}
 
@@ -1050,6 +1240,12 @@ def build_vault_manifest(
             "\n".join(report_lines),
             encoding="utf-8",
         )
+        if write_auth_template:
+            template_payload = _build_auth_template(groups)
+            (output_dir / "auth_verify.template.json").write_text(
+                json.dumps(template_payload, indent=2) + "\n",
+                encoding="utf-8",
+            )
 
     return manifest
 
@@ -1091,7 +1287,36 @@ def main(argv: Optional[List[str]] = None) -> int:
         "--auth-header",
         type=str,
         default=None,
-        help="Optional Authorization header (e.g. Bearer token) for Tier-2 CORS PoC replay",
+        help="Optional Authorization header string or JSON file mapping host/program_id to Authorization value",
+    )
+    parser.add_argument(
+        "--program",
+        action="append",
+        default=None,
+        help="Filter --verify-live to specific program ID(s) or name(s) (repeatable or comma-separated)",
+    )
+    parser.add_argument(
+        "--endpoints",
+        type=str,
+        default=None,
+        help="JSON file or inline JSON mapping host to authenticated API path/URL override",
+    )
+    parser.add_argument(
+        "--researcher-header",
+        type=str,
+        default=None,
+        help="Optional RoE researcher header in 'Name: Value' format (e.g. 'X-Bug-Bounty: HackerOne-handle')",
+    )
+    parser.add_argument(
+        "--auth-config",
+        type=str,
+        default=None,
+        help="Unified JSON config file containing auth_cookies, auth_headers, endpoints, and researcher_header",
+    )
+    parser.add_argument(
+        "--write-auth-template",
+        action="store_true",
+        help="Write auth_verify.template.json into --out for Tier-2 CORS proof verification",
     )
     args = parser.parse_args(argv)
 
@@ -1104,6 +1329,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         live_timeout=args.timeout,
         auth_cookies=args.auth_cookies,
         auth_header=args.auth_header,
+        endpoints=args.endpoints,
+        researcher_header=args.researcher_header,
+        program_filter=args.program,
+        auth_config=args.auth_config,
+        write_auth_template=args.write_auth_template,
     )
     print(
         f"[Vault Compiler:{manifest['verification_mode']}] Evaluated {manifest['total_raw_candidates']} bundles "

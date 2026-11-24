@@ -813,3 +813,188 @@ def test_verify_live_targets_dangling_takeover_uses_dns_not_cors(monkeypatch):
     assert by_host["127.0.0.1"]["verified_live"] is False
 
 
+def test_verify_live_program_filter_per_host_headers_and_endpoints(tmp_path: Path, monkeypatch):
+    seen_requests = []
+
+    class _MockClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def get(self, url: str, headers=None):
+            seen_requests.append((url, dict(headers or {})))
+            return SimpleNamespace(
+                status_code=200,
+                headers={
+                    "Access-Control-Allow-Origin": UNTRUSTED_POC_ORIGIN,
+                    "Access-Control-Allow-Credentials": "true",
+                    "Content-Type": "application/json",
+                },
+                text='{"user_id": 7, "email": "qa@example.com"}',
+            )
+
+    monkeypatch.setattr(bounty_vault_generator, "create_guarded_httpx_client", lambda **kw: _MockClient())
+
+    groups = [
+        {
+            "program": "Alpha",
+            "program_id": "alpha",
+            "verdict": "REFLECTED_PUBLIC_HTML",
+            "tier": "TIER_2_NEEDS_AUTH_PROOF",
+            "hosts": ["api.alpha-example.com"],
+            "urls": ["https://api.alpha-example.com/"],
+            "bundles": [
+                {"host": "api.alpha-example.com", "url": "https://api.alpha-example.com/", "evidence_artifact_id": "ev_111111111111"}
+            ],
+        },
+        {
+            "program": "Beta",
+            "program_id": "beta",
+            "verdict": "REFLECTED_PUBLIC_HTML",
+            "tier": "TIER_2_NEEDS_AUTH_PROOF",
+            "hosts": ["api.beta-example.com"],
+            "urls": ["https://api.beta-example.com/"],
+            "bundles": [
+                {"host": "api.beta-example.com", "url": "https://api.beta-example.com/", "evidence_artifact_id": "ev_222222222222"}
+            ],
+        },
+    ]
+
+    # 1. program_filter=["alpha"] probes only alpha, rewrites endpoint, and attaches researcher header
+    summary = verify_live_targets(
+        groups,
+        auth_header={"api.alpha-example.com": "Bearer secret_alpha"},
+        endpoints={"api.alpha-example.com": "/api/me"},
+        researcher_header="X-Bug-Bounty: HackerOne-tester",
+        program_filter=["alpha"],
+    )
+    assert summary["targets_checked"] == 1
+    assert summary["program_filter"] == ["alpha"]
+    assert len(seen_requests) == 1
+    req_url, req_headers = seen_requests[0]
+    assert req_url == "https://api.alpha-example.com/api/me"
+    assert req_headers["Authorization"] == "Bearer secret_alpha"
+    assert req_headers["X-Bug-Bounty"] == "HackerOne-tester"
+    assert "secret_alpha" not in json.dumps(summary)
+
+    # 2. Without program_filter, beta never receives alpha's host-scoped Authorization header
+    seen_requests.clear()
+    summary_all = verify_live_targets(
+        groups,
+        auth_header={"api.alpha-example.com": "Bearer secret_alpha"},
+    )
+    assert summary_all["targets_checked"] == 2
+    beta_req = next(h for u, h in seen_requests if "beta-example.com" in u)
+    assert "Authorization" not in beta_req
+
+    # 3. Cross-host endpoint override and CR/LF researcher header fail closed
+    with pytest.raises(ValueError, match="Cross-host"):
+        verify_live_targets(groups, endpoints={"api.alpha-example.com": "https://evil.other.com/steal"})
+    with pytest.raises(ValueError, match="CR/LF"):
+        verify_live_targets(groups, researcher_header="X-Bug-Bounty: bad\r\nInjected: 1")
+
+
+def test_auth_config_and_write_auth_template(tmp_path: Path, monkeypatch):
+    disc_dir = tmp_path / "disclosures"
+    disc_dir.mkdir()
+    _write_synthetic_bundle(
+        disc_dir,
+        "playtika_cors_arbitrary_origin_with_credentials_slotomania_com",
+        program_id="playtika",
+        program_name="Playtika",
+        domain="slotomania.com",
+        flaw_type="cors_arbitrary_origin_with_credentials",
+        viability="CONDITIONAL",
+        ev_id="ev_e09a813dc2f2",
+        raw_evidence="Reflected Origin [PUBLIC_HTML_ONLY]",
+    )
+    _write_synthetic_bundle(
+        disc_dir,
+        "alpha_cors_arbitrary_origin_with_credentials_api_alpha_com",
+        program_id="alpha",
+        program_name="Alpha",
+        domain="api.alpha.com",
+        flaw_type="cors_arbitrary_origin_with_credentials",
+        viability="CONDITIONAL",
+        ev_id="ev_aabbccddeeff",
+        raw_evidence="Reflected Origin [PUBLIC_HTML_ONLY]",
+    )
+
+    out_dir = tmp_path / "staging"
+    rc_tpl = bounty_vault_generator.main(
+        ["--disclosures-dir", str(disc_dir), "--out", str(out_dir), "--write-auth-template"]
+    )
+    assert rc_tpl == 0
+    tpl_path = out_dir / "auth_verify.template.json"
+    assert tpl_path.is_file()
+    tpl = json.loads(tpl_path.read_text(encoding="utf-8"))
+    assert tpl["auth_cookies"] == {"api.alpha.com": "", "slotomania.com": ""}
+    assert tpl["auth_headers"] == {"api.alpha.com": "", "slotomania.com": ""}
+    assert tpl["endpoints"] == {"api.alpha.com": "/", "slotomania.com": "/"}
+    assert tpl["researcher_header"] == ""
+
+    seen = []
+
+    class _MockClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def get(self, url: str, headers=None):
+            seen.append((url, dict(headers or {})))
+            return SimpleNamespace(
+                status_code=200,
+                headers={
+                    "Access-Control-Allow-Origin": UNTRUSTED_POC_ORIGIN,
+                    "Access-Control-Allow-Credentials": "true",
+                    "Content-Type": "application/json",
+                },
+                text='{"email": "test@example.com"}',
+            )
+
+    monkeypatch.setattr(bounty_vault_generator, "create_guarded_httpx_client", lambda **kw: _MockClient())
+    cfg_path = out_dir / "auth_verify.local.json"
+    cfg_path.write_text(
+        json.dumps(
+            {
+                "researcher_header": "X-Bug-Bounty: HackerOne-user",
+                "auth_cookies": {"slotomania.com": "sid=supersecret_cookie"},
+                "auth_headers": {},
+                "endpoints": {"slotomania.com": "/api/profile"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc_live = bounty_vault_generator.main(
+        [
+            "--disclosures-dir",
+            str(disc_dir),
+            "--out",
+            str(out_dir),
+            "--verify-live",
+            "--program",
+            "playtika",
+            "--auth-config",
+            str(cfg_path),
+        ]
+    )
+    assert rc_live == 0
+    assert len(seen) == 1
+    assert seen[0][0] == "https://slotomania.com/api/profile"
+    assert seen[0][1]["Cookie"] == "sid=supersecret_cookie"
+    assert seen[0][1]["X-Bug-Bounty"] == "HackerOne-user"
+
+    queue_text = (out_dir / "VAULT_LAUNCH_QUEUE.json").read_text(encoding="utf-8")
+    assert "supersecret_cookie" not in queue_text
+    queue = json.loads(queue_text)
+    assert len(queue["launch_queue"]) == 2
+    assert queue["live_verification"]["targets_checked"] == 1
+    assert queue["live_verification"]["cors_poc_summary"]["exploitable_auth_cors_count"] == 1
+
+
+
