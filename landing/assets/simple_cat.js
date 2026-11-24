@@ -649,12 +649,24 @@
             <!-- Cat Head Inside Helmet -->
             <ellipse cx="32" cy="23" rx="12" ry="10" fill="#090d16" />
 
-            <!-- Cute Eyes -->
-            <g class="cat-eyes">
+            <!-- Cute Eyes & Mood Overlays -->
+            <g class="cat-eyes cat-eyes-normal">
                 <ellipse cx="27" cy="22" rx="2.5" ry="3.5" fill="#10b981" />
                 <circle cx="28" cy="21" r="1" fill="#ffffff" />
                 <ellipse cx="37" cy="22" rx="2.5" ry="3.5" fill="#10b981" />
                 <circle cx="38" cy="21" r="1" fill="#ffffff" />
+            </g>
+            <g class="cat-eyes-happy" aria-hidden="true">
+                <path d="M24 23 Q27 18.5 30 23" stroke="#34d399" stroke-width="2.2" stroke-linecap="round" fill="none" />
+                <path d="M34 23 Q37 18.5 40 23" stroke="#34d399" stroke-width="2.2" stroke-linecap="round" fill="none" />
+            </g>
+            <g class="cat-eyes-radar" aria-hidden="true">
+                <rect x="23" y="20" width="18" height="4" rx="2" fill="#083344" stroke="#06b6d4" stroke-width="1" />
+                <rect class="cat-radar-sweep" x="24" y="21" width="6" height="2" rx="1" fill="#38bdf8" />
+            </g>
+            <g class="cat-eyes-alert" aria-hidden="true">
+                <polygon points="24,20 30,22.5 24,24" fill="#f59e0b" />
+                <polygon points="40,20 34,22.5 40,24" fill="#f59e0b" />
             </g>
 
             <!-- Nose and Mouth -->
@@ -1437,19 +1449,97 @@
         "Forgotten Black Friday subdomains are attacker catnip! ⚠️",
         "Click 🎯 LASER below to test my orbital thrusters!",
         "Click 👾 PATROL to zap rogue DNS threats!",
-        "Monthly PDF audits make client retainers invincible! 💼",
+        "Co-branded PDF audits run 100% in browser RAM—zero server storage! 💼",
         "HSTS forces armored HTTPS trucks for all visitors! 🚚",
         "DNS over HTTPS keeps your lookups 100% secret! 🔒"
     ];
 
+    const PAGE_QUIPS = {
+        index: [
+            "Drop any domain into the DoH terminal—100% client-side, zero server logs! 🛰️",
+            "Want the 60-second nickel tour? Hit 🗺️ Tour down on the Space Station dock!"
+        ],
+        labs: [
+            "Welcome to Security Labs! 1,750+ CISA KEVs and 52 takeover signatures loaded locally. 🧪",
+            "Click any node in the Subdomain Takeover tree to trace the exact DNS hijack path! 🎯"
+        ],
+        fleet: [
+            "Multi-domain fleet audits export with WebCrypto SHA-256 integrity hashes! 🔐"
+        ],
+        audit: [
+            "Every DNS check here resolves directly via RFC 8484 DoH—no proxy middleman! 🛡️"
+        ],
+        benchmark: [
+            "All latency & coverage numbers here come straight from reproducible local runs! ⚡"
+        ],
+        portals: [
+            "Agency sample portals show how co-branded white-label deliverables look for clients! 💼"
+        ],
+        about: [
+            "Built sovereign and local-first from Missoula, MT—zero cloud bloat! 🚀"
+        ]
+    };
+
+    const SECTION_QUIPS = {
+        "audit-terminal": "Enter any domain above—DoH queries resolve right inside your browser tab! 🛰️",
+        "sentinels": "Each sentinel watches a different perimeter layer: DNS, dangling CNAMEs, DMARC, and MX. 🛡️",
+        "security-labs": "The Security Labs page packs KEV+EPSS radar, takeover PoCs, and batch fleet scoring! 🧪",
+        "open-source-proof": "Plug Orbit-Security@v1 into GitHub Actions to stream SARIF 2.1.0 alerts straight to Code Scanning! ⚙️",
+        "simple-cat": "Pick any acronym card below for a plain-English analogy clients actually get! 📖",
+        "pricing": "Self-serve browser audits stay free—optional fleet tiers scale when agencies want automation. 💎",
+        "kev-epss-radar": "CISA KEV + 30-day FIRST EPSS scores pre-joined for sub-5ms client-side search! 📡",
+        "takeover-poc-playground": "52 cloud providers across 76 CNAME fingerprints—plus 1-click DNS cleanup commands! 🎯",
+        "fleet-sentinel-cockpit": "Audit a whole client roster in one batch and sign the JSON export with WebCrypto SHA-256! 🔐"
+    };
+
+    function detectOrbitPageKey() {
+        const path = (window.location && window.location.pathname ? window.location.pathname : '').toLowerCase();
+        if (path.includes('labs')) return 'labs';
+        if (path.includes('fleet')) return 'fleet';
+        if (path.includes('audit')) return 'audit';
+        if (path.includes('benchmark')) return 'benchmark';
+        if (path.includes('portals')) return 'portals';
+        if (path.includes('about')) return 'about';
+        if (path.includes('signup')) return 'signup';
+        if (path.includes('ghostdns')) return 'ghostdns';
+        if (path.includes('stealthbridge')) return 'stealthbridge';
+        return 'index';
+    }
+
+    function getContextualQuip() {
+        const viewportMid = window.innerHeight * 0.45;
+        const sectionIds = Object.keys(SECTION_QUIPS);
+        for (let i = 0; i < sectionIds.length; i++) {
+            const el = document.getElementById(sectionIds[i]);
+            if (!el) continue;
+            const rect = el.getBoundingClientRect();
+            if (rect.top <= viewportMid && rect.bottom >= viewportMid) {
+                if (Math.random() < 0.7) {
+                    return SECTION_QUIPS[sectionIds[i]];
+                }
+                break;
+            }
+        }
+        const pagePool = PAGE_QUIPS[detectOrbitPageKey()] || [];
+        const combined = pagePool.length > 0 ? pagePool.concat(QUIPS.slice(0, 4)) : QUIPS;
+        return combined[Math.floor(Math.random() * combined.length)];
+    }
+
     const copilot = {
         state: 'docked', // 'docked' | 'floating' | 'laser' | 'patrol' | 'tour' | 'treats'
+        mood: 'normal', // 'normal' | 'happy' | 'radar' | 'alert' | 'sleeping'
+        moodTimer: null,
+        idleSleepTimer: null,
         x: window.innerWidth - 180,
         y: window.innerHeight - 140,
         vx: 0,
         vy: 0,
         rot: 0,
         bobAngle: 0,
+        tourTargetX: window.innerWidth - 220,
+        tourTargetY: 190,
+        tourTargetEl: null,
+        tourSteps: null,
         isDragging: false,
         dragStartX: 0,
         dragStartY: 0,
@@ -1516,6 +1606,20 @@
         `;
         document.body.appendChild(recBannerEl);
 
+        // 2c. Guided Tour Tactical Spotlight Overlay
+        const spotlightEl = document.createElement("div");
+        spotlightEl.id = "astro-tour-spotlight";
+        spotlightEl.className = "astro-tour-spotlight hidden";
+        spotlightEl.setAttribute("aria-hidden", "true");
+        spotlightEl.innerHTML = `
+            <span class="spotlight-corner tl"></span>
+            <span class="spotlight-corner tr"></span>
+            <span class="spotlight-corner bl"></span>
+            <span class="spotlight-corner br"></span>
+            <span id="astro-spotlight-label" class="spotlight-label">TARGET LOCKED</span>
+        `;
+        document.body.appendChild(spotlightEl);
+
         // 3. Independent Fixed Viewport Speech Bubble (Never tilts with cat, never clips off-screen)
         const bubbleEl = document.createElement("div");
         bubbleEl.id = "astro-speech-bubble";
@@ -1527,9 +1631,20 @@
                 <button id="astro-bubble-close" class="astro-bubble-close" title="Dismiss">✕</button>
             </div>
             <div id="astro-bubble-text" class="astro-bubble-text">Mission ready! Toss me into zero-G! 🐾</div>
-            <div id="astro-tour-controls" class="hidden mt-2 pt-1.5 border-t border-emerald-500/30 flex items-center justify-between gap-2">
-                <button type="button" id="tour-next-btn" class="px-2.5 py-1 rounded bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-mono text-[10px] font-bold cursor-pointer transition-all shadow-sm">Next ➔</button>
-                <button type="button" id="tour-exit-btn" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-[10px] cursor-pointer transition-all">✕ Exit Tour</button>
+            <div id="astro-reaction-controls" class="hidden mt-2 pt-1.5 border-t border-emerald-500/30 flex items-center justify-between gap-2">
+                <button type="button" id="bubble-decode-finding-btn" data-term="dmarc" class="w-full px-2.5 py-1.5 rounded bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/50 text-cyan-200 font-mono text-[10px] font-bold cursor-pointer transition-all">📖 Decode Finding</button>
+            </div>
+            <div id="astro-tour-controls" class="hidden mt-2 pt-1.5 border-t border-emerald-500/30 flex flex-col gap-1.5">
+                <div class="flex items-center justify-between gap-2">
+                    <div id="tour-step-pips" class="flex items-center gap-1.5"></div>
+                    <span id="tour-step-counter" class="text-[9px] font-mono text-slate-400">1/6</span>
+                </div>
+                <div class="flex items-center justify-between gap-1.5">
+                    <button type="button" id="tour-prev-btn" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-200 font-mono text-[10px] font-bold cursor-pointer transition-all">← Back</button>
+                    <button type="button" id="tour-next-btn" class="flex-1 px-2.5 py-1 rounded bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-mono text-[10px] font-bold cursor-pointer transition-all shadow-sm">Next ➔</button>
+                    <button type="button" id="tour-exit-btn" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-[10px] cursor-pointer transition-all">✕ Exit</button>
+                </div>
+                <a id="tour-action-btn" href="#" class="hidden w-full px-2.5 py-1.5 rounded bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/60 text-cyan-200 font-mono text-[10px] font-bold text-center transition-all">Continue in Security Labs →</a>
             </div>
             <div id="astro-clip-controls" class="hidden mt-2.5 pt-2 border-t border-emerald-500/30 flex flex-col gap-1.5">
                 <div class="flex items-center gap-1.5">
@@ -1579,6 +1694,7 @@
             <div id="space-station-pod" class="relative group cursor-pointer flex items-center justify-center p-1 rounded-2xl bg-slate-950/90 border-2 border-emerald-500 shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:border-emerald-400 hover:shadow-[0_0_35px_rgba(16,185,129,0.55)] transition-all backdrop-blur-md" style="box-shadow: 4px 4px 0px #064e3b;" title="Astro-Cat Orbital Space Station">
                 <div id="dock-avatar-btn" class="relative flex-shrink-0 cursor-pointer min-w-[56px] min-h-[48px] flex items-center justify-center">
                     ${getSpaceStationSVG(76, 56)}
+                    <span id="station-zzz" class="station-zzz hidden" aria-hidden="true">zZz</span>
                 </div>
                 <span id="station-beacon-led" class="absolute -top-1.5 -right-1 flex h-3 w-3 pointer-events-none">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -1950,6 +2066,13 @@
         }
 
         // Tour speech bubble buttons
+        const tourPrevBtn = document.getElementById("tour-prev-btn");
+        if (tourPrevBtn) {
+            tourPrevBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                prevTourStep();
+            });
+        }
         const tourNextBtn = document.getElementById("tour-next-btn");
         if (tourNextBtn) {
             tourNextBtn.addEventListener("click", (e) => {
@@ -1962,6 +2085,15 @@
             tourExitBtn.addEventListener("click", (e) => {
                 e.stopPropagation();
                 exitSiteTour();
+            });
+        }
+        const decodeFindingBtn = document.getElementById("bubble-decode-finding-btn");
+        if (decodeFindingBtn) {
+            decodeFindingBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const term = decodeFindingBtn.getAttribute("data-term") || "dmarc";
+                hideSpeechBubble();
+                showSimpleCatDialog(term);
             });
         }
 
@@ -2025,11 +2157,27 @@
             }
         }, true);
 
-        // Escape or L key stops laser / tour / treats
+        // Escape / L / Tour Arrow key bindings + Idle wake tracking
+        window.addEventListener("pointerdown", () => resetIdleSleepTimer(), { passive: true });
         window.addEventListener("keydown", (e) => {
+            resetIdleSleepTimer();
+            const activeTag = document.activeElement?.tagName;
+            const inEditable = ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag);
             if (e.key === "Escape" || e.key === "l" || e.key === "L") {
                 if (copilot.laserActive) {
                     stopLaserChase();
+                }
+            }
+            if (copilot.state === 'tour' && !inEditable) {
+                if (e.key === "ArrowRight" || e.key === "Enter") {
+                    e.preventDefault();
+                    nextTourStep();
+                    return;
+                }
+                if (e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    prevTourStep();
+                    return;
                 }
             }
             if (e.key === "Escape") {
@@ -2149,6 +2297,47 @@
         playBoing();
         copilotEl.classList.add("hidden");
         dockEl.classList.remove("opacity-50");
+        setVisorMood('normal');
+        resetIdleSleepTimer();
+    }
+
+    function setVisorMood(mood = 'normal', revertMs = 0) {
+        const valid = ['normal', 'happy', 'radar', 'alert', 'sleeping'];
+        const nextMood = valid.includes(mood) ? mood : 'normal';
+        copilot.mood = nextMood;
+        clearTimeout(copilot.moodTimer);
+        if (copilotEl) {
+            copilotEl.setAttribute('data-mood', nextMood);
+        }
+        const pod = document.getElementById("space-station-pod");
+        if (pod) {
+            pod.setAttribute('data-mood', nextMood);
+        }
+        const zzzEl = document.getElementById("station-zzz");
+        if (zzzEl) {
+            if (nextMood === 'sleeping' && copilot.state === 'docked') {
+                zzzEl.classList.remove("hidden");
+            } else {
+                zzzEl.classList.add("hidden");
+            }
+        }
+        if (revertMs > 0 && nextMood !== 'normal' && nextMood !== 'sleeping') {
+            copilot.moodTimer = setTimeout(() => {
+                setVisorMood('normal');
+            }, revertMs);
+        }
+    }
+
+    function resetIdleSleepTimer() {
+        clearTimeout(copilot.idleSleepTimer);
+        if (copilot.mood === 'sleeping') {
+            setVisorMood('normal');
+        }
+        copilot.idleSleepTimer = setTimeout(() => {
+            if (copilot.state === 'docked' && !document.hidden) {
+                setVisorMood('sleeping');
+            }
+        }, 45000);
     }
 
     function petStationCat() {
@@ -2159,13 +2348,15 @@
             const rect = pod.getBoundingClientRect();
             spawnHearts(rect.left + 48, rect.top + 28, 4);
         }
+        setVisorMood('happy', 2600);
+        resetIdleSleepTimer();
         const isMeow = Math.random() > 0.4;
         if (isMeow) {
             playMeow();
         } else {
             playPurr();
         }
-        showSpeechBubble("Purrrrr... Station shields 100%! All orbital sensors nominal! 🐾", 4500, false, "ORBIT STATION // COMMS");
+        showSpeechBubble(getContextualQuip(), 5500, false, "ORBIT STATION // COMMS");
     }
 
     function syncCommandDeckCrtUi() {
@@ -2315,58 +2506,207 @@
     }
 
     // =========================================================================
-    // 6. ASTRO-CAT GUIDED SITE TOUR (AGENCY CONVERSION LANDMARKS)
+    // 6. ASTRO-CAT GUIDED SITE TOUR (TACTICAL SPOTLIGHT + PAGE-AWARE ROUTES)
     // =========================================================================
     const TOUR_STEPS = [
         {
             targetId: "audit-terminal",
-            title: "1/4 🛰️ PASSIVE DOH RADAR",
-            text: "RFC 8484 DNS-over-HTTPS audits run 100% inside your browser. Zero servers, 0ms backend latency, and zero tracing packets!",
+            title: "1/6 🛰️ PASSIVE DOH RADAR",
+            text: "RFC 8484 DNS-over-HTTPS audits run 100% inside your browser—zero backend storage, deterministic DMARC/SPF/CNAME grading, and instant co-branded PDFs.",
             btnText: "Next: Sentinels ➔"
         },
         {
             targetId: "sentinels",
-            title: "2/4 🛡️ AUTONOMOUS SENTINELS",
-            text: "Our 24/7 sentinels inspect DNS records, dangling CNAMEs, SPF deliverability, and DMARC spoofing before attackers strike!",
-            btnText: "Next: Retainers ➔"
+            title: "2/6 🛡️ AUTONOMOUS SENTINELS",
+            text: "Passive sentinels continuously inspect DNS records, dangling CNAMEs, SPF deliverability, and DMARC spoofing before attackers strike.",
+            btnText: "Next: Security Labs ➔"
         },
         {
-            targetId: "pricing",
-            title: "3/4 💎 AGENCY RETAINERS & ROI",
-            text: "Agencies package these verified audits into $250–$1,500/mo high-margin recurring client care plans. Instant MRR boost!",
+            targetId: "security-labs",
+            title: "3/6 🧪 INTERACTIVE SECURITY LABS",
+            text: "Jump into client-side sandboxes for CISA KEV + EPSS prioritization, 52-provider Subdomain Takeover PoCs, and multi-domain Fleet scoring.",
+            btnText: "Next: CI/CD Proof ➔"
+        },
+        {
+            targetId: "open-source-proof",
+            title: "4/6 ⚙️ OPEN-SOURCE & CI/CD PROOF",
+            text: "Add CmfH009/Orbit-Security@v1 to GitHub Actions to emit SARIF 2.1.0 findings straight into GitHub Code Scanning, backed by reproducible benchmarks.",
             btnText: "Next: Jargon Decoder ➔"
         },
         {
             targetId: "simple-cat",
-            title: "4/4 🐱 SIMPLE CAT JARGON DECODER",
-            text: "We translate complex CVEs, DNS, and header policies into plain-English stories non-technical clients understand! Ready to explore! 🐾",
-            btnText: "🎉 Finish Tour!"
+            title: "5/6 🐱 SIMPLE CAT JARGON DECODER",
+            text: "Translates DMARC, DNSSEC, HSTS, and takeover risks into plain-English analogies that non-technical clients immediately understand.",
+            btnText: "Next: Pricing ➔"
+        },
+        {
+            targetId: "pricing",
+            title: "6/6 💎 TRANSPARENT AGENCY PRICING",
+            text: "Self-serve browser audits stay free forever—with straightforward optional fleet tiers when agencies want automated monitoring and white-label portals.",
+            btnText: "🎉 Finish Tour!",
+            actionLabel: "Continue Tour in Security Labs →",
+            actionHref: "labs.html?tour=1"
         }
     ];
 
+    const TOUR_ROUTES = {
+        index: TOUR_STEPS,
+        labs: [
+            {
+                targetId: "kev-epss-radar",
+                title: "1/3 📡 CISA KEV + EPSS RADAR",
+                text: "1,750+ Known Exploited Vulnerabilities pre-joined with FIRST 30-day EPSS weaponization scores—searchable in <5ms completely offline in-browser.",
+                btnText: "Next: Takeover Lab ➔"
+            },
+            {
+                targetId: "takeover-poc-playground",
+                title: "2/3 🎯 SUBDOMAIN TAKEOVER LAB",
+                text: "Simulate 52 cloud provider signatures across 76 CNAME fingerprints with an animated 5-node attack tree and copy-paste DNS remediation.",
+                btnText: "Next: Fleet Portal ➔"
+            },
+            {
+                targetId: "fleet-sentinel-cockpit",
+                title: "3/3 🛰️ ZERO-KNOWLEDGE FLEET",
+                text: "Audit multiple domains in one batch with WebCrypto SHA-256 signed JSON exports—zero domain lists ever leave your browser.",
+                btnText: "🎉 Finish Labs Tour!",
+                actionLabel: "Back to Main Radar →",
+                actionHref: "index.html"
+            }
+        ]
+    };
+
     let currentTourStep = 0;
+    let tourSettleRaf = null;
+    let tourScrollBound = false;
+
+    function resolveActiveTourSteps() {
+        const pageKey = detectOrbitPageKey();
+        if (TOUR_ROUTES[pageKey]) {
+            return TOUR_ROUTES[pageKey];
+        }
+        const discovered = [];
+        document.querySelectorAll('main section[id], section[id]').forEach((sec) => {
+            if (!sec.id || discovered.length >= 4) return;
+            const heading = sec.querySelector('h1, h2, h3');
+            const label = heading ? heading.textContent.trim().slice(0, 48) : sec.id;
+            discovered.push({
+                targetId: sec.id,
+                title: `${discovered.length + 1}/? 🛰️ ${label.toUpperCase()}`,
+                text: `Inspecting ${label} on this page. Use Back / Next or arrow keys to step through active sections.`,
+                btnText: "Next ➔"
+            });
+        });
+        if (discovered.length > 0) {
+            return discovered.map((s, idx) => ({
+                ...s,
+                title: s.title.replace('/?', `/${discovered.length}`),
+                btnText: idx === discovered.length - 1 ? "🎉 Finish Tour!" : "Next ➔",
+                actionLabel: idx === discovered.length - 1 ? "Open Main Guided Tour →" : undefined,
+                actionHref: idx === discovered.length - 1 ? (['benchmark', 'portals', 'ghostdns', 'stealthbridge'].includes(pageKey) ? "../index.html?tour=1" : "index.html?tour=1") : undefined
+            }));
+        }
+        const homeHref = ['benchmark', 'portals', 'ghostdns', 'stealthbridge'].includes(pageKey)
+            ? "../index.html?tour=1"
+            : "index.html?tour=1";
+        return [
+            {
+                targetId: null,
+                title: "1/1 🛰️ ORBIT TOUR ROUTE",
+                text: "The full 6-stop guided tour runs on the main Radar homepage and Security Labs. Jump right back to start it!",
+                btnText: "🎉 Done",
+                actionLabel: "Launch Main Guided Tour →",
+                actionHref: homeHref
+            }
+        ];
+    }
+
+    function hideTourSpotlight() {
+        const spot = document.getElementById("astro-tour-spotlight");
+        if (spot) spot.classList.add("hidden");
+        copilot.tourTargetEl = null;
+        if (tourSettleRaf !== null) {
+            cancelAnimationFrame(tourSettleRaf);
+            tourSettleRaf = null;
+        }
+    }
+
+    function syncTourSpotlight() {
+        const spot = document.getElementById("astro-tour-spotlight");
+        if (!spot) return;
+        if (copilot.state !== 'tour' || !copilot.tourTargetEl) {
+            spot.classList.add("hidden");
+            return;
+        }
+        const rect = copilot.tourTargetEl.getBoundingClientRect();
+        const pad = 10;
+        const viewTop = Math.max(78, rect.top - pad);
+        const viewLeft = Math.max(10, rect.left - pad);
+        const maxBottom = Math.min(window.innerHeight - 10, rect.bottom + pad);
+        const maxRight = Math.min(window.innerWidth - 10, rect.right + pad);
+        const clampedW = Math.max(120, maxRight - viewLeft);
+        const clampedH = Math.max(80, maxBottom - viewTop);
+
+        spot.style.top = `${Math.round(viewTop)}px`;
+        spot.style.left = `${Math.round(viewLeft)}px`;
+        spot.style.width = `${Math.round(clampedW)}px`;
+        spot.style.height = `${Math.round(clampedH)}px`;
+        spot.classList.remove("hidden");
+
+        // Gently keep Astro-Cat parked clear of the spotlight center without overriding smooth glide
+        const preferRight = window.innerWidth > 640;
+        if (preferRight) {
+            const idealX = viewLeft + clampedW + 24 < window.innerWidth - 110
+                ? viewLeft + clampedW + 24
+                : Math.max(24, viewLeft - 96);
+            const idealY = Math.max(84, Math.min(window.innerHeight - 160, viewTop + 24));
+            copilot.tourTargetX = Math.min(window.innerWidth - 95, Math.max(24, idealX));
+            copilot.tourTargetY = idealY;
+        } else {
+            copilot.tourTargetX = 20;
+            copilot.tourTargetY = viewTop > window.innerHeight * 0.48 ? 96 : Math.min(window.innerHeight - 160, viewTop + Math.min(clampedH, 240));
+        }
+    }
+
+    function bindTourSpotlightTracking() {
+        if (tourScrollBound) return;
+        tourScrollBound = true;
+        window.addEventListener("scroll", () => {
+            if (copilot.state === 'tour') syncTourSpotlight();
+        }, { passive: true });
+        window.addEventListener("resize", () => {
+            if (copilot.state === 'tour') syncTourSpotlight();
+        }, { passive: true });
+    }
 
     function startSiteTour() {
         if (copilot.state === 'docked') {
             launchAstroCatIntoZeroG();
         }
         clearActiveGameModes('tour');
+        bindTourSpotlightTracking();
         copilot.state = 'tour';
+        copilot.tourSteps = resolveActiveTourSteps();
         const tourBtn = document.getElementById("hud-tour-btn");
         if (tourBtn) tourBtn.classList.add("astro-hud-btn-active");
+        setVisorMood('radar');
         currentTourStep = 0;
         playPowerUp();
         executeTourStep(0);
     }
 
     function executeTourStep(stepIndex) {
-        if (stepIndex >= TOUR_STEPS.length) {
+        const steps = copilot.tourSteps && copilot.tourSteps.length ? copilot.tourSteps : resolveActiveTourSteps();
+        copilot.tourSteps = steps;
+
+        if (stepIndex < 0) stepIndex = 0;
+        if (stepIndex >= steps.length) {
             finishSiteTour();
             return;
         }
         currentTourStep = stepIndex;
-        const step = TOUR_STEPS[stepIndex];
-        const targetEl = document.getElementById(step.targetId);
+        const step = steps[stepIndex];
+        const targetEl = step.targetId ? document.getElementById(step.targetId) : null;
+        copilot.tourTargetEl = targetEl;
 
         if (targetEl) {
             targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2374,22 +2714,77 @@
 
         const targetX = window.innerWidth > 640 ? Math.min(window.innerWidth - 220, Math.max(80, window.innerWidth * 0.7)) : 24;
         const targetY = window.innerWidth > 640 ? 190 : 210;
-        copilot.x = targetX;
-        copilot.y = targetY;
-        copilot.vx = 0;
-        copilot.vy = 0;
-        copilot.rot = 0;
+        copilot.tourTargetX = targetX;
+        copilot.tourTargetY = targetY;
+
+        const spotLabel = document.getElementById("astro-spotlight-label");
+        if (spotLabel) {
+            spotLabel.textContent = step.title.replace(/^\d+\/\d+\s*/, '');
+        }
+
+        // Track smooth-scroll settling for ~650ms so spotlight & glide target stay locked
+        if (tourSettleRaf !== null) cancelAnimationFrame(tourSettleRaf);
+        const startTs = performance.now();
+        const settleTick = (now) => {
+            if (copilot.state !== 'tour') return;
+            syncTourSpotlight();
+            if (now - startTs < 680) {
+                tourSettleRaf = requestAnimationFrame(settleTick);
+            } else {
+                tourSettleRaf = null;
+            }
+        };
+        syncTourSpotlight();
+        tourSettleRaf = requestAnimationFrame(settleTick);
 
         spawnSparks(copilot.x + 32, copilot.y + 54, 8, '#38bdf8');
+        playThruster();
         playChirp();
 
         const bubbleTitle = document.getElementById("astro-bubble-title");
         if (bubbleTitle) bubbleTitle.textContent = step.title;
 
+        const prevBtn = document.getElementById("tour-prev-btn");
+        if (prevBtn) prevBtn.disabled = (stepIndex === 0);
+
         const nextBtn = document.getElementById("tour-next-btn");
         if (nextBtn) nextBtn.textContent = step.btnText;
 
+        const counterEl = document.getElementById("tour-step-counter");
+        if (counterEl) counterEl.textContent = `${stepIndex + 1}/${steps.length}`;
+
+        const pipsEl = document.getElementById("tour-step-pips");
+        if (pipsEl) {
+            pipsEl.innerHTML = steps.map((_, idx) =>
+                `<button type="button" class="tour-pip ${idx === stepIndex ? 'active' : ''}" data-tour-step="${idx}" aria-label="Go to step ${idx + 1}"></button>`
+            ).join('');
+            pipsEl.querySelectorAll('.tour-pip').forEach((pip) => {
+                pip.addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    const idx = parseInt(pip.getAttribute('data-tour-step'), 10);
+                    if (!isNaN(idx)) executeTourStep(idx);
+                });
+            });
+        }
+
+        const actionBtn = document.getElementById("tour-action-btn");
+        if (actionBtn) {
+            if (step.actionHref && step.actionLabel) {
+                actionBtn.href = step.actionHref;
+                actionBtn.textContent = step.actionLabel;
+                actionBtn.classList.remove("hidden");
+            } else {
+                actionBtn.classList.add("hidden");
+            }
+        }
+
         showSpeechBubble(step.text, 60000, true, step.title);
+    }
+
+    function prevTourStep() {
+        if (currentTourStep > 0) {
+            executeTourStep(currentTourStep - 1);
+        }
     }
 
     function nextTourStep() {
@@ -2398,6 +2793,8 @@
 
     function finishSiteTour() {
         clearActiveGameModes();
+        hideTourSpotlight();
+        setVisorMood('happy', 3200);
         copilot.state = 'floating';
         const tourControls = document.getElementById("astro-tour-controls");
         if (tourControls) tourControls.classList.add("hidden");
@@ -2417,6 +2814,8 @@
 
     function exitSiteTour() {
         clearActiveGameModes();
+        hideTourSpotlight();
+        setVisorMood('normal');
         copilot.state = 'floating';
         const tourControls = document.getElementById("astro-tour-controls");
         if (tourControls) tourControls.classList.add("hidden");
@@ -2475,6 +2874,9 @@
             if (tourHudBtn) tourHudBtn.classList.remove("astro-hud-btn-active");
             const tourControls = document.getElementById("astro-tour-controls");
             if (tourControls) tourControls.classList.add("hidden");
+            const actionBtn = document.getElementById("tour-action-btn");
+            if (actionBtn) actionBtn.classList.add("hidden");
+            hideTourSpotlight();
         }
 
         // 5. Arcade Defense Mode cleanup
@@ -2587,6 +2989,8 @@
             catBody.classList.add("astro-flip");
         }
 
+        setVisorMood('happy', 2600);
+        resetIdleSleepTimer();
         const isMeow = Math.random() > 0.4;
         if (isMeow) {
             playMeow();
@@ -2595,8 +2999,67 @@
         }
 
         spawnSparks(copilot.x + 32, copilot.y + 20, 6, '#34d399');
-        const randomQuip = QUIPS[Math.floor(Math.random() * QUIPS.length)];
-        showSpeechBubble(randomQuip, 6000, false, "ASTRO-CAT // PURR");
+        showSpeechBubble(getContextualQuip(), 6000, false, "ASTRO-CAT // PURR");
+    }
+
+    function reactToScan(audit) {
+        if (!audit || typeof audit !== 'object') return;
+        resetIdleSleepTimer();
+
+        const domain = audit.domain || 'target';
+        const grade = audit.grade || 'B';
+        const findings = Array.isArray(audit.findings) ? audit.findings : [];
+        const hasFail = findings.some(f => f.status === 'FAIL');
+        const hasWarn = findings.some(f => f.status === 'WARN');
+
+        let termKey = 'doh';
+        let termLabel = 'DoH';
+        if (audit.takeoverWarning || findings.some(f => f.status !== 'PASS' && /cname|takeover/i.test(`${f.title || ''} ${f.detail || ''}`))) {
+            termKey = 'cname';
+            termLabel = 'Dangling CNAME';
+        } else if (findings.some(f => f.status !== 'PASS' && /dmarc/i.test(`${f.title || ''} ${f.detail || ''}`))) {
+            termKey = 'dmarc';
+            termLabel = 'DMARC';
+        } else if (findings.some(f => f.status !== 'PASS' && /spf/i.test(`${f.title || ''} ${f.detail || ''}`))) {
+            termKey = 'spf';
+            termLabel = 'SPF';
+        } else if (findings.some(f => f.status !== 'PASS' && /\bmx\b/i.test(`${f.title || ''} ${f.detail || ''}`))) {
+            termKey = 'mx';
+            termLabel = 'MX Records';
+        }
+
+        const isCritical = grade === 'F' || Boolean(audit.takeoverWarning) || hasFail;
+        const isModerate = !isCritical && (grade === 'C' || grade === 'D' || hasWarn);
+
+        let message;
+        if (isCritical) {
+            setVisorMood('alert', 5500);
+            spawnSparks(copilot.x + 32, copilot.y + 32, 12, '#f59e0b');
+            message = `⚠️ ${domain} scored Grade ${grade}. Top exposure: ${termLabel}—click below to decode the fix in plain English.`;
+        } else if (isModerate) {
+            setVisorMood('alert', 4000);
+            spawnSparks(copilot.x + 32, copilot.y + 32, 8, '#38bdf8');
+            message = `🛰️ ${domain} landed at Grade ${grade}. Hardening ${termLabel} will tighten spoof resistance.`;
+        } else {
+            setVisorMood('happy', 4000);
+            spawnSparks(copilot.x + 32, copilot.y + 32, 10, '#10b981');
+            message = `🐾 ${domain} cleared Grade ${grade} (${audit.score ?? 90}/100)! Zero-knowledge DoH perimeter looks clean.`;
+        }
+
+        if (copilot.state === 'tour' || (typeof defenseState !== 'undefined' && defenseState.active)) {
+            return;
+        }
+
+        const reactionControls = document.getElementById("astro-reaction-controls");
+        const decodeBtn = document.getElementById("bubble-decode-finding-btn");
+        if (decodeBtn) {
+            decodeBtn.setAttribute("data-term", termKey);
+            decodeBtn.textContent = `📖 Decode ${termLabel}`;
+        }
+        showSpeechBubble(message, 11000, false, `ASTRO-CAT // SCAN (${grade})`);
+        if (reactionControls) {
+            reactionControls.classList.remove("hidden");
+        }
     }
 
     function toggleLaserChase() {
@@ -4902,6 +5365,7 @@
         const bubbleTitle = document.getElementById("astro-bubble-title");
         const tourControls = document.getElementById("astro-tour-controls");
         const clipControls = document.getElementById("astro-clip-controls");
+        const reactionControls = document.getElementById("astro-reaction-controls");
         if (!bubble || !bubbleText) return;
 
         bubbleText.innerText = text;
@@ -4942,6 +5406,14 @@
             }
         }
 
+        if (reactionControls) {
+            if (customTitle && customTitle.includes("SCAN (")) {
+                reactionControls.classList.remove("hidden");
+            } else {
+                reactionControls.classList.add("hidden");
+            }
+        }
+
         clearTimeout(copilot.speechTimer);
         if (duration > 0 && isFinite(duration)) {
             copilot.speechTimer = setTimeout(() => {
@@ -4953,7 +5425,9 @@
     function hideSpeechBubble() {
         const bubble = document.getElementById("astro-speech-bubble");
         const clipControls = document.getElementById("astro-clip-controls");
+        const reactionControls = document.getElementById("astro-reaction-controls");
         if (clipControls) clipControls.classList.add("hidden");
+        if (reactionControls) reactionControls.classList.add("hidden");
         if (bubble) bubble.classList.add("hidden");
     }
 
@@ -5122,9 +5596,24 @@
                 copilot.y += copilot.vy;
 
             } else if (copilot.state === 'tour') {
-                copilot.vx *= 0.85;
-                copilot.vy *= 0.85;
-                copilot.rot *= 0.9;
+                const tx = typeof copilot.tourTargetX === 'number' ? copilot.tourTargetX : copilot.x;
+                const ty = typeof copilot.tourTargetY === 'number' ? copilot.tourTargetY : copilot.y;
+                const dx = tx - copilot.x;
+                const dy = ty - copilot.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist > 6) {
+                    copilot.vx += dx * 0.08;
+                    copilot.vy += dy * 0.08;
+                    copilot.vx *= 0.72;
+                    copilot.vy *= 0.72;
+                    copilot.rot += (Math.max(-18, Math.min(18, copilot.vx * 1.4)) - copilot.rot) * 0.2;
+                    if (Math.random() > 0.45) spawnSparks(copilot.x + 32, copilot.y + 54, 1, '#38bdf8');
+                } else {
+                    copilot.vx *= 0.5;
+                    copilot.vy *= 0.5;
+                    copilot.rot *= 0.85;
+                }
                 copilot.x += copilot.vx;
                 copilot.y += copilot.vy;
 
@@ -5197,15 +5686,21 @@
                 const forceHudAbove = (visualY > window.innerHeight - 130) || (bubbleVisible && visualY < bubbleH + 32);
 
                 if (hud) {
+                    if (copilot.state === 'tour') {
+                        hud.classList.add("hidden");
+                    } else {
+                        hud.classList.remove("hidden");
+                    }
                     if (forceHudAbove) {
                         hud.classList.add("astro-hud-above");
                     } else {
                         hud.classList.remove("astro-hud-above");
                     }
 
-                    // Keep HUD buttons within screen boundaries
+                    // Keep HUD buttons within screen boundaries (full measured half-width)
                     const catCenterX = copilot.x + 32;
-                    const hudHalfWidth = Math.min(140, (hud.offsetWidth || 270) / 2);
+                    const measuredHalf = (hud.offsetWidth || 270) / 2;
+                    const hudHalfWidth = Math.min((window.innerWidth - 24) / 2, measuredHalf);
                     let hudOffset = 0;
                     if (catCenterX - hudHalfWidth < 12) {
                         hudOffset = 12 - (catCenterX - hudHalfWidth);
@@ -5248,6 +5743,23 @@
                     bubble.style.transform = `translate3d(${bubbleX}px, ${bubbleY}px, 0px)`;
                 }
             }
+        } else {
+            // Docked Speech Bubble Positioning (keeps petStationCat and docked reactToScan cleanly anchored above #simple-cat-dock)
+            const bubble = document.getElementById("astro-speech-bubble");
+            if (bubble && !bubble.classList.contains("hidden") && dockEl) {
+                const dockRect = dockEl.getBoundingClientRect();
+                const bubbleW = bubble.offsetWidth || 280;
+                const bubbleH = bubble.offsetHeight || 96;
+                const anchorX = dockRect.left + Math.min(48, dockRect.width / 2);
+                const bubbleX = Math.max(16, Math.min(window.innerWidth - bubbleW - 16, anchorX - (bubbleW / 2)));
+                const bubbleY = Math.max(12, Math.min(window.innerHeight - bubbleH - 12, dockRect.top - bubbleH - 14));
+                const tail = document.getElementById("astro-bubble-tail");
+                if (tail) {
+                    tail.className = "astro-bubble-tail-down";
+                    tail.style.left = `${Math.max(18, Math.min(bubbleW - 18, anchorX - bubbleX))}px`;
+                }
+                bubble.style.transform = `translate3d(${bubbleX}px, ${bubbleY}px, 0px)`;
+            }
         }
 
         // Render Particle Canvas & Active Lasers (Optimized: skips work when idle)
@@ -5255,8 +5767,9 @@
             const hasSparks = copilot.sparks.length > 0;
             const hasLaser = copilot.laserActive && copilot.state !== 'docked';
             const hasPatrol = copilot.patrolActive && copilot.state !== 'docked';
+            const hasTourBeam = copilot.state === 'tour' && Boolean(copilot.tourTargetEl);
 
-            if (!hasSparks && !hasLaser && !hasPatrol) {
+            if (!hasSparks && !hasLaser && !hasPatrol && !hasTourBeam) {
                 if (!fxCanvas._isClean) {
                     fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
                     fxCanvas._isClean = true;
@@ -5268,6 +5781,27 @@
                 const visualY = copilot.y + Math.sin(copilot.bobAngle) * 4;
                 const catVisorX = copilot.x + 32;
                 const catVisorY = visualY + 22;
+
+                // 0. Tour Spotlight Visor Scanner Beam
+                if (hasTourBeam) {
+                    const spot = document.getElementById("astro-tour-spotlight");
+                    if (spot && !spot.classList.contains("hidden")) {
+                        const sr = spot.getBoundingClientRect();
+                        const targetX = Math.max(sr.left, Math.min(sr.right, catVisorX));
+                        const targetY = Math.max(sr.top, Math.min(sr.bottom, catVisorY));
+                        fxCtx.save();
+                        fxCtx.beginPath();
+                        fxCtx.moveTo(catVisorX, catVisorY);
+                        fxCtx.lineTo(targetX, targetY);
+                        fxCtx.strokeStyle = 'rgba(16, 185, 129, 0.55)';
+                        fxCtx.lineWidth = 1.75;
+                        fxCtx.setLineDash([5, 5]);
+                        fxCtx.shadowColor = '#10b981';
+                        fxCtx.shadowBlur = 8;
+                        fxCtx.stroke();
+                        fxCtx.restore();
+                    }
+                }
 
                 // 1. Laser Chase Mode - Active Laser Targeting Line
                 if (copilot.laserActive && copilot.state !== 'docked') {
@@ -5730,7 +6264,7 @@
                 position: fixed !important;
                 top: 0;
                 left: 0;
-                width: 250px;
+                width: 280px;
                 max-width: calc(100vw - 32px);
                 background-color: rgba(15, 23, 42, 0.98);
                 border: 2px solid #10b981;
@@ -5743,6 +6277,110 @@
                 pointer-events: auto;
                 transition: opacity 0.2s;
                 box-sizing: border-box;
+            }
+
+            /* Visor Mood Overlays & Docked Idle zZz */
+            .cat-eyes-happy, .cat-eyes-radar, .cat-eyes-alert {
+                display: none;
+            }
+            #astro-cat-copilot[data-mood="happy"] .cat-eyes-normal,
+            #astro-cat-copilot[data-mood="radar"] .cat-eyes-normal,
+            #astro-cat-copilot[data-mood="alert"] .cat-eyes-normal {
+                display: none;
+            }
+            #astro-cat-copilot[data-mood="happy"] .cat-eyes-happy {
+                display: block;
+            }
+            #astro-cat-copilot[data-mood="radar"] .cat-eyes-radar {
+                display: block;
+            }
+            #astro-cat-copilot[data-mood="alert"] .cat-eyes-alert {
+                display: block;
+            }
+            .cat-radar-sweep {
+                animation: catRadarSweep 0.9s infinite alternate ease-in-out;
+            }
+            @keyframes catRadarSweep {
+                0% { transform: translateX(0px); }
+                100% { transform: translateX(10px); }
+            }
+            .station-zzz {
+                position: absolute;
+                top: -6px;
+                right: 4px;
+                font-family: monospace;
+                font-size: 10px;
+                font-weight: 900;
+                color: #38bdf8;
+                text-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
+                pointer-events: none;
+                animation: floatZzz 2.2s infinite ease-in-out;
+            }
+            .station-zzz.hidden {
+                display: none !important;
+            }
+            @keyframes floatZzz {
+                0%, 100% { transform: translateY(0px) scale(0.9); opacity: 0.55; }
+                50% { transform: translateY(-5px) scale(1.08); opacity: 1; }
+            }
+
+            /* Tactical Guided Tour Spotlight & Progress Pips */
+            #astro-tour-spotlight {
+                position: fixed !important;
+                pointer-events: none !important;
+                z-index: 99975 !important;
+                border-radius: 16px;
+                border: 2px solid rgba(16, 185, 129, 0.85);
+                box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.72), 0 0 28px rgba(16, 185, 129, 0.45);
+                transition: top 0.28s ease, left 0.28s ease, width 0.28s ease, height 0.28s ease, opacity 0.22s ease;
+                box-sizing: border-box;
+            }
+            #astro-tour-spotlight.hidden {
+                display: none !important;
+            }
+            #astro-tour-spotlight .spotlight-corner {
+                position: absolute;
+                width: 14px;
+                height: 14px;
+                border-color: #38bdf8;
+                border-style: solid;
+                border-width: 0;
+            }
+            #astro-tour-spotlight .spotlight-corner.tl { top: -4px; left: -4px; border-top-width: 3px; border-left-width: 3px; border-top-left-radius: 6px; }
+            #astro-tour-spotlight .spotlight-corner.tr { top: -4px; right: -4px; border-top-width: 3px; border-right-width: 3px; border-top-right-radius: 6px; }
+            #astro-tour-spotlight .spotlight-corner.bl { bottom: -4px; left: -4px; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 6px; }
+            #astro-tour-spotlight .spotlight-corner.br { bottom: -4px; right: -4px; border-bottom-width: 3px; border-right-width: 3px; border-bottom-right-radius: 6px; }
+            #astro-tour-spotlight .spotlight-label {
+                position: absolute;
+                top: -12px;
+                left: 14px;
+                padding: 2px 8px;
+                border-radius: 9999px;
+                background: #020617;
+                border: 1px solid #10b981;
+                color: #34d399;
+                font-family: monospace;
+                font-size: 9px;
+                font-weight: bold;
+                letter-spacing: 0.06em;
+                white-space: nowrap;
+                box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+            }
+            .tour-pip {
+                width: 8px;
+                height: 8px;
+                border-radius: 9999px;
+                background: rgba(148, 163, 184, 0.35);
+                border: 1px solid rgba(148, 163, 184, 0.5);
+                cursor: pointer;
+                padding: 0;
+                transition: all 0.2s;
+            }
+            .tour-pip.active {
+                width: 18px;
+                background: #10b981;
+                border-color: #34d399;
+                box-shadow: 0 0 8px rgba(16, 185, 129, 0.7);
             }
             .astro-bubble-tail-down {
                 position: absolute;
@@ -5815,9 +6453,15 @@
                 opacity: 0.85;
                 transition: opacity 0.2s, transform 0.2s;
                 white-space: nowrap;
+                max-width: calc(100vw - 24px);
+                overflow-x: auto;
+                scrollbar-width: none;
                 z-index: 99995;
                 backdrop-filter: blur(8px);
                 -webkit-backdrop-filter: blur(8px);
+            }
+            .astro-hud.hidden {
+                display: none !important;
             }
             .astro-hud.astro-hud-above {
                 top: -44px !important;
@@ -6014,8 +6658,13 @@
         laserChase: toggleLaserChase,
         stopLaser: stopLaserChase,
         startTour: startSiteTour,
+        prevTourStep: prevTourStep,
         nextTourStep: nextTourStep,
         exitTour: exitSiteTour,
+        getTourSteps: resolveActiveTourSteps,
+        setVisorMood: setVisorMood,
+        reactToScan: reactToScan,
+        getContextualQuip: getContextualQuip,
         startTreats: startTreatsGame,
         stopTreats: stopTreatsGame,
         toggleTreats: toggleTreatsGame,
@@ -6126,9 +6775,23 @@
         syncCommandDeckCrtUi();
         bindTactileInteractions();
         initAllScrollIndicators();
+        resetIdleSleepTimer();
 
         if (window.location.hash === '#arcadeDefenseMode' || window.location.hash === '#arcadeDefense') {
             startArcadeDefenseMode();
+        } else if (typeof URLSearchParams !== 'undefined') {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('tour') === '1') {
+                    params.delete('tour');
+                    const cleanQs = params.toString();
+                    const cleanUrl = window.location.pathname + (cleanQs ? '?' + cleanQs : '') + window.location.hash;
+                    if (window.history && window.history.replaceState) {
+                        window.history.replaceState(null, '', cleanUrl);
+                    }
+                    setTimeout(() => startSiteTour(), 450);
+                }
+            } catch (e) {}
         }
     }
 

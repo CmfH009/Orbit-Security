@@ -422,3 +422,29 @@ def test_slice2_labs_split_open_source_proof_and_command_deck():
         for deck_id in ('id="dock-deck-btn"', 'id="crtShaderToggleBtn"', 'id="crt-arcade-shader-canvas"', 'id="cmd-shortcuts-btn"'):
             assert deck_id in cat_js, f"Missing {deck_id} in {base_dir.name}/assets/simple_cat.js"
 
+
+def test_astro_cat_guided_tour_and_scan_reactor():
+    """Verify Astro-Cat tactical spotlight tour, page-aware routes, visor moods, and scan reactor."""
+    for base_dir in (LANDING_DIR, DOCS_DIR):
+        cat_js = (base_dir / "assets/simple_cat.js").read_text(encoding="utf-8")
+        radar_js = (base_dir / "assets/orbit_radar.js").read_text(encoding="utf-8")
+
+        for token in (
+            "astro-tour-spotlight",
+            "TOUR_ROUTES",
+            "labs.html?tour=1",
+            'id="tour-prev-btn"',
+            'id="tour-step-pips"',
+            'id="tour-action-btn"',
+            'id="bubble-decode-finding-btn"',
+            "function reactToScan(",
+            "function setVisorMood(",
+            "PAGE_QUIPS",
+            "SECTION_QUIPS",
+        ):
+            assert token in cat_js, f"Missing {token!r} in {base_dir.name}/assets/simple_cat.js"
+
+        assert "Instant MRR boost!" not in cat_js, f"Stale hype copy found in {base_dir.name}/assets/simple_cat.js"
+        assert "SimpleCat.reactToScan(audit)" in radar_js, f"Missing reactToScan hook in {base_dir.name}/assets/orbit_radar.js"
+        assert "SimpleCat.setVisorMood('radar'" in radar_js, f"Missing visor mood hook in {base_dir.name}/assets/orbit_radar.js"
+

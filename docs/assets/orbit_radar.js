@@ -2167,8 +2167,9 @@ ${agency}`;
         scanBtnText.textContent = 'Auditing...';
         hud.classList.remove('hidden');
         dispatchRadarTelemetry(domain, 'radar_submit', null);
-        if (window.SimpleCat && typeof SimpleCat.playChirp === 'function') {
-            SimpleCat.playChirp();
+        if (window.SimpleCat) {
+            if (typeof SimpleCat.playChirp === 'function') SimpleCat.playChirp();
+            if (typeof SimpleCat.setVisorMood === 'function') SimpleCat.setVisorMood('radar', 12000);
         }
         hud.innerHTML = `
             <div class="p-4 rounded-xl bg-slate-950/80 border border-emerald-500/30 font-mono text-xs text-slate-300 space-y-2">
@@ -2541,6 +2542,7 @@ ${agency}`;
                 }
                 SimpleCat.bindHelperChips();
                 if (SimpleCat.initScrollIndicators) SimpleCat.initScrollIndicators();
+                if (typeof SimpleCat.reactToScan === 'function') SimpleCat.reactToScan(audit);
             }
         } catch (err) {
             console.error('DoH scan error:', err);
@@ -4882,6 +4884,9 @@ ${payload.url}`;
             if (window.SimpleCat && typeof SimpleCat.playBlip === 'function') {
                 SimpleCat.playBlip();
             }
+            if (window.SimpleCat && typeof SimpleCat.setVisorMood === 'function') {
+                SimpleCat.setVisorMood('radar', 2200);
+            }
             if (clamped === 5 && window.SimpleCat && typeof SimpleCat.playPowerUp === 'function') {
                 SimpleCat.playPowerUp();
             }
@@ -4955,6 +4960,9 @@ ${payload.url}`;
             if (window.SimpleCat && typeof SimpleCat.playBlip === 'function') {
                 SimpleCat.playBlip();
             }
+            if (window.SimpleCat && typeof SimpleCat.setVisorMood === 'function') {
+                SimpleCat.setVisorMood('radar', 2200);
+            }
             OrbitAttackTree.render(inst.containerId);
         },
 
@@ -4976,6 +4984,9 @@ ${payload.url}`;
 
             if (window.SimpleCat && typeof SimpleCat.playBlip === 'function') {
                 SimpleCat.playBlip();
+            }
+            if (window.SimpleCat && typeof SimpleCat.setVisorMood === 'function') {
+                SimpleCat.setVisorMood('radar', 2200);
             }
 
             const subInput = document.getElementById('pocSubdomainInput');

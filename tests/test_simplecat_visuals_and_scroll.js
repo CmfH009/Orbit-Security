@@ -189,16 +189,27 @@ test('Mobile touchscreen action drawer (#station-touch-drawer) provides ergonomi
 });
 
 // 7e. ASTRO-CAT GUIDED SITE TOUR
-test('Astro-Cat guided site tour (startTour) defined with 4 conversion landmarks and bubble controls', () => {
+test('Astro-Cat guided site tour (startTour) defined with tactical spotlight, page-aware routes, Back/Next/keys, and clean copy', () => {
     assert(docsCatJs.includes('startSiteTour'), 'Missing startSiteTour');
     assert(docsCatJs.includes('TOUR_STEPS'), 'Missing TOUR_STEPS definition');
+    assert(docsCatJs.includes('TOUR_ROUTES'), 'Missing page-aware TOUR_ROUTES definition');
     assert(docsCatJs.includes('audit-terminal'), 'Tour must visit audit-terminal');
     assert(docsCatJs.includes('sentinels'), 'Tour must visit sentinels');
+    assert(docsCatJs.includes('security-labs'), 'Tour must visit security-labs');
+    assert(docsCatJs.includes('open-source-proof'), 'Tour must visit open-source-proof');
     assert(docsCatJs.includes('pricing'), 'Tour must visit pricing');
     assert(docsCatJs.includes('simple-cat'), 'Tour must visit simple-cat');
+    assert(docsCatJs.includes('kev-epss-radar'), 'Labs tour route must visit kev-epss-radar');
+    assert(!docsCatJs.includes('Instant MRR boost!'), 'Stale hype copy must remain removed from guided tour');
+    assert(docsCatJs.includes('astro-tour-spotlight'), 'Missing #astro-tour-spotlight overlay');
     assert(docsCatJs.includes('id="astro-tour-controls"'), 'Missing astro-tour-controls in speech bubble');
+    assert(docsCatJs.includes('id="tour-prev-btn"'), 'Missing tour-prev-btn');
     assert(docsCatJs.includes('id="tour-next-btn"'), 'Missing tour-next-btn');
     assert(docsCatJs.includes('id="tour-exit-btn"'), 'Missing tour-exit-btn');
+    assert(docsCatJs.includes('id="tour-step-pips"'), 'Missing tour-step-pips');
+    assert(docsCatJs.includes('id="tour-action-btn"'), 'Missing cross-page tour-action-btn');
+    assert(docsCatJs.includes('ArrowRight') && docsCatJs.includes('ArrowLeft'), 'Tour must support ArrowRight/ArrowLeft navigation');
+    assert(docsCatJs.includes('labs.html?tour=1'), 'Tour must support cross-page ?tour=1 handoff');
 });
 
 // 7f. COSMIC TREATS MINI-GAME & TOUCH-SCREEN PETTING
@@ -489,6 +500,17 @@ test('Expandable Command Deck drawer (#dock-deck-btn, CRT Scanlines, [?] Shortcu
     assert(docsCatJs.includes('id="crtShaderToggleBtn"'), 'Missing #crtShaderToggleBtn in Command Deck');
     assert(docsCatJs.includes('id="crtShaderStatusBadge"'), 'Missing #crtShaderStatusBadge in Command Deck');
     assert(docsCatJs.includes('id="cmd-shortcuts-btn"'), 'Missing #cmd-shortcuts-btn in Command Deck');
+});
+
+test('Live Scan Reactor, Visor Moods, and Page/Section-Aware Quips wired across simple_cat.js and orbit_radar.js', () => {
+    assert(docsCatJs.includes('function reactToScan('), 'Missing reactToScan in simple_cat.js');
+    assert(docsCatJs.includes('function setVisorMood('), 'Missing setVisorMood in simple_cat.js');
+    assert(docsCatJs.includes('PAGE_QUIPS') && docsCatJs.includes('SECTION_QUIPS'), 'Missing contextual quip pools');
+    assert(docsCatJs.includes('id="bubble-decode-finding-btn"'), 'Missing 1-click decode finding button');
+    assert(docsCatJs.includes('prevTourStep: prevTourStep'), 'Missing prevTourStep public export');
+    assert(docsCatJs.includes('reactToScan: reactToScan'), 'Missing reactToScan public export');
+    assert(docsRadarJs.includes('SimpleCat.reactToScan(audit)'), 'orbit_radar.js must call SimpleCat.reactToScan(audit)');
+    assert(docsRadarJs.includes("SimpleCat.setVisorMood('radar'"), 'orbit_radar.js must pulse visor radar mood');
 });
 
 console.log('========================================');
