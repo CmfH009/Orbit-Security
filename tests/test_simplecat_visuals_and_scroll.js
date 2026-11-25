@@ -27,9 +27,13 @@ const landingCatPath = path.join(__dirname, '..', 'landing', 'assets', 'simple_c
 const docsRadarPath = path.join(__dirname, '..', 'docs', 'assets', 'orbit_radar.js');
 const landingRadarPath = path.join(__dirname, '..', 'landing', 'assets', 'orbit_radar.js');
 
+const docsLandingUiPath = path.join(__dirname, '..', 'docs', 'assets', 'landing_ui.js');
+const landingLandingUiPath = path.join(__dirname, '..', 'landing', 'assets', 'landing_ui.js');
+
 const docsIndexHtml = fs.readFileSync(docsIndexPath, 'utf8');
 const docsCatJs = fs.readFileSync(docsCatPath, 'utf8');
 const docsRadarJs = fs.readFileSync(docsRadarPath, 'utf8');
+const docsLandingUiJs = fs.readFileSync(docsLandingUiPath, 'utf8');
 const docsStylesCss = fs.readFileSync(path.join(__dirname, '..', 'docs', 'assets', 'styles.min.css'), 'utf8');
 
 let testCount = 0;
@@ -111,8 +115,8 @@ test('showSimpleCatDialog and hideSimpleCatDialog toggle body.modal-open', () =>
 });
 
 test('openPdfFlipbookModal and closePdfFlipbookModal toggle body.modal-open', () => {
-    assert(docsIndexHtml.includes("document.body.classList.add('modal-open');"), 'openPdfFlipbookModal should add modal-open');
-    assert(docsIndexHtml.includes("document.body.classList.remove('modal-open');"), 'closePdfFlipbookModal should remove modal-open');
+    assert(docsLandingUiJs.includes("document.body.classList.add('modal-open');"), 'openPdfFlipbookModal should add modal-open');
+    assert(docsLandingUiJs.includes("document.body.classList.remove('modal-open');"), 'closePdfFlipbookModal should remove modal-open');
 });
 
 test('showKeyboardHud and hideKeyboardHud toggle body.modal-open', () => {
@@ -341,7 +345,7 @@ test('Arcade Defense Mode public API exports and hash deep-linking', () => {
     assert(docsCatJs.includes('stopDefense: stopArcadeDefenseMode'), 'Missing stopDefense export');
     assert(docsCatJs.includes('toggleDefense: toggleArcadeDefenseMode'), 'Missing toggleDefense export');
     assert(docsCatJs.includes('window.location.hash === \'#arcadeDefenseMode\''), 'Missing hashchange deep link support in simple_cat.js');
-    assert(docsIndexHtml.includes('#arcadeDefenseMode'), 'index.html must handle #arcadeDefenseMode');
+    assert(docsLandingUiJs.includes('#arcadeDefenseMode'), 'landing_ui.js must handle #arcadeDefenseMode');
 });
 
 // 7p. GLOBAL AUDIO SYNTHESIZER POLISH & SOUND TOGGLE
@@ -488,6 +492,12 @@ test('docs/assets/orbit_radar.js and landing/assets/orbit_radar.js have 100% SHA
     assert.strictEqual(hDocs, hLanding, `orbit_radar.js drift: docs=${hDocs} landing=${hLanding}`);
 });
 
+test('docs/assets/landing_ui.js and landing/assets/landing_ui.js have 100% SHA-256 parity', () => {
+    const hDocs = sha256(docsLandingUiPath);
+    const hLanding = sha256(landingLandingUiPath);
+    assert.strictEqual(hDocs, hLanding, `landing_ui.js drift: docs=${hDocs} landing=${hLanding}`);
+});
+
 test('docs/labs.html and landing/labs.html have 100% SHA-256 parity', () => {
     const hDocs = sha256(path.join(__dirname, '..', 'docs', 'labs.html'));
     const hLanding = sha256(path.join(__dirname, '..', 'landing', 'labs.html'));
@@ -541,13 +551,13 @@ test('Top-of-page Tour beacons & relocated animated dynamic Live Threat Wire ver
     const h1Idx = docsIndexHtml.indexOf('</h1>');
     const ribbonIdx = docsIndexHtml.indexOf('id="heroThreatRibbon"');
     assert(h1Idx > 0 && ribbonIdx > h1Idx, '#heroThreatRibbon must be relocated below Hero </h1>');
-    assert(docsIndexHtml.includes('mergeLiveThreatAdvisories'), 'Missing mergeLiveThreatAdvisories dynamic merger');
-    assert(docsIndexHtml.includes('api.github.com/advisories'), 'Missing live GitHub Security Advisories hydration');
-    assert(docsIndexHtml.includes('tabindex') && docsIndexHtml.includes('livewireDupGroup'), 'Duplicate marquee group must disable tab stops');
+    assert(docsLandingUiJs.includes('mergeLiveThreatAdvisories'), 'Missing mergeLiveThreatAdvisories dynamic merger');
+    assert(docsLandingUiJs.includes('api.github.com/advisories'), 'Missing live GitHub Security Advisories hydration');
+    assert(docsLandingUiJs.includes('tabindex') && docsLandingUiJs.includes('livewireDupGroup'), 'Duplicate marquee group must disable tab stops');
 });
 
 test('5-feature upgrade: CVE drawer, unified Tour beacons across all 8 pages, margin model, explainer sync, WebP <picture>', () => {
-    assert(docsIndexHtml.includes('id="threatWireDrawer"') && docsIndexHtml.includes('openThreatWireDrawer'), 'Missing #threatWireDrawer or openThreatWireDrawer');
+    assert(docsIndexHtml.includes('id="threatWireDrawer"') && docsLandingUiJs.includes('openThreatWireDrawer'), 'Missing #threatWireDrawer or openThreatWireDrawer');
     assert(docsIndexHtml.includes('id="explainerActiveChapterBadge"') && docsIndexHtml.includes('id="explainerProgressBar"'), 'Missing explainer chapter badge or progress bar');
     assert(docsIndexHtml.includes('id="roiLaborMins"') && docsIndexHtml.includes('applyRoiPreset('), 'Missing ROI labor slider or preset buttons');
     assert(docsIndexHtml.includes('assets/orbit_cyber_command_deck.webp') && docsIndexHtml.includes('<picture'), 'Missing WebP <picture> delivery in index.html');

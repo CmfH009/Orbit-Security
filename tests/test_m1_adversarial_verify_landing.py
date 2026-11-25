@@ -265,10 +265,16 @@ class TestVerifyLandingPagesEncodingStress(unittest.TestCase):
         for url in expected_links:
             self.assertIn(url, landing_html)
 
-        scripts = re.findall(r"<script>([\s\S]*?)</script>", landing_html)
-        target_scripts = [s for s in scripts if "decorateStripeAndSignupLinks" in s]
-        self.assertEqual(len(target_scripts), 1, "Expected inline script defining decorateStripeAndSignupLinks")
-        inline_script = target_scripts[0]
+        landing_ui_path = REPO_ROOT / "landing" / "assets" / "landing_ui.js"
+        docs_ui_path = REPO_ROOT / "docs" / "assets" / "landing_ui.js"
+        self.assertTrue(landing_ui_path.is_file(), "Missing landing/assets/landing_ui.js")
+        self.assertEqual(
+            landing_ui_path.read_text(encoding="utf-8"),
+            docs_ui_path.read_text(encoding="utf-8"),
+            "landing/assets/landing_ui.js and docs/assets/landing_ui.js must be synced",
+        )
+        inline_script = landing_ui_path.read_text(encoding="utf-8")
+        self.assertIn("decorateStripeAndSignupLinks", inline_script)
 
         harness = textwrap.dedent(
             """

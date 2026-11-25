@@ -142,8 +142,17 @@ def verify_directory(dir_path, name):
         else:
             print(f"[✓] Local media validated: {clean_img}")
 
-    # 7. Check DoH heuristics & DOM XSS protection in inline scripts
-    combined_js = "\n".join(parser.script_blocks)
+    # 7. Check DoH heuristics & DOM XSS protection across inline + local asset scripts
+    external_js_chunks = []
+    for scr in parser.scripts:
+        if scr.startswith("http"):
+            continue
+        clean_scr = scr.split("?")[0]
+        scr_path = os.path.join(dir_path, clean_scr)
+        if os.path.exists(scr_path):
+            with open(scr_path, "r", encoding="utf-8") as jsf:
+                external_js_chunks.append(jsf.read())
+    combined_js = "\n".join(parser.script_blocks + external_js_chunks)
     if "escapeHtml" not in combined_js:
         errors.append("Security regression: escapeHtml function missing in script!")
     else:

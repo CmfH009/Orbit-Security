@@ -667,8 +667,9 @@ async function runTests() {
 
     // Verify Takeover Playground HTML in landing/labs.html includes the visual attack tree elements & noscript
     assert(labsHtml.includes('visualAttackTreeContainer'), 'landing/labs.html includes visual attack tree container');
+    const landingUiJs = fs.readFileSync(path.join(__dirname, '..', 'landing', 'assets', 'landing_ui.js'), 'utf8');
     assert(labsHtml.includes('OrbitAttackTree'), 'landing/labs.html integrates OrbitAttackTree engine');
-    assert(indexHtml.includes('OrbitAttackTree'), 'landing/index.html integrates OrbitAttackTree engine');
+    assert(indexHtml.includes('assets/landing_ui.js') && landingUiJs.includes('OrbitAttackTree'), 'landing/index.html integrates OrbitAttackTree engine via landing_ui.js');
     assert(labsHtml.includes('<noscript>') && labsHtml.includes('Visual Attack Tree // Subdomain Takeover Sequence'), 'landing/labs.html includes accessible noscript attack tree fallback');
 
     // ==========================================
