@@ -427,6 +427,8 @@ def test_astro_cat_guided_tour_and_scan_reactor():
     """Verify Astro-Cat tactical spotlight tour, page-aware routes, visor moods, and scan reactor."""
     for base_dir in (LANDING_DIR, DOCS_DIR):
         cat_js = (base_dir / "assets/simple_cat.js").read_text(encoding="utf-8")
+        cat_data_js = (base_dir / "assets/simple_cat_data.js").read_text(encoding="utf-8")
+        cat_bundle = cat_js + "\n" + cat_data_js
         radar_js = (base_dir / "assets/orbit_radar.js").read_text(encoding="utf-8")
 
         for token in (
@@ -442,9 +444,9 @@ def test_astro_cat_guided_tour_and_scan_reactor():
             "PAGE_QUIPS",
             "SECTION_QUIPS",
         ):
-            assert token in cat_js, f"Missing {token!r} in {base_dir.name}/assets/simple_cat.js"
+            assert token in cat_bundle, f"Missing {token!r} in {base_dir.name}/assets/simple_cat*.js"
 
-        assert "Instant MRR boost!" not in cat_js, f"Stale hype copy found in {base_dir.name}/assets/simple_cat.js"
+        assert "Instant MRR boost!" not in cat_bundle, f"Stale hype copy found in {base_dir.name}/assets/simple_cat*.js"
         assert "SimpleCat.reactToScan(audit)" in radar_js, f"Missing reactToScan hook in {base_dir.name}/assets/orbit_radar.js"
         assert "SimpleCat.setVisorMood('radar'" in radar_js, f"Missing visor mood hook in {base_dir.name}/assets/orbit_radar.js"
 

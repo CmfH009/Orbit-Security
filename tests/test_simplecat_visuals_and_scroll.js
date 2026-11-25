@@ -24,6 +24,8 @@ const docsIndexPath = path.join(__dirname, '..', 'docs', 'index.html');
 const landingIndexPath = path.join(__dirname, '..', 'landing', 'index.html');
 const docsCatPath = path.join(__dirname, '..', 'docs', 'assets', 'simple_cat.js');
 const landingCatPath = path.join(__dirname, '..', 'landing', 'assets', 'simple_cat.js');
+const docsCatDataPath = path.join(__dirname, '..', 'docs', 'assets', 'simple_cat_data.js');
+const landingCatDataPath = path.join(__dirname, '..', 'landing', 'assets', 'simple_cat_data.js');
 const docsRadarPath = path.join(__dirname, '..', 'docs', 'assets', 'orbit_radar.js');
 const landingRadarPath = path.join(__dirname, '..', 'landing', 'assets', 'orbit_radar.js');
 
@@ -32,9 +34,11 @@ const landingLandingUiPath = path.join(__dirname, '..', 'landing', 'assets', 'la
 
 const docsIndexHtml = fs.readFileSync(docsIndexPath, 'utf8');
 const docsCatJs = fs.readFileSync(docsCatPath, 'utf8');
+const docsCatDataJs = fs.readFileSync(docsCatDataPath, 'utf8');
 const docsRadarJs = fs.readFileSync(docsRadarPath, 'utf8');
 const docsLandingUiJs = fs.readFileSync(docsLandingUiPath, 'utf8');
 const docsStylesCss = fs.readFileSync(path.join(__dirname, '..', 'docs', 'assets', 'styles.min.css'), 'utf8');
+const docsCatAll = docsCatDataJs + '\n' + docsCatJs + '\n' + docsStylesCss;
 
 let testCount = 0;
 function test(name, fn) {
@@ -58,12 +62,12 @@ test('Universal horizontal scroll mask utilities present in compiled styles.min.
     assert(docsStylesCss.includes('.scroll-cyber-x'), 'Missing .scroll-cyber-x in styles.min.css');
 });
 
-test('Universal horizontal scroll mask utilities injected by simple_cat.js', () => {
-    assert(docsCatJs.includes('.scroll-indicate-x'), 'Missing .scroll-indicate-x in simple_cat.js');
-    assert(docsCatJs.includes('.scroll-fade-r'), 'Missing .scroll-fade-r in simple_cat.js');
-    assert(docsCatJs.includes('.scroll-fade-l'), 'Missing .scroll-fade-l in simple_cat.js');
-    assert(docsCatJs.includes('.scroll-fade-both'), 'Missing .scroll-fade-both in simple_cat.js');
-    assert(docsCatJs.includes('.scroll-cyber-x'), 'Missing .scroll-cyber-x in simple_cat.js');
+test('Universal horizontal scroll mask utilities compiled into styles.min.css', () => {
+    assert(docsStylesCss.includes('.scroll-indicate-x'), 'Missing .scroll-indicate-x in styles.min.css');
+    assert(docsStylesCss.includes('.scroll-fade-r'), 'Missing .scroll-fade-r in styles.min.css');
+    assert(docsStylesCss.includes('.scroll-fade-l'), 'Missing .scroll-fade-l in styles.min.css');
+    assert(docsStylesCss.includes('.scroll-fade-both'), 'Missing .scroll-fade-both in styles.min.css');
+    assert(docsStylesCss.includes('.scroll-cyber-x'), 'Missing .scroll-cyber-x in styles.min.css');
 });
 
 // 2. HORIZONTAL SCROLL CONTAINERS HOOKED UP
@@ -106,7 +110,6 @@ test('#simple-cat-dock includes safe-area-inset padding for mobile home indicato
 test('body.modal-open and body.drawer-open cleanly suppress #simple-cat-dock', () => {
     assert(docsStylesCss.includes('body.drawer-open #simple-cat-dock'), 'Drawer open rule missing in styles.min.css');
     assert(docsStylesCss.includes('body.modal-open #simple-cat-dock'), 'Modal open rule missing in styles.min.css');
-    assert(docsCatJs.includes('body.modal-open #simple-cat-dock'), 'Modal open rule in simple_cat.js missing');
 });
 
 test('showSimpleCatDialog and hideSimpleCatDialog toggle body.modal-open', () => {
@@ -137,7 +140,7 @@ test('SimpleCat dialog scrollable content container includes -webkit-overflow-sc
 test('Astro-Cat Copilot HUD dynamically flips above cat when near bottom edge', () => {
     assert(docsCatJs.includes('visualY > window.innerHeight - 130'), 'Missing HUD flip threshold check');
     assert(docsCatJs.includes('hud.classList.add("astro-hud-above")'), 'Missing astro-hud-above class addition');
-    assert(docsCatJs.includes('.astro-hud.astro-hud-above'), 'Missing .astro-hud.astro-hud-above style');
+    assert(docsStylesCss.includes('.astro-hud.astro-hud-above'), 'Missing .astro-hud.astro-hud-above style in styles.min.css');
 });
 
 test('Astro-Cat Copilot HUD clamps horizontal offset to prevent off-screen clipping', () => {
@@ -196,16 +199,16 @@ test('Mobile touchscreen action drawer (#station-touch-drawer) provides ergonomi
 // 7e. ASTRO-CAT GUIDED SITE TOUR
 test('Astro-Cat guided site tour (startTour) defined with tactical spotlight, page-aware routes, Back/Next/keys, and clean copy', () => {
     assert(docsCatJs.includes('startSiteTour'), 'Missing startSiteTour');
-    assert(docsCatJs.includes('TOUR_STEPS'), 'Missing TOUR_STEPS definition');
-    assert(docsCatJs.includes('TOUR_ROUTES'), 'Missing page-aware TOUR_ROUTES definition');
-    assert(docsCatJs.includes('audit-terminal'), 'Tour must visit audit-terminal');
-    assert(docsCatJs.includes('sentinels'), 'Tour must visit sentinels');
-    assert(docsCatJs.includes('security-labs'), 'Tour must visit security-labs');
-    assert(docsCatJs.includes('open-source-proof'), 'Tour must visit open-source-proof');
-    assert(docsCatJs.includes('pricing'), 'Tour must visit pricing');
-    assert(docsCatJs.includes('simple-cat'), 'Tour must visit simple-cat');
-    assert(docsCatJs.includes('kev-epss-radar'), 'Labs tour route must visit kev-epss-radar');
-    assert(!docsCatJs.includes('Instant MRR boost!'), 'Stale hype copy must remain removed from guided tour');
+    assert(docsCatDataJs.includes('TOUR_STEPS'), 'Missing TOUR_STEPS definition');
+    assert(docsCatDataJs.includes('TOUR_ROUTES'), 'Missing page-aware TOUR_ROUTES definition');
+    assert(docsCatDataJs.includes('audit-terminal'), 'Tour must visit audit-terminal');
+    assert(docsCatDataJs.includes('sentinels'), 'Tour must visit sentinels');
+    assert(docsCatDataJs.includes('security-labs'), 'Tour must visit security-labs');
+    assert(docsCatDataJs.includes('open-source-proof'), 'Tour must visit open-source-proof');
+    assert(docsCatDataJs.includes('pricing'), 'Tour must visit pricing');
+    assert(docsCatDataJs.includes('simple-cat'), 'Tour must visit simple-cat');
+    assert(docsCatDataJs.includes('kev-epss-radar'), 'Labs tour route must visit kev-epss-radar');
+    assert(!docsCatAll.includes('Instant MRR boost!'), 'Stale hype copy must remain removed from guided tour');
     assert(docsCatJs.includes('astro-tour-spotlight'), 'Missing #astro-tour-spotlight overlay');
     assert(docsCatJs.includes('id="astro-tour-controls"'), 'Missing astro-tour-controls in speech bubble');
     assert(docsCatJs.includes('id="tour-prev-btn"'), 'Missing tour-prev-btn');
@@ -214,7 +217,7 @@ test('Astro-Cat guided site tour (startTour) defined with tactical spotlight, pa
     assert(docsCatJs.includes('id="tour-step-pips"'), 'Missing tour-step-pips');
     assert(docsCatJs.includes('id="tour-action-btn"'), 'Missing cross-page tour-action-btn');
     assert(docsCatJs.includes('ArrowRight') && docsCatJs.includes('ArrowLeft'), 'Tour must support ArrowRight/ArrowLeft navigation');
-    assert(docsCatJs.includes('labs.html?tour=1'), 'Tour must support cross-page ?tour=1 handoff');
+    assert(docsCatDataJs.includes('labs.html?tour=1'), 'Tour must support cross-page ?tour=1 handoff');
 });
 
 // 7f. COSMIC TREATS MINI-GAME & TOUCH-SCREEN PETTING
@@ -224,8 +227,8 @@ test('Cosmic treats mini-game (startTreats) enables tap-to-feed interaction with
     assert(docsCatJs.includes('showFloatingScore'), 'Missing showFloatingScore');
     assert(docsCatJs.includes('spawnHearts'), 'Missing spawnHearts');
     assert(docsCatJs.includes('petStationCat'), 'Missing petStationCat');
-    assert(docsCatJs.includes('astro-cosmic-treat'), 'Missing astro-cosmic-treat styling');
-    assert(docsCatJs.includes('astro-floating-score'), 'Missing astro-floating-score styling');
+    assert(docsStylesCss.includes('astro-cosmic-treat'), 'Missing astro-cosmic-treat styling in styles.min.css');
+    assert(docsStylesCss.includes('astro-floating-score'), 'Missing astro-floating-score styling in styles.min.css');
 });
 
 // 7g. PUBLIC API EXPORTS
@@ -312,11 +315,11 @@ test('Creative Sentinels section showcases 4 dedicated Sentinel Roles with 16-bi
 
 // 7o. ARCADE PERIMETER DEFENSE MODE MINI-GAME
 test('Arcade Perimeter Defense Mode mini-game engine, threats, controls & scoring in simple_cat.js', () => {
-    assert(docsCatJs.includes('DEFENSE_THREAT_SPECS'), 'Missing DEFENSE_THREAT_SPECS in simple_cat.js');
-    assert(docsCatJs.includes('Dangling CNAME'), 'Missing Dangling CNAME threat spec');
-    assert(docsCatJs.includes('Spoofed MX'), 'Missing Spoofed MX threat spec');
-    assert(docsCatJs.includes('SPF PermError'), 'Missing SPF PermError threat spec');
-    assert(docsCatJs.includes('Abandoned S3 Bucket'), 'Missing Abandoned S3 Bucket threat spec');
+    assert(docsCatDataJs.includes('DEFENSE_THREAT_SPECS'), 'Missing DEFENSE_THREAT_SPECS in simple_cat_data.js');
+    assert(docsCatDataJs.includes('Dangling CNAME'), 'Missing Dangling CNAME threat spec');
+    assert(docsCatDataJs.includes('Spoofed MX'), 'Missing Spoofed MX threat spec');
+    assert(docsCatDataJs.includes('SPF PermError'), 'Missing SPF PermError threat spec');
+    assert(docsCatDataJs.includes('Abandoned S3 Bucket'), 'Missing Abandoned S3 Bucket threat spec');
     assert(docsCatJs.includes('ensureArcadeDefenseDOM'), 'Missing ensureArcadeDefenseDOM helper');
     assert(docsCatJs.includes('startArcadeDefenseMode'), 'Missing startArcadeDefenseMode');
     assert(docsCatJs.includes('stopArcadeDefenseMode'), 'Missing stopArcadeDefenseMode');
@@ -486,6 +489,12 @@ test('docs/assets/simple_cat.js and landing/assets/simple_cat.js have 100% SHA-2
     assert.strictEqual(hDocs, hLanding, `simple_cat.js drift: docs=${hDocs} landing=${hLanding}`);
 });
 
+test('docs/assets/simple_cat_data.js and landing/assets/simple_cat_data.js have 100% SHA-256 parity', () => {
+    const hDocs = sha256(docsCatDataPath);
+    const hLanding = sha256(landingCatDataPath);
+    assert.strictEqual(hDocs, hLanding, `simple_cat_data.js drift: docs=${hDocs} landing=${hLanding}`);
+});
+
 test('docs/assets/orbit_radar.js and landing/assets/orbit_radar.js have 100% SHA-256 parity', () => {
     const hDocs = sha256(docsRadarPath);
     const hLanding = sha256(landingRadarPath);
@@ -522,7 +531,7 @@ test('Expandable Command Deck drawer (#dock-deck-btn, CRT Scanlines, [?] Shortcu
 test('Live Scan Reactor, Visor Moods, and Page/Section-Aware Quips wired across simple_cat.js and orbit_radar.js', () => {
     assert(docsCatJs.includes('function reactToScan('), 'Missing reactToScan in simple_cat.js');
     assert(docsCatJs.includes('function setVisorMood('), 'Missing setVisorMood in simple_cat.js');
-    assert(docsCatJs.includes('PAGE_QUIPS') && docsCatJs.includes('SECTION_QUIPS'), 'Missing contextual quip pools');
+    assert(docsCatDataJs.includes('PAGE_QUIPS') && docsCatDataJs.includes('SECTION_QUIPS'), 'Missing contextual quip pools');
     assert(docsCatJs.includes('id="bubble-decode-finding-btn"'), 'Missing 1-click decode finding button');
     assert(docsCatJs.includes('prevTourStep: prevTourStep'), 'Missing prevTourStep public export');
     assert(docsCatJs.includes('reactToScan: reactToScan'), 'Missing reactToScan public export');
@@ -531,10 +540,10 @@ test('Live Scan Reactor, Visor Moods, and Page/Section-Aware Quips wired across 
 });
 
 test('Guided Tour polish & Explainer v4 integration verified in simple_cat.js and index.html', () => {
-    assert(docsCatJs.includes('body.astro-tour-active section'), 'Missing astro-tour-active content-visibility override');
-    assert(docsCatJs.includes('content-visibility: visible !important'), 'Missing content-visibility: visible during tour');
+    assert(docsStylesCss.includes('body.astro-tour-active section'), 'Missing astro-tour-active content-visibility override in styles.min.css');
+    assert(docsStylesCss.includes('content-visibility:visible!important'), 'Missing content-visibility: visible during tour in styles.min.css');
     assert(docsCatJs.includes('id="tour-progress-bar"'), 'Missing #tour-progress-bar in speech bubble');
-    assert(docsCatJs.includes('product-walkthrough'), 'Tour must include product-walkthrough step');
+    assert(docsCatDataJs.includes('product-walkthrough'), 'Tour must include product-walkthrough step');
     assert(docsCatJs.includes("if (copilot.state === 'tour') return;"), 'mouseleave must not auto-dismiss active tour');
     assert(docsCatJs.includes("if (copilot.state === 'tour') {\r\n                    exitSiteTour();\r\n                    return;\r\n                }") || docsCatJs.includes("if (copilot.state === 'tour') {\n                    exitSiteTour();\n                    return;\n                }"), 'bubbleClose must exit tour cleanly');
     assert(docsIndexHtml.includes('id="orbit-explainer-video"'), 'index.html missing #orbit-explainer-video');

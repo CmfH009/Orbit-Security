@@ -60,9 +60,9 @@ def test_dual_tree_byte_parity_exhaustive():
     shared_landing = sync_module.collect(LANDING_DIR)
     shared_docs = sync_module.collect(DOCS_DIR)
 
-    # Exactly 98 shared assets (87 baseline + 9 WebP CWV companions + landing_ui.js + orbit_labs.js)
-    assert len(shared_landing) == 98, f"Expected 98 shared files in landing, got {len(shared_landing)}"
-    assert len(shared_docs) == 98, f"Expected 98 shared files in docs, got {len(shared_docs)}"
+    # Exactly 99 shared assets (87 baseline + 9 WebP CWV companions + landing_ui.js + orbit_labs.js + simple_cat_data.js)
+    assert len(shared_landing) == 99, f"Expected 99 shared files in landing, got {len(shared_landing)}"
+    assert len(shared_docs) == 99, f"Expected 99 shared files in docs, got {len(shared_docs)}"
     assert set(shared_landing.keys()) == set(shared_docs.keys()), "Shared key mismatch between landing and docs"
 
     landing_files = {p.relative_to(LANDING_DIR): p for p in LANDING_DIR.rglob("*") if p.is_file()}
