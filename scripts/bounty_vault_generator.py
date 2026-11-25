@@ -55,6 +55,7 @@ EXPOSED_KEY_MD_RE = re.compile(
     r"^\s*\d+\.\s+[^`]*`([^`]+?\.(?:pdf|mp4|csv|xlsx|json|txt|xml|zip))`",
     re.MULTILINE,
 )
+BUCKET_NAME_RE = re.compile(r"<Name>([^<\s]+)</Name>", re.IGNORECASE)
 UNTRUSTED_POC_ORIGIN = "https://untrusted-adversary.com"
 SENSITIVE_CORS_KEYWORDS = (
     "email",
@@ -187,7 +188,22 @@ def _extract_exposed_object_keys(raw_evidence: str, md_text: str) -> List[str]:
     return keys
 
 
-def _map_disclosure_verdict(flaw_type: str, viability: str, raw_evidence: str) -> Tuple[str, int]:
+def extract_bucket_name(raw_evidence: str, md_text: str) -> str:
+    """Extracts the underlying S3/GCS bucket name from XML or evidence text if present."""
+    for text in (raw_evidence, md_text):
+        m = BUCKET_NAME_RE.search(text or "")
+        if m:
+            return m.group(1).strip()
+    return ""
+
+
+def _map_disclosure_verdict(
+    flaw_type: str,
+    viability: str,
+    raw_evidence: str,
+    *,
+    exposed_keys: Optional[List[str]] = None,
+) -> Tuple[str, int]:
     flaw = flaw_type.strip().lower()
     via = viability.strip().upper()
 
@@ -195,7 +211,10 @@ def _map_disclosure_verdict(flaw_type: str, viability: str, raw_evidence: str) -
         return "SUPPRESSED_FALSE_POSITIVE", 0
 
     if flaw == "open_cloud_bucket":
-        return ("OPEN_BUCKET_LISTING", 6) if via in {"HIGH_CONFIDENCE", "VERIFIED"} else ("OPEN_BUCKET_LISTING", 5)
+        has_sensitive_keys = exposed_keys is None or len(exposed_keys) > 0
+        if via in {"HIGH_CONFIDENCE", "VERIFIED"} and has_sensitive_keys:
+            return "OPEN_BUCKET_LISTING", 6
+        return "OPEN_BUCKET_LISTING", 5
 
     if flaw in {"cors_arbitrary_origin_with_credentials", "cors_null_origin_with_credentials"}:
         if via in {"HIGH_CONFIDENCE", "VERIFIED"} and "[PUBLIC_HTML_ONLY" not in raw_evidence:
@@ -248,7 +267,11 @@ def load_staged_disclosure_entries(
         raw_evidence = _extract_raw_evidence(tech_text)
         flaw_type = str(meta.get("flaw_type", "")).strip()
         viability = str(meta.get("bounty_viability", "CONDITIONAL")).strip().upper()
-        verdict, score = _map_disclosure_verdict(flaw_type, viability, raw_evidence)
+        exposed_keys = _extract_exposed_object_keys(raw_evidence, md_text) if flaw_type == "open_cloud_bucket" else []
+        bucket_name = extract_bucket_name(raw_evidence, md_text) if flaw_type == "open_cloud_bucket" else ""
+        verdict, score = _map_disclosure_verdict(
+            flaw_type, viability, raw_evidence, exposed_keys=exposed_keys
+        )
         if score == 0:
             continue
 
@@ -258,7 +281,6 @@ def load_staged_disclosure_entries(
             raise ValueError(f"Missing or malformed ev_ digest in {meta_path}: {ev_id!r}")
 
         digest_in_docs = ev_id in md_text and (not tech_text or ev_id in tech_text)
-        exposed_keys = _extract_exposed_object_keys(raw_evidence, md_text) if flaw_type == "open_cloud_bucket" else []
 
         note = raw_evidence or f"{flaw_type} ({viability})"
         note = note.replace("https://evil.com", UNTRUSTED_POC_ORIGIN)
@@ -284,6 +306,7 @@ def load_staged_disclosure_entries(
                 "evidence_artifact_id": ev_id,
                 "evidence_digest_verified": digest_in_docs,
                 "bundle_stem": stem,
+                "bucket_name": bucket_name,
                 "evidence_keys": exposed_keys,
                 "notes": note,
             }
@@ -328,11 +351,16 @@ def consolidate_program_findings(entries: List[Dict[str, Any]]) -> List[Dict[str
                 "urls": [],
                 "evidence_digests": [],
                 "evidence_keys": [],
+                "bucket_names": [],
+                "duplicate_bucket_aliases": False,
                 "bundles": [],
                 "notes": [],
             }
 
         grp = grouped[key]
+        bucket_name = str(item.get("bucket_name", "")).strip()
+        if bucket_name and bucket_name not in grp["bucket_names"]:
+            grp["bucket_names"].append(bucket_name)
         if score > grp["max_score"]:
             grp["max_score"] = score
         if tier == "TIER_1_READY":
@@ -341,6 +369,8 @@ def consolidate_program_findings(entries: List[Dict[str, Any]]) -> List[Dict[str
                 grp["bounty_viability"] = "HIGH_CONFIDENCE"
         if host and host not in grp["hosts"]:
             grp["hosts"].append(host)
+        if grp["bucket_names"] and len(grp["hosts"]) > len(grp["bucket_names"]):
+            grp["duplicate_bucket_aliases"] = True
         if url and url not in grp["urls"]:
             grp["urls"].append(url)
         if ev_id and ev_id not in grp["evidence_digests"]:

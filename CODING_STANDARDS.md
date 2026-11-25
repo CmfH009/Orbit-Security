@@ -10,6 +10,7 @@
 ## Remediation & Cost Safety
 - **Quota-Safe Model Routing**: OpenCode remediation paths must default to free-tier or local Ollama models (`opencode/deepseek-v4.1-flash-free`, `ollama/orbit-coder:latest`); flag any hardcoded paid-tier cloud model fallback.
 - **Safe Remediation Boundaries**: Keep generated **Remediation Artifacts** isolated under `data/remediation/` and never auto-send live external emails or apply destructive remote mutations without an explicit human approval gate.
+- **Disclosure & Severity Realism**: Reject scanner or vault changes that grade public CDN/marketing assets or redirect-only `301`/`302` responses as `HIGH_CONFIDENCE` or `TIER_1_READY` without verified non-public data or authoritative takeover control.
 
 ## Test Seams
 - Test audit scoring and remediation at public module seams (`tests/test_audit_scoring.py`, `tests/test_opencode_remediation.py`) using realistic payloads rather than asserting internal private helper call counts.

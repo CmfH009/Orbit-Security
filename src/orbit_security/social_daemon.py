@@ -18,7 +18,7 @@ import random
 import signal
 import sys
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from orbit_security.circuit_breaker import BreakerState, SocialCircuitBreaker, TriggerType
 from orbit_security.content_queue import ContentQueue

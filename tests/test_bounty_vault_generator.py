@@ -209,7 +209,7 @@ def test_vault_synchronizes_ev_bundles_into_dossiers_with_zero_tier3(tmp_path: P
     assert {"Starbucks", "Spotify", "MercadoLibre", "Xiaomi", "Superbet", "Playtika"}.issubset(prog_names)
 
     spotify = by_prog[("Spotify", "OPEN_BUCKET_LISTING")]
-    assert spotify["tier"] == "TIER_1_READY"
+    assert spotify["tier"] == "TIER_2_NEEDS_AUTH_PROOF"
     assert spotify["bounty_viability"] == "HIGH_CONFIDENCE"
     assert "cdn.byspotify.com" in spotify["hosts"]
     assert len(spotify["evidence_digests"]) == len(spotify["hosts"])
@@ -331,6 +331,61 @@ def _write_synthetic_bundle(
         f"# Report on {domain}\n**Evidence Artifact ID:** `{ev_id}`\n",
         encoding="utf-8",
     )
+
+
+def test_open_bucket_requires_sensitive_evidence_keys_for_tier1_and_dedupes_bucket_name(tmp_path: Path):
+    disc_dir = tmp_path / "disclosures"
+    disc_dir.mkdir(parents=True, exist_ok=True)
+    out_dir = tmp_path / "vault_out"
+
+    _write_synthetic_bundle(
+        disc_dir,
+        "acme_open_cloud_bucket_cdn_acme_test",
+        program_id="acme",
+        program_name="Acme",
+        domain="cdn.acme.test",
+        flaw_type="open_cloud_bucket",
+        viability="HIGH_CONFIDENCE",
+        ev_id="ev_111111111111",
+        raw_evidence="Public cloud storage bucket listing on 'cdn.acme.test'. <Name>shared-cdn</Name>",
+    )
+    _write_synthetic_bundle(
+        disc_dir,
+        "acme_open_cloud_bucket_pixel_acme_test",
+        program_id="acme",
+        program_name="Acme",
+        domain="pixel.acme.test",
+        flaw_type="open_cloud_bucket",
+        viability="HIGH_CONFIDENCE",
+        ev_id="ev_222222222222",
+        raw_evidence="Public cloud storage bucket listing on 'pixel.acme.test'. <Name>shared-cdn</Name>",
+    )
+    _write_synthetic_bundle(
+        disc_dir,
+        "beta_open_cloud_bucket_docs_beta_test",
+        program_id="beta",
+        program_name="Beta",
+        domain="docs.beta.test",
+        flaw_type="open_cloud_bucket",
+        viability="HIGH_CONFIDENCE",
+        ev_id="ev_333333333333",
+        raw_evidence="Exposed object (1) reports/q4-partner-deck.pdf on 'docs.beta.test'. <Name>beta-docs</Name>",
+    )
+
+    manifest = build_vault_manifest(output_dir=out_dir, disclosures_dir=disc_dir, archive_fp_dir=None)
+    by_prog = {g["program"]: g for g in manifest["launch_queue"]}
+
+    acme = by_prog["Acme"]
+    assert acme["tier"] == "TIER_2_NEEDS_AUTH_PROOF"
+    assert acme["max_score"] == 5
+    assert acme["bucket_names"] == ["shared-cdn"]
+    assert acme["duplicate_bucket_aliases"] is True
+
+    beta = by_prog["Beta"]
+    assert beta["tier"] == "TIER_1_READY"
+    assert beta["max_score"] == 6
+    assert beta["bucket_names"] == ["beta-docs"]
+    assert beta["duplicate_bucket_aliases"] is False
 
 
 def test_ev_digest_propagation_and_tier3_archive_exclusion(tmp_path: Path):

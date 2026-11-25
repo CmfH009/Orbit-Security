@@ -39,7 +39,10 @@ jobs:
           #   numpy    -> src/orbit_security/tools/embedding_search.py (re-exported via tools/__init__.py)
           # Installed explicitly here as belt-and-braces so CI never depends on
           # optional/local environment packages.
-          python -m pip install edge-tts pywin32 pillow duckdb requests beautifulsoup4 numpy
+          python -m pip install edge-tts pywin32 pillow duckdb requests beautifulsoup4 numpy ruff
+
+      - name: Ruff fatal syntax & undefined-name check
+        run: ruff check --select E9,F63,F7,F82 src/orbit_security scripts/bounty_vault_generator.py scripts/inspect_vault_safe.py
 
       - name: Install ffmpeg
         shell: bash

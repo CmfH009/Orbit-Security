@@ -21,6 +21,7 @@ import sys
 from typing import Any, Dict, List, Optional, Set, Tuple
 import urllib.request
 import urllib.error
+from urllib.parse import urlparse
 
 import dns.resolver
 
