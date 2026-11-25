@@ -14,6 +14,12 @@ from ._sanitize import (
     sanitize_intel_news,
     sanitize_master_briefing,
 )
+from .delivery import (
+    deliver_existing_briefing,
+    delivery_marker_path,
+    speak_via_nova_hook,
+    write_delivery_marker,
+)
 from .email_cockpit import (
     DELTA_GMAIL_QUERIES,
     MASTER_BRIEFING_GMAIL_QUERY,
@@ -97,6 +103,10 @@ __all__ = [
     "render_spoken_summary",
     # Production collector functions & constants
     "DEFAULT_BRIEFINGS_DIR",
+    "deliver_existing_briefing",
+    "delivery_marker_path",
+    "speak_via_nova_hook",
+    "write_delivery_marker",
     "KNOWN_EXPECTED_PORTS",
     "CORE_ACTIVE_REPOS",
     "AI_KEYWORD_RE",

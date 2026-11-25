@@ -17,11 +17,11 @@ import pytest
 from orbit_security.cli import run_disclose
 
 
-# The off-peak window is 2:00 AM - 5:00 AM MST (UTC-7), i.e. 09:00-12:00 UTC.
+# The off-peak window is 6:00 AM - 10:00 AM MST (UTC-7), i.e. 13:00-17:00 UTC.
 # Both instants below are therefore fully deterministic regardless of when the
 # suite happens to run.
-INSIDE_WINDOW_UTC = datetime.datetime(2026, 1, 15, 11, 0, tzinfo=datetime.timezone.utc)
-OUTSIDE_WINDOW_UTC = datetime.datetime(2026, 1, 15, 12, 0, tzinfo=datetime.timezone.utc)
+INSIDE_WINDOW_UTC = datetime.datetime(2026, 1, 15, 15, 0, tzinfo=datetime.timezone.utc)
+OUTSIDE_WINDOW_UTC = datetime.datetime(2026, 1, 15, 10, 0, tzinfo=datetime.timezone.utc)
 
 
 def make_args(**kwargs):

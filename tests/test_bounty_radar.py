@@ -396,6 +396,15 @@ class TestOffPeakWindow:
         dt = datetime.datetime(2026, 10, 2, 21, 0, tzinfo=datetime.timezone.utc)
         assert OffPeakWindow.is_off_peak(dt, start_hour=2, end_hour=5, tz_offset_hours=-7) is False
 
+    def test_is_off_peak_default_window(self):
+        # Default window is 6:00 AM - 10:00 AM MST (13:00 - 17:00 UTC)
+        dt_in = datetime.datetime(2026, 10, 2, 15, 0, tzinfo=datetime.timezone.utc)  # 08:00 AM MST
+        dt_night = datetime.datetime(2026, 10, 2, 10, 0, tzinfo=datetime.timezone.utc)  # 03:00 AM MST
+        dt_end = datetime.datetime(2026, 10, 2, 17, 0, tzinfo=datetime.timezone.utc)  # 10:00 AM MST
+        assert OffPeakWindow.is_off_peak(dt_in) is True
+        assert OffPeakWindow.is_off_peak(dt_night) is False
+        assert OffPeakWindow.is_off_peak(dt_end) is False
+
 
 class TestBountyRadarSupervisor:
     def test_run_sweep_force_now(self, tmp_path):

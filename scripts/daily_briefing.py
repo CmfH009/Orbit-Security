@@ -47,6 +47,7 @@ from orbit_security.briefing import (  # noqa: E402
     TelemetrySnapshot,
     archive_superseded_ci_alerts_in_imap,
     compute_and_save_daily_deltas,
+    deliver_existing_briefing,
     poll_gemini_master_briefing_with_backoff,
     probe_workspace_critic_evidence,
     query_calendar_and_tasks,
@@ -70,7 +71,9 @@ from orbit_security.briefing import (  # noqa: E402
     sanitize_inbound_text as _sanitize_inbound_text,
     sanitize_intel_news,
     sanitize_master_briefing,
+    speak_via_nova_hook as _speak_via_nova_hook,
     triage_email_messages,
+    write_delivery_marker as _write_delivery_marker,
 )
 from orbit_security.briefing.pipeline import _build_agenda_items  # noqa: E402
 from orbit_security.briefing.system_collectors import _count_commits_24h  # noqa: E402
@@ -300,17 +303,17 @@ def generate_briefing(
                 briefing_file=report_path,
             )
             if wt_pid:
+                if not dry_run:
+                    _write_delivery_marker(date_key, DEFAULT_BRIEFINGS_DIR)
                 return result
         except Exception as tui_err:
             print(f"[!] Windows Terminal TUI launch error: {tui_err}")
 
     if speak and not dry_run:
-        hook_script = r"C:\Users\purav\.gemini\config\scripts\nova_voice_hook.py"
-        if os.path.exists(hook_script):
-            py314 = r"C:\Python314\python.exe"
-            voice_exe = py314 if os.path.exists(py314) else sys.executable
-            flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-            subprocess.run([voice_exe, hook_script, "--speak", spoken_summary], creationflags=flags)
+        _speak_via_nova_hook(spoken_summary)
+        _write_delivery_marker(date_key, DEFAULT_BRIEFINGS_DIR)
+    elif (tui or gui) and not dry_run:
+        _write_delivery_marker(date_key, DEFAULT_BRIEFINGS_DIR)
 
     if pause:
         try:
@@ -384,6 +387,11 @@ def main() -> None:
         help="Max Gmail arrival retry count (default: 3 live, 0 dry-run)",
     )
     parser.add_argument(
+        "--deliver-existing",
+        action="store_true",
+        help="Deliver today's already-generated briefing via TUI/voice without re-fetching telemetry",
+    )
+    parser.add_argument(
         "--retry-interval",
         type=float,
         default=300.0,
@@ -399,6 +407,15 @@ def main() -> None:
             return
 
     try:
+        if args.deliver_existing:
+            deliver_existing_briefing(
+                speak=args.speak,
+                tui=bool(args.tui or args.gui),
+                pause=args.pause,
+                dry_run=args.dry_run,
+            )
+            return
+
         generate_briefing(
             speak=args.speak,
             email=args.email,

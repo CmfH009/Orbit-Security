@@ -334,7 +334,7 @@ async def run_disclose(args, now_utc: datetime.datetime | None = None):
 
         console.print("[bold yellow]DRY-RUN — no external targets will be probed[/bold yellow]\n")
         console.print(
-            f"Off-peak window (2:00 AM - 5:00 AM MST): "
+            f"Off-peak window (6:00 AM - 10:00 AM MST): "
             f"{'IN WINDOW' if in_window else 'OUTSIDE WINDOW'}  "
             f"{'--now would bypass' if args.now else ''}"
         )

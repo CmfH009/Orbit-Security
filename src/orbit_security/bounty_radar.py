@@ -3,7 +3,7 @@
 Ingests public bug bounty program target scopes (HackerOne / Bugcrowd),
 expands wildcard scopes (*.target.com), identifies dangling SaaS CNAMEs
 (AWS S3, GitHub Pages, Unbounce, Fastly, Shopify) and SPF/DMARC mail-spoofing vectors,
-executes off-peak sweeps (2:00 AM - 5:00 AM MST), and generates structured
+executes off-peak sweeps (6:00 AM - 10:00 AM MST), and generates structured
 HackerOne-compliant vulnerability disclosure reports.
 """
 
@@ -3705,13 +3705,13 @@ Orbit Security Coordinated Disclosure Team
 
 
 class OffPeakWindow:
-    """Calculates off-peak execution windows for scheduled radar sweeps (e.g. 2:00 AM - 5:00 AM MST)."""
+    """Calculates off-peak execution windows for scheduled radar sweeps (e.g. 6:00 AM - 10:00 AM MST)."""
 
     @staticmethod
     def is_off_peak(
         dt: Optional[datetime.datetime] = None,
-        start_hour: int = 2,
-        end_hour: int = 5,
+        start_hour: int = 6,
+        end_hour: int = 10,
         tz_offset_hours: int = -7,  # MST (UTC-7)
     ) -> bool:
         """Checks if current time falls within off-peak window in the target timezone (default MST)."""
@@ -3892,7 +3892,7 @@ class BountyRadarSupervisor:
         if not force_now and not OffPeakWindow.is_off_peak(now_utc):
             return {
                 "status": "SKIPPED_OUTSIDE_WINDOW",
-                "message": "Current time is outside the off-peak window (2:00 AM - 5:00 AM MST). Use force_now=True to run immediately.",
+                "message": "Current time is outside the off-peak window (6:00 AM - 10:00 AM MST). Use force_now=True to run immediately.",
                 "vulnerabilities": [],
             }
 
@@ -4126,7 +4126,7 @@ class BountyRadar(BountyRadarSupervisor):
         if not force_now and not OffPeakWindow.is_off_peak(start_time):
             return {
                 "status": "SKIPPED_OUTSIDE_WINDOW",
-                "message": "Current time is outside the off-peak window (2:00 AM - 5:00 AM MST). Use force_now=True to run immediately.",
+                "message": "Current time is outside the off-peak window (6:00 AM - 10:00 AM MST). Use force_now=True to run immediately.",
                 "programs_scanned": 0,
                 "programs_list": [],
                 "exit_gate_passed": False,

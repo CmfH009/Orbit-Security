@@ -182,6 +182,10 @@ class TestAct3BugBountyRadar:
         dt_out = datetime.datetime(2026, 10, 2, 18, 0, tzinfo=datetime.timezone.utc)  # 11:00 AM MST
         assert OffPeakWindow.is_off_peak(dt_out, start_hour=2, end_hour=5, tz_offset_hours=-7) is False
 
+        # Verify default 6:00 AM - 10:00 AM MST window
+        assert OffPeakWindow.is_off_peak(datetime.datetime(2026, 10, 2, 14, 30, tzinfo=datetime.timezone.utc)) is True
+        assert OffPeakWindow.is_off_peak(datetime.datetime(2026, 10, 2, 10, 30, tzinfo=datetime.timezone.utc)) is False
+
         # Run supervisor sweep with mock finding
         data_file = tmp_path / "bounty_programs.json"
         state_file = tmp_path / "bounty_state.json"

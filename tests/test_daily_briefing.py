@@ -999,6 +999,66 @@ def test_generate_briefing_accepts_injected_briefing_engine_in_memory(tmp_path, 
     assert (tmp_path / "briefing_state_latest.json").is_file()
 
 
+def test_silent_generate_briefing_skips_delivery_marker(tmp_path, monkeypatch):
+    from orbit_security.briefing import BriefingEngine, CollectorAdapters
+    import scripts.daily_briefing as db
+
+    monkeypatch.setattr(db, "DEFAULT_BRIEFINGS_DIR", tmp_path)
+    monkeypatch.setattr(db, "dispatch_email_briefing", lambda *a, **kw: True)
+    engine = BriefingEngine(adapters=CollectorAdapters.in_memory())
+    res = db.generate_briefing(speak=False, email=True, tui=False, gui=False, dry_run=False, engine=engine)
+
+    assert (tmp_path / f"briefing_{res.date_key}.md").is_file()
+    assert not (tmp_path / f".briefing_delivered_{res.date_key}").exists()
+
+
+def test_deliver_existing_briefing_missing_returns_false(tmp_path):
+    import scripts.daily_briefing as db
+
+    ok = db.deliver_existing_briefing(
+        speak=True,
+        tui=True,
+        dry_run=False,
+        date_key="2026-11-24",
+        briefings_dir=tmp_path,
+    )
+    assert ok is False
+    assert not (tmp_path / ".briefing_delivered_2026-11-24").exists()
+
+
+def test_deliver_existing_briefing_opens_tui_and_writes_marker(tmp_path, monkeypatch):
+    import json
+    import scripts.daily_briefing as db
+    import scripts.briefing_tui as bt
+
+    dk = "2026-11-24"
+    (tmp_path / f"briefing_{dk}.md").write_text("# Daily Briefing\nAll systems green.", encoding="utf-8")
+    (tmp_path / "briefing_state_latest.json").write_text(
+        json.dumps({"spoken_summary": "Afternoon briefing ready."}),
+        encoding="utf-8",
+    )
+
+    captured = {}
+
+    def fake_show_tui(**kwargs):
+        captured.update(kwargs)
+        return 4242
+
+    monkeypatch.setattr(bt, "show_briefing_tui", fake_show_tui)
+
+    ok = db.deliver_existing_briefing(
+        speak=True,
+        tui=True,
+        dry_run=False,
+        date_key=dk,
+        briefings_dir=tmp_path,
+    )
+    assert ok is True
+    assert captured["spoken_summary"] == "Afternoon briefing ready."
+    assert captured["auto_speak"] is True
+    assert (tmp_path / f".briefing_delivered_{dk}").is_file()
+
+
 
 
 
