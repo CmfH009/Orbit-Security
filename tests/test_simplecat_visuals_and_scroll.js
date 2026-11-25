@@ -492,6 +492,12 @@ test('docs/assets/orbit_radar.js and landing/assets/orbit_radar.js have 100% SHA
     assert.strictEqual(hDocs, hLanding, `orbit_radar.js drift: docs=${hDocs} landing=${hLanding}`);
 });
 
+test('docs/assets/orbit_labs.js and landing/assets/orbit_labs.js have 100% SHA-256 parity', () => {
+    const hDocs = sha256(path.join(__dirname, '..', 'docs', 'assets', 'orbit_labs.js'));
+    const hLanding = sha256(path.join(__dirname, '..', 'landing', 'assets', 'orbit_labs.js'));
+    assert.strictEqual(hDocs, hLanding, `orbit_labs.js drift: docs=${hDocs} landing=${hLanding}`);
+});
+
 test('docs/assets/landing_ui.js and landing/assets/landing_ui.js have 100% SHA-256 parity', () => {
     const hDocs = sha256(docsLandingUiPath);
     const hLanding = sha256(landingLandingUiPath);

@@ -182,8 +182,10 @@ sandbox.window = sandbox;
 sandbox.window.PDFLib = mockPdfLib;
 
 const code = fs.readFileSync(path.join(__dirname, '../docs/assets/orbit_radar.js'), 'utf-8');
+const labsCode = fs.readFileSync(path.join(__dirname, '../docs/assets/orbit_labs.js'), 'utf-8');
 vm.createContext(sandbox);
 vm.runInContext(code, sandbox);
+vm.runInContext(labsCode, sandbox);
 
 const performClientDohAudit = sandbox.window.performClientDohAudit;
 const generateInstantPdfForDomain = sandbox.window.generateInstantPdfForDomain;
