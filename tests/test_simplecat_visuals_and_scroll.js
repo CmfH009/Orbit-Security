@@ -30,6 +30,7 @@ const landingRadarPath = path.join(__dirname, '..', 'landing', 'assets', 'orbit_
 const docsIndexHtml = fs.readFileSync(docsIndexPath, 'utf8');
 const docsCatJs = fs.readFileSync(docsCatPath, 'utf8');
 const docsRadarJs = fs.readFileSync(docsRadarPath, 'utf8');
+const docsStylesCss = fs.readFileSync(path.join(__dirname, '..', 'docs', 'assets', 'styles.min.css'), 'utf8');
 
 let testCount = 0;
 function test(name, fn) {
@@ -45,12 +46,12 @@ function test(name, fn) {
 }
 
 // 1. HORIZONTAL SCROLL MASK UTILITIES
-test('Universal horizontal scroll mask utilities present in index.html', () => {
-    assert(docsIndexHtml.includes('.scroll-indicate-x'), 'Missing .scroll-indicate-x in index.html');
-    assert(docsIndexHtml.includes('.scroll-fade-r'), 'Missing .scroll-fade-r in index.html');
-    assert(docsIndexHtml.includes('.scroll-fade-l'), 'Missing .scroll-fade-l in index.html');
-    assert(docsIndexHtml.includes('.scroll-fade-both'), 'Missing .scroll-fade-both in index.html');
-    assert(docsIndexHtml.includes('.scroll-cyber-x'), 'Missing .scroll-cyber-x in index.html');
+test('Universal horizontal scroll mask utilities present in compiled styles.min.css', () => {
+    assert(docsStylesCss.includes('.scroll-indicate-x'), 'Missing .scroll-indicate-x in styles.min.css');
+    assert(docsStylesCss.includes('.scroll-fade-r'), 'Missing .scroll-fade-r in styles.min.css');
+    assert(docsStylesCss.includes('.scroll-fade-l'), 'Missing .scroll-fade-l in styles.min.css');
+    assert(docsStylesCss.includes('.scroll-fade-both'), 'Missing .scroll-fade-both in styles.min.css');
+    assert(docsStylesCss.includes('.scroll-cyber-x'), 'Missing .scroll-cyber-x in styles.min.css');
 });
 
 test('Universal horizontal scroll mask utilities injected by simple_cat.js', () => {
@@ -89,18 +90,18 @@ test('Flipbook Page 2 Subdomain Matrix table has horizontal scroll mask & cyber 
 // 3. SIMPLECAT FLOATING DOCK & MODAL COLLISION ISOLATION
 test('#simple-cat-dock uses z-45 to avoid colliding with z-50 modals & navigation', () => {
     assert(docsCatJs.includes('dockEl.className = "fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-45 flex items-center gap-2";'), 'Dock should use z-45');
-    assert(docsIndexHtml.includes('#simple-cat-dock {'), 'index.html style must target #simple-cat-dock');
+    assert(docsStylesCss.includes('#simple-cat-dock{'), 'styles.min.css must target #simple-cat-dock');
     assert(!docsIndexHtml.includes('#simple-cat-floating {'), 'Stale #simple-cat-floating selector should be removed');
 });
 
 test('#simple-cat-dock includes safe-area-inset padding for mobile home indicator bars', () => {
-    assert(docsIndexHtml.includes('bottom: max(16px, env(safe-area-inset-bottom, 16px))'), 'Missing safe-area-inset-bottom on dock');
-    assert(docsIndexHtml.includes('right: max(16px, env(safe-area-inset-right, 16px))'), 'Missing safe-area-inset-right on dock');
+    assert(docsStylesCss.includes('safe-area-inset-bottom'), 'Missing safe-area-inset-bottom on dock in styles.min.css');
+    assert(docsStylesCss.includes('safe-area-inset-right'), 'Missing safe-area-inset-right on dock in styles.min.css');
 });
 
 test('body.modal-open and body.drawer-open cleanly suppress #simple-cat-dock', () => {
-    assert(docsIndexHtml.includes('body.drawer-open #simple-cat-dock'), 'Drawer open rule missing');
-    assert(docsIndexHtml.includes('body.modal-open #simple-cat-dock'), 'Modal open rule missing');
+    assert(docsStylesCss.includes('body.drawer-open #simple-cat-dock'), 'Drawer open rule missing in styles.min.css');
+    assert(docsStylesCss.includes('body.modal-open #simple-cat-dock'), 'Modal open rule missing in styles.min.css');
     assert(docsCatJs.includes('body.modal-open #simple-cat-dock'), 'Modal open rule in simple_cat.js missing');
 });
 

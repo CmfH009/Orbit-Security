@@ -50,45 +50,6 @@
     <script src="assets/orbit_radar.js?v=20261124v9" defer></script>
 
     <style>
-        /* 0% CPU Idle Governor (Pillar 5 Resiliency) - Low-Recalc Targeted Selectors */
-        body.page-idle .animate-pulse,
-        body.page-idle .animate-ping,
-        body.page-idle .animate-bounce,
-        body.page-idle .telemetry-beam,
-        body.page-idle .radar-sweep-beam {
-            animation-play-state: paused !important;
-        }
-        .font-arcade { font-family: 'Press Start 2P', monospace, cursive; }
-        .font-pixel { font-family: 'Silkscreen', monospace; }
-        
-        /* 32-Bit Cyber Glass & CRT Scanlines */
-        .scanlines {
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
-            background-size: 100% 4px;
-        }
-        .card-glass {
-            background: linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(6, 10, 22, 0.90) 100%);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.1), 0 12px 35px -10px rgba(2, 6, 23, 0.8);
-            backdrop-filter: blur(16px);
-        }
-        .card-glass-emerald {
-            border-color: rgba(16, 185, 129, 0.35);
-            box-shadow: inset 0 1px 1px 0 rgba(16, 185, 129, 0.2), 0 12px 35px -8px rgba(16, 185, 129, 0.18);
-        }
-        .card-glass-cyan {
-            border-color: rgba(6, 182, 212, 0.35);
-            box-shadow: inset 0 1px 1px 0 rgba(6, 182, 212, 0.2), 0 12px 35px -8px rgba(6, 182, 212, 0.18);
-        }
-        .card-glass-purple {
-            border-color: rgba(168, 85, 247, 0.35);
-            box-shadow: inset 0 1px 1px 0 rgba(168, 85, 247, 0.2), 0 12px 35px -8px rgba(168, 85, 247, 0.18);
-        }
-        .card-glass-amber {
-            border-color: rgba(245, 158, 11, 0.35);
-            box-shadow: inset 0 1px 1px 0 rgba(245, 158, 11, 0.2), 0 12px 35px -8px rgba(245, 158, 11, 0.18);
-        }
-
         .hud-border {
             border: 1px solid rgba(16, 185, 129, 0.2);
             box-shadow: 0 0 20px rgba(16, 185, 129, 0.05);
@@ -100,40 +61,6 @@
             transition: stroke-dashoffset 0.5s ease-in-out;
             transform: rotate(-90deg);
             transform-origin: 50% 50%;
-        }
-        .pixel-box-emerald {
-            box-shadow: 4px 4px 0px #064e3b;
-            border: 2px solid #10b981;
-        }
-        .pixel-box-cyan {
-            box-shadow: 4px 4px 0px #164e63;
-            border: 2px solid #06b6d4;
-        }
-        .pixel-box-purple {
-            box-shadow: 4px 4px 0px #581c87;
-            border: 2px solid #a855f7;
-        }
-        /* Stabilized Tactile Pixel Buttons (Zero Horizontal Movement) */
-        html {
-            overflow-x: hidden;
-            scrollbar-gutter: stable;
-            width: 100%;
-        }
-        body {
-            overflow-x: clip;
-            width: 100%;
-            max-width: 100%;
-        }
-        .pixel-btn {
-            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3), 0 2px 4px rgba(0, 0, 0, 0.4);
-            transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
-        }
-        .pixel-btn:hover {
-            box-shadow: 0 0 16px rgba(16, 185, 129, 0.35);
-            border-color: #34d399;
-        }
-        .pixel-btn:active {
-            transform: translateY(1px);
         }
         #dock-launch-btn, #dock-decode-btn, #dock-rec-btn {
             min-height: 48px !important;

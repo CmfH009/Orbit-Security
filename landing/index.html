@@ -227,16 +227,6 @@
     <script src="assets/orbit_radar.js?v=20261124v9" defer></script>
 
     <style>
-        html { color-scheme: dark; }
-        /* 0% CPU Idle Governor (Pillar 5 Resiliency) - Low-Recalc Targeted Selectors */
-        body.page-idle .animate-pulse,
-        body.page-idle .animate-ping,
-        body.page-idle .animate-bounce,
-        body.page-idle .telemetry-beam,
-        body.page-idle .radar-sweep-beam {
-            animation-play-state: paused !important;
-        }
-        
         /* Layout Containment & Render Optimizations for Off-Screen Subtrees */
         #auditHUD {
             contain: layout;
@@ -249,146 +239,21 @@
             content-visibility: auto;
             contain-intrinsic-size: 1px 600px;
         }
-        body.astro-tour-active section {
-            content-visibility: visible !important;
-        }
-        body.astro-tour-active #simple-cat-dock {
-            opacity: 0 !important;
-            pointer-events: none !important;
-            transform: translateY(20px) scale(0.95) !important;
-        }
-        body.drawer-open #simple-cat-dock {
-            display: none !important;
-        }
-        /* Precision Viewport Stabilization & Horizontal Lock (Zero Left-to-Right Sway) */
-        html {
-            overflow-x: hidden;
-            scrollbar-gutter: stable;
-            width: 100%;
-            -webkit-text-size-adjust: 100%;
-        }
-        body {
-            overflow-x: clip;
-            width: 100%;
-            max-width: 100%;
-            margin: 0;
-            padding: 0;
-            position: relative;
-        }
-        
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Universal Horizontal Scroll Mask & Indication Suite */
-        .scroll-indicate-x {
-            overflow-x: auto !important;
-            -webkit-overflow-scrolling: touch !important;
-            scroll-behavior: smooth;
-        }
-        .scroll-fade-r {
-            mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%) !important;
-            -webkit-mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%) !important;
-        }
-        .scroll-fade-l {
-            mask-image: linear-gradient(to right, transparent 0%, black 32px, black 100%) !important;
-            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 32px, black 100%) !important;
-        }
-        .scroll-fade-both {
-            mask-image: linear-gradient(to right, transparent 0%, black 32px, black calc(100% - 32px), transparent 100%) !important;
-            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 32px, black calc(100% - 32px), transparent 100%) !important;
-        }
-        .scroll-cyber-x {
-            scrollbar-width: thin;
-            scrollbar-color: rgba(16, 185, 129, 0.4) rgba(15, 23, 42, 0.6);
-        }
-        .scroll-cyber-x::-webkit-scrollbar {
-            height: 4px;
-        }
-        .scroll-cyber-x::-webkit-scrollbar-track {
-            background: rgba(15, 23, 42, 0.6);
-            border-radius: 9999px;
-        }
-        .scroll-cyber-x::-webkit-scrollbar-thumb {
-            background: rgba(16, 185, 129, 0.4);
-            border-radius: 9999px;
-        }
-        .scroll-cyber-x::-webkit-scrollbar-thumb:hover {
-            background: rgba(16, 185, 129, 0.8);
-        }
-
-        .font-arcade { font-family: 'Press Start 2P', monospace, cursive; }
-        .font-pixel { font-family: 'Silkscreen', monospace; }
-        
-        /* Modern Specular Cyber Cards (Restrained 1px Borders) */
-        .card-glass {
-            background: linear-gradient(180deg, rgba(15, 23, 42, 0.72) 0%, rgba(6, 10, 22, 0.92) 100%);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 10px 30px -12px rgba(2, 6, 23, 0.85);
-            backdrop-filter: blur(12px);
-        }
-        .card-glass-emerald {
-            border-color: rgba(16, 185, 129, 0.28);
-            box-shadow: 0 10px 28px -12px rgba(2, 6, 23, 0.85);
-        }
-        .card-glass-cyan {
-            border-color: rgba(6, 182, 212, 0.28);
-            box-shadow: 0 10px 28px -12px rgba(2, 6, 23, 0.85);
-        }
-        .card-glass-purple {
-            border-color: rgba(168, 85, 247, 0.28);
-            box-shadow: 0 10px 28px -12px rgba(2, 6, 23, 0.85);
-        }
-        .card-glass-amber {
-            border-color: rgba(245, 158, 11, 0.28);
-            box-shadow: 0 10px 28px -12px rgba(2, 6, 23, 0.85);
-        }
-
-        /* Legacy Retro Pixel Helpers (Preserved for Mascot Badges) */
-        .pixel-box-emerald {
-            box-shadow: 4px 4px 0px #064e3b;
-            border: 2px solid #10b981;
-        }
-        .pixel-box-amber {
-            box-shadow: 4px 4px 0px #78350f;
-            border: 2px solid #f59e0b;
-        }
-        .pixel-box-cyan {
-            box-shadow: 4px 4px 0px #164e63;
-            border: 2px solid #06b6d4;
-        }
-        .pixel-box-purple {
-            box-shadow: 4px 4px 0px #581c87;
-            border: 2px solid #a855f7;
-        }
-        /* Stabilized Tactile Pixel Buttons (Zero Horizontal Movement on Hover) */
-        .pixel-btn {
-            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3), 0 2px 4px rgba(0, 0, 0, 0.4);
-            transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
-        }
-        .pixel-btn:hover {
-            box-shadow: 0 0 16px rgba(16, 185, 129, 0.35);
-            border-color: #34d399;
-        }
-        .pixel-btn:active {
-            transform: translateY(1px);
-        }
-
-        /* Sentinel Card Hover Radar Sweep Beam */
-        @keyframes radarSweep {
+        /* Sentinel Card Hover & Terminal Radar Sweep Beam */
+        @keyframes sentinelBeamSweep {
             0% { transform: translateY(-100%); opacity: 0; }
             50% { opacity: 0.6; }
             100% { transform: translateY(100%); opacity: 0; }
         }
         .sentinel-card:hover .radar-sweep-beam {
-            animation: radarSweep 1.8s ease-in-out infinite;
+            animation: sentinelBeamSweep 1.8s ease-in-out infinite;
         }
-
-        /* Hero Command Deck & Terminal Radar Sweep Animation */
         #audit-terminal .radar-sweep-beam {
-            animation: radarSweep 4s ease-in-out infinite;
+            animation: sentinelBeamSweep 4s ease-in-out infinite;
         }
 
-        /* Command Deck Atmospheric Visual Utilities (Zero Layout Shift, Pure Web Standard) */
+        /* Command Deck Atmospheric Visual Utilities */
         .hero-deck-backdrop {
             mix-blend-mode: luminosity;
             opacity: 0.16;
@@ -397,7 +262,6 @@
             pointer-events: none;
             user-select: none;
         }
-
         .terminal-deck-backdrop {
             mix-blend-mode: luminosity;
             opacity: 0.12;
@@ -405,43 +269,8 @@
             pointer-events: none;
             user-select: none;
         }
-        
-        .scanlines {
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
-            background-size: 100% 4px;
-        }
 
-        body.crt-lines-disabled .scanlines {
-            background: none !important;
-            background-image: none !important;
-        }
-        body.crt-lines-disabled #retro-scanlines {
-            display: none !important;
-        }
-
-        /* Guaranteed Floating Simple Cat Companion & Mobile Collision Guards */
-        #simple-cat-dock {
-            position: fixed !important;
-            bottom: max(16px, env(safe-area-inset-bottom, 16px)) !important;
-            right: max(16px, env(safe-area-inset-right, 16px)) !important;
-            left: auto !important;
-            top: auto !important;
-            z-index: 45 !important;
-            display: flex !important;
-            align-items: center !important;
-            transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        }
-        body.drawer-open #simple-cat-dock,
-        body.modal-open #simple-cat-dock {
-            opacity: 0 !important;
-            pointer-events: none !important;
-            transform: translateY(24px) scale(0.95) !important;
-        }
-        /* Advisory Banner, Header Nav, ROI Calculator Sliders & White-Label Flipbook Sheet Styles */
-        header nav a {
-            padding: 0 5px;
-            white-space: nowrap;
-        }
+        /* Advisory Banner, ROI Calculator Sliders & White-Label Flipbook Sheet Styles */
         .advisory-flex-row {
             display: flex;
             flex-direction: column;
