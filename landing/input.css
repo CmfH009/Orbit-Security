@@ -96,34 +96,10 @@ body.crt-lines-disabled #retro-scanlines {
     display: none !important;
 }
 
-/* Eye-Catching Header & Hero Tour Beacon */
-@keyframes tourBeaconPulse {
-  0%, 100% {
-    box-shadow: 0 0 12px rgba(6, 182, 212, 0.28), 0 0 0 0 rgba(34, 211, 238, 0.35);
-  }
-  50% {
-    box-shadow: 0 0 22px rgba(16, 185, 129, 0.45), 0 0 0 4px rgba(34, 211, 238, 0);
-  }
-}
-@keyframes tourBeaconSweep {
-  0%, 55% { transform: translateX(-140%) skewX(-20deg); opacity: 0; }
-  68% { opacity: 0.55; }
-  100% { transform: translateX(240%) skewX(-20deg); opacity: 0; }
-}
+/* Calm Guided Tour Trigger (No continuous pulse/shimmer) */
 .tour-cta-beacon {
   position: relative;
-  overflow: hidden;
-  animation: tourBeaconPulse 2.8s ease-in-out infinite;
-}
-.tour-cta-beacon::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  width: 45%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
-  transform: translateX(-140%) skewX(-20deg);
-  animation: tourBeaconSweep 4.5s ease-in-out infinite;
-  pointer-events: none;
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
 }
 
 /* Animated Live Threat Wire Ticker Strip */
