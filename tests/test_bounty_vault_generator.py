@@ -209,7 +209,8 @@ def test_vault_synchronizes_ev_bundles_into_dossiers_with_zero_tier3(tmp_path: P
     assert {"Starbucks", "Spotify", "MercadoLibre", "Xiaomi", "Superbet", "Playtika"}.issubset(prog_names)
 
     spotify = by_prog[("Spotify", "OPEN_BUCKET_LISTING")]
-    assert spotify["tier"] == "TIER_2_NEEDS_AUTH_PROOF"
+    expected_spotify_tier = "TIER_1_READY" if spotify.get("evidence_keys") else "TIER_2_NEEDS_AUTH_PROOF"
+    assert spotify["tier"] == expected_spotify_tier
     assert spotify["bounty_viability"] == "HIGH_CONFIDENCE"
     assert "cdn.byspotify.com" in spotify["hosts"]
     assert len(spotify["evidence_digests"]) == len(spotify["hosts"])

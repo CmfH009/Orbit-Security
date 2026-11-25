@@ -176,7 +176,7 @@ def test_github_pages_live_radar_showcase_ui_and_asset_parity():
         assert 'id="kevRadarResultsGrid"' in labs_html
         assert 'id="kevRadarDetailPanel"' in labs_html
 
-        radar_js = (repo_root / tree / "assets" / "orbit_radar.js").read_text(encoding="utf-8")
+        radar_js = (repo_root / tree / "assets" / "orbit_labs.js").read_text(encoding="utf-8")
         assert "assets/kev_epss_radar.json" in radar_js
         assert "initKevEpssRadar" in radar_js
         assert "filterKevEpssRadar" in radar_js

@@ -293,8 +293,8 @@ def test_projects_12_and_19_epss_horizon_and_bounty_statuspage_ui(tmp_path):
     docs_html = (root / "docs" / "index.html").read_text(encoding="utf-8")
     landing_labs = (root / "landing" / "labs.html").read_text(encoding="utf-8")
     docs_labs = (root / "docs" / "labs.html").read_text(encoding="utf-8")
-    landing_js = (root / "landing" / "assets" / "orbit_radar.js").read_text(encoding="utf-8")
-    docs_js = (root / "docs" / "assets" / "orbit_radar.js").read_text(encoding="utf-8")
+    landing_js = (root / "landing" / "assets" / "orbit_labs.js").read_text(encoding="utf-8")
+    docs_js = (root / "docs" / "assets" / "orbit_labs.js").read_text(encoding="utf-8")
 
     # Project #12: EPSS Probability Horizon Visualizer Widget (relocated to labs.html)
     assert 'id="epss-horizon-visualizer"' in landing_labs

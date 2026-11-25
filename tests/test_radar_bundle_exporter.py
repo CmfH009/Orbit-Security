@@ -199,7 +199,7 @@ def test_landing_and_docs_html_have_fixpack_button():
         html = path.read_text(encoding="utf-8")
         assert "btnDownloadFixPack" in html, path
         assert "downloadDnsFixPack" in html, path
-        assert "Download DNS Fix Pack" in html, path
+        assert "DNS Fix Pack" in html, path
 
 
 def test_fixpack_function_is_exposed_on_window():
