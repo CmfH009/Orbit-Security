@@ -16,13 +16,15 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-_SYSTEM_SCRIPTS = Path(r"A:\system\scripts")
-if not _SYSTEM_SCRIPTS.is_dir():
-    _SYSTEM_SCRIPTS = Path(r"C:\AgyHut\system\scripts")
-if str(_SYSTEM_SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(_SYSTEM_SCRIPTS))
+def _load_h1_read():
+    """Lazily load local HackerOneReadClient and load_credentials from system scripts."""
+    for candidate in (Path(r"A:\system\scripts"), Path(r"C:\AgyHut\system\scripts")):
+        if candidate.is_dir() and str(candidate) not in sys.path:
+            sys.path.insert(0, str(candidate))
+            break
+    from h1_read import HackerOneReadClient, load_credentials
 
-from h1_read import HackerOneReadClient, load_credentials  # noqa: E402
+    return HackerOneReadClient, load_credentials
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUTPUT_DIR = _REPO_ROOT / "daily_briefings"
@@ -120,7 +122,7 @@ def score_program_candidate(prog: Dict[str, Any], scopes: List[Dict[str, Any]]) 
 
 
 def discover_candidates(
-    client: HackerOneReadClient,
+    client: Any,
     *,
     pages: int = 3,
     inspect_limit: int = 15,
@@ -204,6 +206,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--dry-run", action="store_true", help="Print candidates without writing files")
     args = parser.parse_args(argv)
 
+    HackerOneReadClient, load_credentials = _load_h1_read()
     user, token = load_credentials()
     client = HackerOneReadClient(user, token)
     payload = discover_candidates(

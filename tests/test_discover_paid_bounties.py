@@ -89,3 +89,15 @@ def test_discover_candidates_and_write(tmp_path: Path):
     assert out.is_file()
     latest = json.loads((tmp_path / "paid_bounty_candidates_latest.json").read_text(encoding="utf-8"))
     assert latest["candidates"][0]["handle"] == "paid-oss"
+
+
+def test_import_succeeds_without_h1_read(monkeypatch):
+    import importlib.util
+
+    monkeypatch.setitem(sys.modules, "h1_read", None)
+    script_path = _SCRIPTS_DIR / "discover_paid_bounties.py"
+    spec = importlib.util.spec_from_file_location("discover_paid_bounties_no_h1", script_path)
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert hasattr(mod, "score_program_candidate")
