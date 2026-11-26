@@ -574,7 +574,7 @@ test('Top-of-page Tour beacons & relocated animated dynamic Live Threat Wire ver
 test('5-feature upgrade: CVE drawer, unified Tour beacons across all 8 pages, margin model, explainer sync, WebP <picture>', () => {
     assert(docsIndexHtml.includes('id="threatWireDrawer"') && docsLandingUiJs.includes('openThreatWireDrawer'), 'Missing #threatWireDrawer or openThreatWireDrawer');
     assert(docsIndexHtml.includes('id="explainerActiveChapterBadge"') && docsIndexHtml.includes('id="explainerProgressBar"'), 'Missing explainer chapter badge or progress bar');
-    assert(docsIndexHtml.includes('id="roiLaborMins"') && docsIndexHtml.includes('applyRoiPreset('), 'Missing ROI labor slider or preset buttons');
+    assert(docsIndexHtml.includes('id="roiLaborMins"') && docsIndexHtml.includes('data-ui-action="applyRoiPreset"'), 'Missing ROI labor slider or preset buttons');
     assert(docsIndexHtml.includes('assets/orbit_cyber_command_deck.webp') && docsIndexHtml.includes('<picture'), 'Missing WebP <picture> delivery in index.html');
 
     const pages = [

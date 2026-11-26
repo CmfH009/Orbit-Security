@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#060a16">
     <meta name="color-scheme" content="dark">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https://cmfh009.github.io; connect-src 'self' http://127.0.0.1:* http://localhost:* https://dns.google https://cloudflare-dns.com https://buy.stripe.com https://checkout.stripe.com https://*.run.app https://discord.com https://*.lhr.life https://raw.githubusercontent.com https://api.github.com; object-src 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com https://buy.stripe.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https://cmfh009.github.io; connect-src 'self' http://127.0.0.1:* http://localhost:* https://dns.google https://cloudflare-dns.com https://buy.stripe.com https://checkout.stripe.com https://*.run.app https://discord.com https://*.lhr.life https://raw.githubusercontent.com https://api.github.com; object-src 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com https://buy.stripe.com;">
     <title>Orbit Security | Attack Surface & Subdomain Hygiene for Web Agencies</title>
     
     <!-- Primary SEO Meta Tags -->
@@ -223,11 +223,11 @@
     <link rel="stylesheet" href="assets/styles.min.css?v=20261124v9">
     <!-- Simple Cat 16-Bit Companion & Plain-English Decoder -->
     <script src="assets/simple_cat_data.js?v=20261125v1" defer></script>
-    <script src="assets/simple_cat.js?v=20261124v9" defer></script>
+    <script src="assets/simple_cat.js?v=20261125v2" defer></script>
     <!-- Orbit Radar Terminal & Ergonomics Engine -->
-    <script src="assets/orbit_radar.js?v=20261124v9" defer></script>
+    <script src="assets/orbit_radar.js?v=20261125v2" defer></script>
     <!-- Landing Page UI Controllers -->
-    <script src="assets/landing_ui.js?v=20261125v1" defer></script>
+    <script src="assets/landing_ui.js?v=20261125v2" defer></script>
 
     <style>
         /* Layout Containment & Render Optimizations for Off-Screen Subtrees */
@@ -354,13 +354,13 @@
 
             <div class="hidden lg:flex items-center gap-1.5 xl:gap-2 flex-shrink-0">
                 <!-- Global Audio SFX Mute/Unmute Toggle Button -->
-                <button type="button" id="audio-toggle-btn" onclick="if(window.SimpleCat){SimpleCat.toggleSound();}" class="inline-flex items-center justify-center min-w-[40px] min-h-[40px] px-2.5 py-2 rounded-md bg-slate-900 border border-slate-700/80 hover:border-emerald-500/50 hover:bg-slate-800 text-slate-300 hover:text-emerald-300 font-mono text-xs transition-colors cursor-pointer whitespace-nowrap" title="Toggle 8-Bit Audio SFX (Hotkey: M)" aria-label="Toggle 8-Bit Audio SFX">
+                <button type="button" id="audio-toggle-btn" data-sc-action="toggle-sound" class="inline-flex items-center justify-center min-w-[40px] min-h-[40px] px-2.5 py-2 rounded-md bg-slate-900 border border-slate-700/80 hover:border-emerald-500/50 hover:bg-slate-800 text-slate-300 hover:text-emerald-300 font-mono text-xs transition-colors cursor-pointer whitespace-nowrap" title="Toggle 8-Bit Audio SFX (Hotkey: M)" aria-label="Toggle 8-Bit Audio SFX">
                     <span>🔊</span>
                 </button>
                 <a href="https://github.com/CmfH009/Orbit-Security" target="_blank" rel="noopener noreferrer" class="hidden xl:inline-flex p-2 min-w-[40px] min-h-[40px] rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white transition-colors items-center justify-center" title="View Source on GitHub" aria-label="GitHub Repository">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
                 </a>
-                <button type="button" id="header-tour-btn" onclick="if(window.SimpleCat){SimpleCat.playPowerUp(); SimpleCat.startTour();}" class="tour-cta-beacon inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-cyan-400/70 text-cyan-300 hover:text-cyan-200 font-mono text-xs font-medium tracking-wide transition-colors cursor-pointer whitespace-nowrap" title="Take the 7-Stop Interactive Guided Tour" aria-label="Take Interactive Guided Tour">
+                <button type="button" id="header-tour-btn" data-sc-action="start-tour" data-sc-sfx="powerup" class="tour-cta-beacon inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-cyan-400/70 text-cyan-300 hover:text-cyan-200 font-mono text-xs font-medium tracking-wide transition-colors cursor-pointer whitespace-nowrap" title="Take the 7-Stop Interactive Guided Tour" aria-label="Take Interactive Guided Tour">
                     <span class="h-1.5 w-1.5 rounded-full bg-cyan-400 flex-shrink-0"></span>
                     <span>Take Tour</span>
                 </button>
@@ -371,7 +371,7 @@
 
             <!-- Mobile Tour Beacon + Accessible Mobile Hamburger -->
             <div class="flex lg:hidden items-center gap-2 flex-shrink-0">
-                <button type="button" id="mobile-header-tour-btn" onclick="if(window.SimpleCat){SimpleCat.playPowerUp(); SimpleCat.startTour();}" class="tour-cta-beacon inline-flex items-center gap-1.5 min-h-[42px] px-3 py-1.5 rounded-md bg-slate-900 border border-slate-700 hover:border-cyan-400/70 text-cyan-300 font-mono text-xs font-medium whitespace-nowrap cursor-pointer" title="Take Interactive Guided Tour" aria-label="Take Interactive Guided Tour">
+                <button type="button" id="mobile-header-tour-btn" data-sc-action="start-tour" data-sc-sfx="powerup" class="tour-cta-beacon inline-flex items-center gap-1.5 min-h-[42px] px-3 py-1.5 rounded-md bg-slate-900 border border-slate-700 hover:border-cyan-400/70 text-cyan-300 font-mono text-xs font-medium whitespace-nowrap cursor-pointer" title="Take Interactive Guided Tour" aria-label="Take Interactive Guided Tour">
                     <span class="h-1.5 w-1.5 rounded-full bg-cyan-400 flex-shrink-0"></span>
                     <span>Tour</span>
                 </button>
@@ -397,7 +397,7 @@
         <nav id="mobileMenu" 
             class="fixed top-16 sm:top-20 left-0 right-0 z-50 lg:hidden bg-slate-950/98 border-b-2 border-emerald-500/50 backdrop-blur-2xl px-5 pt-3 pb-6 space-y-1 shadow-2xl transition-all duration-300 ease-out transform -translate-y-4 opacity-0 pointer-events-none overflow-y-auto max-h-[calc(100dvh-4rem)] overscroll-contain"
             aria-label="Mobile Navigation">
-            <button type="button" onclick="const mb=document.getElementById('mobileMenuBtn'); if(mb) mb.click(); if(window.SimpleCat){SimpleCat.playPowerUp(); SimpleCat.startTour();}" class="w-full flex items-center justify-between min-h-[48px] px-3.5 rounded-xl bg-cyan-500/15 border border-cyan-400/50 text-cyan-200 hover:bg-cyan-500/25 text-sm font-bold transition-all cursor-pointer mb-2">
+            <button type="button" data-sc-action="start-tour" data-sc-sfx="powerup" data-sc-close-mobile="1" class="w-full flex items-center justify-between min-h-[48px] px-3.5 rounded-xl bg-cyan-500/15 border border-cyan-400/50 text-cyan-200 hover:bg-cyan-500/25 text-sm font-bold transition-all cursor-pointer mb-2">
                 <span>🗺️ Start Interactive Guided Tour</span>
                 <span class="text-[9px] font-arcade bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded border border-cyan-400/40">7 STOPS</span>
             </button>
@@ -459,7 +459,7 @@
                 <span>Agency FAQ</span>
                 <span class="text-xs text-slate-500 font-mono">06</span>
             </a>
-            <button type="button" id="sound-toggle-btn" onclick="if(window.SimpleCat){SimpleCat.toggleSound();}" class="w-full flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-900/80 text-sm font-semibold transition-all cursor-pointer">
+            <button type="button" id="sound-toggle-btn" data-sc-action="toggle-sound" class="w-full flex items-center justify-between min-h-[48px] px-3.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-900/80 text-sm font-semibold transition-all cursor-pointer">
                 <span class="flex items-center gap-2">
                     <span>🔊</span>
                     <span>Audio SFX (Mute/Unmute)</span>
@@ -524,7 +524,7 @@
             
             <!-- Refined Lead Paragraph with High-Contrast Tokens -->
             <p class="text-base sm:text-lg text-slate-300 max-w-3xl mx-auto mb-6 leading-relaxed font-normal">
-                Orbit Security continuously patrols your client perimeters for <span class="text-white font-medium cursor-pointer underline decoration-emerald-500/50" onclick="SimpleCat.explain('cname')">dangling SaaS subdomains</span> (Shopify, Unbounce, AWS, GitHub), orphaned CNAMEs, and email spoofing drift. Deliver co-branded executive PDF audits every month to justify <span class="text-emerald-400 font-semibold">$250/mo agency care plans</span>.
+                Orbit Security continuously patrols your client perimeters for <span class="text-white font-medium cursor-pointer underline decoration-emerald-500/50" data-sc-action="explain" data-sc-topic="cname">dangling SaaS subdomains</span> (Shopify, Unbounce, AWS, GitHub), orphaned CNAMEs, and email spoofing drift. Deliver co-branded executive PDF audits every month to justify <span class="text-emerald-400 font-semibold">$250/mo agency care plans</span>.
             </p>
 
             <!-- High-Impact B2B Call-to-Action Buttons (Clear Primary Funnel) -->
@@ -534,14 +534,14 @@
                     <span>Deploy Growth Plan ($59/mo)</span>
                     <svg class="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                 </a>
-                <a href="#audit-preview" onclick="openPdfFlipbookModal(); return false;" 
+                <a href="#audit-preview" data-ui-action="open-flipbook" 
                    class="w-full sm:w-auto min-h-[48px] px-6 py-3.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 text-slate-100 font-semibold text-sm transition-colors duration-150 flex items-center justify-center gap-2">
                     <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     <span>Preview White-Label PDF</span>
                 </a>
             </div>
             <div class="mb-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-mono text-slate-400">
-                <button type="button" id="hero-start-tour-btn" onclick="if(window.SimpleCat){SimpleCat.playPowerUp(); SimpleCat.startTour();}" class="inline-flex items-center gap-1.5 text-cyan-300 hover:text-cyan-200 underline underline-offset-4 decoration-cyan-500/40 hover:decoration-cyan-300 transition-colors cursor-pointer py-1">
+                <button type="button" id="hero-start-tour-btn" data-sc-action="start-tour" data-sc-sfx="powerup" class="inline-flex items-center gap-1.5 text-cyan-300 hover:text-cyan-200 underline underline-offset-4 decoration-cyan-500/40 hover:decoration-cyan-300 transition-colors cursor-pointer py-1">
                     <span>Launch 7-Stop Guided Tour</span>
                     <span aria-hidden="true">&rarr;</span>
                 </button>
@@ -570,7 +570,7 @@
                         <span class="w-3 h-3 rounded-sm bg-emerald-500 inline-block shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
                         <span class="text-[10px] sm:text-[11px] font-arcade font-bold text-slate-200 ml-2 tracking-wide">ORBIT // PERIMETER RADAR TERMINAL</span>
                     </div>
-                    <div class="flex items-center gap-2 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded cursor-pointer hover:bg-emerald-500/20 transition-colors" onclick="SimpleCat.explain('doh')" title="Click to explain DoH">
+                    <div class="flex items-center gap-2 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded cursor-pointer hover:bg-emerald-500/20 transition-colors" data-sc-action="explain" data-sc-topic="doh" title="Click to explain DoH">
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                         <span>RFC-8484 DoH</span>
                     </div>
@@ -578,7 +578,7 @@
 
                 <div class="p-4 sm:p-6 scanlines relative z-10">
                     <!-- Input Form (Anti-Zoom text-base on mobile, min-h-[48px]) -->
-                    <form id="auditForm" onsubmit="handleAuditRequest(event)" class="flex flex-col sm:flex-row flex-wrap gap-2.5">
+                    <form id="auditForm" data-ui-submit="audit-form" class="flex flex-col sm:flex-row flex-wrap gap-2.5">
                         <div class="relative flex-1 min-w-[220px]">
                             <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-400 font-mono text-sm">
                                 &gt;
@@ -609,7 +609,7 @@
                         <button 
                             type="submit" 
                             id="scanBtn"
-                            onclick="if(window.SimpleCat) SimpleCat.playBlip()"
+                            data-sc-action="play-blip"
                             class="min-h-[48px] px-7 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide transition-all shadow-lg shadow-emerald-500/20 whitespace-nowrap flex items-center justify-center gap-2 group cursor-pointer pixel-btn">
                             <span id="scanBtnText">Scan Radar</span>
                             <svg id="scanBtnIcon" class="w-4 h-4 group-hover:rotate-45 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
@@ -629,15 +629,15 @@
                             />
                         </div>
                         <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
-                            <button type="button" onclick="runRealScanAndGeneratePdf()" class="min-h-[42px] px-3.5 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/40 text-xs text-emerald-300 font-mono font-semibold whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 cursor-pointer" title="Run real perimeter scan on the domain above and generate branded PDF with actual findings">
+                            <button type="button" data-ui-action="run-real-scan-pdf" class="min-h-[42px] px-3.5 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/40 text-xs text-emerald-300 font-mono font-semibold whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 cursor-pointer" title="Run real perimeter scan on the domain above and generate branded PDF with actual findings">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                 <span>Real Audit PDF</span>
                             </button>
-                            <button type="button" id="btnDownloadFixPack" onclick="downloadDnsFixPack()" class="min-h-[42px] px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 text-xs text-slate-200 font-mono whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 cursor-pointer" title="Export remediation.zone, remediation.tf and security.txt from your latest DoH scan">
+                            <button type="button" id="btnDownloadFixPack" data-radar-action="downloadDnsFixPack" class="min-h-[42px] px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 text-xs text-slate-200 font-mono whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 cursor-pointer" title="Export remediation.zone, remediation.tf and security.txt from your latest DoH scan">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                                 <span>DNS Fix Pack</span>
                             </button>
-                            <button type="button" onclick="copySessionLink()" class="min-h-[42px] px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 text-xs text-slate-300 hover:text-white font-mono whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 cursor-pointer" title="Copy session URL to share with team for real-time collaboration">
+                            <button type="button" data-ui-action="copy-session-link" class="min-h-[42px] px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 text-xs text-slate-300 hover:text-white font-mono whitespace-nowrap transition-colors flex items-center justify-center gap-1.5 cursor-pointer" title="Copy session URL to share with team for real-time collaboration">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
                                 <span>Copy Link</span>
                             </button>
@@ -662,12 +662,12 @@
                     <!-- Quick-Scan Preset Chips (Upgraded to 48px min touch height) -->
                     <div class="mt-3 flex items-center gap-2 text-xs text-slate-400 font-mono flex-wrap">
                         <span class="text-slate-500 text-[11px] mr-1">Quick Tests:</span>
-                        <button type="button" onclick="if(window.SimpleCat) SimpleCat.playBlip(); setScanTarget('cmfh009.github.io')" class="min-h-[40px] px-3.5 py-2 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/50 text-xs text-emerald-400 font-semibold transition-colors flex items-center justify-center cursor-pointer">cmfh009.github.io</button>
-                        <button type="button" onclick="if(window.SimpleCat) SimpleCat.playBlip(); setScanTarget('shopify.com')" class="min-h-[40px] px-3.5 py-2 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 text-xs text-slate-300 hover:text-emerald-400 transition-colors flex items-center justify-center cursor-pointer">shopify.com</button>
-                        <button type="button" onclick="if(window.SimpleCat) SimpleCat.playBlip(); setScanTarget('unbounce.com')" class="min-h-[40px] px-3.5 py-2 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 text-xs text-slate-300 hover:text-emerald-400 transition-colors flex items-center justify-center cursor-pointer">unbounce.com</button>
-                        <button type="button" onclick="if(window.SimpleCat) SimpleCat.playBlip(); setScanTarget('github.io')" class="min-h-[40px] px-3.5 py-2 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 text-xs text-slate-300 hover:text-emerald-400 transition-colors flex items-center justify-center cursor-pointer">github.io</button>
-                        <button type="button" onclick="if(window.SimpleCat) SimpleCat.playBlip(); setScanTarget('10up.com')" class="min-h-[40px] px-3.5 py-2 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 text-xs text-slate-300 hover:text-emerald-400 transition-colors flex items-center justify-center cursor-pointer">10up.com</button>
-                        <button type="button" onclick="simulateTakeoverAttack()" class="min-h-[40px] px-3.5 py-2 rounded-md bg-red-500/10 hover:bg-red-500/20 border border-red-500/40 text-xs text-red-300 hover:text-red-200 font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer">
+                        <button type="button" data-radar-action="set-scan-target" data-domain="cmfh009.github.io" data-sc-sfx="blip" class="min-h-[40px] px-3.5 py-2 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/50 text-xs text-emerald-400 font-semibold transition-colors flex items-center justify-center cursor-pointer">cmfh009.github.io</button>
+                        <button type="button" data-radar-action="set-scan-target" data-domain="shopify.com" data-sc-sfx="blip" class="min-h-[40px] px-3.5 py-2 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 text-xs text-slate-300 hover:text-emerald-400 transition-colors flex items-center justify-center cursor-pointer">shopify.com</button>
+                        <button type="button" data-radar-action="set-scan-target" data-domain="unbounce.com" data-sc-sfx="blip" class="min-h-[40px] px-3.5 py-2 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 text-xs text-slate-300 hover:text-emerald-400 transition-colors flex items-center justify-center cursor-pointer">unbounce.com</button>
+                        <button type="button" data-radar-action="set-scan-target" data-domain="github.io" data-sc-sfx="blip" class="min-h-[40px] px-3.5 py-2 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 text-xs text-slate-300 hover:text-emerald-400 transition-colors flex items-center justify-center cursor-pointer">github.io</button>
+                        <button type="button" data-radar-action="set-scan-target" data-domain="10up.com" data-sc-sfx="blip" class="min-h-[40px] px-3.5 py-2 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 text-xs text-slate-300 hover:text-emerald-400 transition-colors flex items-center justify-center cursor-pointer">10up.com</button>
+                        <button type="button" data-radar-action="simulate-takeover" class="min-h-[40px] px-3.5 py-2 rounded-md bg-red-500/10 hover:bg-red-500/20 border border-red-500/40 text-xs text-red-300 hover:text-red-200 font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer">
                             <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
                             <span>Simulate Takeover Attack</span>
                         </button>
@@ -685,12 +685,12 @@
                     <div class="mt-3.5 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-500">
                         <span>Share Radar or record clip:</span>
                         <div class="flex flex-wrap items-center gap-1">
-                            <button type="button" onclick="shareOrbitTool('radar', 'x')" class="min-h-[34px] px-2.5 py-1 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 transition-colors cursor-pointer">𝕏 Post</button>
-                            <button type="button" onclick="shareOrbitTool('radar', 'linkedin')" class="min-h-[34px] px-2.5 py-1 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 transition-colors cursor-pointer">LinkedIn</button>
-                            <button type="button" onclick="shareOrbitTool('radar', 'reddit')" class="min-h-[34px] px-2.5 py-1 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 transition-colors cursor-pointer">Reddit</button>
-                            <button type="button" onclick="shareOrbitTool('radar', 'native')" class="min-h-[34px] px-2.5 py-1 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 transition-colors cursor-pointer">Share</button>
+                            <button type="button" data-radar-action="share-tool" data-tool="radar" data-channel="x" class="min-h-[34px] px-2.5 py-1 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 transition-colors cursor-pointer">𝕏 Post</button>
+                            <button type="button" data-radar-action="share-tool" data-tool="radar" data-channel="linkedin" class="min-h-[34px] px-2.5 py-1 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 transition-colors cursor-pointer">LinkedIn</button>
+                            <button type="button" data-radar-action="share-tool" data-tool="radar" data-channel="reddit" class="min-h-[34px] px-2.5 py-1 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 transition-colors cursor-pointer">Reddit</button>
+                            <button type="button" data-radar-action="share-tool" data-tool="radar" data-channel="native" class="min-h-[34px] px-2.5 py-1 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 transition-colors cursor-pointer">Share</button>
                             <span class="text-slate-700 mx-1" aria-hidden="true">|</span>
-                            <button type="button" onclick="if(window.SimpleCat && SimpleCat.recordClip) SimpleCat.recordClip()" class="min-h-[34px] px-2.5 py-1 rounded text-slate-300 hover:text-emerald-300 hover:bg-slate-800/70 transition-colors cursor-pointer">Record Clip</button>
+                            <button type="button" data-sc-action="record-clip" class="min-h-[34px] px-2.5 py-1 rounded text-slate-300 hover:text-emerald-300 hover:bg-slate-800/70 transition-colors cursor-pointer">Record Clip</button>
                         </div>
                     </div>
 
@@ -730,7 +730,7 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-                        <button type="button" onclick="if(window.SimpleCat){SimpleCat.playPowerUp(); SimpleCat.startDefense();}" class="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 text-slate-950 font-arcade text-[10px] font-bold flex items-center gap-1.5 cursor-pointer shadow-lg shadow-red-500/25 active:scale-95 transition-all pixel-btn" title="Launch Perimeter Defense Arcade Mini-Game">
+                        <button type="button" data-sc-action="start-defense" data-sc-sfx="powerup" class="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 text-slate-950 font-arcade text-[10px] font-bold flex items-center gap-1.5 cursor-pointer shadow-lg shadow-red-500/25 active:scale-95 transition-all pixel-btn" title="Launch Perimeter Defense Arcade Mini-Game">
                             <span>🛡️ DEFENSE ARCADE</span>
                         </button>
                         <a href="#sentinels" class="text-xs font-mono text-emerald-400 hover:text-emerald-300 underline decoration-dotted px-2 py-2">
@@ -739,7 +739,7 @@
                     </div>
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-left">
-                    <div class="sentinel-patrol-card p-2.5 rounded-xl bg-slate-900/80 border border-emerald-500/30 hover:border-emerald-400 transition-all cursor-pointer group card-glass-emerald" onmouseenter="if(window.SimpleCat&&SimpleCat.playHoverTick)SimpleCat.playHoverTick();" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('dns');}">
+                    <div class="sentinel-patrol-card p-2.5 rounded-xl bg-slate-900/80 border border-emerald-500/30 hover:border-emerald-400 transition-all cursor-pointer group card-glass-emerald" onmouseenter="if(window.SimpleCat&&SimpleCat.playHoverTick)SimpleCat.playHoverTick();" data-sc-action="explain" data-sc-topic="dns" data-sc-sfx="blip">
                         <div class="flex items-center justify-between mb-1">
                             <span class="text-base">🛰️</span>
                             <span class="text-[9px] font-arcade text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">DNS PROBE</span>
@@ -748,7 +748,7 @@
                         <div class="text-[11px] font-mono text-slate-400 truncate">16-subdomain grid probe</div>
                         <div class="mt-1.5 pt-1 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono"><span class="text-slate-500">Telemetry</span><span class="text-emerald-400 font-bold">16/16 Active</span></div>
                     </div>
-                    <div class="sentinel-patrol-card p-2.5 rounded-xl bg-slate-900/80 border border-amber-500/30 hover:border-amber-400 transition-all cursor-pointer group card-glass-amber" onmouseenter="if(window.SimpleCat&&SimpleCat.playHoverTick)SimpleCat.playHoverTick();" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('cname');}">
+                    <div class="sentinel-patrol-card p-2.5 rounded-xl bg-slate-900/80 border border-amber-500/30 hover:border-amber-400 transition-all cursor-pointer group card-glass-amber" onmouseenter="if(window.SimpleCat&&SimpleCat.playHoverTick)SimpleCat.playHoverTick();" data-sc-action="explain" data-sc-topic="cname" data-sc-sfx="blip">
                         <div class="flex items-center justify-between mb-1">
                             <span class="text-base">🎯</span>
                             <span class="text-[9px] font-arcade text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">CNAME HUNT</span>
@@ -757,7 +757,7 @@
                         <div class="text-[11px] font-mono text-slate-400 truncate">Orphan bucket &amp; CNAME hunter</div>
                         <div class="mt-1.5 pt-1 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono"><span class="text-slate-500">Risk Audit</span><span class="text-amber-400 font-bold">0 Dangling</span></div>
                     </div>
-                    <div class="sentinel-patrol-card p-2.5 rounded-xl bg-slate-900/80 border border-cyan-500/30 hover:border-cyan-400 transition-all cursor-pointer group card-glass-cyan" onmouseenter="if(window.SimpleCat&&SimpleCat.playHoverTick)SimpleCat.playHoverTick();" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('dmarc');}">
+                    <div class="sentinel-patrol-card p-2.5 rounded-xl bg-slate-900/80 border border-cyan-500/30 hover:border-cyan-400 transition-all cursor-pointer group card-glass-cyan" onmouseenter="if(window.SimpleCat&&SimpleCat.playHoverTick)SimpleCat.playHoverTick();" data-sc-action="explain" data-sc-topic="dmarc" data-sc-sfx="blip">
                         <div class="flex items-center justify-between mb-1">
                             <span class="text-base">🛡️</span>
                             <span class="text-[9px] font-arcade text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20">DMARC/SPF</span>
@@ -766,7 +766,7 @@
                         <div class="text-[11px] font-mono text-slate-400 truncate">DMARC &amp; SPF enforcement</div>
                         <div class="mt-1.5 pt-1 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono"><span class="text-slate-500">Policy</span><span class="text-cyan-400 font-bold">p=reject</span></div>
                     </div>
-                    <div class="sentinel-patrol-card p-2.5 rounded-xl bg-slate-900/80 border border-purple-500/30 hover:border-purple-400 transition-all cursor-pointer group card-glass-purple" onmouseenter="if(window.SimpleCat&&SimpleCat.playHoverTick)SimpleCat.playHoverTick();" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('mx');}">
+                    <div class="sentinel-patrol-card p-2.5 rounded-xl bg-slate-900/80 border border-purple-500/30 hover:border-purple-400 transition-all cursor-pointer group card-glass-purple" onmouseenter="if(window.SimpleCat&&SimpleCat.playHoverTick)SimpleCat.playHoverTick();" data-sc-action="explain" data-sc-topic="mx" data-sc-sfx="blip">
                         <div class="flex items-center justify-between mb-1">
                             <span class="text-base">⚔️</span>
                             <span class="text-[9px] font-arcade text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20">RFC 7505</span>
@@ -811,13 +811,13 @@
             </div>
 
             <div class="flex items-center justify-between lg:justify-end gap-2 flex-shrink-0">
-                <button type="button" id="copyThreatAlertBtn" onclick="copyNovThreatAlert()" class="min-h-[36px] px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-amber-500/40 text-amber-300 font-mono text-[11px] font-bold transition-all inline-flex items-center justify-center whitespace-nowrap cursor-pointer" title="Copy client-ready advisory alert email from live CVEs">
+                <button type="button" id="copyThreatAlertBtn" data-ui-action="copy-nov-threat-alert" class="min-h-[36px] px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-amber-500/40 text-amber-300 font-mono text-[11px] font-bold transition-all inline-flex items-center justify-center whitespace-nowrap cursor-pointer" title="Copy client-ready advisory alert email from live CVEs">
                     📋 Copy Alert
                 </button>
                 <a href="labs.html#kev-epss-radar" class="min-h-[36px] px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-cyan-500/40 text-cyan-300 font-mono text-[11px] font-bold transition-all inline-flex items-center justify-center whitespace-nowrap">
                     KEV Radar &rarr;
                 </a>
-                <button type="button" id="dismissThreatRibbonBtn" onclick="const r=document.getElementById('heroThreatRibbon'); if(r){r.classList.add('hidden');} try{sessionStorage.setItem('orbit_threat_ribbon_dismissed','1');}catch(e){}" class="min-w-[36px] min-h-[36px] rounded-lg bg-slate-900/70 hover:bg-slate-800 border border-slate-700/70 text-slate-400 hover:text-white text-xs flex items-center justify-center cursor-pointer transition-colors" aria-label="Dismiss advisory ribbon" title="Dismiss advisory">
+                <button type="button" id="dismissThreatRibbonBtn" data-ui-action="dismiss-threat-ribbon" class="min-w-[36px] min-h-[36px] rounded-lg bg-slate-900/70 hover:bg-slate-800 border border-slate-700/70 text-slate-400 hover:text-white text-xs flex items-center justify-center cursor-pointer transition-colors" aria-label="Dismiss advisory ribbon" title="Dismiss advisory">
                     ✕
                 </button>
             </div>
@@ -825,7 +825,7 @@
     </aside>
 
     <!-- Live Threat Wire CVE Action Drawer (Workstream 1) -->
-    <div id="threatWireDrawer" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="threatDrawerTitle" onclick="if(event.target===this) closeThreatWireDrawer();">
+    <div id="threatWireDrawer" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="threatDrawerTitle" data-ui-action="threat-drawer-backdrop">
         <div class="relative w-full max-w-2xl bg-slate-950 border-2 border-rose-500/60 rounded-2xl shadow-[0_0_50px_rgba(244,63,94,0.28)] overflow-hidden card-glass">
             <div class="px-5 py-3.5 bg-slate-900/95 border-b border-slate-800 flex items-center justify-between gap-3">
                 <div class="flex items-center gap-2 min-w-0">
@@ -835,7 +835,7 @@
                     </h3>
                     <span id="threatDrawerSource" class="hidden sm:inline-block px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px] whitespace-nowrap">CISA KEV + EPSS</span>
                 </div>
-                <button type="button" id="closeThreatDrawerBtn" onclick="closeThreatWireDrawer()" class="min-w-[40px] min-h-[40px] rounded-lg bg-slate-800 hover:bg-rose-500 hover:text-slate-950 text-slate-300 border border-slate-700 font-mono text-sm font-bold flex items-center justify-center cursor-pointer transition-colors" aria-label="Close CVE advisory drawer">✕</button>
+                <button type="button" id="closeThreatDrawerBtn" data-ui-action="close-threat-drawer" class="min-w-[40px] min-h-[40px] rounded-lg bg-slate-800 hover:bg-rose-500 hover:text-slate-950 text-slate-300 border border-slate-700 font-mono text-sm font-bold flex items-center justify-center cursor-pointer transition-colors" aria-label="Close CVE advisory drawer">✕</button>
             </div>
             <div class="p-5 sm:p-6 space-y-4 max-h-[82dvh] overflow-y-auto">
                 <div class="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
@@ -874,14 +874,14 @@
                     <label for="threatDrawerDomainInput" class="block text-[10px] font-arcade text-cyan-300 uppercase">Affected Stack Quick-Check (Hero DoH Radar)</label>
                     <div class="flex flex-col sm:flex-row gap-2">
                         <input type="text" id="threatDrawerDomainInput" placeholder="clientbrand.com" autocomplete="off" autocapitalize="none" spellcheck="false" class="flex-1 min-h-[44px] px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm font-mono text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
-                        <button type="button" onclick="scanDomainFromThreatDrawer()" class="min-h-[44px] px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs font-mono whitespace-nowrap cursor-pointer transition-colors">
+                        <button type="button" data-ui-action="scan-from-threat-drawer" class="min-h-[44px] px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs font-mono whitespace-nowrap cursor-pointer transition-colors">
                             Scan Domain on Hero Radar &rarr;
                         </button>
                     </div>
                 </div>
 
                 <div class="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-slate-800">
-                    <button type="button" id="threatDrawerCopyBtn" onclick="copyDrawerCveAdvisory()" class="min-h-[44px] px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-200 font-mono text-xs font-bold cursor-pointer transition-all">
+                    <button type="button" id="threatDrawerCopyBtn" data-ui-action="copy-drawer-cve" class="min-h-[44px] px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-200 font-mono text-xs font-bold cursor-pointer transition-all">
                         📋 Copy Agency Client Advisory
                     </button>
                     <div class="flex flex-wrap items-center gap-2">
@@ -939,7 +939,7 @@
 
                     <button type="button"
                             id="explainerPlayOverlay"
-                            onclick="playOrbitExplainer()"
+                            data-ui-action="play-explainer"
                             class="absolute inset-0 m-auto w-fit h-fit min-h-[48px] px-5 py-3 rounded-full bg-slate-950/90 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 border-2 border-emerald-400/80 font-mono text-xs sm:text-sm font-bold shadow-[0_0_30px_rgba(16,185,129,0.45)] backdrop-blur-md flex items-center gap-2.5 cursor-pointer transition-all z-20 pixel-btn"
                             aria-label="Play 72-second Orbit Security Walkthrough">
                         <span id="explainerPlayOverlayIcon">▶</span>
@@ -953,19 +953,19 @@
                     </div>
                     <div class="px-4 sm:px-5 py-3">
                         <div id="explainerChapterBar" class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar scroll-indicate-x scroll-fade-r scroll-cyber-x">
-                            <button type="button" data-chapter-time="0" aria-current="true" onclick="seekOrbitExplainer(0)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-mono text-[11px] font-bold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:00 Local Stakes</button>
-                            <button type="button" data-chapter-time="12.7" onclick="seekOrbitExplainer(12.7)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:12 Montana &middot; DoH</button>
-                            <button type="button" data-chapter-time="24.8" onclick="seekOrbitExplainer(24.8)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:25 Browser PDF</button>
-                            <button type="button" data-chapter-time="33.2" onclick="seekOrbitExplainer(33.2)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:33 KEV + EPSS</button>
-                            <button type="button" data-chapter-time="42.0" onclick="seekOrbitExplainer(42.0)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:42 Takeover Tree</button>
-                            <button type="button" data-chapter-time="50.5" onclick="seekOrbitExplainer(50.5)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:50 GitHub SARIF</button>
-                            <button type="button" data-chapter-time="58.7" onclick="seekOrbitExplainer(58.7)" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:59 Benchmarks</button>
+                            <button type="button" data-chapter-time="0" aria-current="true" data-ui-action="seek-explainer" data-time="0" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-mono text-[11px] font-bold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:00 Local Stakes</button>
+                            <button type="button" data-chapter-time="12.7" data-ui-action="seek-explainer" data-time="12.7" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:12 Montana &middot; DoH</button>
+                            <button type="button" data-chapter-time="24.8" data-ui-action="seek-explainer" data-time="24.8" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:25 Browser PDF</button>
+                            <button type="button" data-chapter-time="33.2" data-ui-action="seek-explainer" data-time="33.2" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:33 KEV + EPSS</button>
+                            <button type="button" data-chapter-time="42.0" data-ui-action="seek-explainer" data-time="42.0" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:42 Takeover Tree</button>
+                            <button type="button" data-chapter-time="50.5" data-ui-action="seek-explainer" data-time="50.5" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:50 GitHub SARIF</button>
+                            <button type="button" data-chapter-time="58.7" data-ui-action="seek-explainer" data-time="58.7" class="explainer-chapter-btn min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white font-mono text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all flex-shrink-0">0:59 Benchmarks</button>
                         </div>
                     </div>
                 </div>
 
                 <div class="px-4 sm:px-6 py-3 bg-slate-950/70 border-t border-slate-900 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
-                    <button type="button" onclick="if(window.SimpleCat){SimpleCat.startTour();}" class="text-cyan-300 hover:text-cyan-200 font-bold cursor-pointer transition-colors">
+                    <button type="button" data-sc-action="start-tour" class="text-cyan-300 hover:text-cyan-200 font-bold cursor-pointer transition-colors">
                         🗺️ Launch Interactive Guided Tour &rarr;
                     </button>
                     <div class="flex flex-wrap items-center gap-4">
@@ -996,11 +996,11 @@
                 <div class="px-4 sm:px-6 py-4 bg-slate-950/80 border-b border-slate-800 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
                     <div class="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 -mx-2 px-2 no-scrollbar scroll-indicate-x scroll-fade-r scroll-cyber-x" style="-webkit-overflow-scrolling: touch;">
                         <span class="text-xs font-mono text-slate-400 uppercase tracking-wider flex-shrink-0 hidden sm:inline">Views:</span>
-                        <button type="button" onclick="switchReportView('radar')" id="viewBtn-radar" class="report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Subdomain Radar</button>
-                        <button type="button" onclick="switchReportView('dmarc')" id="viewBtn-dmarc" class="report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Email Spoofing (DMARC)</button>
-                        <button type="button" onclick="switchReportView('secrets')" id="viewBtn-secrets" class="report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">JS Bundle Secrets</button>
-                        <button type="button" onclick="switchReportView('compliance')" id="viewBtn-compliance" class="report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Bulk Sender Compliance</button>
-                        <button type="button" onclick="switchReportView('contrast')" id="viewBtn-contrast" class="report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Before vs. After</button>
+                        <button type="button" data-ui-action="switch-report-view" data-view="radar" id="viewBtn-radar" class="report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Subdomain Radar</button>
+                        <button type="button" data-ui-action="switch-report-view" data-view="dmarc" id="viewBtn-dmarc" class="report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Email Spoofing (DMARC)</button>
+                        <button type="button" data-ui-action="switch-report-view" data-view="secrets" id="viewBtn-secrets" class="report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">JS Bundle Secrets</button>
+                        <button type="button" data-ui-action="switch-report-view" data-view="compliance" id="viewBtn-compliance" class="report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Bulk Sender Compliance</button>
+                        <button type="button" data-ui-action="switch-report-view" data-view="contrast" id="viewBtn-contrast" class="report-view-btn min-h-[48px] px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Before vs. After</button>
                     </div>
                     
                     <!-- Live Co-Branding Customizer with Accessible Palette Hit Targets (>= 48px) -->
@@ -1011,7 +1011,7 @@
                                 type="text" 
                                 id="customAgencyName" 
                                 value="Apex Digital Studio" 
-                                oninput="updateCustomBranding()" 
+                                data-ui-input="update-branding" 
                                 class="bg-slate-950 border border-slate-800 rounded-lg min-h-[48px] px-3.5 py-2.5 text-sm text-white font-semibold focus:outline-none focus:border-emerald-400 flex-1 min-w-[120px]"
                                 placeholder="Your Agency Name"
                             />
@@ -1019,7 +1019,7 @@
                         <div class="flex items-center justify-end gap-2 pl-1" role="radiogroup" aria-label="Brand Color Palette">
                             <button type="button" 
                                     id="brandColorBtn-emerald" 
-                                    onclick="setBrandColor('emerald')" 
+                                    data-ui-action="set-brand-color" data-color="emerald" 
                                     class="brand-color-btn w-12 h-12 min-w-[48px] min-h-[48px] rounded-xl bg-slate-950 border border-slate-700 hover:border-emerald-400 flex items-center justify-center transition-all cursor-pointer ring-2 ring-white ring-offset-2 ring-offset-slate-900 border-white scale-105" 
                                     title="Emerald Palette (#10B981)" 
                                     aria-label="Select Emerald Palette">
@@ -1027,7 +1027,7 @@
                             </button>
                             <button type="button" 
                                     id="brandColorBtn-cyan" 
-                                    onclick="setBrandColor('cyan')" 
+                                    data-ui-action="set-brand-color" data-color="cyan" 
                                     class="brand-color-btn w-12 h-12 min-w-[48px] min-h-[48px] rounded-xl bg-slate-950 border border-slate-700 hover:border-cyan-400 flex items-center justify-center transition-all cursor-pointer" 
                                     title="Cyan Palette (#06B6D4)" 
                                     aria-label="Select Cyan Palette">
@@ -1035,7 +1035,7 @@
                             </button>
                             <button type="button" 
                                     id="brandColorBtn-indigo" 
-                                    onclick="setBrandColor('indigo')" 
+                                    data-ui-action="set-brand-color" data-color="indigo" 
                                     class="brand-color-btn w-12 h-12 min-w-[48px] min-h-[48px] rounded-xl bg-slate-950 border border-slate-700 hover:border-indigo-400 flex items-center justify-center transition-all cursor-pointer" 
                                     title="Indigo Palette (#6366F1)" 
                                     aria-label="Select Indigo Palette">
@@ -1043,7 +1043,7 @@
                             </button>
                             <button type="button" 
                                     id="brandColorBtn-violet" 
-                                    onclick="setBrandColor('violet')" 
+                                    data-ui-action="set-brand-color" data-color="violet" 
                                     class="brand-color-btn w-12 h-12 min-w-[48px] min-h-[48px] rounded-xl bg-slate-950 border border-slate-700 hover:border-purple-400 flex items-center justify-center transition-all cursor-pointer" 
                                     title="Violet Palette (#A855F7)" 
                                     aria-label="Select Violet Palette">
@@ -1069,7 +1069,7 @@
                                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                                 Grade: A (94/100) <span class="text-[10px] text-amber-400">(Demo)</span>
                             </div>
-                            <button type="button" id="btnExportPdf" onclick="generateInstantPdf()" class="min-h-[48px] px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 cursor-pointer" title="Generates a DEMO PREVIEW PDF with example data — not a real scan">
+                            <button type="button" id="btnExportPdf" data-ui-action="generate-instant-pdf" class="min-h-[48px] px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 cursor-pointer" title="Generates a DEMO PREVIEW PDF with example data — not a real scan">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                 <span>Export Demo PDF Preview</span>
                             </button>
@@ -1087,7 +1087,7 @@
                                     value=""
                                 />
                             </div>
-                            <button type="button" id="btnRealScanPdf" onclick="runRealScanAndGeneratePdf()" class="min-h-[48px] px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-cyan-500/20 cursor-pointer" title="Runs a real perimeter scan via API and generates a branded PDF with actual findings">
+                            <button type="button" id="btnRealScanPdf" data-ui-action="run-real-scan-pdf" class="min-h-[48px] px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-cyan-500/20 cursor-pointer" title="Runs a real perimeter scan via API and generates a branded PDF with actual findings">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                                 <span>Generate Real Audit PDF</span>
                             </button>
@@ -1238,16 +1238,16 @@
                     <div class="mt-6 bg-slate-950/60 rounded-xl p-4 border border-slate-800 text-xs text-slate-400 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                         <span>💡 Co-Branding Guarantee: Your clients never see Orbit Security. All reports feature your logo, brand colors, and contact info.</span>
                         <div class="flex flex-wrap items-center gap-2">
-                            <button type="button" onclick="openPdfFlipbookModal()" class="min-h-[40px] px-3.5 py-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer">
+                            <button type="button" data-ui-action="open-flipbook" class="min-h-[40px] px-3.5 py-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer">
                                 <span>Inspect Interactive PDF Flipbook</span>
                             </button>
-                            <button type="button" onclick="shareOrbitTool('audit-studio', 'x')" class="min-h-[36px] px-2.5 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 font-mono text-[11px] transition-colors cursor-pointer">
+                            <button type="button" data-radar-action="share-tool" data-tool="audit-studio" data-channel="x" class="min-h-[36px] px-2.5 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 font-mono text-[11px] transition-colors cursor-pointer">
                                 <span>𝕏 Share</span>
                             </button>
-                            <button type="button" onclick="shareOrbitTool('audit-studio', 'linkedin')" class="min-h-[36px] px-2.5 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 font-mono text-[11px] transition-colors cursor-pointer">
+                            <button type="button" data-radar-action="share-tool" data-tool="audit-studio" data-channel="linkedin" class="min-h-[36px] px-2.5 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 font-mono text-[11px] transition-colors cursor-pointer">
                                 <span>LinkedIn</span>
                             </button>
-                            <button type="button" onclick="shareOrbitTool('audit-studio', 'native')" class="min-h-[36px] px-2.5 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 font-mono text-[11px] transition-colors cursor-pointer">
+                            <button type="button" data-radar-action="share-tool" data-tool="audit-studio" data-channel="native" class="min-h-[36px] px-2.5 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 font-mono text-[11px] transition-colors cursor-pointer">
                                 <span>Share</span>
                             </button>
                             <a href="sample_audit.pdf" target="_blank" rel="noopener noreferrer" class="text-slate-300 hover:text-emerald-300 font-semibold flex items-center gap-1 whitespace-nowrap underline decoration-dotted ml-1">
@@ -1269,9 +1269,9 @@
                         <p class="text-xs text-slate-400 mt-0.5">Send one of these plain-English emails to your client roster today to close $250/mo security care retainers.</p>
                     </div>
                     <div class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 no-scrollbar scroll-indicate-x scroll-fade-r scroll-cyber-x" style="-webkit-overflow-scrolling: touch;">
-                        <button type="button" onclick="switchPitchTemplate('cve')" id="pitchTab-cve" class="pitch-tab-btn min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-bold bg-red-500/20 text-red-300 border border-red-500/40 cursor-pointer whitespace-nowrap">🚨 Breaking CVE Alert</button>
-                        <button type="button" onclick="switchPitchTemplate('quarterly')" id="pitchTab-quarterly" class="pitch-tab-btn min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap">🛡️ Quarterly Checkup</button>
-                        <button type="button" onclick="switchPitchTemplate('handover')" id="pitchTab-handover" class="pitch-tab-btn min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap">🚀 Post-Launch Care</button>
+                        <button type="button" data-ui-action="switch-pitch-template" data-template="cve" id="pitchTab-cve" class="pitch-tab-btn min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-bold bg-red-500/20 text-red-300 border border-red-500/40 cursor-pointer whitespace-nowrap">🚨 Breaking CVE Alert</button>
+                        <button type="button" data-ui-action="switch-pitch-template" data-template="quarterly" id="pitchTab-quarterly" class="pitch-tab-btn min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap">🛡️ Quarterly Checkup</button>
+                        <button type="button" data-ui-action="switch-pitch-template" data-template="handover" id="pitchTab-handover" class="pitch-tab-btn min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 cursor-pointer whitespace-nowrap">🚀 Post-Launch Care</button>
                     </div>
                 </div>
                 <div class="p-5 sm:p-6">
@@ -1280,14 +1280,14 @@
                             Subject: <span id="pitchSubjectDisplay" class="text-white font-bold">[Action Recommended] Protecting your domain against the November NGINX, OpenSSL &amp; DNS exposure wave</span>
                         </div>
                         <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
-                            <button type="button" id="copyPitchBtn" onclick="copyClientPitch()" class="min-h-[42px] px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                            <button type="button" id="copyPitchBtn" data-ui-action="copy-client-pitch" class="min-h-[42px] px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide transition-colors flex items-center justify-center gap-2 cursor-pointer">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                                 <span id="copyPitchBtnText">Copy Email Pitch</span>
                             </button>
-                            <button type="button" onclick="shareOrbitTool('pitch-drawer', 'x')" class="min-h-[40px] px-2.5 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 font-mono text-xs transition-colors cursor-pointer">
+                            <button type="button" data-radar-action="share-tool" data-tool="pitch-drawer" data-channel="x" class="min-h-[40px] px-2.5 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 font-mono text-xs transition-colors cursor-pointer">
                                 <span>𝕏 Share</span>
                             </button>
-                            <button type="button" onclick="shareOrbitTool('pitch-drawer', 'native')" class="min-h-[40px] px-2.5 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 font-mono text-xs transition-colors cursor-pointer">
+                            <button type="button" data-radar-action="share-tool" data-tool="pitch-drawer" data-channel="native" class="min-h-[40px] px-2.5 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 font-mono text-xs transition-colors cursor-pointer">
                                 <span>Share</span>
                             </button>
                         </div>
@@ -1365,11 +1365,11 @@ Apex Digital Studio</pre>
                     </div>
                     <div class="p-5 pt-0">
                         <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
-                            <button type="button" class="min-h-[48px] text-[11px] font-mono text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors cursor-pointer group text-left min-w-0" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('dns');}">
+                            <button type="button" class="min-h-[48px] text-[11px] font-mono text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors cursor-pointer group text-left min-w-0" data-sc-action="explain" data-sc-topic="dns" data-sc-sfx="blip">
                                 <span>🐱</span>
                                 <span class="text-slate-300 group-hover:text-white underline decoration-dotted truncate">"Maps hidden subdomains"</span>
                             </button>
-                            <button type="button" class="pixel-btn min-h-[48px] min-w-[48px] px-3 py-2 text-[9px] font-arcade rounded bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400 border border-emerald-500/40 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm flex-shrink-0" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('dns');}" title="Open layman explanation">
+                            <button type="button" class="pixel-btn min-h-[48px] min-w-[48px] px-3 py-2 text-[9px] font-arcade rounded bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400 border border-emerald-500/40 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm flex-shrink-0" data-sc-action="explain" data-sc-topic="dns" data-sc-sfx="blip" title="Open layman explanation">
                                 <span>[?]</span>
                             </button>
                         </div>
@@ -1417,11 +1417,11 @@ Apex Digital Studio</pre>
                     </div>
                     <div class="p-5 pt-0">
                         <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
-                            <button type="button" class="min-h-[48px] text-[11px] font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1 transition-colors cursor-pointer group text-left min-w-0" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('cname');}">
+                            <button type="button" class="min-h-[48px] text-[11px] font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1 transition-colors cursor-pointer group text-left min-w-0" data-sc-action="explain" data-sc-topic="cname" data-sc-sfx="blip">
                                 <span>🐱</span>
                                 <span class="text-slate-300 group-hover:text-white underline decoration-dotted truncate">"Guards abandoned lockers"</span>
                             </button>
-                            <button type="button" class="pixel-btn min-h-[48px] min-w-[48px] px-3 py-2 text-[9px] font-arcade rounded bg-slate-950 hover:bg-amber-500 hover:text-slate-950 text-amber-400 border border-amber-500/40 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm flex-shrink-0" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('cname');}" title="Open layman explanation">
+                            <button type="button" class="pixel-btn min-h-[48px] min-w-[48px] px-3 py-2 text-[9px] font-arcade rounded bg-slate-950 hover:bg-amber-500 hover:text-slate-950 text-amber-400 border border-amber-500/40 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm flex-shrink-0" data-sc-action="explain" data-sc-topic="cname" data-sc-sfx="blip" title="Open layman explanation">
                                 <span>[?]</span>
                             </button>
                         </div>
@@ -1469,11 +1469,11 @@ Apex Digital Studio</pre>
                     </div>
                     <div class="p-5 pt-0">
                         <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
-                            <button type="button" class="min-h-[48px] text-[11px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors cursor-pointer group text-left min-w-0" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('dmarc');}">
+                            <button type="button" class="min-h-[48px] text-[11px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors cursor-pointer group text-left min-w-0" data-sc-action="explain" data-sc-topic="dmarc" data-sc-sfx="blip">
                                 <span>🐱</span>
                                 <span class="text-slate-300 group-hover:text-white underline decoration-dotted truncate">"Stops fake CEO emails"</span>
                             </button>
-                            <button type="button" class="pixel-btn min-h-[48px] min-w-[48px] px-3 py-2 text-[9px] font-arcade rounded bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 text-cyan-400 border border-cyan-500/40 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm flex-shrink-0" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('dmarc');}" title="Open layman explanation">
+                            <button type="button" class="pixel-btn min-h-[48px] min-w-[48px] px-3 py-2 text-[9px] font-arcade rounded bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 text-cyan-400 border border-cyan-500/40 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm flex-shrink-0" data-sc-action="explain" data-sc-topic="dmarc" data-sc-sfx="blip" title="Open layman explanation">
                                 <span>[?]</span>
                             </button>
                         </div>
@@ -1521,11 +1521,11 @@ Apex Digital Studio</pre>
                     </div>
                     <div class="p-5 pt-0">
                         <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
-                            <button type="button" class="min-h-[48px] text-[11px] font-mono text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors cursor-pointer group text-left min-w-0" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('mx');}">
+                            <button type="button" class="min-h-[48px] text-[11px] font-mono text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors cursor-pointer group text-left min-w-0" data-sc-action="explain" data-sc-topic="mx" data-sc-sfx="blip">
                                 <span>🐱</span>
                                 <span class="text-slate-300 group-hover:text-white underline decoration-dotted truncate">"Shields inbound gateways"</span>
                             </button>
-                            <button type="button" class="pixel-btn min-h-[48px] min-w-[48px] px-3 py-2 text-[9px] font-arcade rounded bg-slate-950 hover:bg-purple-500 hover:text-slate-950 text-purple-400 border border-purple-500/40 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm flex-shrink-0" onclick="if(window.SimpleCat){SimpleCat.playBlip(); SimpleCat.explain('mx');}" title="Open layman explanation">
+                            <button type="button" class="pixel-btn min-h-[48px] min-w-[48px] px-3 py-2 text-[9px] font-arcade rounded bg-slate-950 hover:bg-purple-500 hover:text-slate-950 text-purple-400 border border-purple-500/40 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm flex-shrink-0" data-sc-action="explain" data-sc-topic="mx" data-sc-sfx="blip" title="Open layman explanation">
                                 <span>[?]</span>
                             </button>
                         </div>
@@ -1551,7 +1551,7 @@ Apex Digital Studio</pre>
                     </div>
                 </div>
                 <div class="flex items-center gap-3 w-full md:w-auto justify-end flex-shrink-0">
-                    <button type="button" onclick="if(window.SimpleCat){SimpleCat.startDefense();}" class="w-full md:w-auto min-h-[48px] px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 text-slate-950 font-arcade text-xs font-bold transition-all shadow-lg shadow-red-500/30 active:scale-95 cursor-pointer pixel-btn flex items-center justify-center gap-2">
+                    <button type="button" data-sc-action="start-defense" class="w-full md:w-auto min-h-[48px] px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 text-slate-950 font-arcade text-xs font-bold transition-all shadow-lg shadow-red-500/30 active:scale-95 cursor-pointer pixel-btn flex items-center justify-center gap-2">
                         <span>🎮 PLAY DEFENSE MODE</span>
                     </button>
                 </div>
@@ -1711,7 +1711,7 @@ Apex Digital Studio</pre>
                 </div>
                 <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between gap-3 text-[11px] font-mono">
                     <a href="ghostdns/index.html" class="text-slate-300 hover:text-emerald-400 transition-colors">Test in GhostDNS &rarr;</a>
-                    <button type="button" onclick="SimpleCat.explain('cname')" class="text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer whitespace-nowrap py-1">Plain-English &rarr;</button>
+                    <button type="button" data-sc-action="explain" data-sc-topic="cname" class="text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer whitespace-nowrap py-1">Plain-English &rarr;</button>
                 </div>
             </article>
 
@@ -1729,7 +1729,7 @@ Apex Digital Studio</pre>
                 </div>
                 <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between gap-3 text-[11px] font-mono">
                     <a href="portals/index.html" class="text-slate-300 hover:text-emerald-400 transition-colors">8 Portal Demos &rarr;</a>
-                    <button type="button" onclick="SimpleCat.explain('audit')" class="text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer whitespace-nowrap py-1">Plain-English &rarr;</button>
+                    <button type="button" data-sc-action="explain" data-sc-topic="audit" class="text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer whitespace-nowrap py-1">Plain-English &rarr;</button>
                 </div>
             </article>
 
@@ -1746,7 +1746,7 @@ Apex Digital Studio</pre>
                     </p>
                 </div>
                 <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-end text-[11px] font-mono">
-                    <button type="button" onclick="SimpleCat.explain('dmarc')" class="text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer whitespace-nowrap py-1">Plain-English &rarr;</button>
+                    <button type="button" data-sc-action="explain" data-sc-topic="dmarc" class="text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer whitespace-nowrap py-1">Plain-English &rarr;</button>
                 </div>
             </article>
 
@@ -1763,7 +1763,7 @@ Apex Digital Studio</pre>
                     </p>
                 </div>
                 <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-end text-[11px] font-mono">
-                    <button type="button" onclick="SimpleCat.explain('audit')" class="text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer whitespace-nowrap py-1">Plain-English &rarr;</button>
+                    <button type="button" data-sc-action="explain" data-sc-topic="audit" class="text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer whitespace-nowrap py-1">Plain-English &rarr;</button>
                 </div>
             </article>
 
@@ -1780,7 +1780,7 @@ Apex Digital Studio</pre>
                     </p>
                 </div>
                 <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-end text-[11px] font-mono">
-                    <button type="button" onclick="SimpleCat.explain('doh')" class="text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer whitespace-nowrap py-1">Plain-English &rarr;</button>
+                    <button type="button" data-sc-action="explain" data-sc-topic="doh" class="text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer whitespace-nowrap py-1">Plain-English &rarr;</button>
                 </div>
             </article>
 
@@ -1798,7 +1798,7 @@ Apex Digital Studio</pre>
                 </div>
                 <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between gap-3 text-[11px] font-mono">
                     <a href="#legal" class="text-slate-300 hover:text-emerald-400 transition-colors">Copy MSA Rider &rarr;</a>
-                    <button type="button" onclick="SimpleCat.explain('hsts')" class="text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer whitespace-nowrap py-1">Plain-English &rarr;</button>
+                    <button type="button" data-sc-action="explain" data-sc-topic="hsts" class="text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer whitespace-nowrap py-1">Plain-English &rarr;</button>
                 </div>
             </article>
         </div>
@@ -1864,32 +1864,32 @@ Apex Digital Studio</pre>
                     <!-- 6 Preset Swatches -->
                     <div class="grid grid-cols-3 sm:grid-cols-6 gap-2" role="radiogroup" aria-label="Preset Brand Accent Swatches">
                         <!-- Orbit Emerald -->
-                        <button type="button" id="portalSwatch-emerald" onclick="applyPortalBrandColor('#10b981', 'emerald')" class="portal-swatch-btn min-h-[48px] rounded-xl bg-slate-950 border border-slate-700 hover:border-emerald-400 flex flex-col items-center justify-center p-2 transition-all cursor-pointer ring-2 ring-white ring-offset-2 ring-offset-slate-900 border-white scale-105" title="Orbit Emerald (#10b981)" aria-label="Select Orbit Emerald Swatch">
+                        <button type="button" id="portalSwatch-emerald" data-ui-action="apply-portal-color" data-hex="#10b981" data-name="emerald" class="portal-swatch-btn min-h-[48px] rounded-xl bg-slate-950 border border-slate-700 hover:border-emerald-400 flex flex-col items-center justify-center p-2 transition-all cursor-pointer ring-2 ring-white ring-offset-2 ring-offset-slate-900 border-white scale-105" title="Orbit Emerald (#10b981)" aria-label="Select Orbit Emerald Swatch">
                             <span class="w-4 h-4 rounded-full bg-[#10b981] shadow-sm"></span>
                             <span class="text-[9px] font-mono text-slate-400 mt-1">Emerald</span>
                         </button>
                         <!-- Cyber Cyan -->
-                        <button type="button" id="portalSwatch-cyan" onclick="applyPortalBrandColor('#06b6d4', 'cyan')" class="portal-swatch-btn min-h-[48px] rounded-xl bg-slate-950 border border-slate-700 hover:border-cyan-400 flex flex-col items-center justify-center p-2 transition-all cursor-pointer" title="Cyber Cyan (#06b6d4)" aria-label="Select Cyber Cyan Swatch">
+                        <button type="button" id="portalSwatch-cyan" data-ui-action="apply-portal-color" data-hex="#06b6d4" data-name="cyan" class="portal-swatch-btn min-h-[48px] rounded-xl bg-slate-950 border border-slate-700 hover:border-cyan-400 flex flex-col items-center justify-center p-2 transition-all cursor-pointer" title="Cyber Cyan (#06b6d4)" aria-label="Select Cyber Cyan Swatch">
                             <span class="w-4 h-4 rounded-full bg-[#06b6d4] shadow-sm"></span>
                             <span class="text-[9px] font-mono text-slate-400 mt-1">Cyan</span>
                         </button>
                         <!-- Indigo -->
-                        <button type="button" id="portalSwatch-indigo" onclick="applyPortalBrandColor('#6366f1', 'indigo')" class="portal-swatch-btn min-h-[48px] rounded-xl bg-slate-950 border border-slate-700 hover:border-indigo-400 flex flex-col items-center justify-center p-2 transition-all cursor-pointer" title="Indigo (#6366f1)" aria-label="Select Indigo Swatch">
+                        <button type="button" id="portalSwatch-indigo" data-ui-action="apply-portal-color" data-hex="#6366f1" data-name="indigo" class="portal-swatch-btn min-h-[48px] rounded-xl bg-slate-950 border border-slate-700 hover:border-indigo-400 flex flex-col items-center justify-center p-2 transition-all cursor-pointer" title="Indigo (#6366f1)" aria-label="Select Indigo Swatch">
                             <span class="w-4 h-4 rounded-full bg-[#6366f1] shadow-sm"></span>
                             <span class="text-[9px] font-mono text-slate-400 mt-1">Indigo</span>
                         </button>
                         <!-- Electric Violet -->
-                        <button type="button" id="portalSwatch-violet" onclick="applyPortalBrandColor('#8b5cf6', 'violet')" class="portal-swatch-btn min-h-[48px] rounded-xl bg-slate-950 border border-slate-700 hover:border-purple-400 flex flex-col items-center justify-center p-2 transition-all cursor-pointer" title="Electric Violet (#8b5cf6)" aria-label="Select Electric Violet Swatch">
+                        <button type="button" id="portalSwatch-violet" data-ui-action="apply-portal-color" data-hex="#8b5cf6" data-name="violet" class="portal-swatch-btn min-h-[48px] rounded-xl bg-slate-950 border border-slate-700 hover:border-purple-400 flex flex-col items-center justify-center p-2 transition-all cursor-pointer" title="Electric Violet (#8b5cf6)" aria-label="Select Electric Violet Swatch">
                             <span class="w-4 h-4 rounded-full bg-[#8b5cf6] shadow-sm"></span>
                             <span class="text-[9px] font-mono text-slate-400 mt-1">Violet</span>
                         </button>
                         <!-- Amber Gold -->
-                        <button type="button" id="portalSwatch-amber" onclick="applyPortalBrandColor('#f59e0b', 'amber')" class="portal-swatch-btn min-h-[48px] rounded-xl bg-slate-950 border border-slate-700 hover:border-amber-400 flex flex-col items-center justify-center p-2 transition-all cursor-pointer" title="Amber Gold (#f59e0b)" aria-label="Select Amber Gold Swatch">
+                        <button type="button" id="portalSwatch-amber" data-ui-action="apply-portal-color" data-hex="#f59e0b" data-name="amber" class="portal-swatch-btn min-h-[48px] rounded-xl bg-slate-950 border border-slate-700 hover:border-amber-400 flex flex-col items-center justify-center p-2 transition-all cursor-pointer" title="Amber Gold (#f59e0b)" aria-label="Select Amber Gold Swatch">
                             <span class="w-4 h-4 rounded-full bg-[#f59e0b] shadow-sm"></span>
                             <span class="text-[9px] font-mono text-slate-400 mt-1">Amber</span>
                         </button>
                         <!-- Crimson -->
-                        <button type="button" id="portalSwatch-crimson" onclick="applyPortalBrandColor('#f43f5e', 'crimson')" class="portal-swatch-btn min-h-[48px] rounded-xl bg-slate-950 border border-slate-700 hover:border-rose-400 flex flex-col items-center justify-center p-2 transition-all cursor-pointer" title="Crimson (#f43f5e)" aria-label="Select Crimson Swatch">
+                        <button type="button" id="portalSwatch-crimson" data-ui-action="apply-portal-color" data-hex="#f43f5e" data-name="crimson" class="portal-swatch-btn min-h-[48px] rounded-xl bg-slate-950 border border-slate-700 hover:border-rose-400 flex flex-col items-center justify-center p-2 transition-all cursor-pointer" title="Crimson (#f43f5e)" aria-label="Select Crimson Swatch">
                             <span class="w-4 h-4 rounded-full bg-[#f43f5e] shadow-sm"></span>
                             <span class="text-[9px] font-mono text-slate-400 mt-1">Crimson</span>
                         </button>
@@ -1931,18 +1931,18 @@ Apex Digital Studio</pre>
                             </div>
                         </div>
                     </div>
-                    <button type="button" id="portalResetLogoBtn" onclick="resetPortalLogo()" class="min-h-[44px] w-full px-3 py-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-xs text-slate-400 hover:text-white font-mono transition-all flex items-center justify-center gap-1.5 cursor-pointer" title="Restore default Orbit Security brand logo">
+                    <button type="button" id="portalResetLogoBtn" data-ui-action="reset-portal-logo" class="min-h-[44px] w-full px-3 py-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-xs text-slate-400 hover:text-white font-mono transition-all flex items-center justify-center gap-1.5 cursor-pointer" title="Restore default Orbit Security brand logo">
                         <span>↺ Reset to Default Orbit Logo</span>
                     </button>
                 </div>
 
                 <!-- 4. Panel Action Controls -->
                 <div class="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    <button type="button" id="portalCopyInviteBtn" onclick="copyClientInviteLink()" class="flex-1 min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-200 text-xs font-mono font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+                    <button type="button" id="portalCopyInviteBtn" data-ui-action="copy-client-invite" class="flex-1 min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-200 text-xs font-mono font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm">
                         <span>🔗</span>
                         <span id="portalCopyInviteBtnText">Copy Client Invite Link</span>
                     </button>
-                    <button type="button" id="portalResetAllBtn" onclick="resetPortalBranding()" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white text-xs font-mono transition-all flex items-center justify-center gap-1.5 cursor-pointer" title="Reset all agency branding to default Apex Digital Studio">
+                    <button type="button" id="portalResetAllBtn" data-ui-action="reset-portal-branding" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white text-xs font-mono transition-all flex items-center justify-center gap-1.5 cursor-pointer" title="Reset all agency branding to default Apex Digital Studio">
                         <span>↺ Reset All</span>
                     </button>
                 </div>
@@ -2054,7 +2054,7 @@ Apex Digital Studio</pre>
                                 <div class="flex items-center gap-3 flex-wrap">
                                     <span class="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/30">95/100 (A+)</span>
                                     <span class="text-xs font-mono text-slate-400">0 Crit / 0 High</span>
-                                    <button type="button" onclick="runRealScanAndGeneratePdf()" id="portalMockupPdfBtn" class="min-h-[44px] px-3.5 py-1.5 rounded-lg text-xs font-bold font-sans transition-all shadow-md flex items-center gap-1.5 cursor-pointer pixel-btn" style="background: var(--portal-accent, #10b981); color: #020617;" title="Download sample co-branded executive audit PDF">
+                                    <button type="button" data-ui-action="run-real-scan-pdf" id="portalMockupPdfBtn" class="min-h-[44px] px-3.5 py-1.5 rounded-lg text-xs font-bold font-sans transition-all shadow-md flex items-center gap-1.5 cursor-pointer pixel-btn" style="background: var(--portal-accent, #10b981); color: #020617;" title="Download sample co-branded executive audit PDF">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                         <span>Download PDF Audit</span>
                                     </button>
@@ -2070,11 +2070,11 @@ Apex Digital Studio</pre>
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                         </a>
                         <div class="flex items-center gap-2">
-                            <button type="button" id="portalMockupInviteBtn" onclick="copyClientInviteLink()" class="flex-1 sm:flex-none min-h-[48px] px-4 py-2.5 rounded-xl border border-slate-700 hover:border-slate-600 bg-slate-900 text-slate-200 text-xs font-mono font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+                            <button type="button" id="portalMockupInviteBtn" data-ui-action="copy-client-invite" class="flex-1 sm:flex-none min-h-[48px] px-4 py-2.5 rounded-xl border border-slate-700 hover:border-slate-600 bg-slate-900 text-slate-200 text-xs font-mono font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm">
                                 <span>🔗</span>
                                 <span>Copy Client Invite Link</span>
                             </button>
-                            <button type="button" id="portalMockupResetBtn" onclick="resetPortalBranding()" class="min-h-[48px] px-4 py-2.5 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-950 text-slate-400 hover:text-white text-xs font-mono transition-all flex items-center justify-center gap-1.5 cursor-pointer" title="Reset all agency branding back to default Orbit theme">
+                            <button type="button" id="portalMockupResetBtn" data-ui-action="reset-portal-branding" class="min-h-[48px] px-4 py-2.5 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-950 text-slate-400 hover:text-white text-xs font-mono transition-all flex items-center justify-center gap-1.5 cursor-pointer" title="Reset all agency branding back to default Orbit theme">
                                 <span>↺ Reset Branding</span>
                             </button>
                         </div>
@@ -2110,7 +2110,7 @@ Apex Digital Studio</pre>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
                 
                 <!-- Card 1: DMARC -->
-                <div onclick="SimpleCat.explain('dmarc')" class="bg-slate-900/90 border-2 border-emerald-500/40 hover:border-emerald-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(16,185,129,0.3)] group card-glass">
+                <div data-sc-action="explain" data-sc-topic="dmarc" class="bg-slate-900/90 border-2 border-emerald-500/40 hover:border-emerald-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(16,185,129,0.3)] group card-glass">
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-2xl">🛡️</span>
                         <span class="text-[9px] font-arcade text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">DMARC</span>
@@ -2125,7 +2125,7 @@ Apex Digital Studio</pre>
                 </div>
 
                 <!-- Card 2: DNSSEC -->
-                <div onclick="SimpleCat.explain('dnssec')" class="bg-slate-900/90 border-2 border-cyan-500/40 hover:border-cyan-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(6,182,212,0.3)] group card-glass">
+                <div data-sc-action="explain" data-sc-topic="dnssec" class="bg-slate-900/90 border-2 border-cyan-500/40 hover:border-cyan-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(6,182,212,0.3)] group card-glass">
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-2xl">📜</span>
                         <span class="text-[9px] font-arcade text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30">DNSSEC</span>
@@ -2140,7 +2140,7 @@ Apex Digital Studio</pre>
                 </div>
 
                 <!-- Card 3: CNAME & Subdomain Takeover -->
-                <div onclick="SimpleCat.explain('cname')" class="bg-slate-900/90 border-2 border-emerald-500/40 hover:border-emerald-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(16,185,129,0.3)] group card-glass">
+                <div data-sc-action="explain" data-sc-topic="cname" class="bg-slate-900/90 border-2 border-emerald-500/40 hover:border-emerald-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(16,185,129,0.3)] group card-glass">
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-2xl">🏷️</span>
                         <span class="text-[9px] font-arcade text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">CNAME TAKEOVER</span>
@@ -2155,7 +2155,7 @@ Apex Digital Studio</pre>
                 </div>
 
                 <!-- Card 4: Subdomain Hijacking -->
-                <div onclick="SimpleCat.explain('subdomain')" class="bg-slate-900/90 border-2 border-purple-500/40 hover:border-purple-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(168,85,247,0.3)] group card-glass">
+                <div data-sc-action="explain" data-sc-topic="subdomain" class="bg-slate-900/90 border-2 border-purple-500/40 hover:border-purple-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(168,85,247,0.3)] group card-glass">
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-2xl">🏚️</span>
                         <span class="text-[9px] font-arcade text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/30">SUBDOMAIN HIJACK</span>
@@ -2170,7 +2170,7 @@ Apex Digital Studio</pre>
                 </div>
 
                 <!-- Card 5: SPF Guest List -->
-                <div onclick="SimpleCat.explain('spf')" class="bg-slate-900/90 border-2 border-cyan-500/40 hover:border-cyan-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(6,182,212,0.3)] group card-glass">
+                <div data-sc-action="explain" data-sc-topic="spf" class="bg-slate-900/90 border-2 border-cyan-500/40 hover:border-cyan-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(6,182,212,0.3)] group card-glass">
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-2xl">📋</span>
                         <span class="text-[9px] font-arcade text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30">SPF POLICY</span>
@@ -2185,7 +2185,7 @@ Apex Digital Studio</pre>
                 </div>
 
                 <!-- Card 6: DKIM Royal Seal -->
-                <div onclick="SimpleCat.explain('dkim')" class="bg-slate-900/90 border-2 border-emerald-500/40 hover:border-emerald-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(16,185,129,0.3)] group card-glass">
+                <div data-sc-action="explain" data-sc-topic="dkim" class="bg-slate-900/90 border-2 border-emerald-500/40 hover:border-emerald-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(16,185,129,0.3)] group card-glass">
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-2xl">🔏</span>
                         <span class="text-[9px] font-arcade text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">DKIM CRYPTO</span>
@@ -2200,7 +2200,7 @@ Apex Digital Studio</pre>
                 </div>
 
                 <!-- Card 7: MX Records -->
-                <div onclick="SimpleCat.explain('mx')" class="bg-slate-900/90 border-2 border-purple-500/40 hover:border-purple-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(168,85,247,0.3)] group card-glass">
+                <div data-sc-action="explain" data-sc-topic="mx" class="bg-slate-900/90 border-2 border-purple-500/40 hover:border-purple-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(168,85,247,0.3)] group card-glass">
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-2xl">📬</span>
                         <span class="text-[9px] font-arcade text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/30">MX ROUTING</span>
@@ -2215,7 +2215,7 @@ Apex Digital Studio</pre>
                 </div>
 
                 <!-- Card 8: $250 Agency Retainer -->
-                <div onclick="SimpleCat.explain('audit')" class="bg-slate-900/90 border-2 border-emerald-500/40 hover:border-emerald-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(16,185,129,0.3)] group card-glass">
+                <div data-sc-action="explain" data-sc-topic="audit" class="bg-slate-900/90 border-2 border-emerald-500/40 hover:border-emerald-400 p-5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(16,185,129,0.3)] group card-glass">
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-2xl">💰</span>
                         <span class="text-[9px] font-arcade text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">$250 RETAINER</span>
@@ -2248,56 +2248,56 @@ Apex Digital Studio</pre>
                 
                 <!-- Complete 12-Term Interactive Chips Matrix -->
                 <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5">
-                    <button type="button" onclick="SimpleCat.explain('dmarc')" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/50 text-xs font-mono text-emerald-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
+                    <button type="button" data-sc-action="explain" data-sc-topic="dmarc" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/50 text-xs font-mono text-emerald-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
                         🛡️ DMARC Bouncer
                     </button>
-                    <button type="button" onclick="SimpleCat.explain('spf')" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 border border-cyan-500/50 text-xs font-mono text-cyan-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
+                    <button type="button" data-sc-action="explain" data-sc-topic="spf" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 border border-cyan-500/50 text-xs font-mono text-cyan-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
                         📋 SPF Guest List
                     </button>
-                    <button type="button" onclick="SimpleCat.explain('dkim')" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/50 text-xs font-mono text-emerald-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
+                    <button type="button" data-sc-action="explain" data-sc-topic="dkim" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/50 text-xs font-mono text-emerald-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
                         🔏 DKIM Royal Seal
                     </button>
-                    <button type="button" onclick="SimpleCat.explain('dnssec')" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 border border-cyan-500/50 text-xs font-mono text-cyan-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
+                    <button type="button" data-sc-action="explain" data-sc-topic="dnssec" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 border border-cyan-500/50 text-xs font-mono text-cyan-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
                         📜 DNSSEC Notary
                     </button>
-                    <button type="button" onclick="SimpleCat.explain('cname')" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/50 text-xs font-mono text-emerald-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
+                    <button type="button" data-sc-action="explain" data-sc-topic="cname" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/50 text-xs font-mono text-emerald-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
                         🏷️ CNAME Takeovers
                     </button>
-                    <button type="button" onclick="SimpleCat.explain('subdomain')" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-purple-500 hover:text-slate-950 border border-purple-500/50 text-xs font-mono text-purple-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
+                    <button type="button" data-sc-action="explain" data-sc-topic="subdomain" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-purple-500 hover:text-slate-950 border border-purple-500/50 text-xs font-mono text-purple-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
                         🏚️ Subdomain Hijacking
                     </button>
-                    <button type="button" onclick="SimpleCat.explain('doh')" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 border border-cyan-500/50 text-xs font-mono text-cyan-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
+                    <button type="button" data-sc-action="explain" data-sc-topic="doh" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 border border-cyan-500/50 text-xs font-mono text-cyan-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
                         🤫 DoH (RFC 8484)
                     </button>
-                    <button type="button" onclick="SimpleCat.explain('mx')" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-purple-500 hover:text-slate-950 border border-purple-500/50 text-xs font-mono text-purple-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
+                    <button type="button" data-sc-action="explain" data-sc-topic="mx" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-purple-500 hover:text-slate-950 border border-purple-500/50 text-xs font-mono text-purple-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
                         📬 MX Records
                     </button>
-                    <button type="button" onclick="SimpleCat.explain('hsts')" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/50 text-xs font-mono text-emerald-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
+                    <button type="button" data-sc-action="explain" data-sc-topic="hsts" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/50 text-xs font-mono text-emerald-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
                         🔒 HSTS Armored Truck
                     </button>
-                    <button type="button" onclick="SimpleCat.explain('csp')" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 border border-cyan-500/50 text-xs font-mono text-cyan-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
+                    <button type="button" data-sc-action="explain" data-sc-topic="csp" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 border border-cyan-500/50 text-xs font-mono text-cyan-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
                         📜 CSP Code Rules
                     </button>
-                    <button type="button" onclick="SimpleCat.explain('headers')" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/50 text-xs font-mono text-emerald-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
+                    <button type="button" data-sc-action="explain" data-sc-topic="headers" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/50 text-xs font-mono text-emerald-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
                         🔐 OWASP Deadbolts
                     </button>
-                    <button type="button" onclick="SimpleCat.explain('drift')" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-purple-500 hover:text-slate-950 border border-purple-500/50 text-xs font-mono text-purple-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
+                    <button type="button" data-sc-action="explain" data-sc-topic="drift" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-purple-500 hover:text-slate-950 border border-purple-500/50 text-xs font-mono text-purple-400 transition-all pixel-btn cursor-pointer flex items-center justify-center">
                         📡 Perimeter Drift
                     </button>
-                    <button type="button" onclick="SimpleCat.playPowerUp(); SimpleCat.explain('audit')" class="min-h-[48px] px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs font-mono hover:bg-emerald-400 transition-all pixel-btn cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.3)] flex items-center justify-center">
+                    <button type="button" data-sc-action="explain" data-sc-topic="audit" data-sc-sfx="powerup" class="min-h-[48px] px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs font-mono hover:bg-emerald-400 transition-all pixel-btn cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.3)] flex items-center justify-center">
                         ⭐ $250 Agency Retainer Engine
                     </button>
                 </div>
 
                 <!-- Mobile & Desktop Record Clip for X + Social Share Bar -->
                 <div class="mt-6 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-center gap-2 text-[11px] font-mono text-slate-500">
-                    <button type="button" onclick="if(window.SimpleCat && SimpleCat.recordClip) SimpleCat.recordClip()" class="min-h-[36px] px-3 py-1.5 rounded bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-emerald-300 border border-slate-700 font-semibold transition-colors cursor-pointer">
+                    <button type="button" data-sc-action="record-clip" class="min-h-[36px] px-3 py-1.5 rounded bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-emerald-300 border border-slate-700 font-semibold transition-colors cursor-pointer">
                         Record Clip for X
                     </button>
-                    <button type="button" onclick="shareOrbitTool('simple-cat', 'x')" class="min-h-[36px] px-2.5 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 transition-colors cursor-pointer">
+                    <button type="button" data-radar-action="share-tool" data-tool="simple-cat" data-channel="x" class="min-h-[36px] px-2.5 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 transition-colors cursor-pointer">
                         𝕏 Share
                     </button>
-                    <button type="button" onclick="shareOrbitTool('simple-cat', 'native')" class="min-h-[36px] px-2.5 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 transition-colors cursor-pointer">
+                    <button type="button" data-radar-action="share-tool" data-tool="simple-cat" data-channel="native" class="min-h-[36px] px-2.5 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 transition-colors cursor-pointer">
                         Share Decoder
                     </button>
                 </div>
@@ -2471,7 +2471,7 @@ Apex Digital Studio</pre>
                         <span>.github/workflows/orbit-security.yml</span>
                         <span class="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[10px]">SARIF 2.1.0</span>
                     </div>
-                    <button type="button" id="copyActionYamlBtn" onclick="copyOrbitActionYaml()" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/40 text-emerald-300 font-mono text-[11px] font-bold cursor-pointer transition-all">
+                    <button type="button" id="copyActionYamlBtn" data-ui-action="copy-action-yaml" class="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 border border-emerald-500/40 text-emerald-300 font-mono text-[11px] font-bold cursor-pointer transition-all">
                         📋 Copy Workflow YAML
                     </button>
                 </div>
@@ -2502,7 +2502,7 @@ Apex Digital Studio</pre>
             <div class="space-y-4">
                 <!-- FAQ Item 1 -->
                 <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-5 hover:border-emerald-500/40 transition-colors">
-                    <button type="button" onclick="toggleFaq(this)" class="w-full min-h-[48px] py-3.5 px-2 flex items-center justify-between text-left gap-4 font-bold text-white text-base cursor-pointer">
+                    <button type="button" data-ui-action="toggle-faq" class="w-full min-h-[48px] py-3.5 px-2 flex items-center justify-between text-left gap-4 font-bold text-white text-base cursor-pointer">
                         <span>How do agencies monetize Orbit Security to earn $250/mo per client?</span>
                         <span class="faq-icon text-emerald-400 text-xl font-mono flex-shrink-0">+</span>
                     </button>
@@ -2514,7 +2514,7 @@ Apex Digital Studio</pre>
 
                 <!-- FAQ Item 2 -->
                 <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-5 hover:border-emerald-500/40 transition-colors">
-                    <button type="button" onclick="toggleFaq(this)" class="w-full min-h-[48px] py-3.5 px-2 flex items-center justify-between text-left gap-4 font-bold text-white text-base cursor-pointer">
+                    <button type="button" data-ui-action="toggle-faq" class="w-full min-h-[48px] py-3.5 px-2 flex items-center justify-between text-left gap-4 font-bold text-white text-base cursor-pointer">
                         <span>Will these automated scans slow down or disrupt our clients' websites?</span>
                         <span class="faq-icon text-emerald-400 text-xl font-mono flex-shrink-0">+</span>
                     </button>
@@ -2526,7 +2526,7 @@ Apex Digital Studio</pre>
 
                 <!-- FAQ Item 3 -->
                 <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-5 hover:border-emerald-500/40 transition-colors">
-                    <button type="button" onclick="toggleFaq(this)" class="w-full min-h-[48px] py-3.5 px-2 flex items-center justify-between text-left gap-4 font-bold text-white text-base cursor-pointer">
+                    <button type="button" data-ui-action="toggle-faq" class="w-full min-h-[48px] py-3.5 px-2 flex items-center justify-between text-left gap-4 font-bold text-white text-base cursor-pointer">
                         <span>Can we put our agency logo, corporate palette, and contact info on the PDF?</span>
                         <span class="faq-icon text-emerald-400 text-xl font-mono flex-shrink-0">+</span>
                     </button>
@@ -2538,7 +2538,7 @@ Apex Digital Studio</pre>
 
                 <!-- FAQ Item 4 -->
                 <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-5 hover:border-emerald-500/40 transition-colors">
-                    <button type="button" onclick="toggleFaq(this)" class="w-full min-h-[48px] py-3.5 px-2 flex items-center justify-between text-left gap-4 font-bold text-white text-base cursor-pointer">
+                    <button type="button" data-ui-action="toggle-faq" class="w-full min-h-[48px] py-3.5 px-2 flex items-center justify-between text-left gap-4 font-bold text-white text-base cursor-pointer">
                         <span>What legal protection do we have when monitoring client domains?</span>
                         <span class="faq-icon text-emerald-400 text-xl font-mono flex-shrink-0">+</span>
                     </button>
@@ -2550,7 +2550,7 @@ Apex Digital Studio</pre>
 
                 <!-- FAQ Item 5 -->
                 <div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-5 hover:border-emerald-500/40 transition-colors">
-                    <button type="button" onclick="toggleFaq(this)" class="w-full min-h-[48px] py-3.5 px-2 flex items-center justify-between text-left gap-4 font-bold text-white text-base cursor-pointer">
+                    <button type="button" data-ui-action="toggle-faq" class="w-full min-h-[48px] py-3.5 px-2 flex items-center justify-between text-left gap-4 font-bold text-white text-base cursor-pointer">
                         <span>How does the 30-day money-back guarantee work?</span>
                         <span class="faq-icon text-emerald-400 text-xl font-mono flex-shrink-0">+</span>
                     </button>
@@ -2584,14 +2584,14 @@ Apex Digital Studio</pre>
                         </details>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
-                        <button type="button" id="copy-rider-btn" onclick="copyLegalRider()" class="min-h-[42px] px-4 py-2 rounded-md bg-slate-950 border border-slate-700 hover:border-emerald-500 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 text-xs font-mono font-semibold uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                        <button type="button" id="copy-rider-btn" data-ui-action="copy-legal-rider" class="min-h-[42px] px-4 py-2 rounded-md bg-slate-950 border border-slate-700 hover:border-emerald-500 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 text-xs font-mono font-semibold uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                             <span>Copy Contract Rider</span>
                         </button>
-                        <button type="button" onclick="shareOrbitTool('legal-rider', 'x')" class="min-h-[38px] px-2.5 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 font-mono text-xs transition-colors cursor-pointer">
+                        <button type="button" data-radar-action="share-tool" data-tool="legal-rider" data-channel="x" class="min-h-[38px] px-2.5 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 font-mono text-xs transition-colors cursor-pointer">
                             𝕏 Share
                         </button>
-                        <button type="button" onclick="shareOrbitTool('legal-rider', 'native')" class="min-h-[38px] px-2.5 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 font-mono text-xs transition-colors cursor-pointer">
+                        <button type="button" data-radar-action="share-tool" data-tool="legal-rider" data-channel="native" class="min-h-[38px] px-2.5 py-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 font-mono text-xs transition-colors cursor-pointer">
                             Share
                         </button>
                     </div>
@@ -2740,9 +2740,9 @@ Apex Digital Studio</pre>
                         </div>
                         <div class="flex flex-wrap items-center gap-1.5 font-mono text-[11px]">
                             <span class="text-slate-500 mr-1 hidden sm:inline">Presets:</span>
-                            <button type="button" onclick="applyRoiPreset(10, 200, 0)" class="min-h-[34px] px-2.5 py-1 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-300 cursor-pointer transition-colors">Boutique (10 &times; $200)</button>
-                            <button type="button" onclick="applyRoiPreset(25, 250, 0)" class="min-h-[34px] px-2.5 py-1 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-300 cursor-pointer transition-colors">Growth (25 &times; $250)</button>
-                            <button type="button" onclick="applyRoiPreset(60, 350, 0)" class="min-h-[34px] px-2.5 py-1 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-300 cursor-pointer transition-colors">Shopify Fleet (60 &times; $350)</button>
+                            <button type="button" data-ui-action="applyRoiPreset" data-clients="10" data-fee="200" data-labor="0" class="min-h-[34px] px-2.5 py-1 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-300 cursor-pointer transition-colors">Boutique (10 &times; $200)</button>
+                            <button type="button" data-ui-action="applyRoiPreset" data-clients="25" data-fee="250" data-labor="0" class="min-h-[34px] px-2.5 py-1 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-300 cursor-pointer transition-colors">Growth (25 &times; $250)</button>
+                            <button type="button" data-ui-action="applyRoiPreset" data-clients="60" data-fee="350" data-labor="0" class="min-h-[34px] px-2.5 py-1 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-300 cursor-pointer transition-colors">Shopify Fleet (60 &times; $350)</button>
                         </div>
                     </div>
 
@@ -2754,7 +2754,7 @@ Apex Digital Studio</pre>
                                     <label for="roiClientCount" class="text-slate-300">Active Client Domains on Care Plan:</label>
                                     <span id="roiClientCountVal" class="px-2 py-0.5 rounded bg-slate-950 text-emerald-300 font-bold text-xs border border-slate-700 tabular-nums">25 Clients</span>
                                 </div>
-                                <input type="range" id="roiClientCount" min="1" max="100" value="25" oninput="updateRoiCalculator()" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-400" />
+                                <input type="range" id="roiClientCount" min="1" max="100" value="25" data-ui-input="update-roi" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-400" />
                                 <div class="flex justify-between text-[10px] font-mono text-slate-500 mt-1">
                                     <span>1 Client</span>
                                     <span>15 (Starter)</span>
@@ -2768,7 +2768,7 @@ Apex Digital Studio</pre>
                                     <label for="roiRetainerFee" class="text-slate-300">Monthly Security Retainer Charged per Client:</label>
                                     <span id="roiRetainerFeeVal" class="px-2 py-0.5 rounded bg-slate-950 text-slate-200 font-bold text-xs border border-slate-700 tabular-nums">$250 / mo</span>
                                 </div>
-                                <input type="range" id="roiRetainerFee" min="100" max="500" step="25" value="250" oninput="updateRoiCalculator()" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400" />
+                                <input type="range" id="roiRetainerFee" min="100" max="500" step="25" value="250" data-ui-input="update-roi" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400" />
                                 <div class="flex justify-between text-[10px] font-mono text-slate-500 mt-1">
                                     <span>$100/mo (Add-on)</span>
                                     <span>$250/mo (Standard)</span>
@@ -2781,7 +2781,7 @@ Apex Digital Studio</pre>
                                     <label for="roiLaborMins" class="text-slate-300">Est. Manual Review per Client / mo (@ $75/hr):</label>
                                     <span id="roiLaborMinsVal" class="px-2 py-0.5 rounded bg-slate-950 text-slate-200 font-bold text-xs border border-slate-700 tabular-nums">0 min ($0/mo)</span>
                                 </div>
-                                <input type="range" id="roiLaborMins" min="0" max="45" step="5" value="0" oninput="updateRoiCalculator()" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400" />
+                                <input type="range" id="roiLaborMins" min="0" max="45" step="5" value="0" data-ui-input="update-roi" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400" />
                                 <div class="flex justify-between text-[10px] font-mono text-slate-500 mt-1">
                                     <span>0m (Automated)</span>
                                     <span>15m (Light QA)</span>
@@ -2848,9 +2848,9 @@ Apex Digital Studio</pre>
                             <div class="flex items-center justify-between gap-2 pt-1 font-mono text-[11px] text-slate-500">
                                 <span>Share calculation:</span>
                                 <div class="flex items-center gap-1">
-                                    <button type="button" onclick="shareOrbitTool('roi-calculator', 'x')" class="px-2 py-1 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 cursor-pointer transition-colors">𝕏 Post</button>
-                                    <button type="button" onclick="shareOrbitTool('roi-calculator', 'linkedin')" class="px-2 py-1 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 cursor-pointer transition-colors">LinkedIn</button>
-                                    <button type="button" onclick="shareOrbitTool('roi-calculator', 'native')" class="px-2 py-1 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 cursor-pointer transition-colors">Share</button>
+                                    <button type="button" data-radar-action="share-tool" data-tool="roi-calculator" data-channel="x" class="px-2 py-1 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 cursor-pointer transition-colors">𝕏 Post</button>
+                                    <button type="button" data-radar-action="share-tool" data-tool="roi-calculator" data-channel="linkedin" class="px-2 py-1 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 cursor-pointer transition-colors">LinkedIn</button>
+                                    <button type="button" data-radar-action="share-tool" data-tool="roi-calculator" data-channel="native" class="px-2 py-1 rounded text-slate-400 hover:text-white hover:bg-slate-800/70 cursor-pointer transition-colors">Share</button>
                                 </div>
                             </div>
                             <p class="text-[10px] text-slate-500 font-mono leading-snug">
@@ -3008,7 +3008,7 @@ Apex Digital Studio</pre>
                     <span class="text-xl">⌨️</span>
                     <h3 id="hudTitle" class="font-pixel text-emerald-400 text-sm tracking-wide">KEYBOARD COMMAND CENTER</h3>
                 </div>
-                <button type="button" onclick="hideKeyboardHud()" class="text-slate-400 hover:text-white font-arcade text-xs min-w-[48px] min-h-[48px] px-3 py-2 rounded bg-slate-900 border border-slate-700 cursor-pointer pixel-btn flex items-center justify-center" aria-label="Close modal">✕ ESC</button>
+                <button type="button" data-ui-action="hide-keyboard-hud" class="text-slate-400 hover:text-white font-arcade text-xs min-w-[48px] min-h-[48px] px-3 py-2 rounded bg-slate-900 border border-slate-700 cursor-pointer pixel-btn flex items-center justify-center" aria-label="Close modal">✕ ESC</button>
             </div>
             <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs font-mono">
                 <div class="flex items-center justify-between p-2 rounded bg-slate-900/80 border border-slate-800">
@@ -3076,13 +3076,13 @@ Apex Digital Studio</pre>
                             <p class="text-[10px] sm:text-[11px] text-amber-400 font-mono" style="margin:0; white-space:nowrap;">&#9888; DEMO MODE &mdash; Example Data Only &bull; Not a Real Audit</p>
                         </div>
                     </div>
-                    <button type="button" onclick="closePdfFlipbookModal()" class="sm:hidden text-slate-400 hover:text-white font-arcade text-xs min-w-[40px] min-h-[40px] px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 cursor-pointer flex items-center justify-center">✕</button>
+                    <button type="button" data-ui-action="close-flipbook" class="sm:hidden text-slate-400 hover:text-white font-arcade text-xs min-w-[40px] min-h-[40px] px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 cursor-pointer flex items-center justify-center">✕</button>
                 </div>
                 <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar scroll-indicate-x scroll-fade-r scroll-cyber-x" style="flex-shrink:0;">
-                    <button type="button" onclick="setFlipbookPage(1)" id="flipBtn-1" class="flip-page-btn px-3 py-1.5 rounded bg-emerald-500 text-slate-950 font-mono text-xs font-bold cursor-pointer whitespace-nowrap">Page 1: Scorecard</button>
-                    <button type="button" onclick="setFlipbookPage(2)" id="flipBtn-2" class="flip-page-btn px-3 py-1.5 rounded bg-slate-900 text-slate-300 border border-slate-700 hover:border-emerald-400 font-mono text-xs cursor-pointer whitespace-nowrap">Page 2: Takeover Matrix</button>
-                    <button type="button" onclick="setFlipbookPage(3)" id="flipBtn-3" class="flip-page-btn px-3 py-1.5 rounded bg-slate-900 text-slate-300 border border-slate-700 hover:border-emerald-400 font-mono text-xs cursor-pointer whitespace-nowrap">Page 3: DMARC &amp; Headers</button>
-                    <button type="button" onclick="closePdfFlipbookModal()" class="hidden sm:inline-flex text-slate-400 hover:text-white font-arcade text-xs min-w-[38px] min-h-[38px] px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 cursor-pointer items-center justify-center">✕</button>
+                    <button type="button" data-ui-action="set-flipbook-page" data-page="1" id="flipBtn-1" class="flip-page-btn px-3 py-1.5 rounded bg-emerald-500 text-slate-950 font-mono text-xs font-bold cursor-pointer whitespace-nowrap">Page 1: Scorecard</button>
+                    <button type="button" data-ui-action="set-flipbook-page" data-page="2" id="flipBtn-2" class="flip-page-btn px-3 py-1.5 rounded bg-slate-900 text-slate-300 border border-slate-700 hover:border-emerald-400 font-mono text-xs cursor-pointer whitespace-nowrap">Page 2: Takeover Matrix</button>
+                    <button type="button" data-ui-action="set-flipbook-page" data-page="3" id="flipBtn-3" class="flip-page-btn px-3 py-1.5 rounded bg-slate-900 text-slate-300 border border-slate-700 hover:border-emerald-400 font-mono text-xs cursor-pointer whitespace-nowrap">Page 3: DMARC &amp; Headers</button>
+                    <button type="button" data-ui-action="close-flipbook" class="hidden sm:inline-flex text-slate-400 hover:text-white font-arcade text-xs min-w-[38px] min-h-[38px] px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 cursor-pointer items-center justify-center">✕</button>
                 </div>
             </div>
 
@@ -3204,7 +3204,7 @@ Apex Digital Studio</pre>
                 <span class="text-xs text-amber-400 font-mono text-center md:text-left">⚠ DEMO PREVIEW — Not a real scan. Example data only.</span>
                 <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-wrap">
                     <a href="sample_audit.pdf" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono font-bold transition-colors text-center whitespace-nowrap">Download Sample PDF</a>
-                    <button type="button" onclick="closePdfFlipbookModal(); generateInstantPdf();" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold uppercase tracking-wide cursor-pointer pixel-btn whitespace-nowrap" title="Generates a DEMO PREVIEW PDF with example data — not a real scan">Export Demo PDF Preview</button>
+                    <button type="button" data-ui-action="flipbook-export-pdf" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold uppercase tracking-wide cursor-pointer pixel-btn whitespace-nowrap" title="Generates a DEMO PREVIEW PDF with example data — not a real scan">Export Demo PDF Preview</button>
                     <div class="flex items-center gap-2 w-full sm:w-auto">
                         <input 
                             type="text" 
@@ -3213,7 +3213,7 @@ Apex Digital Studio</pre>
                             class="bg-slate-950 border border-slate-700 rounded-lg min-h-[42px] px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-cyan-400 flex-1 min-w-[180px]"
                             value=""
                         />
-                        <button type="button" onclick="closePdfFlipbookModal(); runRealScanFromFlipbook();" class="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold uppercase tracking-wide cursor-pointer pixel-btn whitespace-nowrap" title="Runs a real perimeter scan via API and generates a branded PDF with actual findings">Generate Real Audit PDF</button>
+                        <button type="button" data-ui-action="flipbook-real-scan" class="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold uppercase tracking-wide cursor-pointer pixel-btn whitespace-nowrap" title="Runs a real perimeter scan via API and generates a branded PDF with actual findings">Generate Real Audit PDF</button>
                     </div>
                 </div>
             </div>

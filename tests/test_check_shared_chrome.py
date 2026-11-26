@@ -65,3 +65,18 @@ def test_detects_missing_header_wrong_order_and_version_drift(tmp_path, monkeypa
     assert any("Missing header chrome token: id=\"header-tour-btn\"" in e for e in errors)
     assert any("simple_cat_data.js must load before simple_cat.js" in e for e in errors)
     assert any("Inconsistent ?v= for styles.min.css" in e for e in errors)
+
+
+def test_strict_csp_and_zero_inline_handlers():
+    import re
+
+    inline_re = re.compile(r"""\bon(?:click|input|change|submit|keydown|keyup|focus|blur|load|error)\s*=\s*['"]""")
+    for tree in ("landing", "docs"):
+        idx_html = (REPO_ROOT / tree / "index.html").read_text(encoding="utf-8")
+        assert "script-src 'self';" in idx_html, f"{tree}/index.html must enforce script-src 'self';"
+        assert "script-src 'self' 'unsafe-inline'" not in idx_html, f"{tree}/index.html must not allow 'unsafe-inline' in script-src"
+        assert not inline_re.search(idx_html), f"{tree}/index.html still contains inline event handlers"
+
+    for asset in ("orbit_radar.js", "simple_cat.js"):
+        src = (REPO_ROOT / "landing" / "assets" / asset).read_text(encoding="utf-8")
+        assert not inline_re.search(src), f"landing/assets/{asset} still contains inline event handlers"

@@ -207,7 +207,7 @@
                 <span class="px-2 py-0.5 rounded text-[10px] font-pixel border font-bold ${badgeColor} flex-shrink-0">${badgeLabel}</span>
                 <span class="text-slate-200 truncate font-semibold">${escapeHtml(message)}</span>
             </div>
-            <button type="button" onclick="this.parentElement.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none')" class="text-slate-400 hover:text-white text-sm font-mono px-1 cursor-pointer" aria-label="Dismiss">&times;</button>
+            <button type="button" data-radar-action="dismiss-toast" class="text-slate-400 hover:text-white text-sm font-mono px-1 cursor-pointer" aria-label="Dismiss">&times;</button>
         `;
 
         if (isError && window.SimpleCat && typeof SimpleCat.playAlarm === 'function') {
@@ -679,7 +679,7 @@
                 const dotColor = item.score >= 90 ? 'bg-emerald-400' : (item.score >= 75 ? 'bg-cyan-400' : 'bg-yellow-400');
                 const scoreColor = item.score >= 90 ? 'text-emerald-400' : 'text-slate-400';
                 return `
-                    <button type="button" onclick="setScanTarget('${escapeHtml(item.domain)}')" 
+                    <button type="button" data-radar-action="set-scan-target" data-domain="${escapeHtml(item.domain)}" 
                             class="px-2.5 py-1 rounded bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 text-[11px] font-mono text-slate-300 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm group">
                         <span class="w-1.5 h-1.5 rounded-full ${dotColor} group-hover:scale-125 transition-transform"></span>
                         <span class="font-bold">${escapeHtml(item.domain)}</span>
@@ -2346,26 +2346,26 @@ ${agency}`;
                         <!-- Action Bar Conversion Hooks -->
                         <div class="w-full xl:w-auto flex flex-wrap items-center gap-2 min-w-0">
                             <button type="button" 
-                                    onclick="runRealScanAndGeneratePdfFromHUD('${safeDomain}', ${audit.score}, '${escapeHtml(audit.grade)}')" 
+                                    data-radar-action="hud-pdf" data-domain="${safeDomain}" data-score="${audit.score}" data-grade="${escapeHtml(audit.grade)}" 
                                     class="flex-1 sm:flex-none min-h-[42px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer pixel-btn whitespace-nowrap"
                                     title="Download instant co-branded perimeter audit PDF">
                                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                 <span>Co-Branded PDF</span>
                             </button>
                             <button type="button" 
-                                    onclick="simulateTakeoverAttack('${audit.detectedSaaS?.[0]?.preset || 'cname'}', '${audit.detectedSaaS?.[0]?.sub || safeDomain}', '${audit.detectedSaaS?.[0]?.target || ''}')" 
+                                    data-radar-action="simulate-takeover" data-preset="${escapeHtml(audit.detectedSaaS?.[0]?.preset || 'cname')}" data-domain="${escapeHtml(audit.detectedSaaS?.[0]?.sub || safeDomain)}" data-target="${escapeHtml(audit.detectedSaaS?.[0]?.target || '')}" 
                                     class="flex-1 sm:flex-none min-h-[42px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-400 hover:to-red-500 text-white font-bold text-xs uppercase font-sans tracking-wide shadow-md shadow-red-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer pixel-btn whitespace-nowrap"
                                     title="Simulate exploit attack sequence in visual simulator">
                                 <span>⚡ Simulate Exploit</span>
                             </button>
                             <button type="button" 
-                                    onclick="copyClientBriefingEmail('${safeDomain}', ${audit.score}, '${escapeHtml(audit.grade)}')" 
+                                    data-radar-action="copy-briefing-email" data-domain="${safeDomain}" data-score="${audit.score}" data-grade="${escapeHtml(audit.grade)}" 
                                     class="flex-1 sm:flex-none min-h-[42px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs uppercase font-sans tracking-wide shadow-md shadow-cyan-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer pixel-btn whitespace-nowrap"
                                     title="Prepopulate and copy client briefing pitch email">
                                 <span>📋 Copy Pitch Email</span>
                             </button>
                             <button type="button" 
-                                    onclick="downloadDnsFixPack()" 
+                                    data-radar-action="downloadDnsFixPack" 
                                     class="w-full sm:w-auto min-h-[42px] px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 font-bold text-xs uppercase font-sans tracking-wide transition-all flex items-center justify-center gap-1.5 cursor-pointer pixel-btn whitespace-nowrap"
                                     title="Download remediation.zone and DNS fix pack">
                                 <span>⚡ Fix Pack</span>
@@ -2380,19 +2380,19 @@ ${agency}`;
                             <span>Share Scan Scorecard:</span>
                         </span>
                         <div class="flex flex-wrap items-center gap-2">
-                            <button type="button" onclick="shareOrbitTool('radar', 'x')" class="min-h-[36px] px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 text-emerald-300 border border-emerald-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1">
+                            <button type="button" data-radar-action="share-tool" data-tool="radar" data-channel="x" class="min-h-[36px] px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-emerald-500 hover:text-slate-950 text-emerald-300 border border-emerald-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1">
                                 <span>𝕏 Post to X</span>
                             </button>
-                            <button type="button" onclick="shareOrbitTool('radar', 'linkedin')" class="min-h-[36px] px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 border border-cyan-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1">
+                            <button type="button" data-radar-action="share-tool" data-tool="radar" data-channel="linkedin" class="min-h-[36px] px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 border border-cyan-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1">
                                 <span>in LinkedIn</span>
                             </button>
-                            <button type="button" onclick="shareOrbitTool('radar', 'reddit')" class="min-h-[36px] px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-amber-500 hover:text-slate-950 text-amber-300 border border-amber-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1">
+                            <button type="button" data-radar-action="share-tool" data-tool="radar" data-channel="reddit" class="min-h-[36px] px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-amber-500 hover:text-slate-950 text-amber-300 border border-amber-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1">
                                 <span>👾 Reddit</span>
                             </button>
-                            <button type="button" onclick="shareOrbitTool('radar', 'native')" class="min-h-[36px] px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-purple-500 hover:text-slate-950 text-purple-300 border border-purple-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1">
+                            <button type="button" data-radar-action="share-tool" data-tool="radar" data-channel="native" class="min-h-[36px] px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-purple-500 hover:text-slate-950 text-purple-300 border border-purple-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1">
                                 <span>📤 Share</span>
                             </button>
-                            <button type="button" onclick="if(window.SimpleCat && SimpleCat.recordClip) SimpleCat.recordClip()" class="min-h-[36px] px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500 hover:text-slate-950 text-rose-300 border border-rose-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1">
+                            <button type="button" data-sc-action="record-clip" class="min-h-[36px] px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500 hover:text-slate-950 text-rose-300 border border-rose-500/40 font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1">
                                 <span>📹 Clip for X</span>
                             </button>
                         </div>
@@ -2400,10 +2400,10 @@ ${agency}`;
 
                     <!-- HUD Tabs -->
                     <div class="flex border-b border-slate-800/80 gap-1.5 overflow-x-auto pb-1.5 -mx-1 px-1 no-scrollbar scroll-indicate-x scroll-fade-r scroll-cyber-x">
-                        <button type="button" id="tabBtn-overview" onclick="switchHudTab('overview')" class="hud-tab-btn min-h-[48px] px-4 py-2.5 font-mono text-xs font-semibold rounded-lg border-b-2 border-emerald-500 text-emerald-400 bg-emerald-500/10 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Overview</button>
-                        <button type="button" id="tabBtn-email" onclick="switchHudTab('email')" class="hud-tab-btn min-h-[48px] px-4 py-2.5 font-mono text-xs font-semibold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Email Auth</button>
-                        <button type="button" id="tabBtn-dns" onclick="switchHudTab('dns')" class="hud-tab-btn min-h-[48px] px-4 py-2.5 font-mono text-xs font-semibold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Perimeter Grid (16)</button>
-                        <button type="button" id="tabBtn-raw" onclick="switchHudTab('raw')" class="hud-tab-btn min-h-[48px] px-4 py-2.5 font-mono text-xs font-semibold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Raw Telemetry</button>
+                        <button type="button" id="tabBtn-overview" data-radar-action="switch-hud-tab" data-tab="overview" class="hud-tab-btn min-h-[48px] px-4 py-2.5 font-mono text-xs font-semibold rounded-lg border-b-2 border-emerald-500 text-emerald-400 bg-emerald-500/10 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Overview</button>
+                        <button type="button" id="tabBtn-email" data-radar-action="switch-hud-tab" data-tab="email" class="hud-tab-btn min-h-[48px] px-4 py-2.5 font-mono text-xs font-semibold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Email Auth</button>
+                        <button type="button" id="tabBtn-dns" data-radar-action="switch-hud-tab" data-tab="dns" class="hud-tab-btn min-h-[48px] px-4 py-2.5 font-mono text-xs font-semibold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Perimeter Grid (16)</button>
+                        <button type="button" id="tabBtn-raw" data-radar-action="switch-hud-tab" data-tab="raw" class="hud-tab-btn min-h-[48px] px-4 py-2.5 font-mono text-xs font-semibold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer whitespace-nowrap flex items-center justify-center flex-shrink-0">Raw Telemetry</button>
                     </div>
 
                     <!-- Tab 1: Overview (4-Quadrant Surface Grid) -->
@@ -2422,10 +2422,10 @@ ${agency}`;
                                     <div class="text-[10px] text-slate-500 mt-1">16 subdomains probed via RFC 8484 DoH</div>
                                 </div>
                                 <div class="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between">
-                                    <button type="button" onclick="simulateTakeoverAttack('${audit.detectedSaaS?.[0]?.preset || 'cname'}', '${audit.detectedSaaS?.[0]?.sub || safeDomain}', '${audit.detectedSaaS?.[0]?.target || ''}')" class="text-[10px] text-rose-400 hover:text-rose-300 underline decoration-dotted cursor-pointer">
+                                    <button type="button" data-radar-action="simulate-takeover" data-preset="${escapeHtml(audit.detectedSaaS?.[0]?.preset || 'cname')}" data-domain="${escapeHtml(audit.detectedSaaS?.[0]?.sub || safeDomain)}" data-target="${escapeHtml(audit.detectedSaaS?.[0]?.target || '')}" class="text-[10px] text-rose-400 hover:text-rose-300 underline decoration-dotted cursor-pointer">
                                         ⚡ Launch Exploit Simulator &rarr;
                                     </button>
-                                    <div class="text-[10px] text-emerald-400 cursor-pointer hover:underline" onclick="SimpleCat.explain('cname')">
+                                    <div class="text-[10px] text-emerald-400 cursor-pointer hover:underline" data-sc-action="explain" data-sc-topic="cname">
                                         🐱 Simple Cat
                                     </div>
                                 </div>
@@ -2447,10 +2447,10 @@ ${agency}`;
                                     </div>
                                 </div>
                                 <div class="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between">
-                                    <button type="button" onclick="switchHudTab('email')" class="text-[10px] text-cyan-400 hover:text-cyan-300 underline decoration-dotted cursor-pointer">
+                                    <button type="button" data-radar-action="switch-hud-tab" data-tab="email" class="text-[10px] text-cyan-400 hover:text-cyan-300 underline decoration-dotted cursor-pointer">
                                         Inspect DMARC Policy &rarr;
                                     </button>
-                                    <div class="text-[10px] text-emerald-400 cursor-pointer hover:underline" onclick="SimpleCat.explain('dmarc')">
+                                    <div class="text-[10px] text-emerald-400 cursor-pointer hover:underline" data-sc-action="explain" data-sc-topic="dmarc">
                                         🐱 Simple Cat
                                     </div>
                                 </div>
@@ -2471,10 +2471,10 @@ ${agency}`;
                                     </div>
                                 </div>
                                 <div class="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between">
-                                    <button type="button" onclick="switchHudTab('email')" class="text-[10px] text-cyan-400 hover:text-cyan-300 underline decoration-dotted cursor-pointer">
+                                    <button type="button" data-radar-action="switch-hud-tab" data-tab="email" class="text-[10px] text-cyan-400 hover:text-cyan-300 underline decoration-dotted cursor-pointer">
                                         View SPF Lookup Tree &rarr;
                                     </button>
-                                    <div class="text-[10px] text-emerald-400 cursor-pointer hover:underline" onclick="SimpleCat.explain('spf')">
+                                    <div class="text-[10px] text-emerald-400 cursor-pointer hover:underline" data-sc-action="explain" data-sc-topic="spf">
                                         🐱 Simple Cat
                                     </div>
                                 </div>
@@ -2496,7 +2496,7 @@ ${agency}`;
                                 </div>
                                 <div class="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between">
                                     <span class="text-[10px] text-slate-500">RFC 7505 / RFC 5321</span>
-                                    <div class="text-[10px] text-emerald-400 cursor-pointer hover:underline" onclick="SimpleCat.explain('mx')">
+                                    <div class="text-[10px] text-emerald-400 cursor-pointer hover:underline" data-sc-action="explain" data-sc-topic="mx">
                                         🐱 Simple Cat
                                     </div>
                                 </div>
@@ -2525,7 +2525,7 @@ ${agency}`;
                             <p id="spfTreeNotice" class="hidden text-[11px] mt-1.5"></p>
                             <p id="spfTreeChain" class="text-slate-400 text-[11px] mt-1.5 break-all"></p>
                             <div class="mt-2 flex flex-wrap items-center gap-2">
-                                <button type="button" id="btnSimulateFlattenedSpf" onclick="simulateFlattenedSpf()" class="pixel-btn min-h-[34px] px-3 py-1.5 text-[10px] font-arcade rounded bg-slate-900 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 transition-all cursor-pointer flex items-center gap-1.5">⚡ Simulate Flattened Record</button>
+                                <button type="button" id="btnSimulateFlattenedSpf" data-radar-action="simulate-flattened-spf" class="pixel-btn min-h-[34px] px-3 py-1.5 text-[10px] font-arcade rounded bg-slate-900 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500 hover:text-slate-950 transition-all cursor-pointer flex items-center gap-1.5">⚡ Simulate Flattened Record</button>
                             </div>
                             <code id="flattenedSpfPreview" class="hidden block mt-2 p-2 rounded bg-slate-950/80 border border-cyan-500/20 text-cyan-300 break-all"></code>
                         </div>
@@ -2566,7 +2566,7 @@ ${agency}`;
                     <div id="tabPane-raw" class="hud-tab-pane hidden space-y-2">
                         <div class="flex items-center justify-between pb-1">
                             <span class="text-[11px] font-mono text-slate-400">DNS-over-HTTPS (RFC 8484) Raw Responses</span>
-                            <button type="button" id="copyRawBtn" onclick="copyRawTelemetry()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-mono cursor-pointer">Copy JSON</button>
+                            <button type="button" id="copyRawBtn" data-radar-action="copy-raw-telemetry" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-mono cursor-pointer">Copy JSON</button>
                         </div>
                         <div class="relative bg-slate-900/90 rounded-lg p-3 font-mono text-[11px] text-emerald-300 overflow-x-auto max-h-48 border border-slate-800 scroll-indicate-x scroll-fade-r scroll-cyber-x">
                             <pre id="rawTelemetryJson"></pre>
@@ -4576,7 +4576,7 @@ ${payload.url}`;
             `}
 
             <!-- ================= NODE 1: VICTIM CLIENT ================= -->
-            <g class="attack-tree-node cursor-pointer" onclick="OrbitAttackTree.setStep(1, '${inst.containerId}')" id="${prefix}-node-1" data-node="1">
+            <g class="attack-tree-node cursor-pointer" data-radar-action="attack-tree-step" data-step="1" data-container="${inst.containerId}" id="${prefix}-node-1" data-node="1">
                 <rect x="40" y="95" width="150" height="100" rx="12" fill="${s1.fill}" stroke="${s1.border}" stroke-width="${s1.borderWidth}" filter="${s1.filter}" />
                 <text x="115" y="120" text-anchor="middle" font-size="10" font-weight="bold" fill="${s1.textColor}">1. VICTIM CLIENT</text>
                 <text x="115" y="137" text-anchor="middle" font-size="9" fill="#94a3b8">visitor.browser</text>
@@ -4586,7 +4586,7 @@ ${payload.url}`;
             </g>
 
             <!-- ================= NODE 2: AUTHORITATIVE DNS ================= -->
-            <g class="attack-tree-node cursor-pointer" onclick="OrbitAttackTree.setStep(2, '${inst.containerId}')" id="${prefix}-node-2" data-node="2">
+            <g class="attack-tree-node cursor-pointer" data-radar-action="attack-tree-step" data-step="2" data-container="${inst.containerId}" id="${prefix}-node-2" data-node="2">
                 <rect x="240" y="45" width="150" height="100" rx="12" fill="${s2.fill}" stroke="${s2.border}" stroke-width="${s2.borderWidth}" filter="${s2.filter}" />
                 <text x="315" y="70" text-anchor="middle" font-size="10" font-weight="bold" fill="${s2.textColor}">2. AUTHORITATIVE DNS</text>
                 <text x="315" y="87" text-anchor="middle" font-size="9" fill="#94a3b8">CNAME Pointer Route</text>
@@ -4596,7 +4596,7 @@ ${payload.url}`;
             </g>
 
             <!-- ================= NODE 3: ABANDONED CLOUD TENANT ================= -->
-            <g class="attack-tree-node cursor-pointer" onclick="OrbitAttackTree.setStep(3, '${inst.containerId}')" id="${prefix}-node-3" data-node="3">
+            <g class="attack-tree-node cursor-pointer" data-radar-action="attack-tree-step" data-step="3" data-container="${inst.containerId}" id="${prefix}-node-3" data-node="3">
                 <rect x="440" y="45" width="150" height="100" rx="12" fill="${s3.fill}" stroke="${s3.border}" stroke-width="${s3.borderWidth}" filter="${s3.filter}" />
                 <text x="515" y="70" text-anchor="middle" font-size="10" font-weight="bold" fill="${s3.textColor}">3. ABANDONED TENANT</text>
                 <text x="515" y="87" text-anchor="middle" font-size="9" fill="#94a3b8">${provider}</text>
@@ -4606,7 +4606,7 @@ ${payload.url}`;
             </g>
 
             <!-- ================= NODE 4: THREAT ACTOR ================= -->
-            <g class="attack-tree-node cursor-pointer" onclick="OrbitAttackTree.setStep(4, '${inst.containerId}')" id="${prefix}-node-4" data-node="4">
+            <g class="attack-tree-node cursor-pointer" data-radar-action="attack-tree-step" data-step="4" data-container="${inst.containerId}" id="${prefix}-node-4" data-node="4">
                 <rect x="590" y="165" width="150" height="100" rx="12" fill="${s4.fill}" stroke="${s4.border}" stroke-width="${s4.borderWidth}" filter="${s4.filter}" />
                 <text x="665" y="190" text-anchor="middle" font-size="10" font-weight="bold" fill="${s4.textColor}">4. THREAT ACTOR</text>
                 <text x="665" y="207" text-anchor="middle" font-size="9" fill="#94a3b8">Adversary Re-Claim</text>
@@ -4616,7 +4616,7 @@ ${payload.url}`;
             </g>
 
             <!-- ================= NODE 5: WEAPONIZED EXECUTION ================= -->
-            <g class="attack-tree-node cursor-pointer" onclick="OrbitAttackTree.setStep(5, '${inst.containerId}')" id="${prefix}-node-5" data-node="5">
+            <g class="attack-tree-node cursor-pointer" data-radar-action="attack-tree-step" data-step="5" data-container="${inst.containerId}" id="${prefix}-node-5" data-node="5">
                 <rect x="810" y="95" width="150" height="100" rx="12" fill="${s5.fill}" stroke="${s5.border}" stroke-width="${s5.borderWidth}" filter="${s5.filter}" />
                 <text x="885" y="120" text-anchor="middle" font-size="10" font-weight="bold" fill="${s5.textColor}">5. WEAPONIZED EXEC</text>
                 <text x="885" y="137" text-anchor="middle" font-size="9" fill="#94a3b8">SSL Padlock Exploited</text>
@@ -4877,7 +4877,7 @@ ${payload.url}`;
                 const cls = isActive
                     ? 'px-2.5 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold text-[11px] border border-amber-400 cursor-pointer shadow-sm transition'
                     : 'px-2.5 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-700 hover:border-amber-400 text-[11px] font-semibold cursor-pointer transition';
-                return `<button type="button" onclick="OrbitAttackTree.loadScenario('${p.id}', '${inst.containerId}')" class="${cls}">${p.label}</button>`;
+                return `<button type="button" data-radar-action="attack-tree-scenario" data-scenario="${p.id}" data-container="${inst.containerId}" class="${cls}">${p.label}</button>`;
             }).join('');
 
             const pillLabels = ['1. Visitor', '2. DNS CNAME', '3. Abandoned', '4. Threat Actor', '5. Weaponized'];
@@ -4891,7 +4891,7 @@ ${payload.url}`;
                 } else {
                     cls = 'px-2 py-1 rounded bg-slate-900 text-slate-400 border border-slate-800 text-[10px] hover:border-slate-700';
                 }
-                return `<button type="button" onclick="OrbitAttackTree.setStep(${sNum}, '${inst.containerId}')" class="${cls} cursor-pointer transition whitespace-nowrap">${lbl}</button>`;
+                return `<button type="button" data-radar-action="attack-tree-step" data-step="${sNum}" data-container="${inst.containerId}" class="${cls} cursor-pointer transition whitespace-nowrap">${lbl}</button>`;
             }).join('');
 
             const svgGraphHtml = _buildAttackTreeSvg(inst, sc, prefix);
@@ -4926,17 +4926,17 @@ ${payload.url}`;
                 <!-- Interactive Playback Controls Bar -->
                 <div class="p-3 rounded-xl bg-slate-950/90 border border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
                     <div class="flex items-center gap-1.5 flex-wrap">
-                        <button type="button" onclick="OrbitAttackTree.reset('${inst.containerId}')" title="Reset to Step 1" class="min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold cursor-pointer transition flex items-center gap-1">
+                        <button type="button" data-radar-action="attack-tree-reset" data-container="${inst.containerId}" title="Reset to Step 1" class="min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold cursor-pointer transition flex items-center gap-1">
                             <span>⏮</span> <span>Reset</span>
                         </button>
-                        <button type="button" onclick="OrbitAttackTree.prevStep('${inst.containerId}')" title="Previous Step" class="min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold cursor-pointer transition flex items-center gap-1">
+                        <button type="button" data-radar-action="attack-tree-prev" data-container="${inst.containerId}" title="Previous Step" class="min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold cursor-pointer transition flex items-center gap-1">
                             <span>◀</span> <span>Prev</span>
                         </button>
-                        <button type="button" onclick="OrbitAttackTree.togglePlay('${inst.containerId}')" title="${inst.isPlaying ? 'Pause auto-play' : 'Auto-play sequence'}" class="min-h-[36px] px-3.5 py-1.5 rounded-lg ${inst.isPlaying ? 'bg-amber-500 text-slate-950 font-black' : 'bg-red-500 hover:bg-red-400 text-slate-950 font-bold'} text-xs uppercase cursor-pointer transition flex items-center gap-1.5 shadow-md shadow-red-500/20">
+                        <button type="button" data-radar-action="attack-tree-toggle" data-container="${inst.containerId}" title="${inst.isPlaying ? 'Pause auto-play' : 'Auto-play sequence'}" class="min-h-[36px] px-3.5 py-1.5 rounded-lg ${inst.isPlaying ? 'bg-amber-500 text-slate-950 font-black' : 'bg-red-500 hover:bg-red-400 text-slate-950 font-bold'} text-xs uppercase cursor-pointer transition flex items-center gap-1.5 shadow-md shadow-red-500/20">
                             <span>${inst.isPlaying ? '⏸' : '▶'}</span>
                             <span>${inst.isPlaying ? 'Pause' : 'Auto-Play'}</span>
                         </button>
-                        <button type="button" onclick="OrbitAttackTree.nextStep('${inst.containerId}')" title="Next Step" class="min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold cursor-pointer transition flex items-center gap-1">
+                        <button type="button" data-radar-action="attack-tree-next" data-container="${inst.containerId}" title="Next Step" class="min-h-[36px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold cursor-pointer transition flex items-center gap-1">
                             <span>Next</span> <span>▶</span>
                         </button>
                     </div>
@@ -4986,15 +4986,15 @@ ${payload.url}`;
                     <!-- Action / Remediation Footer -->
                     <div class="pt-1 flex flex-wrap items-center justify-between gap-2 text-xs">
                         <div class="flex items-center gap-2">
-                            <button type="button" onclick="OrbitAttackTree.copyPocSnippet('${inst.containerId}')" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 text-xs font-bold cursor-pointer transition">
+                            <button type="button" data-radar-action="attack-tree-copy-poc" data-container="${inst.containerId}" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 text-xs font-bold cursor-pointer transition">
                                 Copy PoC cURL
                             </button>
-                            <button type="button" onclick="OrbitAttackTree.copyFixSnippet('${inst.containerId}')" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-emerald-500/40 text-xs font-bold cursor-pointer transition">
+                            <button type="button" data-radar-action="attack-tree-copy-fix" data-container="${inst.containerId}" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-emerald-500/40 text-xs font-bold cursor-pointer transition">
                                 Copy DNS Fix Ticket
                             </button>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button type="button" onclick="if(window.SimpleCat) SimpleCat.explain('cname')" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 font-pixel text-[11px] cursor-pointer">
+                            <button type="button" data-sc-action="explain" data-sc-topic="cname" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 font-pixel text-[11px] cursor-pointer">
                                 🐱 Ask Simple Cat
                             </button>
                             <a href="labs.html#takeover-poc-playground" class="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 text-xs font-bold cursor-pointer transition">
@@ -5269,6 +5269,57 @@ ${payload.url}`;
             return `<span class="score-delta-badge score-delta-down px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">${num}</span>`;
         }
         return `<span class="score-delta-badge score-delta-neutral px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-400 border border-slate-700">±0</span>`;
+    }
+
+    if (typeof document !== 'undefined' && !window.__orbitRadarDelegationBound) {
+        window.__orbitRadarDelegationBound = true;
+        document.addEventListener('click', (e) => {
+            const el = e.target && e.target.closest ? e.target.closest('[data-radar-action]') : null;
+            if (!el) return;
+            const action = el.dataset.radarAction;
+            if (action === 'dismiss-toast') {
+                if (el.parentElement) el.parentElement.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+            } else if (action === 'set-scan-target') {
+                if (el.dataset.scSfx === 'blip' && window.SimpleCat && SimpleCat.playBlip) SimpleCat.playBlip();
+                if (typeof setScanTarget === 'function') setScanTarget(el.dataset.domain);
+            } else if (action === 'hud-pdf') {
+                if (typeof runRealScanAndGeneratePdfFromHUD === 'function') {
+                    runRealScanAndGeneratePdfFromHUD(el.dataset.domain, Number(el.dataset.score), el.dataset.grade);
+                }
+            } else if (action === 'simulate-takeover') {
+                simulateTakeoverAttack(el.dataset.preset || 'cname', el.dataset.domain || null, el.dataset.target || null);
+            } else if (action === 'copy-briefing-email') {
+                if (typeof copyClientBriefingEmail === 'function') {
+                    copyClientBriefingEmail(el.dataset.domain, Number(el.dataset.score), el.dataset.grade);
+                }
+            } else if (action === 'downloadDnsFixPack') {
+                if (typeof downloadDnsFixPack === 'function') downloadDnsFixPack();
+            } else if (action === 'share-tool') {
+                if (typeof shareOrbitTool === 'function') shareOrbitTool(el.dataset.tool, el.dataset.channel);
+            } else if (action === 'switch-hud-tab') {
+                if (typeof switchHudTab === 'function') switchHudTab(el.dataset.tab);
+            } else if (action === 'simulate-flattened-spf') {
+                if (typeof simulateFlattenedSpf === 'function') simulateFlattenedSpf();
+            } else if (action === 'copy-raw-telemetry') {
+                if (typeof copyRawTelemetry === 'function') copyRawTelemetry();
+            } else if (action === 'attack-tree-step') {
+                OrbitAttackTree.setStep(parseInt(el.dataset.step, 10), el.dataset.container);
+            } else if (action === 'attack-tree-scenario') {
+                OrbitAttackTree.loadScenario(el.dataset.scenario, el.dataset.container);
+            } else if (action === 'attack-tree-reset') {
+                OrbitAttackTree.reset(el.dataset.container);
+            } else if (action === 'attack-tree-prev') {
+                OrbitAttackTree.prevStep(el.dataset.container);
+            } else if (action === 'attack-tree-toggle') {
+                OrbitAttackTree.togglePlay(el.dataset.container);
+            } else if (action === 'attack-tree-next') {
+                OrbitAttackTree.nextStep(el.dataset.container);
+            } else if (action === 'attack-tree-copy-poc') {
+                OrbitAttackTree.copyPocSnippet(el.dataset.container);
+            } else if (action === 'attack-tree-copy-fix') {
+                OrbitAttackTree.copyFixSnippet(el.dataset.container);
+            }
+        });
     }
 
     // Expose to window

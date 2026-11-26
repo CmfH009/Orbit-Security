@@ -531,9 +531,9 @@ async function runTests() {
     assert(rdUrl.startsWith('https://www.reddit.com/submit?url='), 'shareOrbitTool reddit builds valid Reddit submit URL');
 
     // Verify dynamic #auditHUD includes social share & mobile clip buttons
-    assert(hudHtml.includes("shareOrbitTool('radar', 'x')"), 'Dynamic #auditHUD includes X share button');
-    assert(hudHtml.includes("shareOrbitTool('radar', 'linkedin')"), 'Dynamic #auditHUD includes LinkedIn share button');
-    assert(hudHtml.includes("SimpleCat.recordClip()"), 'Dynamic #auditHUD includes Record Clip for X button');
+    assert(hudHtml.includes('data-radar-action="share-tool" data-tool="radar" data-channel="x"'), 'Dynamic #auditHUD includes X share button');
+    assert(hudHtml.includes('data-radar-action="share-tool" data-tool="radar" data-channel="linkedin"'), 'Dynamic #auditHUD includes LinkedIn share button');
+    assert(hudHtml.includes('data-sc-action="record-clip"'), 'Dynamic #auditHUD includes Record Clip for X button');
 
     // Verify simple_cat.js contains mobile phone canvas stream fallback & native file sharing
     const simpleCatJs = fs.readFileSync(path.join(__dirname, '..', 'landing', 'assets', 'simple_cat.js'), 'utf8');
@@ -547,7 +547,7 @@ async function runTests() {
     const indexToolKeys = ['radar', 'audit-studio', 'pitch-drawer', 'simple-cat', 'legal-rider', 'roi-calculator'];
     const labsToolKeys = ['kev-radar', 'zk-scorecard', 'takeover-poc', 'epss-horizon'];
     for (const tk of indexToolKeys) {
-        assert(indexHtml.includes(`shareOrbitTool('${tk}'`), `landing/index.html includes social share button for '${tk}'`);
+        assert(indexHtml.includes(`data-radar-action="share-tool" data-tool="${tk}"`), `landing/index.html includes social share button for '${tk}'`);
     }
     for (const tk of labsToolKeys) {
         assert(labsHtml.includes(`shareOrbitTool('${tk}'`), `landing/labs.html includes social share button for '${tk}'`);

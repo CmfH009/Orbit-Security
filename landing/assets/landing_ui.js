@@ -1089,3 +1089,98 @@ window.addEventListener('DOMContentLoaded', () => {
             });
     })();
 });
+
+if (typeof document !== 'undefined' && !window.__landingUiDelegationBound) {
+    window.__landingUiDelegationBound = true;
+
+    document.addEventListener('click', (e) => {
+        const el = e.target && e.target.closest ? e.target.closest('[data-ui-action]') : null;
+        if (!el) return;
+        const action = el.dataset.uiAction;
+        if (action === 'toggle-faq') {
+            if (typeof toggleFaq === 'function') toggleFaq(el);
+        } else if (action === 'run-real-scan-pdf') {
+            if (typeof runRealScanAndGeneratePdf === 'function') runRealScanAndGeneratePdf();
+        } else if (action === 'copy-session-link') {
+            if (typeof copySessionLink === 'function') copySessionLink();
+        } else if (action === 'copy-nov-threat-alert') {
+            copyNovThreatAlert();
+        } else if (action === 'dismiss-threat-ribbon') {
+            const r = document.getElementById('heroThreatRibbon');
+            if (r) r.classList.add('hidden');
+            try { sessionStorage.setItem('orbit_threat_ribbon_dismissed', '1'); } catch (_) {}
+        } else if (action === 'threat-drawer-backdrop') {
+            if (e.target === el && typeof closeThreatWireDrawer === 'function') closeThreatWireDrawer();
+        } else if (action === 'close-threat-drawer') {
+            if (typeof closeThreatWireDrawer === 'function') closeThreatWireDrawer();
+        } else if (action === 'scan-from-threat-drawer') {
+            if (typeof scanDomainFromThreatDrawer === 'function') scanDomainFromThreatDrawer();
+        } else if (action === 'copy-drawer-cve') {
+            if (typeof copyDrawerCveAdvisory === 'function') copyDrawerCveAdvisory();
+        } else if (action === 'play-explainer') {
+            playOrbitExplainer();
+        } else if (action === 'seek-explainer') {
+            seekOrbitExplainer(parseFloat(el.dataset.time || '0'));
+        } else if (action === 'switch-report-view') {
+            if (typeof switchReportView === 'function') switchReportView(el.dataset.view);
+        } else if (action === 'set-brand-color') {
+            if (typeof setBrandColor === 'function') setBrandColor(el.dataset.color);
+        } else if (action === 'generate-instant-pdf') {
+            if (typeof generateInstantPdf === 'function') generateInstantPdf();
+        } else if (action === 'open-flipbook') {
+            e.preventDefault();
+            openPdfFlipbookModal();
+        } else if (action === 'close-flipbook') {
+            closePdfFlipbookModal();
+        } else if (action === 'set-flipbook-page') {
+            setFlipbookPage(parseInt(el.dataset.page, 10));
+        } else if (action === 'flipbook-export-pdf') {
+            closePdfFlipbookModal();
+            if (typeof generateInstantPdf === 'function') generateInstantPdf();
+        } else if (action === 'flipbook-real-scan') {
+            closePdfFlipbookModal();
+            if (typeof runRealScanFromFlipbook === 'function') runRealScanFromFlipbook();
+        } else if (action === 'switch-pitch-template') {
+            switchPitchTemplate(el.dataset.template);
+        } else if (action === 'copy-client-pitch') {
+            copyClientPitch();
+        } else if (action === 'copy-client-invite') {
+            if (typeof copyClientInviteLink === 'function') copyClientInviteLink();
+        } else if (action === 'reset-portal-branding') {
+            if (typeof resetPortalBranding === 'function') resetPortalBranding();
+        } else if (action === 'apply-portal-color') {
+            if (typeof applyPortalBrandColor === 'function') applyPortalBrandColor(el.dataset.hex, el.dataset.name);
+        } else if (action === 'reset-portal-logo') {
+            if (typeof resetPortalLogo === 'function') resetPortalLogo();
+        } else if (action === 'copy-action-yaml') {
+            copyOrbitActionYaml();
+        } else if (action === 'copy-legal-rider') {
+            if (typeof copyLegalRider === 'function') copyLegalRider();
+        } else if (action === 'applyRoiPreset') {
+            applyRoiPreset(
+                parseInt(el.dataset.clients, 10),
+                parseInt(el.dataset.fee, 10),
+                parseInt(el.dataset.labor || '0', 10)
+            );
+        } else if (action === 'hide-keyboard-hud') {
+            if (typeof hideKeyboardHud === 'function') hideKeyboardHud();
+        }
+    });
+
+    document.addEventListener('input', (e) => {
+        const el = e.target && e.target.closest ? e.target.closest('[data-ui-input]') : null;
+        if (!el) return;
+        const kind = el.dataset.uiInput;
+        if (kind === 'update-roi') {
+            updateRoiCalculator();
+        } else if (kind === 'update-branding') {
+            if (typeof updateCustomBranding === 'function') updateCustomBranding();
+        }
+    });
+
+    document.addEventListener('submit', (e) => {
+        if (e.target && e.target.id === 'auditForm' && typeof handleAuditRequest === 'function') {
+            handleAuditRequest(e);
+        }
+    });
+}

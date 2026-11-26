@@ -683,17 +683,17 @@
 
                 <!-- Quick-Jump Term Chips Row -->
                 <div id="cat-quick-chips" class="flex items-center gap-1.5 py-2.5 overflow-x-auto border-b border-slate-800 text-[10px] font-mono no-scrollbar scroll-indicate-x scroll-fade-r scroll-cyber-x" style="-webkit-overflow-scrolling: touch;">
-                    <button type="button" onclick="SimpleCat.explain('dmarc')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="dmarc">DMARC</button>
-                    <button type="button" onclick="SimpleCat.explain('spf')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="spf">SPF</button>
-                    <button type="button" onclick="SimpleCat.explain('dkim')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="dkim">DKIM</button>
-                    <button type="button" onclick="SimpleCat.explain('dnssec')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="dnssec">DNSSEC</button>
-                    <button type="button" onclick="SimpleCat.explain('cname')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="cname">CNAME</button>
-                    <button type="button" onclick="SimpleCat.explain('subdomain')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-purple-400 hover:border-purple-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="subdomain">Subdomain</button>
-                    <button type="button" onclick="SimpleCat.explain('doh')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="doh">DoH</button>
-                    <button type="button" onclick="SimpleCat.explain('mx')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-purple-400 hover:border-purple-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="mx">MX</button>
-                    <button type="button" onclick="SimpleCat.explain('hsts')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="hsts">HSTS</button>
-                    <button type="button" onclick="SimpleCat.explain('drift')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-purple-400 hover:border-purple-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="drift">Drift</button>
-                    <button type="button" onclick="SimpleCat.explain('audit')" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="audit">Retainer</button>
+                    <button type="button" data-sc-action="explain" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="dmarc">DMARC</button>
+                    <button type="button" data-sc-action="explain" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="spf">SPF</button>
+                    <button type="button" data-sc-action="explain" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="dkim">DKIM</button>
+                    <button type="button" data-sc-action="explain" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="dnssec">DNSSEC</button>
+                    <button type="button" data-sc-action="explain" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="cname">CNAME</button>
+                    <button type="button" data-sc-action="explain" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-purple-400 hover:border-purple-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="subdomain">Subdomain</button>
+                    <button type="button" data-sc-action="explain" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="doh">DoH</button>
+                    <button type="button" data-sc-action="explain" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-purple-400 hover:border-purple-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="mx">MX</button>
+                    <button type="button" data-sc-action="explain" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="hsts">HSTS</button>
+                    <button type="button" data-sc-action="explain" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-purple-400 hover:border-purple-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="drift">Drift</button>
+                    <button type="button" data-sc-action="explain" class="chip-item min-h-[48px] px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 cursor-pointer flex-shrink-0 flex items-center justify-center" data-chip="audit">Retainer</button>
                 </div>
 
                 <!-- Navigation Tabs with ARIA Tablist Semantics -->
@@ -707,7 +707,8 @@
                             aria-selected="true" 
                             aria-controls="pane-story" 
                             tabindex="0"
-                            onclick="SimpleCat.switchTab('story')" 
+                            data-sc-action="switch-tab"
+                            data-sc-tab="story"
                             class="min-h-[48px] px-4 py-2 rounded-t-lg border-b-2 font-bold transition-all cursor-pointer border-emerald-400 text-emerald-300 bg-emerald-500/10 flex items-center justify-center">
                         🐱 1. Layman Story
                     </button>
@@ -717,7 +718,8 @@
                             aria-selected="false" 
                             aria-controls="pane-acronym" 
                             tabindex="-1"
-                            onclick="SimpleCat.switchTab('acronym')" 
+                            data-sc-action="switch-tab"
+                            data-sc-tab="acronym"
                             class="min-h-[48px] px-4 py-2 rounded-t-lg border-b-2 font-bold transition-all cursor-pointer border-transparent text-slate-400 hover:text-white flex items-center justify-center">
                         🔤 2. Letters Decoded
                     </button>
@@ -727,7 +729,8 @@
                             aria-selected="false" 
                             aria-controls="pane-risk" 
                             tabindex="-1"
-                            onclick="SimpleCat.switchTab('risk')" 
+                            data-sc-action="switch-tab"
+                            data-sc-tab="risk"
                             class="min-h-[48px] px-4 py-2 rounded-t-lg border-b-2 font-bold transition-all cursor-pointer border-transparent text-slate-400 hover:text-white flex items-center justify-center">
                         💥 3. Wallet Risk
                     </button>
@@ -737,7 +740,8 @@
                             aria-selected="false" 
                             aria-controls="pane-fix" 
                             tabindex="-1"
-                            onclick="SimpleCat.switchTab('fix')" 
+                            data-sc-action="switch-tab"
+                            data-sc-tab="fix"
                             class="min-h-[48px] px-4 py-2 rounded-t-lg border-b-2 font-bold transition-all cursor-pointer border-transparent text-slate-400 hover:text-white flex items-center justify-center">
                         🛠️ 4. The 2-Min Fix
                     </button>
@@ -3855,7 +3859,7 @@
                         <span class="text-sm">🎬</span>
                         <span class="font-arcade text-[10px] tracking-wider text-emerald-300">ARCADE HUD CLIP // ${fileExt.toUpperCase()}</span>
                     </div>
-                    <button type="button" onclick="document.getElementById('orbit-clip-share-modal').classList.add('hidden')" class="text-slate-400 hover:text-white text-lg px-2 py-0.5 rounded cursor-pointer leading-none">&times;</button>
+                    <button type="button" data-sc-action="close-clip-modal" class="text-slate-400 hover:text-white text-lg px-2 py-0.5 rounded cursor-pointer leading-none">&times;</button>
                 </div>
                 <div class="relative rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-900 shadow-inner">
                     <video src="${lastRecordedClipUrl}" controls playsinline webkit-playsinline muted autoplay loop class="w-full max-h-40 sm:max-h-52 bg-slate-950 object-contain"></video>
@@ -6014,6 +6018,48 @@
             toggleSound();
         }
     });
+
+    if (!window.__simpleCatDelegationBound) {
+        window.__simpleCatDelegationBound = true;
+        document.addEventListener("click", (e) => {
+            const el = e.target && e.target.closest ? e.target.closest("[data-sc-action]") : null;
+            if (!el) return;
+            const action = el.dataset.scAction;
+            const sc = window.SimpleCat;
+            if (action === "explain") {
+                if (sc) {
+                    if (el.dataset.scSfx === "blip" && sc.playBlip) sc.playBlip();
+                    else if (el.dataset.scSfx === "powerup" && sc.playPowerUp) sc.playPowerUp();
+                    if (sc.explain) sc.explain(el.dataset.scTopic || el.dataset.chip);
+                }
+            } else if (action === "switch-tab") {
+                if (sc && sc.switchTab) sc.switchTab(el.dataset.scTab);
+            } else if (action === "toggle-sound") {
+                if (sc && sc.toggleSound) sc.toggleSound();
+            } else if (action === "start-tour") {
+                if (el.dataset.scCloseMobile === "1") {
+                    const mb = document.getElementById("mobileMenuBtn");
+                    if (mb) mb.click();
+                }
+                if (sc) {
+                    if (el.dataset.scSfx === "powerup" && sc.playPowerUp) sc.playPowerUp();
+                    if (sc.startTour) sc.startTour();
+                }
+            } else if (action === "start-defense") {
+                if (sc) {
+                    if (el.dataset.scSfx === "powerup" && sc.playPowerUp) sc.playPowerUp();
+                    if (sc.startDefense) sc.startDefense();
+                }
+            } else if (action === "record-clip") {
+                if (sc && sc.recordClip) sc.recordClip();
+            } else if (action === "play-blip") {
+                if (sc && sc.playBlip) sc.playBlip();
+            } else if (action === "close-clip-modal") {
+                const modal = document.getElementById("orbit-clip-share-modal");
+                if (modal) modal.classList.add("hidden");
+            }
+        });
+    }
 
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", initAll);
