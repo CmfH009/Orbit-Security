@@ -19,7 +19,7 @@
 | Platform | Target | Finding Summary | Artifact | Next Action |
 | :--- | :--- | :--- | :--- | :--- |
 | **Bugcrowd** (`launchdarkly-mbb-og`) | `launchdarkly/ld-relay` | Unbounded inbound event payload & `gzip` decompression OOM on public client-side event routes | [backblaze_launchdarkly_audit.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/4803c6f8-5ab3-447e-a610-8ea5d01da32a/backblaze_launchdarkly_audit.md) | Hold — verify DoS is in scope before submitting; Bugcrowd `1/1` slot is open |
-| **Bugcrowd** (`aiven-mbb-og`) | `Aiven-Open/klaw` | Cross-user & cross-tenant active team modification IDOR (`POST /user/updateTeam`, CWE-639) + user/switch-team enumeration | [bugcrowd_aiven_audit.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/c2e423cc-1735-4674-a0f6-93bcb0a62666/bugcrowd_aiven_audit.md) | Run standalone `curl`/JUnit PoC on a Java/Docker host to capture live output before submitting |
+| **Bugcrowd** (`aiven-mbb-og`) | `Aiven-Open/klaw` | Cross-user & cross-tenant active team modification IDOR (`POST /user/updateTeam`, CWE-639) + user/switch-team enumeration | [bugcrowd_aiven_audit.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/c2e423cc-1735-4674-a0f6-93bcb0a62666/bugcrowd_aiven_audit.md) | Live PoC Verified (`SwitchTeamIdorPoCIT` passed 1/1 on JDK 17) — Ready to Submit on Bugcrowd (`aiven-mbb-og`) |
 
 ### Automated Paid Bounty Discovery Leads (`2026-11-26`)
 - **`deriv`** (score `80` [fast-pay, gold-harbor]) — `URL, SOURCE_CODE, WILDCARD, OTHER` (`h1-read program deriv --scopes --paid-only`)
