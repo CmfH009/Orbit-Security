@@ -93,22 +93,22 @@ class TestFleetCertifierStewardship:
 
     def test_certifier_fallback_rejects_scanned_domain(self):
         """Assert fallback client certifier does not default to scanned domain."""
-        for html_path in [LANDING_DIR / "fleet.html", DOCS_DIR / "fleet.html"]:
-            text = html_path.read_text(encoding="utf-8")
+        for js_path in [LANDING_DIR / "assets" / "fleet_page.js", DOCS_DIR / "assets" / "fleet_page.js"]:
+            text = js_path.read_text(encoding="utf-8")
 
             # Check handleAddDomain fallback
             add_match = re.search(
                 r'const client =\s*nameInput\.value\.trim\(\)\s*\|\|\s*["\']([^"\']+)["\'];',
                 text,
             )
-            assert add_match, f"Could not find client assignment in handleAddDomain in {html_path}"
+            assert add_match, f"Could not find client assignment in handleAddDomain in {js_path}"
             fallback_val = add_match.group(1)
-            assert fallback_val != "domain", f"Fallback client certifier must not default to domain in {html_path}"
+            assert fallback_val != "domain", f"Fallback client certifier must not default to domain in {js_path}"
             assert fallback_val == "Orbit Security Certified Client"
 
             # Check downloadSinglePDF anti-self-certification logic
             assert "const safeClient = (rawClient && rawClient !== safeDomain) ? rawClient : 'Orbit Security Certified Client';" in text, (
-                f"Missing strict self-certification prevention guard in {html_path}"
+                f"Missing strict self-certification prevention guard in {js_path}"
             )
 
     def simulate_fleet_client_resolution(self, raw_client, safe_domain):

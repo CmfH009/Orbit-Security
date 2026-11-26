@@ -223,7 +223,7 @@
     <link rel="stylesheet" href="assets/styles.min.css?v=20261124v9">
     <!-- Simple Cat 16-Bit Companion & Plain-English Decoder -->
     <script src="assets/simple_cat_data.js?v=20261125v1" defer></script>
-    <script src="assets/simple_cat.js?v=20261125v2" defer></script>
+    <script src="assets/simple_cat.js?v=20261125v3" defer></script>
     <!-- Orbit Radar Terminal & Ergonomics Engine -->
     <script src="assets/orbit_radar.js?v=20261125v2" defer></script>
     <!-- Landing Page UI Controllers -->
@@ -3067,18 +3067,18 @@ Apex Digital Studio</pre>
                 </div>
             </div>
             <!-- Modal Header -->
-            <div class="px-4 sm:px-6 py-3.5 bg-slate-950 border-b border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-20">
-                <div class="flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-2.5">
+            <div class="px-4 sm:px-6 py-3.5 bg-slate-950 border-b border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-20 min-w-0">
+                <div class="flex items-center justify-between gap-3 min-w-0">
+                    <div class="flex items-center gap-2.5 min-w-0">
                         <span class="text-xl flex-shrink-0">📖</span>
-                        <div>
-                            <h3 id="flipbookTitle" class="font-pixel text-emerald-400 text-xs sm:text-sm tracking-wide" style="margin:0; white-space:nowrap;">WHITE-LABEL EXECUTIVE AUDIT PREVIEW</h3>
-                            <p class="text-[10px] sm:text-[11px] text-amber-400 font-mono" style="margin:0; white-space:nowrap;">&#9888; DEMO MODE &mdash; Example Data Only &bull; Not a Real Audit</p>
+                        <div class="min-w-0">
+                            <h3 id="flipbookTitle" class="font-pixel text-emerald-400 text-xs sm:text-sm tracking-wide truncate" style="margin:0;">WHITE-LABEL EXECUTIVE AUDIT PREVIEW</h3>
+                            <p class="text-[10px] sm:text-[11px] text-amber-400 font-mono truncate" style="margin:0;">&#9888; DEMO MODE &mdash; Example Data Only &bull; Not a Real Audit</p>
                         </div>
                     </div>
                     <button type="button" data-ui-action="close-flipbook" class="sm:hidden text-slate-400 hover:text-white font-arcade text-xs min-w-[40px] min-h-[40px] px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 cursor-pointer flex items-center justify-center">✕</button>
                 </div>
-                <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar scroll-indicate-x scroll-fade-r scroll-cyber-x" style="flex-shrink:0;">
+                <div class="flex flex-wrap items-center gap-2 pb-1 sm:pb-0 flex-shrink-0">
                     <button type="button" data-ui-action="set-flipbook-page" data-page="1" id="flipBtn-1" class="flip-page-btn px-3 py-1.5 rounded bg-emerald-500 text-slate-950 font-mono text-xs font-bold cursor-pointer whitespace-nowrap">Page 1: Scorecard</button>
                     <button type="button" data-ui-action="set-flipbook-page" data-page="2" id="flipBtn-2" class="flip-page-btn px-3 py-1.5 rounded bg-slate-900 text-slate-300 border border-slate-700 hover:border-emerald-400 font-mono text-xs cursor-pointer whitespace-nowrap">Page 2: Takeover Matrix</button>
                     <button type="button" data-ui-action="set-flipbook-page" data-page="3" id="flipBtn-3" class="flip-page-btn px-3 py-1.5 rounded bg-slate-900 text-slate-300 border border-slate-700 hover:border-emerald-400 font-mono text-xs cursor-pointer whitespace-nowrap">Page 3: DMARC &amp; Headers</button>

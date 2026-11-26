@@ -124,7 +124,9 @@ class TestAct4GhostDNSMicroSaaS:
         assert "$29" in content
         assert "$199" in content
         assert "Agency Fleet Guard" in content
-        assert "runAudit()" in content
+        ghostdns_js = (project_root / "docs" / "assets" / "ghostdns_page.js").read_text(encoding="utf-8")
+        assert 'data-ghost-action="run-audit"' in content
+        assert "function runAudit()" in ghostdns_js
         assert "Pre-Order Store Sentinel" in content
 
 

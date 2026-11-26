@@ -486,14 +486,17 @@ def test_signup_static_github_pages_and_checkout_api_fallback():
     docs_bytes = docs_signup.read_bytes()
     assert landing_bytes == docs_bytes, "landing/signup.html and docs/signup.html must be synced"
 
-    html = landing_bytes.decode("utf-8")
-    assert 'action="/create-checkout-session"' in html
-    assert "https://buy.stripe.com/8x29ASgAk3V15X2el6cs801" in html
-    assert "https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800" in html
-    assert "https://buy.stripe.com/5kQ14mbg0bnt716a4Qcs802" in html
+    landing_signup_js = REPO_ROOT / "landing" / "assets" / "signup_page.js"
+    docs_signup_js = REPO_ROOT / "docs" / "assets" / "signup_page.js"
+    assert landing_signup_js.read_bytes() == docs_signup_js.read_bytes(), "signup_page.js must be synced"
 
-    scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, flags=re.DOTALL)
-    inline_js = next(s for s in scripts if "STRIPE_LINKS" in s)
+    html = landing_bytes.decode("utf-8")
+    inline_js = landing_signup_js.read_text(encoding="utf-8")
+    assert 'action="/create-checkout-session"' in html
+    assert "https://buy.stripe.com/8x29ASgAk3V15X2el6cs801" in inline_js
+    assert "https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800" in inline_js
+    assert "https://buy.stripe.com/5kQ14mbg0bnt716a4Qcs802" in inline_js
+    assert "STRIPE_LINKS" in inline_js
 
     harness = r"""
 const assert = require('assert');

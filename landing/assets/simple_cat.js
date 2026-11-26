@@ -6038,7 +6038,7 @@
                 if (sc && sc.toggleSound) sc.toggleSound();
             } else if (action === "start-tour") {
                 if (el.dataset.scCloseMobile === "1") {
-                    const mb = document.getElementById("mobileMenuBtn");
+                    const mb = document.getElementById(el.dataset.scMobileBtn || "mobileMenuBtn");
                     if (mb) mb.click();
                 }
                 if (sc) {
@@ -6058,6 +6058,18 @@
                 const modal = document.getElementById("orbit-clip-share-modal");
                 if (modal) modal.classList.add("hidden");
             }
+        });
+    }
+
+    if (!window.__orbitMobileMenuBound) {
+        window.__orbitMobileMenuBound = true;
+        document.addEventListener("click", (e) => {
+            const btn = e.target && e.target.closest ? e.target.closest('[id$="MobileMenuBtn"][aria-controls]') : null;
+            if (!btn) return;
+            const menu = document.getElementById(btn.getAttribute("aria-controls"));
+            if (!menu) return;
+            const isHidden = menu.classList.toggle("hidden");
+            btn.setAttribute("aria-expanded", String(!isHidden));
         });
     }
 

@@ -116,12 +116,14 @@ class TestVerifyLandingPagesEncodingStress(unittest.TestCase):
         for tree in (REPO_ROOT / "landing", REPO_ROOT / "docs"):
             self.assertTrue((tree / ".nojekyll").is_file(), f"Missing .nojekyll in {tree}")
             signup_html = (tree / "signup.html").read_text(encoding="utf-8")
-            self.assertIn("/create-checkout-session", signup_html)
-            self.assertIn("https://buy.stripe.com/8x29ASgAk3V15X2el6cs801", signup_html)
-            self.assertIn("https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800", signup_html)
-            self.assertIn("https://buy.stripe.com/5kQ14mbg0bnt716a4Qcs802", signup_html)
-            self.assertIn("prefilled_email", signup_html)
-            self.assertIn("client_reference_id", signup_html)
+            signup_js = (tree / "assets" / "signup_page.js").read_text(encoding="utf-8")
+            signup_combined = signup_html + "\n" + signup_js
+            self.assertIn("/create-checkout-session", signup_combined)
+            self.assertIn("https://buy.stripe.com/8x29ASgAk3V15X2el6cs801", signup_combined)
+            self.assertIn("https://buy.stripe.com/4gM14m1Fq2QXetya4Qcs800", signup_combined)
+            self.assertIn("https://buy.stripe.com/5kQ14mbg0bnt716a4Qcs802", signup_combined)
+            self.assertIn("prefilled_email", signup_combined)
+            self.assertIn("client_reference_id", signup_combined)
             audit_html = (tree / "audit.html").read_text(encoding="utf-8")
             self.assertIn('href="https://cmfh009.github.io/Orbit-Security/audit.html"', audit_html)
 

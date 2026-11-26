@@ -550,12 +550,12 @@ async function runTests() {
         assert(indexHtml.includes(`data-radar-action="share-tool" data-tool="${tk}"`), `landing/index.html includes social share button for '${tk}'`);
     }
     for (const tk of labsToolKeys) {
-        assert(labsHtml.includes(`shareOrbitTool('${tk}'`), `landing/labs.html includes social share button for '${tk}'`);
+        assert(labsHtml.includes(`data-radar-action="share-tool" data-tool="${tk}"`), `landing/labs.html includes social share button for '${tk}'`);
         assert(sandbox.window.buildOrbitToolSharePayload(tk).url.includes('labs.html#'), `buildOrbitToolSharePayload('${tk}') routes to labs.html`);
     }
     const ghostDnsHtml = fs.readFileSync(path.join(__dirname, '..', 'landing', 'ghostdns', 'index.html'), 'utf8');
-    assert(ghostDnsHtml.includes("shareGhostDnsTool('x')"), 'landing/ghostdns/index.html includes X share button');
-    assert(ghostDnsHtml.includes("shareGhostDnsTool('native')"), 'landing/ghostdns/index.html includes Native share button');
+    assert(ghostDnsHtml.includes('data-ghost-action="share" data-channel="x"'), 'landing/ghostdns/index.html includes X share button');
+    assert(ghostDnsHtml.includes('data-ghost-action="share" data-channel="native"'), 'landing/ghostdns/index.html includes Native share button');
 
     // =========================================================================
     // Scenario 9: Interactive Visual Attack Tree & Takeover Simulator
@@ -670,7 +670,8 @@ async function runTests() {
     // Verify Takeover Playground HTML in landing/labs.html includes the visual attack tree elements & noscript
     assert(labsHtml.includes('visualAttackTreeContainer'), 'landing/labs.html includes visual attack tree container');
     const landingUiJs = fs.readFileSync(path.join(__dirname, '..', 'landing', 'assets', 'landing_ui.js'), 'utf8');
-    assert(labsHtml.includes('OrbitAttackTree'), 'landing/labs.html integrates OrbitAttackTree engine');
+    const labsJs = fs.readFileSync(path.join(__dirname, '..', 'landing', 'assets', 'orbit_labs.js'), 'utf8');
+    assert(labsHtml.includes('assets/orbit_labs.js') && labsJs.includes('OrbitAttackTree'), 'landing/labs.html integrates OrbitAttackTree engine via orbit_labs.js');
     assert(indexHtml.includes('assets/landing_ui.js') && landingUiJs.includes('OrbitAttackTree'), 'landing/index.html integrates OrbitAttackTree engine via landing_ui.js');
     assert(labsHtml.includes('<noscript>') && labsHtml.includes('Visual Attack Tree // Subdomain Takeover Sequence'), 'landing/labs.html includes accessible noscript attack tree fallback');
 

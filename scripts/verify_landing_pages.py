@@ -225,6 +225,9 @@ def verify_directory(dir_path, name):
                 if not os.path.exists(os.path.join(sub_dir, clean_asset)):
                     errors.append(f"Broken {label} in {subpage}: {asset}")
         if subpage == "signup.html":
+            signup_js_path = os.path.join(dir_path, "assets", "signup_page.js")
+            signup_js = open(signup_js_path, "r", encoding="utf-8").read() if os.path.exists(signup_js_path) else ""
+            signup_combined = sub_html + "\n" + signup_js
             required_signup_tokens = [
                 "/create-checkout-session",
                 "https://buy.stripe.com/8x29ASgAk3V15X2el6cs801",
@@ -236,7 +239,7 @@ def verify_directory(dir_path, name):
                 "file:",
             ]
             for token in required_signup_tokens:
-                if token not in sub_html:
+                if token not in signup_combined:
                     errors.append(f"signup.html missing Stripe/static fallback token: {token}")
             if not sub_parser.meta_csp or "https://buy.stripe.com" not in sub_parser.meta_csp:
                 errors.append("signup.html CSP missing https://buy.stripe.com allowance!")

@@ -121,7 +121,7 @@
             const barColor = (item.epss || 0) >= 0.50 ? 'bg-gradient-to-r from-amber-500 to-red-500' : 'bg-gradient-to-r from-cyan-500 to-emerald-500';
 
             return `
-                <div role="button" tabindex="0" onclick="selectKevRadarCve('${escapeHtml(item.cve)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectKevRadarCve('${escapeHtml(item.cve)}');}" class="p-3.5 rounded-xl bg-slate-950/90 hover:bg-slate-900 border ${idx === 0 ? 'border-cyan-500/50' : 'border-slate-800'} hover:border-cyan-400/70 transition-all cursor-pointer group">
+                <div role="button" tabindex="0" data-labs-action="select-kev-cve" data-cve="${escapeHtml(item.cve)}" class="p-3.5 rounded-xl bg-slate-950/90 hover:bg-slate-900 border ${idx === 0 ? 'border-cyan-500/50' : 'border-slate-800'} hover:border-cyan-400/70 transition-all cursor-pointer group">
                     <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
                         <div class="flex items-center gap-2">
                             <span class="font-mono font-bold text-sm text-white group-hover:text-cyan-300 transition-colors">${escapeHtml(item.cve)}</span>
@@ -658,6 +658,66 @@
         if (typeof initKevEpssRadar === 'function') initKevEpssRadar();
         if (typeof renderEpssHorizonChart === 'function') renderEpssHorizonChart();
         if (typeof initBountyRadarStatuspage === 'function') initBountyRadarStatuspage();
+        if (document.getElementById('visualAttackTreeContainer') && window.OrbitAttackTree && typeof OrbitAttackTree.init === 'function') {
+            OrbitAttackTree.init('visualAttackTreeContainer', { scenarioKey: 'aws_s3' });
+        }
+        const labsMenu = document.getElementById('labsMobileMenu');
+        if (labsMenu && !labsMenu.dataset.labsDrawerBound) {
+            labsMenu.dataset.labsDrawerBound = '1';
+            labsMenu.querySelectorAll('a').forEach((link) => {
+                link.addEventListener('click', () => {
+                    labsMenu.classList.add('hidden');
+                    const btn = document.getElementById('labsMobileMenuBtn');
+                    if (btn) btn.setAttribute('aria-expanded', 'false');
+                    document.body.classList.remove('drawer-open');
+                });
+            });
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !labsMenu.classList.contains('hidden')) {
+                    labsMenu.classList.add('hidden');
+                    const btn = document.getElementById('labsMobileMenuBtn');
+                    if (btn) btn.setAttribute('aria-expanded', 'false');
+                    document.body.classList.remove('drawer-open');
+                }
+            });
+        }
+    }
+
+    if (typeof document !== 'undefined' && !window.__orbitLabsDelegationBound) {
+        window.__orbitLabsDelegationBound = true;
+        const handleLabsAction = (el) => {
+            const action = el.dataset.labsAction;
+            if (action === 'select-kev-cve') selectKevRadarCve(el.dataset.cve);
+            else if (action === 'set-kev-filter') setKevRadarFilter(el.dataset.filter);
+            else if (action === 'quick-search-kev') quickSearchKevRadar(el.dataset.query || '');
+            else if (action === 'copy-kev-advisory') copySelectedKevClientAdvisory();
+            else if (action === 'load-takeover-preset') loadTakeoverPreset(el.dataset.preset);
+            else if (action === 'run-takeover-poc') runTakeoverPocSimulation();
+            else if (action === 'copy-takeover-remediation') copyTakeoverRemediation();
+            else if (action === 'render-epss-horizon') renderEpssHorizonChart();
+            else if (action === 'run-zk-scorecard') runZeroKnowledgeBatchScorecard();
+            else if (action === 'export-zk-json') exportZeroKnowledgeScorecardJson();
+        };
+
+        document.addEventListener('click', (e) => {
+            const el = e.target && e.target.closest ? e.target.closest('[data-labs-action]') : null;
+            if (el) handleLabsAction(el);
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            const el = e.target && e.target.closest ? e.target.closest('[data-labs-action="select-kev-cve"]') : null;
+            if (!el) return;
+            e.preventDefault();
+            handleLabsAction(el);
+        });
+        document.addEventListener('input', (e) => {
+            const el = e.target && e.target.closest ? e.target.closest('[data-labs-input]') : null;
+            if (el && el.dataset.labsInput === 'filter-kev') filterKevEpssRadar();
+        });
+        document.addEventListener('change', (e) => {
+            const el = e.target && e.target.closest ? e.target.closest('[data-labs-change]') : null;
+            if (el && el.dataset.labsChange === 'run-takeover-poc') runTakeoverPocSimulation();
+        });
     }
 
     if (document.readyState === 'loading') {

@@ -71,12 +71,34 @@ def test_strict_csp_and_zero_inline_handlers():
     import re
 
     inline_re = re.compile(r"""\bon(?:click|input|change|submit|keydown|keyup|focus|blur|load|error)\s*=\s*['"]""")
+    inline_script_re = re.compile(r"<script(?![^>]*\bsrc=)(?![^>]*application/ld\+json)[^>]*>", re.I)
+    pages = [
+        "index.html",
+        "labs.html",
+        "audit.html",
+        "fleet.html",
+        "signup.html",
+        "about.html",
+        "privacy.html",
+        "terms.html",
+        "disclaimer.html",
+        "refunds.html",
+        "benchmark/index.html",
+        "ghostdns/index.html",
+        "stealthbridge/index.html",
+        "portals/index.html",
+    ]
     for tree in ("landing", "docs"):
-        idx_html = (REPO_ROOT / tree / "index.html").read_text(encoding="utf-8")
-        assert "script-src 'self';" in idx_html, f"{tree}/index.html must enforce script-src 'self';"
-        assert "script-src 'self' 'unsafe-inline'" not in idx_html, f"{tree}/index.html must not allow 'unsafe-inline' in script-src"
-        assert not inline_re.search(idx_html), f"{tree}/index.html still contains inline event handlers"
+        for rel in pages:
+            html = (REPO_ROOT / tree / rel).read_text(encoding="utf-8")
+            csp_m = re.search(r'http-equiv="Content-Security-Policy"\s+content="([^"]+)"', html)
+            assert csp_m is not None, f"{tree}/{rel} missing CSP meta tag"
+            script_src = next((p.strip() for p in csp_m.group(1).split(";") if p.strip().startswith("script-src")), "")
+            assert script_src, f"{tree}/{rel} missing script-src directive"
+            assert "'unsafe-inline'" not in script_src, f"{tree}/{rel} must not allow 'unsafe-inline' in script-src"
+            assert not inline_re.search(html), f"{tree}/{rel} still contains inline event handlers"
+            assert not inline_script_re.search(html), f"{tree}/{rel} still contains inline executable <script>"
 
-    for asset in ("orbit_radar.js", "simple_cat.js"):
-        src = (REPO_ROOT / "landing" / "assets" / asset).read_text(encoding="utf-8")
-        assert not inline_re.search(src), f"landing/assets/{asset} still contains inline event handlers"
+    for js_path in sorted((REPO_ROOT / "landing" / "assets").glob("*.js")):
+        src = js_path.read_text(encoding="utf-8")
+        assert not inline_re.search(src), f"landing/assets/{js_path.name} still contains inline event handlers"
