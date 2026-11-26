@@ -9,16 +9,23 @@
 
 | Platform | Program / Target | Finding | Reference / ID | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Bugcrowd** | `mattermost-mbb-public` (`mattermost/mattermost-plugin-confluence`) | OAuth2 state not bound to authenticated user & missing single-use invalidation (CWE-352) | `a67e736a-829c-4c61-a4af-c4d2d550888e` ([report](file:///C:/Users/purav/.gemini/antigravity-cli/brain/0f94c3e0-4031-48e6-9de3-d96872df8113/confluence_oauth_csrf_audit.md)) | `New` (1/1 slot occupied; est. review `2026-12-06`) |
-| **HackerOne** | `mondelez` | `shop.hukitchen.com` dangling CNAME to `unbouncepages.com` | `#4204025` | `New` (no triage reply yet; Signal-gates other H1 programs until resolved) |
+| **HackerOne** | `mondelez` | `shop.hukitchen.com` dangling CNAME to `unbouncepages.com` | `#4204025` | `New` (Mondelēz paused new submissions 2026-11-26 15:48 UTC; existing report awaiting triage; Signal-gates other H1 programs until resolved) |
+| **Direct Private Email** (`security@omarchy.org`) | `omacom/omarchy` (`quattro` @ `f989b43`) | 3 verified security-boundary issues (`omarchy.clonedFrom` auth bypass, root ALPM `hyprland-reload-guard` hardening, WPA-Enterprise RADIUS TLS validation) + 3 clean patches | [omarchy-security-disclosure-bundle.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/7ac73744-8f67-4f1d-bb31-7871dcbca23f/omarchy-security-disclosure-bundle.md) | Dispatched 2026-11-26 02:40 UTC to `security@omarchy.org` (awaiting vendor reply) |
 
 ---
 
 ## 2. Ready Now (No Platform Queue / Signal Gate)
 
-| Channel | Target | Finding Summary | Artifact | Next Action |
+| Platform | Target | Finding Summary | Artifact | Next Action |
 | :--- | :--- | :--- | :--- | :--- |
-| **Direct Private Email** (`security@omarchy.org`) | `omacom/omarchy` (`quattro` @ `f989b43`) | 3 verified security-boundary issues (`omarchy.clonedFrom` auth bypass, root ALPM `hyprland-reload-guard` hardening, WPA-Enterprise RADIUS TLS validation) + 3 clean patches | [omarchy-security-disclosure-bundle.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/7ac73744-8f67-4f1d-bb31-7871dcbca23f/omarchy-security-disclosure-bundle.md) | Send private disclosure email to `security@omarchy.org` |
+| **Bugcrowd** (`launchdarkly-mbb-og`) | `launchdarkly/ld-relay` | Unbounded inbound event payload & `gzip` decompression OOM on public client-side event routes | [backblaze_launchdarkly_audit.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/4803c6f8-5ab3-447e-a610-8ea5d01da32a/backblaze_launchdarkly_audit.md) | Bugcrowd `1/1` slot cleared after Mattermost NA closure — verify slot status on Bugcrowd before submitting |
+
+### Automated Paid Bounty Discovery Leads (`2026-11-26`)
+- **`deriv`** (score `80` [fast-pay, gold-harbor]) — `URL, SOURCE_CODE, WILDCARD, OTHER` (`h1-read program deriv --scopes --paid-only`)
+- **`matomo`** (score `70` [fast-pay]) — `SOURCE_CODE, URL` (`h1-read program matomo --scopes --paid-only`)
+- **`faraday_inc`** (score `70` [fast-pay, gold-harbor]) — `URL, OTHER`
+- **`mercadolibre`** (score `70` [fast-pay, gold-harbor]) — `URL, WILDCARD, GOOGLE_PLAY_APP_ID, OTHER, APPLE_STORE_APP_ID, HARDWARE`
+- **`crypto`** (score `70` [fast-pay, gold-harbor]) — `WILDCARD, URL, APPLE_STORE_APP_ID, API, GOOGLE_PLAY_APP_ID, SMART_CONTRACT`
 
 ---
 
@@ -26,13 +33,14 @@
 
 | Platform | Target | Finding Summary | Artifact | Blocker |
 | :--- | :--- | :--- | :--- | :--- |
-| **Bugcrowd** (`launchdarkly-mbb-og`) | `launchdarkly/ld-relay` | Unbounded inbound event payload & `gzip` decompression OOM on public client-side event routes | [backblaze_launchdarkly_audit.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/4803c6f8-5ab3-447e-a610-8ea5d01da32a/backblaze_launchdarkly_audit.md) | Waiting for Bugcrowd `1/1` slot to clear |
 | **HackerOne** (`gitlab`) | `gitlab-org/gitaly` | SSRF via DNS rebinding bypass on `git://` URLs (`internal/git/gitcmd/command_resolve.go`) | [gitaly_ssrf_audit.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/0f94c3e0-4031-48e6-9de3-d96872df8113/gitaly_ssrf_audit.md) | HackerOne Signal >= 1.0 gate (0 trial reports left) |
 | **HackerOne** (`gitlab`) | `gitlab-org/gitlab-runner` | KMP partial-match drop in `masker.Write` leaks self-overlapping CI/CD secrets | [gitlab_runner_audit.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/0f94c3e0-4031-48e6-9de3-d96872df8113/gitlab_runner_audit.md) | HackerOne Signal >= 1.0 gate (0 trial reports left) |
 
 ---
 
-## 4. Clean / Archived Audits (Do Not Submit)
+## 4. Closed / Clean / Archived Audits (Do Not Submit)
+
+- `mattermost/mattermost-plugin-confluence` (`a67e736a-829c-4c61-a4af-c4d2d550888e`, [report](file:///C:/Users/purav/.gemini/antigravity-cli/brain/0f94c3e0-4031-48e6-9de3-d96872df8113/confluence_oauth_csrf_audit.md)) — Closed — Not Applicable by `hexghost_bugcrowd` (2026-11-26 14:07 UTC).
 
 - `cloudflare/vinext` ([vinext-security-audit-report.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/3c9e83cd-386a-443d-b318-7d90fde0cd15/vinext-security-audit-report.md)) — Clean pass.
 - `gitlab-org/gitlab-pages` ([gitlab-pages-security-audit-report.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/61686068-3087-49f4-93ae-dba925a03183/gitlab-pages-security-audit-report.md)) — `GetConfigForClient` placeholder not wired live.
