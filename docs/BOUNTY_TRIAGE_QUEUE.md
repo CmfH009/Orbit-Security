@@ -18,7 +18,8 @@
 
 | Platform | Target | Finding Summary | Artifact | Next Action |
 | :--- | :--- | :--- | :--- | :--- |
-| **Bugcrowd** (`launchdarkly-mbb-og`) | `launchdarkly/ld-relay` | Unbounded inbound event payload & `gzip` decompression OOM on public client-side event routes | [backblaze_launchdarkly_audit.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/4803c6f8-5ab3-447e-a610-8ea5d01da32a/backblaze_launchdarkly_audit.md) | Bugcrowd `1/1` slot cleared after Mattermost NA closure — verify slot status on Bugcrowd before submitting |
+| **Bugcrowd** (`launchdarkly-mbb-og`) | `launchdarkly/ld-relay` | Unbounded inbound event payload & `gzip` decompression OOM on public client-side event routes | [backblaze_launchdarkly_audit.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/4803c6f8-5ab3-447e-a610-8ea5d01da32a/backblaze_launchdarkly_audit.md) | Hold — verify DoS is in scope before submitting; Bugcrowd `1/1` slot is open |
+| **Bugcrowd** (`aiven-mbb-og`) | `Aiven-Open/klaw` | Cross-user & cross-tenant active team modification IDOR (`POST /user/updateTeam`, CWE-639) + user/switch-team enumeration | [bugcrowd_aiven_audit.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/c2e423cc-1735-4674-a0f6-93bcb0a62666/bugcrowd_aiven_audit.md) | Run standalone `curl`/JUnit PoC on a Java/Docker host to capture live output before submitting |
 
 ### Automated Paid Bounty Discovery Leads (`2026-11-26`)
 - **`deriv`** (score `80` [fast-pay, gold-harbor]) — `URL, SOURCE_CODE, WILDCARD, OTHER` (`h1-read program deriv --scopes --paid-only`)
@@ -41,6 +42,7 @@
 ## 4. Closed / Clean / Archived Audits (Do Not Submit)
 
 - `mattermost/mattermost-plugin-confluence` (`a67e736a-829c-4c61-a4af-c4d2d550888e`, [report](file:///C:/Users/purav/.gemini/antigravity-cli/brain/0f94c3e0-4031-48e6-9de3-d96872df8113/confluence_oauth_csrf_audit.md)) — Closed — Not Applicable by `hexghost_bugcrowd` (2026-11-26 14:07 UTC).
+- `Aiven-Open/karapace` (`91f25f28`), `Aiven-Open/ai-gateway-cli` (`23b6e49a`), `Aiven-Open/myhoard` (`b7ec9ac6`) — Clean on audited auth/ACL/forwarding boundaries.
 
 - `cloudflare/vinext` ([vinext-security-audit-report.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/3c9e83cd-386a-443d-b318-7d90fde0cd15/vinext-security-audit-report.md)) — Clean pass.
 - `gitlab-org/gitlab-pages` ([gitlab-pages-security-audit-report.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/61686068-3087-49f4-93ae-dba925a03183/gitlab-pages-security-audit-report.md)) — `GetConfigForClient` placeholder not wired live.
