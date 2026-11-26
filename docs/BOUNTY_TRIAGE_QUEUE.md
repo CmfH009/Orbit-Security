@@ -9,6 +9,7 @@
 
 | Platform | Program / Target | Finding | Reference / ID | Status |
 | :--- | :--- | :--- | :--- | :--- |
+| **Bugcrowd** (`aiven-mbb-og`) | `Aiven-Open/klaw` | Cross-user & cross-tenant active team modification IDOR (`POST /user/updateTeam`, CWE-639) + user/switch-team enumeration | `a5c3b75c-4efc-409c-ad56-b9e88642ccfe` ([report](file:///C:/Users/purav/.gemini/antigravity-cli/brain/c2e423cc-1735-4674-a0f6-93bcb0a62666/bugcrowd_aiven_audit.md)) | `New` (Submitted 2026-11-26; 1/1 slot occupied; live cross-tenant PoC verified) |
 | **HackerOne** | `mondelez` | `shop.hukitchen.com` dangling CNAME to `unbouncepages.com` | `#4204025` | `New` (Mondelēz paused new submissions 2026-11-26 15:48 UTC; existing report awaiting triage; Signal-gates other H1 programs until resolved) |
 | **Direct Private Email** (`security@omarchy.org`) | `omacom/omarchy` (`quattro` @ `f989b43`) | 3 verified security-boundary issues (`omarchy.clonedFrom` auth bypass, root ALPM `hyprland-reload-guard` hardening, WPA-Enterprise RADIUS TLS validation) + 3 clean patches | [omarchy-security-disclosure-bundle.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/7ac73744-8f67-4f1d-bb31-7871dcbca23f/omarchy-security-disclosure-bundle.md) | Dispatched 2026-11-26 02:40 UTC to `security@omarchy.org` (awaiting vendor reply) |
 
@@ -18,8 +19,7 @@
 
 | Platform | Target | Finding Summary | Artifact | Next Action |
 | :--- | :--- | :--- | :--- | :--- |
-| **Bugcrowd** (`launchdarkly-mbb-og`) | `launchdarkly/ld-relay` | Unbounded inbound event payload & `gzip` decompression OOM on public client-side event routes | [backblaze_launchdarkly_audit.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/4803c6f8-5ab3-447e-a610-8ea5d01da32a/backblaze_launchdarkly_audit.md) | Hold — verify DoS is in scope before submitting; Bugcrowd `1/1` slot is open |
-| **Bugcrowd** (`aiven-mbb-og`) | `Aiven-Open/klaw` | Cross-user & cross-tenant active team modification IDOR (`POST /user/updateTeam`, CWE-639) + user/switch-team enumeration | [bugcrowd_aiven_audit.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/c2e423cc-1735-4674-a0f6-93bcb0a62666/bugcrowd_aiven_audit.md) | Live PoC Verified (`SwitchTeamIdorPoCIT` passed 1/1 on JDK 17) — Ready to Submit on Bugcrowd (`aiven-mbb-og`) |
+| **Bugcrowd** (`launchdarkly-mbb-og`) | `launchdarkly/ld-relay` | Unbounded inbound event payload & `gzip` decompression OOM on public client-side event routes | [backblaze_launchdarkly_audit.md](file:///C:/Users/purav/.gemini/antigravity-cli/brain/4803c6f8-5ab3-447e-a610-8ea5d01da32a/backblaze_launchdarkly_audit.md) | Waiting for Bugcrowd `1/1` slot to clear (occupied by `Aiven-Open/klaw`) + verify DoS is in scope before submitting |
 
 ### Automated Paid Bounty Discovery Leads (`2026-11-26`)
 - **`deriv`** (score `80` [fast-pay, gold-harbor]) — `URL, SOURCE_CODE, WILDCARD, OTHER` (`h1-read program deriv --scopes --paid-only`)
