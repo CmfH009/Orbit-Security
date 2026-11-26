@@ -789,8 +789,9 @@ def render_master_briefing_block(master_briefing: Any) -> str:
         comp_sec_items = sections.get("competitive_security") or []
         yt_items = sections.get("youtube_newsletters") or sections.get("youtube_digest") or []
         dl_items = sections.get("deadlines_checklist") or sections.get("deprecations") or []
+        bounty_items = sections.get("paid_bounty_radar") or []
 
-        has_canonical = any((ops_items, ai_items, comp_sec_items, yt_items, dl_items))
+        has_canonical = any((ops_items, ai_items, comp_sec_items, yt_items, dl_items, bounty_items))
         if has_canonical:
             lines.append("")
             lines.append(
@@ -832,6 +833,15 @@ def render_master_briefing_block(master_briefing: Any) -> str:
                     "No upcoming 30-day deadlines reported.",
                 )
             )
+            if bounty_items:
+                lines.append("")
+                lines.append(
+                    _render_cloud_subsection(
+                        "3.5b Paid Bug Bounty Radar (Gemini)",
+                        bounty_items,
+                        "No new paid bug bounty targets reported.",
+                    )
+                )
         else:
             for h in highlights[:24]:
                 lines.append(f"  - {h}")
@@ -842,6 +852,39 @@ def render_master_briefing_block(master_briefing: Any) -> str:
     else:
         warn = "**[WARN] Gemini Master Briefing not yet received** — "
     return f"- {warn}No Combined Daily Master Briefing found in latest inbox sweep; running in local-only mode."
+
+
+def _load_local_paid_bounty_block(briefings_dir: Path = DEFAULT_BRIEFINGS_DIR) -> str:
+    """Render top automation-ready paid HackerOne candidates from the 12:30 PM local sweep."""
+    latest_path = briefings_dir / "paid_bounty_candidates_latest.json"
+    if not latest_path.is_file():
+        return ""
+    try:
+        payload = json.loads(latest_path.read_text(encoding="utf-8"))
+        candidates = payload.get("candidates") or []
+        if not isinstance(candidates, list) or not candidates:
+            return ""
+        gen_at = str(payload.get("generated_at") or payload.get("date") or "").strip()
+        header = f"#### 3.5c Automated Paid Bounty Discovery (`discover_paid_bounties.py` · {gen_at})"
+        lines = [header]
+        for c in candidates[:5]:
+            handle = str(c.get("handle") or "").strip()
+            score = int(c.get("score") or 0)
+            url = str(c.get("url") or f"https://hackerone.com/{handle}")
+            types = ", ".join(c.get("paid_scope_types") or []) or "N/A"
+            badges = []
+            if c.get("fast_payments"):
+                badges.append("fast-pay")
+            if c.get("gold_safe_harbor"):
+                badges.append("gold-harbor")
+            badge_str = f" [{', '.join(badges)}]" if badges else ""
+            hint = str(c.get("kickoff_hint") or "").strip()
+            lines.append(f"  - **`{handle}`** (score `{score}`{badge_str}) · scopes: `{types}` · {url}")
+            if hint:
+                lines.append(f"    - {hint}")
+        return "\n\n" + "\n".join(lines)
+    except Exception:
+        return ""
 
 
 def render_markdown(
@@ -1015,6 +1058,7 @@ def render_markdown(
     read_cleared_24h = email_hygiene.get("read_or_cleared_24h", 0)
     auto_hygiene_cnt = email_hygiene.get("auto_hygiene_candidates", 0)
     master_briefing_block = render_master_briefing_block(master_brief)
+    local_paid_bounty_block = _load_local_paid_bounty_block()
 
     delta_lines: List[str] = []
     for label_title, bucket_key in (
@@ -1219,7 +1263,7 @@ def render_markdown(
 
 ## ☁️ 3. Gemini Cloud Intelligence Digest
 
-{master_briefing_block}
+{master_briefing_block}{local_paid_bounty_block}
 
 #### 3.6 Post-Briefing High-Priority Gmail Delta (`Orbit/CI-CD`, `Orbit/VDP`, `Work`)
 {post_delta_str}

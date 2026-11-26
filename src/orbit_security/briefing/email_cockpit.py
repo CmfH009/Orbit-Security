@@ -82,6 +82,7 @@ _AGY_DELIMITER_MAP: Dict[str, str] = {
     "COMPETITIVE_SECURITY": "competitive_security",
     "YOUTUBE_NEWSLETTERS": "youtube_newsletters",
     "DEADLINES_CHECKLIST": "deadlines_checklist",
+    "PAID_BOUNTY_RADAR": "paid_bounty_radar",
     "ZIVA_AND_BRITTANY": "ziva_and_brittany",
     "CRITIC_AUDIT": "critic_audit",
     "FULL_DOSSIER": "__HARD_STOP__",
