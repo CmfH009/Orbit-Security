@@ -135,8 +135,9 @@ def test_autonomous_reply_guardrail_blocks_loops_autoresponders_and_forbidden_pr
     assert res_promise.status in (GuardrailStatus.BLOCKED, GuardrailStatus.HELD_FOR_REVIEW)
 
 
-def test_inbox_agent_process_lead_sanitizes_adversarial_payload(tmp_path: Path):
+def test_inbox_agent_process_lead_sanitizes_adversarial_payload(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     agent = InboxAgent(state_file=str(tmp_path / "leads_state.json"))
+    monkeypatch.setattr(agent.dispatcher, "send_email", lambda *a, **kw: False)
     res = agent.process_inbound_lead(
         {
             "sender": "attacker@evil-agency.example",

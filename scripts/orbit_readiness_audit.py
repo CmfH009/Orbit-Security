@@ -743,7 +743,8 @@ def verify_stripe_cutover(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
 def run_readiness_audit(repo_root: Path = REPO_ROOT, verify_cutover: bool = False) -> Dict[str, Any]:
     """Run all read-only Orbit Security readiness checks and return structured metrics."""
     data_dir = repo_root / "data"
-    kyc_status = os.getenv("ORBIT_KYC_STATUS", "PENDING_PHYSICAL_ID").strip() or "PENDING_PHYSICAL_ID"
+    dotenv_values = _load_dotenv_values(repo_root)
+    kyc_status = (_resolve_env_or_dotenv("ORBIT_KYC_STATUS", dotenv_values) or "PENDING_PHYSICAL_ID").strip() or "PENDING_PHYSICAL_ID"
 
     parity = _check_landing_docs_parity(repo_root)
     stripe = _check_stripe_env(repo_root)

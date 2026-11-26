@@ -343,14 +343,16 @@ def test_scheduled_task_configs_and_manifest_use_highest_runlevel_and_tui():
     # install_orbit_tasks.ps1 checks
     daily_block = ps1_text.split('$tasks["OrbitSecurityDailyBriefing"]', 1)[1].split("}", 1)[0]
     assert 'RunLevel    = "Highest"' in daily_block
-    assert "--tui" in daily_block
+    assert "--email" in daily_block
+    assert "--tui" not in daily_block
     assert "pythonw.exe" in daily_block
 
     # orbit_tasks_manifest.json checks
     daily_entry = next(t for t in manifest["tasks"] if t["task_name"] == "OrbitSecurityDailyBriefing")
     assert daily_entry["run_level"] == "Highest"
     assert daily_entry["logon_type"] == "Interactive"
-    assert "--tui" in daily_entry["arguments"]
+    assert "--email" in daily_entry["arguments"]
+    assert "--tui" not in daily_entry["arguments"]
     assert daily_entry["python_executable"].endswith("pythonw.exe")
 
     # orbit_daemon.py checks

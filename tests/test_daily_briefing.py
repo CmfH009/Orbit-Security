@@ -973,8 +973,38 @@ def test_known_expected_ports_includes_patch_desktop_app():
     import scripts.unified_morning_cockpit as cockpit
 
     assert cockpit.KNOWN_EXPECTED_PORTS.get(4064) == "Patch Desktop App"
+    assert "studio1-room-545" in cockpit.CORE_ACTIVE_REPOS
+    assert "nova-body" in cockpit.CORE_ACTIVE_REPOS
     triage = cockpit._triage_listening_ports()["port_triage"]
     assert all(e.get("port") != 4064 for e in triage["unexpected_listeners"])
+
+
+def test_triage_listening_ports_whitelists_agy_and_antigravity(monkeypatch):
+    from types import SimpleNamespace
+    import orbit_security.briefing.system_collectors as sc
+
+    fake_conns = [
+        SimpleNamespace(status="LISTEN", laddr=SimpleNamespace(ip="127.0.0.1", port=45321), pid=101),
+        SimpleNamespace(status="LISTEN", laddr=SimpleNamespace(ip="127.0.0.1", port=45322), pid=102),
+    ]
+    proc_names = {101: "agy.exe", 102: "Antigravity.exe"}
+
+    class FakePsutil:
+        @staticmethod
+        def net_connections(kind="tcp"):
+            return fake_conns
+
+        @staticmethod
+        def Process(pid):
+            return SimpleNamespace(name=lambda: proc_names[pid])
+
+    monkeypatch.setattr(sc, "psutil", FakePsutil)
+    res = sc._triage_listening_ports()
+    triage = res["port_triage"]
+    assert triage["unexpected_listeners"] == []
+    exp_procs = {e["process"] for e in triage["expected_listeners"]}
+    assert "agy.exe" in exp_procs
+    assert "Antigravity.exe" in exp_procs
 
 
 def test_generate_briefing_accepts_injected_briefing_engine_in_memory(tmp_path, monkeypatch):

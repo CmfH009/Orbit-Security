@@ -63,6 +63,13 @@ KNOWN_EXPECTED_PORTS: Dict[int, str] = {
     28894: "OpenCode Server",
 }
 
+KNOWN_EXPECTED_PROCESSES: Dict[str, str] = {
+    "agy": "Antigravity CLI",
+    "agy.exe": "Antigravity CLI",
+    "antigravity": "Antigravity IDE",
+    "antigravity.exe": "Antigravity IDE",
+}
+
 _EPHEMERAL_DEV_PORTS = frozenset({4173, 8501})
 _IGNORED_OS_SYNC_PROCESSES = frozenset(
     {
@@ -86,6 +93,8 @@ CORE_ACTIVE_REPOS: Tuple[str, ...] = (
     "canine-sanctuary",
     "browser-companion",
     "email-organizer",
+    "studio1-room-545",
+    "nova-body",
 )
 
 
@@ -251,8 +260,9 @@ def _triage_listening_ports() -> Dict[str, Any]:
     for port in sorted(seen_ports):
         entry = dict(seen_ports[port])
         known_svc = KNOWN_EXPECTED_PORTS.get(port)
-        if known_svc and port not in _EPHEMERAL_DEV_PORTS:
-            entry["service"] = known_svc
+        proc_svc = KNOWN_EXPECTED_PROCESSES.get(str(entry.get("process", "")).lower())
+        if (known_svc or proc_svc) and port not in _EPHEMERAL_DEV_PORTS:
+            entry["service"] = known_svc or proc_svc
             entry["status"] = "expected"
             expected_listeners.append(entry)
         else:
