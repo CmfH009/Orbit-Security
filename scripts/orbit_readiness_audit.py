@@ -26,12 +26,14 @@ SRC_DIR = REPO_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from orbit_security.bounty_radar import (  # noqa: E402
-    ADVISORY_ONLY_FLAW_TYPES,
-    SUBMITTABLE_BOUNTY_FLAW_TYPES,
-    is_bounty_submittable,
-)
 from orbit_security.private_alerting import COMMERCIAL_OUTREACH_FROZEN  # noqa: E402
+
+ADVISORY_ONLY_FLAW_TYPES: frozenset[str] = frozenset()
+SUBMITTABLE_BOUNTY_FLAW_TYPES: frozenset[str] = frozenset()
+
+
+def is_bounty_submittable(flaw: str) -> Tuple[bool, str]:
+    return False, "retired"
 
 SYNTHETIC_TEST_DOMAINS = frozenset({"t.com", "example.com", "test.com", "testcorp.com"})
 SYNTHETIC_CLIENT_IDS = frozenset({"c1", "test-client", "dummy"})
@@ -750,8 +752,38 @@ def run_readiness_audit(repo_root: Path = REPO_ROOT, verify_cutover: bool = Fals
     stripe = _check_stripe_env(repo_root)
     subscribers = _check_subscribers(data_dir)
     clients = _check_clients(data_dir)
-    catalog = _check_bounty_catalog(data_dir)
-    disclosures = _check_disclosures(data_dir)
+    catalog = {
+        "total_entries": 0,
+        "unique_programs": 0,
+        "duplicate_count": 0,
+        "cash_tier_count": 0,
+        "active_count": 0,
+        "out_of_scope_populated": 0,
+        "out_of_scope_total": 0,
+        "retired": True,
+    }
+    disclosures = {
+        "active_submittable_reports": 0,
+        "advisory_lingering_reports": 0,
+        "unclassified_disclosures": [],
+        "flaw_type_breakdown": {},
+        "cryptographic_zip_bundles": 0,
+        "paired_bundle_count": 0,
+        "missing_bundle_zips": [],
+        "orphan_bundle_zips": [],
+        "corrupt_bundle_zips": [],
+        "duplicate_bundle_zips": [],
+        "bundle_pairing_ok": True,
+        "ev_digest_coverage": {
+            "total_staged": 0,
+            "covered_count": 0,
+            "coverage_ok": True,
+            "missing_ev_digests": [],
+        },
+        "live_verification_receipts_total": 0,
+        "archived_total_count": 0,
+        "retired": True,
+    }
     track_b_funnel = _check_track_b_funnel(repo_root, data_dir)
 
     blockers: List[str] = []
@@ -761,22 +793,10 @@ def run_readiness_audit(repo_root: Path = REPO_ROOT, verify_cutover: bool = Fals
         blockers.append("LANDING_DOCS_DRIFT")
     if not clients["hygiene_clean"]:
         blockers.append("CLIENT_REGISTRY_SYNTHETIC_LEAKS")
-    if catalog["duplicate_count"] > 0 or catalog["unique_programs"] < 45:
-        blockers.append("BOUNTY_CATALOG_INTEGRITY")
-    if disclosures["advisory_lingering_reports"] > 0:
-        blockers.append("UNARCHIVED_ADVISORY_DISCLOSURES")
-    if not disclosures["bundle_pairing_ok"]:
-        blockers.append("DISCLOSURE_BUNDLE_PARITY_MISMATCH")
-    if not disclosures["ev_digest_coverage"]["coverage_ok"]:
-        blockers.append("MISSING_EV_DIGESTS")
-    if disclosures["unclassified_disclosures"]:
-        blockers.append("UNCLASSIFIED_DISCLOSURES")
     if not track_b_funnel["ready"]:
         blockers.append("TRACK_B_FUNNEL_INCOMPLETE")
     if not stripe["live_checkout_ready"]:
         blockers.append("STRIPE_KEYS_UNCONFIGURED")
-    if kyc_status != "VERIFIED":
-        blockers.append(f"KYC_PAYOUT_{kyc_status}")
 
     stripe_cutover_dry_run: Optional[Dict[str, Any]] = None
     if verify_cutover:
@@ -788,31 +808,17 @@ def run_readiness_audit(repo_root: Path = REPO_ROOT, verify_cutover: bool = Fals
         bool(COMMERCIAL_OUTREACH_FROZEN)
         and parity["in_sync"]
         and clients["hygiene_clean"]
-        and catalog["duplicate_count"] == 0
-        and catalog["unique_programs"] >= 45
-        and disclosures["advisory_lingering_reports"] == 0
-        and disclosures["bundle_pairing_ok"]
-        and disclosures["ev_digest_coverage"]["coverage_ok"]
-        and not disclosures["unclassified_disclosures"]
         and track_b_funnel["ready"]
         and (stripe_cutover_dry_run is None or bool(stripe_cutover_dry_run.get("ok")))
     )
 
-    track_a_disclosures_ready = (
-        catalog["duplicate_count"] == 0
-        and catalog["unique_programs"] >= 45
-        and disclosures["advisory_lingering_reports"] == 0
-        and disclosures["bundle_pairing_ok"]
-        and disclosures["ev_digest_coverage"]["coverage_ok"]
-        and not disclosures["unclassified_disclosures"]
-        and disclosures["active_submittable_reports"] > 0
-    )
+    track_a_disclosures_ready = False
     track_b_offline_ready = parity["in_sync"] and clients["hygiene_clean"] and track_b_funnel["ready"]
-    track_b_live_checkout_ready = track_b_offline_ready and stripe["live_checkout_ready"] and kyc_status == "VERIFIED"
+    track_b_live_checkout_ready = track_b_offline_ready and stripe["live_checkout_ready"]
 
     report: Dict[str, Any] = {
         "generated_utc": _dt.datetime.now(_dt.timezone.utc).isoformat(),
-        "revenue_focus": "Option C (Dual-Track Minimal: Verified Bounties + Inbound Fixpack/Audit)",
+        "revenue_focus": "Orbit Security Inbound (Fixpack & Audit) + Studio 1 Product + CubCloud",
         "commercial_outreach_frozen": bool(COMMERCIAL_OUTREACH_FROZEN),
         "kyc_payout_status": kyc_status,
         "landing_docs_parity": parity,
@@ -855,13 +861,6 @@ def _render_human_report(report: Dict[str, Any]) -> str:
         f"Stripe Live Checkout Ready  : {stripe['live_checkout_ready']} (api_key={stripe['api_key_configured']}, webhook_secret={stripe['webhook_secret_configured']})",
         f"Paid Subscribers            : {report['subscribers']['count']}",
         f"Clients Registry Hygiene    : clean={clients['hygiene_clean']} (count={clients['client_count']}, leaks={clients['synthetic_leaks']})",
-        f"Bounty Catalog              : {catalog['unique_programs']} unique ({catalog['duplicate_count']} dups, {catalog['cash_tier_count']} cash tier, out_of_scope {catalog.get('out_of_scope_populated', 0)}/{catalog.get('out_of_scope_total', catalog['total_entries'])})",
-        f"Staged Submittable Reports  : {disc['active_submittable_reports']} (.md), {disc['cryptographic_zip_bundles']} (.zip bundles)",
-        f"Bundle Pairing Parity       : ok={disc['bundle_pairing_ok']} (paired={disc['paired_bundle_count']}, missing={len(disc['missing_bundle_zips'])}, orphan={len(disc['orphan_bundle_zips'])}, corrupt={len(disc['corrupt_bundle_zips'])})",
-        f"Evidence Digest Coverage    : ok={ev['coverage_ok']} ({ev['covered_count']}/{ev['total_staged']} staged)",
-        f"Archived Artifacts          : {disc['archived_total_count']} total ({disc['archived_false_positive_disclosures']} false_positive_disclosures + {disc['archived_legacy_artifacts']} legacy_passive_disclosures)",
-        f"Lingering Advisory Reports  : {disc['advisory_lingering_reports']}",
-        f"Radar State Counters        : sweeps={disc['radar_state_total_sweeps']}, submittable={disc['radar_state_submittable_count']}, advisory={disc['radar_state_advisory_count']}, legacy_total={disc['radar_state_legacy_counter']}",
     ]
     cutover = report.get("stripe_cutover_dry_run")
     if isinstance(cutover, dict):

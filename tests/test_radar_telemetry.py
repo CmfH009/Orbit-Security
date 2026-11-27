@@ -537,9 +537,7 @@ class TestRadarLeadEnricherAndProposalStager:
         assert "Subject:" in pitch_text
         assert "smartmouseco.com" in pitch_text
 
-    def test_leads_summary_deliverable_reader_and_attack_graph_projection(self, tmp_path):
-        from orbit_security.bounty_graph import BountyAttackGraph
-
+    def test_leads_summary_deliverable_reader(self, tmp_path):
         service = RadarTelemetryService(
             queries_file=tmp_path / "queries.jsonl",
             leads_file=tmp_path / "leads.json",
@@ -582,16 +580,6 @@ class TestRadarLeadEnricherAndProposalStager:
         # Reject invalid deliverable type or domain
         bad_doc = service.get_deliverable_content("smartmouseco.com", "../../etc/passwd")
         assert bad_doc["ok"] is False
-
-        # Project into 3D Attack Surface Graph
-        g = BountyAttackGraph(output_dir=tmp_path)
-        added = g.ingest_radar_leads(leads)
-        assert added == 1
-        constellation = g.export_constellation_hubs()
-        probe_hubs = [h for h in constellation["hubs"] if h["category"] == "Radar Probe"]
-        assert len(probe_hubs) == 1
-        assert probe_hubs[0]["id"] == "radar:smartmouseco.com"
-        assert probe_hubs[0]["color"] == "#00f0ff"
 
     def test_security_ssrf_ip_anonymization_and_tunnel_access_control(self, tmp_path, monkeypatch):
         import http.server

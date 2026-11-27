@@ -324,43 +324,6 @@ def test_ct_stream_daemon_automatic_cname_takeover_chaining(tmp_path):
     assert takeover_events[0]["payload"]["domain"] == "staging.example.com"
 
 
-def test_bounty_rolling_daemon_ct_sweep_integration(tmp_path):
-    from orbit_security.bounty_rolling_daemon import BountyRollingDaemon
-
-    programs_file = tmp_path / "test_programs.json"
-    programs_file.write_text(
-        json.dumps({
-            "programs": [
-                {
-                    "program_id": "example_bbp",
-                    "name": "Example Corp BBP",
-                    "platform": "hackerone",
-                    "policy_url": "https://hackerone.com/example",
-                    "in_scope": ["*.example.com", "example.com"],
-                    "out_of_scope": [],
-                    "bounty_tier": "cash",
-                    "max_bounty": 10000,
-                }
-            ]
-        }),
-        encoding="utf-8",
-    )
-    state_file = tmp_path / "radar_state.json"
-    watermark_file = tmp_path / "ct_watermark.json"
-
-    daemon = BountyRollingDaemon(
-        programs_path=programs_file,
-        state_file=state_file,
-        ct_watermark_file=watermark_file,
-        offline=True,
-    )
-    ct_res = daemon.sweep_ct_logs_for_program("example_bbp")
-    assert ct_res is not None
-    assert ct_res["program_id"] == "example_bbp"
-    assert ct_res["domains_polled"] >= 1
-    assert "api.example.com" in ct_res["new_subdomains"]
-
-
 # ==============================================================================
 # 5. Wave B (Projects #4, #7, #9): White-Label Fleet PDF, Takeover Playground,
 #    and Zero-Knowledge Agency Scorecard Tests

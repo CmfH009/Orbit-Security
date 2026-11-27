@@ -728,7 +728,7 @@ def test_poll_gemini_master_briefing_with_backoff_and_post_briefing_delta():
     assert len(delta["ci_cd_delta"]) == 1
     assert delta["ci_cd_delta"][0]["repo"] == "CmfH009/microgravity"
     assert delta["ci_cd_delta"][0]["sha"] == "e830ea3"
-    assert len(delta["vdp_all"]) == 1
+    assert delta["vdp_all"] == []
     assert len(delta["vdp_delta"]) == 0  # arrived before briefing_dt
     assert len(delta["work_delta"]) == 1
     assert "Stellar Cyber" in delta["work_delta"][0]["subject"]

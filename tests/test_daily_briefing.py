@@ -123,9 +123,8 @@ def test_query_option_c_readiness_surfaces_track_a_and_track_b(tmp_path):
 
     repo_root = Path(__file__).resolve().parent.parent
     (tmp_path / "data" / "disclosures").mkdir(parents=True)
-    (tmp_path / "data" / "hackerone_staging").mkdir(parents=True)
 
-    for rel_json in ("data/bounty_programs.json", "data/agency_retainers.json"):
+    for rel_json in ("data/agency_retainers.json",):
         src = repo_root / rel_json
         dst = tmp_path / rel_json
         dst.parent.mkdir(parents=True, exist_ok=True)
@@ -145,38 +144,11 @@ def test_query_option_c_readiness_surfaces_track_a_and_track_b(tmp_path):
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
 
-    stem = "spotify_open_cloud_bucket_cdn_byspotify_com"
-    md_bytes = b"# Synthetic Track A Disclosure\n\nEvidence Digest: ev_0123456789ab\n"
-    (tmp_path / "data" / "disclosures" / f"{stem}.md").write_bytes(md_bytes)
-    manifest = json.dumps({"file_hashes_sha256": {"report.md": hashlib.sha256(md_bytes).hexdigest()}})
-    with zipfile.ZipFile(tmp_path / "data" / "disclosures" / f"{stem}_bundle.zip", "w") as zf:
-        zf.writestr("report.md", md_bytes)
-        zf.writestr("manifest_sha256.json", manifest)
-
-    (tmp_path / "data" / "hackerone_staging" / "VAULT_LAUNCH_QUEUE.json").write_text(
-        json.dumps(
-            {
-                "consolidated_dossiers": 1,
-                "launch_queue": [
-                    {
-                        "program": "Spotify",
-                        "tier": "TIER_1_READY",
-                        "hosts": ["cdn.byspotify.com"],
-                        "evidence_digests": ["ev_0123456789ab"],
-                    }
-                ],
-            }
-        ),
-        encoding="utf-8",
-    )
-
     res = query_option_c_readiness(repo_root=tmp_path)
     assert res["commercial_outreach_frozen"] is True
-    assert res["unique_programs"] >= 45
-    assert res["staged_reports"] >= 1
     assert res["track_b_ready"] is True
     assert res["landing_docs_in_sync"] is True
-    assert any("Spotify" in item for item in res["tier_1_items"])
+    assert "Orbit Security Inbound" in res["revenue_focus"]
 
 
 def test_query_campaign_outreach_sorts_newest_first(tmp_path):
@@ -538,14 +510,14 @@ def test_build_agenda_items_surfaces_urgent_emails_when_unread_is_zero():
         daemon={"live_verified_active": True},
         inbox_q={"failed": 0},
     )
-    assert len(items) == 3
-    assert "2 actionable urgent email item(s)" in items[2]
+    assert len(items) == 2
+    assert "2 actionable urgent email item(s)" in items[1]
 
 
-def test_build_agenda_items_skips_closed_vdp_4204024_but_surfaces_open_analyst_vdp():
+def test_build_agenda_items_ignores_vdp_emails_after_bounty_retirement():
     from scripts.daily_briefing import _build_agenda_items
 
-    items_closed = _build_agenda_items(
+    items = _build_agenda_items(
         ci_count=0,
         live_ci={},
         option_c={"kyc_payout_status": "VERIFIED"},
@@ -553,41 +525,17 @@ def test_build_agenda_items_skips_closed_vdp_4204024_but_surfaces_open_analyst_v
         daemon={"live_verified_active": True},
         inbox_q={"failed": 0},
         post_delta={
-            "vdp_delta": [],
+            "vdp_delta": [{"subject": "[acme] #9999999: Analyst PoC requested", "sender": "no-reply@hackerone.com"}],
             "vdp_all": [
                 {
-                    "subject": "[disney] #4204024: Dangling DNS CNAME on test.hulu.com",
-                    "age_hours": 141.0,
+                    "subject": "[acme] #9999999: Analyst PoC requested",
+                    "age_hours": 12.5,
                 }
             ],
             "work_delta": [],
         },
     )
-    assert not any("Waiting on Carson (VDP SLA" in item for item in items_closed)
-
-    items_open = _build_agenda_items(
-        ci_count=0,
-        live_ci={},
-        option_c={"kyc_payout_status": "VERIFIED"},
-        email_data={"unread_non_ci_count": 0, "urgent": 0},
-        daemon={"live_verified_active": True},
-        inbox_q={"failed": 0},
-        post_delta={
-            "vdp_delta": [],
-            "vdp_all": [
-                {
-                    "subject": "[disney] #4204024: Dangling DNS CNAME on test.hulu.com",
-                    "age_hours": 141.0,
-                },
-                {
-                    "subject": "[acme] #9999999: Analyst PoC requested",
-                    "age_hours": 12.5,
-                },
-            ],
-            "work_delta": [],
-        },
-    )
-    assert any("Waiting on Carson (VDP SLA, `12.5h` age)" in item and "#9999999" in item for item in items_open)
+    assert not any("Waiting on Carson (VDP" in item for item in items)
 
 
 def test_triage_email_messages_moves_self_replied_thread_to_awaiting_external_reply():
@@ -833,7 +781,7 @@ def test_awaiting_reply_excluded_from_top3_and_rendered_in_section4():
 
     md = generate_markdown(today="2026-11-14", email_data=email_data, agenda_items=agenda_items)
     top3_section = md.split("## 🖥️ 2. Live Local System", 1)[0]
-    sec2_4 = md.split("### 2.4 Track A Bounty Vault", 1)[1].split("## ☁️ 3. Gemini Cloud Intelligence Digest", 1)[0]
+    sec2_4 = md.split("### 2.4 Orbit Security Funnel", 1)[1].split("## ☁️ 3. Gemini Cloud Intelligence Digest", 1)[0]
 
     assert "support@atlasfin.com" not in top3_section
     assert "- **⏳ Awaiting External Reply:** 1" in sec2_4

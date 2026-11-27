@@ -158,33 +158,6 @@ def test_project_13_graphrag_ast_security_vulnerability_matrix(tmp_path):
     assert len(matrix["edges"]) >= 1
 
 
-def test_project_16_headless_browser_free_dom_error_extractor():
-    from orbit_security.bounty_active_prober import BountyActiveProber
-
-    prober = BountyActiveProber()
-    leaked_html = """
-    <html>
-    <head><title>500 Internal Error</title></head>
-    <body>
-      <pre>Traceback (most recent call last):
-        File "/srv/app/views.py", line 42, in checkout
-      sqlalchemy.exc.ProgrammingError: (psycopg2.errors.SyntaxError) SELECT * FROM users</pre>
-      <script id="__NEXT_DATA__" type="application/json">{"buildId":"dev","runtimeConfig":{"STRIPE_SECRET":"sk_live_123"}}</script>
-      <script src="/static/chunks/main.js"></script>
-      <!--# sourceMappingURL=main.js.map -->
-    </body>
-    </html>
-    """
-    res = prober.extract_dom_error_signatures("checkout.target.com", leaked_html)
-    assert res["vulnerable"] is True
-    assert res["browser_spawned"] is False
-    categories = {s["category"] for s in res["signatures"]}
-    assert "stack_trace_leak" in categories
-    assert "sql_database_error" in categories
-    assert "sourcemap_exposure" in categories
-    assert "ssr_hydration_leak" in categories
-
-
 def test_project_17_one_click_verification_sandbox_receipt():
     from orbit_security.exploit_sandbox import OperatorExploitSandbox
 
@@ -279,15 +252,6 @@ def test_project_14_automated_cobranded_portal_provisioner(tmp_path):
 
 
 def test_projects_12_and_19_epss_horizon_and_bounty_statuspage_ui(tmp_path):
-    from orbit_security.bounty_radar import BountyScopeIngester
-
-    ingester = BountyScopeIngester(data_path=tmp_path / "bounty_programs.json")
-    snapshot = ingester.export_public_statuspage_snapshot()
-    assert snapshot["total_programs"] >= 1
-    assert snapshot["safe_harbor_enforced"] is True
-    assert snapshot["commercial_outreach_frozen"] is True
-    assert len(snapshot["programs"]) >= 1
-
     root = Path(__file__).resolve().parent.parent
     landing_html = (root / "landing" / "index.html").read_text(encoding="utf-8")
     docs_html = (root / "docs" / "index.html").read_text(encoding="utf-8")

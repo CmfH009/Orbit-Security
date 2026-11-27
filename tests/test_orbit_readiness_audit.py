@@ -103,19 +103,12 @@ def test_readiness_audit_reports_clean_floor_and_pending_id(tmp_path, monkeypatc
 
     report = mod.run_readiness_audit(repo_root=tmp_path)
     assert report["technical_floor_clean"] is True
-    assert report["track_a_disclosures_ready"] is True
+    assert report["track_a_disclosures_ready"] is False
     assert report["track_b_offline_ready"] is True
     assert report["track_b_live_checkout_ready"] is False
     assert report["kyc_payout_status"] == "PENDING_PHYSICAL_ID"
-    assert "KYC_PAYOUT_PENDING_PHYSICAL_ID" in report["blockers"]
     assert "STRIPE_KEYS_UNCONFIGURED" in report["blockers"]
     assert report["clients_hygiene"]["hygiene_clean"] is True
-    assert report["disclosures_and_radar"]["active_submittable_reports"] == 1
-    assert report["disclosures_and_radar"]["paired_bundle_count"] == 1
-    assert report["disclosures_and_radar"]["bundle_pairing_ok"] is True
-    assert report["disclosures_and_radar"]["ev_digest_coverage"]["coverage_ok"] is True
-    assert report["disclosures_and_radar"]["ev_digest_coverage"]["covered_count"] == 1
-    assert report["disclosures_and_radar"]["advisory_lingering_reports"] == 0
     assert report["track_b_funnel"]["ready"] is True
 
 
@@ -129,76 +122,10 @@ def test_readiness_audit_flags_synthetic_leaks_and_advisory_reports(tmp_path):
         json.dumps({"clients": [{"client_id": "c1", "apex_domain": "t.com"}]}),
         encoding="utf-8",
     )
-    (data_dir / "bounty_programs.json").write_text(json.dumps({"programs": []}), encoding="utf-8")
-    (data_dir / "disclosures" / "acme_mail_spoofing_mail_acme_com.md").write_text("# DMARC", encoding="utf-8")
 
     report = mod.run_readiness_audit(repo_root=tmp_path)
     assert report["technical_floor_clean"] is False
     assert "CLIENT_REGISTRY_SYNTHETIC_LEAKS" in report["blockers"]
-    assert "UNARCHIVED_ADVISORY_DISCLOSURES" in report["blockers"]
-    assert "BOUNTY_CATALOG_INTEGRITY" in report["blockers"]
-
-
-def test_readiness_audit_flags_disclosure_bundle_parity_mismatch(tmp_path, monkeypatch):
-    mod = _load_audit_module()
-    monkeypatch.setenv("ORBIT_KYC_STATUS", "PENDING_PHYSICAL_ID")
-    _seed_clean_repo(tmp_path, mod)
-    disc_dir = tmp_path / "data" / "disclosures"
-
-    # Case 1: Missing _bundle.zip for an extra .md report
-    (disc_dir / "gitlab_graphql_introspection_gitlab_com.md").write_text("# GraphQL", encoding="utf-8")
-    report_missing = mod.run_readiness_audit(repo_root=tmp_path)
-    assert report_missing["technical_floor_clean"] is False
-    assert report_missing["disclosures_and_radar"]["bundle_pairing_ok"] is False
-    assert report_missing["disclosures_and_radar"]["missing_bundle_zips"] == [
-        "gitlab_graphql_introspection_gitlab_com.md"
-    ]
-    assert "DISCLOSURE_BUNDLE_PARITY_MISMATCH" in report_missing["blockers"]
-
-    # Case 2: Orphan _bundle.zip with no .md
-    (disc_dir / "gitlab_graphql_introspection_gitlab_com.md").unlink()
-    with zipfile.ZipFile(disc_dir / "orphan_finding_bundle.zip", "w") as zf:
-        zf.writestr("manifest_sha256.json", "{}")
-    report_orphan = mod.run_readiness_audit(repo_root=tmp_path)
-    assert report_orphan["disclosures_and_radar"]["orphan_bundle_zips"] == ["orphan_finding_bundle.zip"]
-    assert report_orphan["disclosures_and_radar"]["bundle_pairing_ok"] is False
-    assert "DISCLOSURE_BUNDLE_PARITY_MISMATCH" in report_orphan["blockers"]
-    (disc_dir / "orphan_finding_bundle.zip").unlink()
-
-    # Case 3: Corrupt/tampered SHA-256 manifest in _bundle.zip
-    bad_zip = disc_dir / "uber_subdomain_takeover_dev_uber_com_bundle.zip"
-    with zipfile.ZipFile(bad_zip, "w") as zf:
-        zf.writestr("hackerone_report.md", b"tampered")
-        zf.writestr(
-            "manifest_sha256.json",
-            json.dumps({"file_hashes_sha256": {"hackerone_report.md": "0" * 64}}),
-        )
-    report_corrupt = mod.run_readiness_audit(repo_root=tmp_path)
-    assert report_corrupt["disclosures_and_radar"]["corrupt_bundle_zips"] == [bad_zip.name]
-    assert report_corrupt["disclosures_and_radar"]["bundle_pairing_ok"] is False
-    assert "DISCLOSURE_BUNDLE_PARITY_MISMATCH" in report_corrupt["blockers"]
-
-
-def test_readiness_audit_boundary_aware_flaw_classification(tmp_path):
-    mod = _load_audit_module()
-    _seed_clean_repo(tmp_path, mod)
-    disc_dir = tmp_path / "data" / "disclosures"
-
-    # Domain contains 'spf' substring inside 'spfhub', but flaw is submittable subdomain_takeover
-    _write_disclosure_pair(disc_dir, "uber_subdomain_takeover_app_spfhub_com")
-    report_ok = mod.run_readiness_audit(repo_root=tmp_path)
-    assert report_ok["disclosures_and_radar"]["advisory_lingering_reports"] == 0
-    assert report_ok["disclosures_and_radar"]["active_submittable_reports"] == 2
-    assert report_ok["disclosures_and_radar"]["unclassified_disclosures"] == []
-
-    # Unclassified .md report should be caught explicitly rather than assumed submittable
-    _write_disclosure_pair(disc_dir, "custom_unknown_vector_example_com")
-    report_unclassified = mod.run_readiness_audit(repo_root=tmp_path)
-    assert report_unclassified["disclosures_and_radar"]["unclassified_disclosures"] == [
-        "custom_unknown_vector_example_com.md"
-    ]
-    assert "UNCLASSIFIED_DISCLOSURES" in report_unclassified["blockers"]
-    assert report_unclassified["technical_floor_clean"] is False
 
 
 def test_readiness_audit_flags_track_b_funnel_gaps(tmp_path):
@@ -235,115 +162,10 @@ def test_readiness_audit_cli_json_and_verified_gate(tmp_path, monkeypatch, capsy
     assert rc == 0
     captured = json.loads(capsys.readouterr().out)
     assert captured["technical_floor_clean"] is True
-    assert captured["track_a_disclosures_ready"] is True
+    assert captured["track_a_disclosures_ready"] is False
     assert captured["track_b_offline_ready"] is True
     assert captured["track_b_live_checkout_ready"] is True
     assert captured["blockers"] == []
-
-
-def test_readiness_audit_flags_missing_ev_digest_in_md_and_metadata(tmp_path):
-    mod = _load_audit_module()
-    _seed_clean_repo(tmp_path, mod)
-    disc_dir = tmp_path / "data" / "disclosures"
-
-    # Replace clean fixture with a report missing ev_ digest in .md (even if metadata has it)
-    _write_disclosure_pair(
-        disc_dir,
-        "uber_subdomain_takeover_dev_uber_com",
-        md_body="# PoC without digest\n",
-        meta_digest="ev_a1b2c3d4e5f6",
-    )
-    report_missing_md = mod.run_readiness_audit(repo_root=tmp_path)
-    ev_md = report_missing_md["disclosures_and_radar"]["ev_digest_coverage"]
-    assert ev_md["coverage_ok"] is False
-    assert ev_md["covered_count"] == 0
-    assert ev_md["missing_ev_digests"] == ["uber_subdomain_takeover_dev_uber_com.md"]
-    assert "MISSING_EV_DIGESTS" in report_missing_md["blockers"]
-    assert report_missing_md["technical_floor_clean"] is False
-    assert report_missing_md["track_a_disclosures_ready"] is False
-
-    # Valid .md digest, but metadata.json lacks ev_ digest
-    _write_disclosure_pair(
-        disc_dir,
-        "uber_subdomain_takeover_dev_uber_com",
-        md_body="# PoC\n\nEvidence Digest: ev_1234567890ab\n",
-        meta_digest="",
-    )
-    report_missing_meta = mod.run_readiness_audit(repo_root=tmp_path)
-    ev_meta = report_missing_meta["disclosures_and_radar"]["ev_digest_coverage"]
-    assert ev_meta["coverage_ok"] is False
-    assert ev_meta["md_covered_count"] == 1
-    assert ev_meta["metadata_checked_count"] == 1
-    assert ev_meta["metadata_covered_count"] == 0
-    assert "MISSING_EV_DIGESTS" in report_missing_meta["blockers"]
-
-
-def test_readiness_audit_counts_false_positive_archive_alongside_legacy(tmp_path):
-    mod = _load_audit_module()
-    _seed_clean_repo(tmp_path, mod)
-
-    legacy_dir = tmp_path / "data" / "archive" / "legacy_passive_disclosures"
-    for i in range(3):
-        (legacy_dir / f"legacy_{i}.md").write_text("# Legacy\n", encoding="utf-8")
-
-    fp_dir = tmp_path / "data" / "archive" / "false_positive_disclosures"
-    fp_dir.mkdir(parents=True, exist_ok=True)
-    for stem in ("uber_cors_fp1", "gitlab_graphql_fp2"):
-        (fp_dir / f"{stem}.md").write_text("# False positive\n", encoding="utf-8")
-        (fp_dir / f"{stem}_bundle.zip").write_bytes(b"zip")
-        (fp_dir / f"{stem}_bundle").mkdir()
-    (fp_dir / "duplicate_bundle (1)").mkdir()
-
-    report = mod.run_readiness_audit(repo_root=tmp_path)
-    disc = report["disclosures_and_radar"]
-    assert disc["archived_legacy_artifacts"] == 3
-    assert disc["archived_false_positive_disclosures"] == 2
-    assert disc["archived_false_positive_items"] == 7
-    assert disc["archived_total_count"] == 5
-
-    rendered = mod._render_human_report(report)
-    assert "2 false_positive_disclosures + 3 legacy_passive_disclosures" in rendered
-
-
-def test_readiness_audit_reports_out_of_scope_populated_count(tmp_path):
-    mod = _load_audit_module()
-    _seed_clean_repo(tmp_path, mod)
-
-    programs = []
-    for i in range(45):
-        entry = {
-            "program_id": f"prog-{i}",
-            "bounty_tier": "cash",
-            "state": "active",
-        }
-        if i < 12:
-            entry["out_of_scope"] = [f"https://oos-{i}.example.com"]
-        elif i == 12:
-            entry["out_of_scope"] = []
-        elif i == 13:
-            entry["out_of_scope"] = ["   "]
-        programs.append(entry)
-
-    (tmp_path / "data" / "bounty_programs.json").write_text(
-        json.dumps({"programs": programs}),
-        encoding="utf-8",
-    )
-    partial = mod.run_readiness_audit(repo_root=tmp_path)
-    assert partial["bounty_catalog"]["total_entries"] == 45
-    assert partial["bounty_catalog"]["out_of_scope_populated"] == 12
-    assert partial["bounty_catalog"]["out_of_scope_total"] == 45
-    assert "out_of_scope 12/45" in mod._render_human_report(partial)
-
-    for idx, entry in enumerate(programs):
-        entry["out_of_scope"] = [f"https://oos-{idx}.example.com"]
-    (tmp_path / "data" / "bounty_programs.json").write_text(
-        json.dumps({"programs": programs}),
-        encoding="utf-8",
-    )
-    full = mod.run_readiness_audit(repo_root=tmp_path)
-    assert full["bounty_catalog"]["out_of_scope_populated"] == 45
-    assert full["bounty_catalog"]["out_of_scope_total"] == 45
-    assert "out_of_scope 45/45" in mod._render_human_report(full)
 
 
 def test_verify_stripe_cutover_hermetic_and_redacts_secrets(tmp_path, monkeypatch, capsys):
@@ -536,8 +358,8 @@ def test_readiness_audit_dotenv_fallback_clears_stripe_blocker_hermetically(tmp_
     assert with_dotenv["stripe_config"]["live_checkout_ready"] is True
     assert all(with_dotenv["stripe_config"]["price_overrides_configured"].values())
     assert "STRIPE_KEYS_UNCONFIGURED" not in with_dotenv["blockers"]
-    assert with_dotenv["blockers"] == ["KYC_PAYOUT_PENDING_PHYSICAL_ID"]
-    assert with_dotenv["track_b_live_checkout_ready"] is False
+    assert with_dotenv["blockers"] == []
+    assert with_dotenv["track_b_live_checkout_ready"] is True
 
     cutover = with_dotenv["stripe_cutover_dry_run"]
     assert cutover["ok"] is True

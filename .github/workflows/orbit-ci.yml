@@ -42,7 +42,7 @@ jobs:
           python -m pip install edge-tts pywin32 pillow duckdb requests beautifulsoup4 numpy ruff
 
       - name: Ruff fatal syntax & undefined-name check
-        run: ruff check --select E9,F63,F7,F82 src/orbit_security scripts/bounty_vault_generator.py scripts/inspect_vault_safe.py
+        run: ruff check --select E9,F63,F7,F82 src/orbit_security
 
       - name: Install ffmpeg
         shell: bash

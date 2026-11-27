@@ -827,7 +827,7 @@ def query_option_c_readiness(
     return {
         "revenue_focus": audit.get(
             "revenue_focus",
-            "Option C (Dual-Track Minimal: Verified Bounties + Inbound Fixpack/Audit)",
+            "Orbit Security Inbound (Fixpack & Audit) + Studio 1 Product + CubCloud",
         ),
         "technical_floor_clean": bool(audit.get("technical_floor_clean", False)),
         "commercial_outreach_frozen": bool(audit.get("commercial_outreach_frozen", True)),

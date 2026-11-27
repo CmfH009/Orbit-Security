@@ -293,7 +293,7 @@ def test_bounty_programs_active_and_wired_transitions(tmp_path):
     orch = OrbitRecursiveOrchestrator(max_depth=3, dry_run=False)
     state = orch.assess_pipeline_state()
     assert "bounty_programs_active" in state
-    assert state["bounty_programs_active"] >= 27
+    assert state["bounty_programs_active"] == 0
 
     # Isolate PROJECT_ROOT to tmp_path so wired transitions don't mutate live pilot_manifest.json
     (tmp_path / "data").mkdir(parents=True, exist_ok=True)

@@ -705,28 +705,7 @@ def _build_agenda_items(
         p_desc = ", ".join(f"{e.get('port')} ({e.get('process')})" for e in unexp_ports[:3])
         agenda_items.append(f"Port Triage: inspect unexpected local listener(s): {p_desc}.")
 
-    vdp_delta = delta.get("vdp_delta", []) or []
-    vdp_all = delta.get("vdp_all", []) or []
     work_delta = delta.get("work_delta", []) or []
-    closed_vdp_ids = _closed_vdp_report_ids()
-    open_vdp_all = [
-        v for v in vdp_all
-        if not _is_closed_vdp_subject(str(v.get("subject", "")), closed_ids=closed_vdp_ids)
-    ]
-    if vdp_delta:
-        top_vdp = vdp_delta[0]
-        agenda_items.append(
-            f"Waiting on Carson (VDP Delta): respond to `{top_vdp.get('subject')}` ({top_vdp.get('sender')})."
-        )
-    else:
-        analyst_vdp = next(
-            (v for v in open_vdp_all if "analyst" in str(v.get("subject", "")).lower()),
-            None,
-        )
-        if analyst_vdp is not None:
-            agenda_items.append(
-                f"Waiting on Carson (VDP SLA, `{analyst_vdp.get('age_hours', 0)}h` age): fulfill HackerOne analyst PoC request on `{analyst_vdp.get('subject')}`."
-            )
 
     if work_delta:
         top_work = work_delta[0]
@@ -734,10 +713,6 @@ def _build_agenda_items(
             f"Career / Work Delta: review `{top_work.get('subject')}` from `{top_work.get('sender')}`."
         )
 
-    if option_c.get("kyc_payout_status") != "VERIFIED":
-        agenda_items.append(
-            "Gate 2 Physical ID / KYC watch: keep Tier-1 Spotify bucket ready and capture authenticated session/PII proof for Tier-2 CONDITIONAL CORS bundles (MercadoLibre, Xiaomi, Superbet, Playtika)."
-        )
     if email_data.get("unread_non_ci_count", 0) > 0:
         agenda_items.append(
             f"Triage {email_data['unread_non_ci_count']} unread non-CI message(s) in `carsonmail009@gmail.com`."
@@ -789,14 +764,13 @@ def render_master_briefing_block(master_briefing: Any) -> str:
         comp_sec_items = sections.get("competitive_security") or []
         yt_items = sections.get("youtube_newsletters") or sections.get("youtube_digest") or []
         dl_items = sections.get("deadlines_checklist") or sections.get("deprecations") or []
-        bounty_items = sections.get("paid_bounty_radar") or []
 
-        has_canonical = any((ops_items, ai_items, comp_sec_items, yt_items, dl_items, bounty_items))
+        has_canonical = any((ops_items, ai_items, comp_sec_items, yt_items, dl_items))
         if has_canonical:
             lines.append("")
             lines.append(
                 _render_cloud_subsection(
-                    "3.1 VDP / Career SLAs & Personal Delta",
+                    "3.1 Operations, Projects & Personal Delta",
                     ops_items,
                     "No new personal or SLA items in this dispatch.",
                 )
@@ -833,15 +807,6 @@ def render_master_briefing_block(master_briefing: Any) -> str:
                     "No upcoming 30-day deadlines reported.",
                 )
             )
-            if bounty_items:
-                lines.append("")
-                lines.append(
-                    _render_cloud_subsection(
-                        "3.5b Paid Bug Bounty Radar (Gemini)",
-                        bounty_items,
-                        "No new paid bug bounty targets reported.",
-                    )
-                )
         else:
             for h in highlights[:24]:
                 lines.append(f"  - {h}")
@@ -1058,12 +1023,10 @@ def render_markdown(
     read_cleared_24h = email_hygiene.get("read_or_cleared_24h", 0)
     auto_hygiene_cnt = email_hygiene.get("auto_hygiene_candidates", 0)
     master_briefing_block = render_master_briefing_block(master_brief)
-    local_paid_bounty_block = _load_local_paid_bounty_block()
 
     delta_lines: List[str] = []
     for label_title, bucket_key in (
         ("Orbit/CI-CD (Post-Briefing)", "ci_cd_delta"),
-        ("Orbit/VDP (Post-Briefing)", "vdp_delta"),
         ("Work / Career (Post-Briefing)", "work_delta"),
     ):
         for entry in post_delta.get(bucket_key, []) or []:
@@ -1072,7 +1035,7 @@ def render_markdown(
             )
     if not delta_lines:
         delta_lines.append(
-            "  - 0 new high-priority messages arrived in `Orbit/CI-CD`, `Orbit/VDP`, or `Work` after Gemini's briefing timestamp."
+            "  - 0 new high-priority messages arrived in `Orbit/CI-CD` or `Work` after Gemini's briefing timestamp."
         )
     post_delta_str = "\n".join(delta_lines)
 
@@ -1232,13 +1195,9 @@ def render_markdown(
 - **Recommended Engineering Agenda Today:**
 {agenda_str}
 
-### 2.4 Track A Bounty Vault, Track B/Stripe, GEO Citation Share & Mailbox Hygiene
+### 2.4 Orbit Security Funnel, Stripe, GEO Citation Share & Mailbox Hygiene
 - **Strategic Focus:** {option_c.get("revenue_focus")}
-- **Technical Floor Clean:** {option_c.get("technical_floor_clean")} | **KYC / Payout Gate:** `{option_c.get("kyc_payout_status")}`
-- **Bounty Catalog:** {option_c.get("unique_programs", 0)} unique programs ({option_c.get("cash_tier_count", 0)} cash tier)
-- **Submission Vault (`data/hackerone_staging`):** {option_c.get("staged_reports", 0)} staged `.md` + {option_c.get("paired_bundles", 0)} paired `.zip` bundles (`{option_c.get("ev_covered", 0)}/{option_c.get("ev_total", 0)}` `ev_` digests, `{option_c.get("consolidated_dossiers", 0)}` dossiers, `{option_c.get("archived_total", 0)}` archived noise)
-- **Tier-1 Ready (Pending KYC ID):** {tier_1_str}
-- **Tier-2 Conditional CORS (Needs Auth Proof):** {tier_2_str}
+- **Technical Floor Clean:** {option_c.get("technical_floor_clean")}
 - **Track B Self-Serve Funnel:** `ready={option_c.get("track_b_ready")}` | **Landing <-> Docs Parity:** `{option_c.get("landing_docs_identical")}/{option_c.get("landing_docs_shared")}` (`in_sync={option_c.get("landing_docs_in_sync")}`)
 - **Stripe Live Checkout Ready:** `{option_c.get("stripe_live_checkout_ready")}` | **Available:** ${stripe.get("available_usd", 0.0):.2f} USD | **Pending:** ${stripe.get("pending_usd", 0.0):.2f} USD | **Paid Subs:** {option_c.get("paid_subscribers", 0)} ({stripe.get("active_subscriptions", 0)} Stripe)
 - **Inbound Deals & Lead Pipeline (`Orbit/Deal-Desk`):** {deal_count} deals | {inbox.get("total_threads", 0)} threads tracked ({inbox.get("escalations", 0)} escalations)
@@ -1263,9 +1222,9 @@ def render_markdown(
 
 ## ☁️ 3. Gemini Cloud Intelligence Digest
 
-{master_briefing_block}{local_paid_bounty_block}
+{master_briefing_block}
 
-#### 3.6 Post-Briefing High-Priority Gmail Delta (`Orbit/CI-CD`, `Orbit/VDP`, `Work`)
+#### 3.6 Post-Briefing High-Priority Gmail Delta (`Orbit/CI-CD`, `Work`)
 {post_delta_str}
 
 #### 3.7 Live Local Macro & Frontpage Supplement
@@ -1345,12 +1304,8 @@ def render_spoken_summary(
     world_list = intel_news.get("world_news", [])
     top_ai = ai_list[0].split(" [")[0].split("(")[0].strip() if ai_list else "AI models running stable"
     top_world = world_list[0].split(" - ")[0].strip() if world_list else "macro news quiet"
-    vault_count = option_c.get("staged_reports", 0)
-    kyc_note = (
-        "awaiting physical ID for KYC payout unlock"
-        if option_c.get("kyc_payout_status") != "VERIFIED"
-        else "KYC verified"
-    )
+    paid_subs = int(option_c.get("paid_subscribers", 0) or 0)
+    track_b_note = "Track B checkout ready" if option_c.get("track_b_ready") else "Track B in progress"
     gemini_note = (
         "Gemini Master Briefing synced cleanly"
         if isinstance(master_brief, dict) and master_brief.get("found")
@@ -1364,7 +1319,7 @@ def render_spoken_summary(
         f"[chuckle] Morning Carson. Nova here with your synced morning briefing. "
         f"Hardware pulse: CPU is running cool at {temp_spoken}, RAM is at {ram_spoken}, with {port_spoken}. "
         f"{daemon_spoken}. Over on GitHub, {ci_note}. {gemini_note}. "
-        f"Option C status: {vault_count} verified bounty bundles staged with Spotify Tier-1 ready, Track B checkout ready, {kyc_note}. "
+        f"Orbit Security funnel: {track_b_note}, {paid_subs} paid subscribers. "
         f"In your workspace, {projs_spoken}. "
         f"Mailbox has {unread_str}, {urgent_spoken}. "
         f"On the AI radar: {top_ai}. World headline: {top_world}. "

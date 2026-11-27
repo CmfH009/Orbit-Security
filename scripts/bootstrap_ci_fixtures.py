@@ -29,7 +29,6 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from orbit_security.report_verifier import compute_evidence_digest  # noqa: E402
-from scripts.bounty_vault_generator import build_vault_manifest  # noqa: E402
 from scripts.reconcile_outreach_dispositions import (  # noqa: E402
     ensure_baseline_outreach_state,
     reconcile_dispositions,
@@ -615,62 +614,25 @@ def _seed_hyatt_bundle(disc_dir: Path) -> None:
 
 
 def ensure_disclosures_and_staging(repo_root: Path) -> Dict[str, Any]:
-    """Seeds synthetic disclosure bundles and staging queue manifests if absent."""
-    data_dir = repo_root / "data"
-    disc_dir = data_dir / "disclosures"
-    fp_dir = data_dir / "archive" / "false_positive_disclosures"
-    staging_dir = data_dir / "hackerone_staging"
-
+    """Bug bounty / Track A staging retired; keep empty disclosures dir for non-bounty tests."""
+    disc_dir = repo_root / "data" / "disclosures"
     disc_dir.mkdir(parents=True, exist_ok=True)
-    staging_dir.mkdir(parents=True, exist_ok=True)
-
-    seeded_secrets = _write_if_missing_text(staging_dir / "js_leaked_secrets.json", "[]\n")
-
-    seeded_bundles = 0
-    if not any(disc_dir.glob("*.md")):
-        _seed_starbucks_bundle(disc_dir)
-        seeded_bundles += 1
-        _seed_spotify_bundle(disc_dir)
-        seeded_bundles += 1
-        _seed_hyatt_bundle(disc_dir)
-        seeded_bundles += 1
-        for prog_id, prog_name, count in _TIER2_PROGRAM_SPEC:
-            for idx in range(1, count + 1):
-                _seed_synthetic_cors_bundle(
-                    disc_dir,
-                    program_id=prog_id,
-                    program_name=prog_name,
-                    index=idx,
-                )
-                seeded_bundles += 1
-
-    seeded_vault = False
-    vault_queue_path = staging_dir / "VAULT_LAUNCH_QUEUE.json"
-    if not vault_queue_path.exists():
-        build_vault_manifest(
-            output_dir=staging_dir,
-            disclosures_dir=disc_dir,
-            archive_fp_dir=fp_dir,
-        )
-        seeded_vault = True
-
     return {
-        "seeded_js_leaked_secrets": seeded_secrets,
-        "seeded_disclosure_bundles": seeded_bundles,
-        "seeded_vault_queue": seeded_vault,
+        "seeded_js_leaked_secrets": False,
+        "seeded_disclosure_bundles": 0,
+        "seeded_vault_queue": False,
     }
 
 
 def bootstrap_all(repo_root: Path = REPO_ROOT) -> Dict[str, Any]:
     """Runs all idempotent fixture initializations for clean checkouts."""
-    lf_fixed = normalize_bounty_programs_lf(repo_root)
     outreach_seeded = ensure_outreach_baseline(repo_root)
     pdfs_created = ensure_portal_audit_pdfs(repo_root)
     fp_created = ensure_false_positive_archives(repo_root)
     vault_summary = ensure_disclosures_and_staging(repo_root)
     return {
         "repo_root": str(repo_root),
-        "bounty_programs_lf_normalized": lf_fixed,
+        "bounty_programs_lf_normalized": False,
         "outreach_baseline_seeded": outreach_seeded,
         "portal_audit_pdfs_created": pdfs_created,
         "false_positive_archive_items_created": fp_created,

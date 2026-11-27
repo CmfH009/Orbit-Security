@@ -99,84 +99,6 @@ def test_project_26_multi_cloud_init_matrix():
         assert "41641/udp" in spec["user_data"]
 
 
-def test_project_27_autonomous_bounty_scope_parser(tmp_path):
-    from orbit_security.bounty_radar import BountyScopeIngester
-
-    ingester = BountyScopeIngester(data_path=tmp_path / "programs.json")
-    raw_h1_payload = {
-        "handle": "acme_cloud",
-        "name": "Acme Cloud Security",
-        "max_bounty": 25000,
-        "relationships": {
-            "structured_scopes": {
-                "data": [
-                    {
-                        "attributes": {
-                            "asset_identifier": "*.acme-cloud.io",
-                            "asset_type": "WILDCARD",
-                            "eligible_for_bounty": True,
-                            "eligible_for_submission": True,
-                        }
-                    },
-                    {
-                        "attributes": {
-                            "asset_identifier": "status.acme-cloud.io",
-                            "asset_type": "URL",
-                            "eligible_for_bounty": False,
-                            "eligible_for_submission": False,
-                        }
-                    },
-                ]
-            }
-        },
-    }
-
-    parsed = ingester.parse_unified_program_scope(raw_h1_payload, platform="auto")
-    assert parsed["platform_detected"] == "hackerone"
-    assert "*.acme-cloud.io" in parsed["in_scope_wildcards"]
-    assert "status.acme-cloud.io" in parsed["out_of_scope"]
-    assert parsed["max_bounty"] == 25000
-
-
-# ==============================================================================
-# Wave 3B: Cockpit Executive Triage Modal, CISA KEV PR Reviewer, Audio DSP,
-#          Retro TUI & Release Packager (#23, #24, #28, #29, #30)
-# ==============================================================================
-
-def test_project_23_interactive_executive_triage_modal_payload():
-    from orbit_security.bounty_radar import BountyProgram, BountyVulnerability
-    from orbit_security.bounty_triage_copilot import GemmaTriageCopilot
-    from orbit_security.models import Severity
-
-    program = BountyProgram(
-        program_id="shopify",
-        name="Shopify",
-        platform="hackerone",
-        in_scope=["*.shopify.com"],
-        max_bounty=50000,
-    )
-    vuln = BountyVulnerability(
-        program_id="shopify",
-        program_name="Shopify",
-        platform="hackerone",
-        target_domain="media.shopify.com",
-        cname_target="orphaned-media.s3.amazonaws.com",
-        flaw_type="subdomain_takeover",
-        provider="AWS S3",
-        severity=Severity.CRITICAL,
-        cvss_score=8.6,
-        evidence="Dangling AWS S3 CNAME returning NoSuchBucket on media.shopify.com",
-        remediation="Remove dangling CNAME or claim bucket.",
-    )
-
-    modal = GemmaTriageCopilot.build_cockpit_triage_modal_payload(vuln, program)
-    assert modal["verdict"] == "ACCEPTED_HIGH_PRIORITY"
-    assert modal["policy_compliance"] is True
-    assert modal["target_domain"] == "media.shopify.com"
-    assert "curl" in modal["sandbox_replay_cmd"]
-    assert "shopify" in modal["disclosure_markdown"].lower()
-    assert len(modal["QuickActions"]) >= 3
-
 
 def test_project_24_automated_cisa_kev_pr_security_reviewer():
     from orbit_security.github_sentinel import GitHubPRAuditor
@@ -264,30 +186,10 @@ def test_project_21_crt_arcade_shader_canvas_web_ui_parity():
 
 def test_swarm_audit_adversarial_edge_cases(tmp_path):
     """Verify negative/adversarial edge-cases identified by the 5-Agent Audit Swarm."""
-    import pytest
-    from orbit_security.bounty_radar import BountyScopeIngester
     from orbit_security.cloud_sentinels import EmailAuthPolicyAnalyzer
     from orbit_security.threat_radar import AudioDspThreatTelegraph
 
-    # 1. Bugcrowd URL/scheme stripping and malformed JSON error handling
-    bc_payload = {
-        "name": "Bugcrowd URL Edge Case",
-        "targets": {
-            "in_scope": [
-                {"uri": "https://*.bc-target.com/api/v1:8443", "type": "website"},
-                {"target": "http://portal.bc-target.com/login", "category": "api"},
-            ]
-        },
-    }
-    ingester = BountyScopeIngester(data_path=tmp_path / "bounty_edge.json")
-    parsed = ingester.parse_unified_program_scope(bc_payload, platform="bugcrowd")
-    assert "*.bc-target.com" in parsed["in_scope_domains"]
-    assert "portal.bc-target.com" in parsed["in_scope_domains"]
-
-    with pytest.raises(ValueError, match="Malformed JSON"):
-        ingester.parse_unified_program_scope("{bad json", platform="hackerone")
-
-    # 2. Revoked DKIM key with trailing comment must be flagged as revoked, not valid
+    # 1. Revoked DKIM key with trailing comment must be flagged as revoked, not valid
     revoked_posture = EmailAuthPolicyAnalyzer.analyze_email_security_posture(
         domain="revoked-dkim.example",
         spf_record="v=spf1 include:_spf.google.com -all",

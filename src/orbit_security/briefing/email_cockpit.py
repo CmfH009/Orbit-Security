@@ -32,7 +32,6 @@ MASTER_BRIEFING_GMAIL_QUERY = (
 )
 DELTA_GMAIL_QUERIES: Dict[str, str] = {
     "ci_cd": "label:Orbit/CI-CD newer_than:2d",
-    "vdp": "label:Orbit/VDP newer_than:7d",
     "work": "label:Work newer_than:3d",
 }
 
@@ -1076,7 +1075,7 @@ def query_post_briefing_email_delta(
     ci_msgs, ci_status = _fetch_label(DELTA_GMAIL_QUERIES["ci_cd"])
     if ci_status == "unconfigured":
         return empty_result
-    vdp_msgs, _ = _fetch_label(DELTA_GMAIL_QUERIES["vdp"])
+    vdp_msgs: List[Any] = []
     work_msgs, _ = _fetch_label(DELTA_GMAIL_QUERIES["work"])
 
     cutoff_ts = float(since_ts or 0.0)

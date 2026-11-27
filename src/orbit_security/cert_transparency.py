@@ -366,8 +366,6 @@ class CtStreamDaemon:
         batch_size: int = 100,
     ) -> Dict[str, Any]:
         """Polls CT log feed for domain, computes delta against persistent watermark, and chains takeover checks."""
-        from orbit_security.bounty_radar import RulesOfEngagementEngine
-
         clean_domain = domain.strip().lower().lstrip("*.")
         certs = self.monitor.fetch_certificates(clean_domain, force_refresh=force_refresh, offline=self.offline)
 
@@ -403,10 +401,18 @@ class CtStreamDaemon:
             known_subs.update(all_subdomains)
             self.monitor.known_subdomains[clean_domain] = set(known_subs)
 
+        def _permitted(sub: str) -> bool:
+            out_of_scope = [str(x).strip().lower().lstrip("*.") for x in (getattr(program, "out_of_scope", []) or []) if str(x).strip()]
+            s_low = sub.strip().lower().lstrip("*.")
+            if any(s_low == o or s_low.endswith(f".{o}") for o in out_of_scope):
+                return False
+            in_scope = [str(x).strip().lower().lstrip("*.") for x in (getattr(program, "in_scope", []) or []) if str(x).strip()]
+            return True if not in_scope else any(s_low == i or s_low.endswith(f".{i}") for i in in_scope)
+
         if program is not None:
             new_subdomains = [
                 sub for sub in raw_new_subdomains
-                if RulesOfEngagementEngine.is_permitted(program, sub)
+                if _permitted(sub)
             ]
         else:
             new_subdomains = raw_new_subdomains
@@ -457,7 +463,7 @@ class CtStreamDaemon:
             self.save_watermark()
 
         permitted_all = (
-            [s for s in sorted(list(all_subdomains)) if RulesOfEngagementEngine.is_permitted(program, s)]
+            [s for s in sorted(list(all_subdomains)) if _permitted(s)]
             if program is not None
             else sorted(list(all_subdomains))
         )
@@ -582,9 +588,20 @@ class MicrogravitySubdomainDispatcher:
         self.batch_size = max(1, int(batch_size))
         self.external_worker = external_worker
 
-    def _scan_single_program(self, program: Any, force_refresh: bool = False) -> Dict[str, Any]:
-        from orbit_security.bounty_radar import RulesOfEngagementEngine
+    @staticmethod
+    def _is_domain_permitted(program: Any, domain: str) -> bool:
+        if program is None:
+            return True
+        out_of_scope = [str(x).strip().lower().lstrip("*.") for x in (getattr(program, "out_of_scope", []) or []) if str(x).strip()]
+        d_low = domain.strip().lower().lstrip("*.")
+        if any(d_low == o or d_low.endswith(f".{o}") for o in out_of_scope):
+            return False
+        in_scope = [str(x).strip().lower().lstrip("*.") for x in (getattr(program, "in_scope", []) or []) if str(x).strip()]
+        if not in_scope:
+            return True
+        return any(d_low == i or d_low.endswith(f".{i}") for i in in_scope)
 
+    def _scan_single_program(self, program: Any, force_refresh: bool = False) -> Dict[str, Any]:
         poll_results = self.ct_daemon.poll_domains(
             list(getattr(program, "in_scope", []) or []),
             force_refresh=force_refresh,
@@ -597,7 +614,7 @@ class MicrogravitySubdomainDispatcher:
         seen_local: Set[str] = set()
         for res in poll_results:
             for sub in res.get("new_subdomains", []):
-                if sub not in seen_local and RulesOfEngagementEngine.is_permitted(program, sub):
+                if sub not in seen_local and self._is_domain_permitted(program, sub):
                     seen_local.add(sub)
                     program_subs.append(sub)
 
@@ -605,7 +622,7 @@ class MicrogravitySubdomainDispatcher:
             extra_events: List[Dict[str, Any]] = []
             for cand in self.external_worker(program) or []:
                 norm = str(cand).strip().lower().lstrip("*.")
-                if norm and norm not in seen_local and RulesOfEngagementEngine.is_permitted(program, norm):
+                if norm and norm not in seen_local and self._is_domain_permitted(program, norm):
                     seen_local.add(norm)
                     program_subs.append(norm)
                     if self.blackboard is not None:

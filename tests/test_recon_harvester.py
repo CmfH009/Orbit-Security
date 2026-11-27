@@ -6,7 +6,6 @@ import json
 from unittest.mock import MagicMock, patch
 import pytest
 
-from orbit_security.bounty_radar import BountyTakeoverSweeper
 from orbit_security.recon_harvester import (
     CertificateTransparencyStreamer,
     ArchiveHarvester,
@@ -258,43 +257,3 @@ class TestJsRouteExtractor:
             res = JsRouteExtractor.analyze_target_scripts("https://target.com")
             assert "/api/internal/fleet" in res["api_routes"]
             assert "my-bucket.s3.amazonaws.com" in res["cloud_storage"]
-
-
-class TestBountySweeperReconIntegration:
-    """Tests integrating recon_harvester with BountyTakeoverSweeper."""
-
-    def test_expand_wildcards_with_archive_harvest(self):
-        sweeper = BountyTakeoverSweeper(custom_prefixes=["assets"])
-        mock_archive_res = {
-            "subdomains": ["archived-portal.acme.com", "legacy-api.acme.com"]
-        }
-        with patch(
-            "orbit_security.recon_harvester.ArchiveHarvester.harvest_historical_assets",
-            return_value=mock_archive_res,
-        ):
-            candidates = sweeper.expand_wildcards(
-                ["*.acme.com"],
-                max_per_wildcard=5,
-                use_passive_ct=False,
-                use_archive_harvest=True,
-            )
-            assert "acme.com" in candidates
-            assert "archived-portal.acme.com" in candidates
-            assert "legacy-api.acme.com" in candidates
-
-    def test_harvest_javascript_routes_sweeper(self):
-        sweeper = BountyTakeoverSweeper()
-        mock_analysis = {
-            "target_url": "https://target.com",
-            "api_routes": ["/api/v1/auth"],
-            "cloud_storage": ["target-bucket.s3.amazonaws.com"],
-            "internal_subdomains": ["dev.target.com"],
-            "potential_env_keys": [],
-        }
-        with patch(
-            "orbit_security.recon_harvester.JsRouteExtractor.analyze_target_scripts",
-            return_value=mock_analysis,
-        ):
-            res = sweeper.harvest_javascript_routes("https://target.com")
-            assert res["api_routes"] == ["/api/v1/auth"]
-            assert res["cloud_storage"] == ["target-bucket.s3.amazonaws.com"]
