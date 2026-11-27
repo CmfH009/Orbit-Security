@@ -1072,11 +1072,15 @@ def query_post_briefing_email_delta(
                 return [], f"error: {exc}"
         return fetcher(folder="[Gmail]/All Mail", query=xgm, limit=limit)
 
-    ci_msgs, ci_status = _fetch_label(DELTA_GMAIL_QUERIES["ci_cd"])
+    ci_query = DELTA_GMAIL_QUERIES.get("ci_cd")
+    if not ci_query:
+        return empty_result
+    ci_msgs, ci_status = _fetch_label(ci_query)
     if ci_status == "unconfigured":
         return empty_result
     vdp_msgs: List[Any] = []
-    work_msgs, _ = _fetch_label(DELTA_GMAIL_QUERIES["work"])
+    work_query = DELTA_GMAIL_QUERIES.get("work")
+    work_msgs, _ = _fetch_label(work_query) if work_query else ([], "skipped")
 
     cutoff_ts = float(since_ts or 0.0)
     now_utc = datetime.datetime.now(datetime.timezone.utc).timestamp()

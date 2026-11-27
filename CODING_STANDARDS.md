@@ -10,9 +10,8 @@
 ## Remediation & Cost Safety
 - **Quota-Safe Model Routing**: OpenCode remediation paths must default to free-tier or local Ollama models (`opencode/deepseek-v4.1-flash-free`, `ollama/orbit-coder:latest`); flag any hardcoded paid-tier cloud model fallback.
 - **Safe Remediation Boundaries**: Keep generated **Remediation Artifacts** isolated under `data/remediation/` and never auto-send live external emails or apply destructive remote mutations without an explicit human approval gate.
-- **Disclosure & Severity Realism**: Reject scanner or vault changes that grade public CDN/marketing assets or redirect-only `301`/`302` responses as `HIGH_CONFIDENCE` or `TIER_1_READY` without verified non-public data or authoritative takeover control.
+- **Audit & Severity Realism**: Reject scanner or report changes that grade public CDN/marketing assets or redirect-only `301`/`302` responses as `HIGH_CONFIDENCE` without verified non-public data or authoritative takeover control.
 - **Live Caller Verification for State Overwrites**: Before classifying a state-overwrite or dead-write bug as security-impacting in an audit report, trace at least one live consumer/reader path that actually reads the overwritten key or state.
-- **Bug Bounty Evidence, Scope & Human-Submit Bar (`TRAP-023`)**: Reject mocked unit tests (`MockMvc`, `plugintest.API`, fake `httptest`) as external submission PoCs, reject inflated VRT severity or low-impact/out-of-scope drafts (e.g., non-`-sdk` repos, DoS when excluded, unescalated Login CSRF), require `bugcrowd-brief` / `h1-read` brief verification, and forbid autonomous external report submission without human sign-off.
 
 ## Test Seams
 - Test audit scoring and remediation at public module seams (`tests/test_audit_scoring.py`, `tests/test_opencode_remediation.py`) using realistic payloads rather than asserting internal private helper call counts.
