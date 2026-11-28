@@ -32,7 +32,7 @@ Create a **CNAME** record pointing to your GitHub Pages host:
 Once your DNS records are added, run the automated domain setup utility:
 
 ```powershell
-cd A:\projects\orbit-security
+cd <REPO_ROOT>
 uv run python scripts/setup_custom_domain.py <your-domain.com>
 ```
 

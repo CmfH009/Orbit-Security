@@ -275,7 +275,7 @@
 
                 <div class="mt-8 p-4 sm:p-5 rounded-xl bg-slate-950/80 border border-slate-800">
                     <div class="text-[10px] uppercase tracking-wider text-slate-500 font-mono mb-2">Exact command that produced this page</div>
-                    <pre class="text-xs sm:text-xs text-cyan-300 font-mono overflow-x-auto whitespace-pre-wrap">A:\projects\orbit-security\.venv\Scripts\python.exe scripts/run_benchmark.py --repeat 5 --out docs\benchmark\benchmark_results.json</pre>
+                    <pre class="text-xs sm:text-xs text-cyan-300 font-mono overflow-x-auto whitespace-pre-wrap">uv run python scripts/run_benchmark.py --repeat 5 --out docs\benchmark\benchmark_results.json</pre>
                 </div>
 
                 <div class="mt-6 flex flex-wrap gap-3">
@@ -302,7 +302,7 @@
 cd Orbit-Security
 .venv\Scripts\python.exe scripts\run_benchmark.py --repeat 5 --out docs\benchmark\benchmark_results.json</code></pre>
 <p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">On macOS or Linux, use <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">python3</code> in place of <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">.venv\Scripts\python.exe</code>. The command that produced <em>this</em> page was:</p>
-<pre class="mt-5 mb-5 p-4 rounded-xl bg-slate-950/90 border border-slate-800 overflow-x-auto text-xs sm:text-xs leading-relaxed"><code class="font-mono text-cyan-300">A:\projects\orbit-security\.venv\Scripts\python.exe scripts/run_benchmark.py --repeat 5 --out docs\benchmark\benchmark_results.json</code></pre>
+<pre class="mt-5 mb-5 p-4 rounded-xl bg-slate-950/90 border border-slate-800 overflow-x-auto text-xs sm:text-xs leading-relaxed"><code class="font-mono text-cyan-300">uv run python scripts/run_benchmark.py --repeat 5 --out docs\benchmark\benchmark_results.json</code></pre>
 <p class="mt-4 mb-4 text-sm sm:text-base text-slate-300 leading-relaxed">The harness is deterministic and read-only with respect to the scanner source, the tests and the stored audits. It only writes the JSON file, and it writes <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">null</code> plus a reason for anything it could not measure. To benchmark a client estate you are authorised to scan, pass a target file - one domain per line, <code class="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800 text-cyan-300 text-xs font-mono">#</code> comments allowed:</p>
 <pre class="mt-5 mb-5 p-4 rounded-xl bg-slate-950/90 border border-slate-800 overflow-x-auto text-xs sm:text-xs leading-relaxed"><code class="font-mono text-cyan-300">.venv\Scripts\python.exe scripts\run_benchmark.py --targets my_clients.txt --repeat 3</code></pre>
 <h2 class="text-2xl sm:text-xl font-bold text-white tracking-tight mt-12 mb-5">Results</h2>

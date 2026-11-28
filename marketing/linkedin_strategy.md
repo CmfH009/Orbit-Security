@@ -6,7 +6,7 @@ A complete blueprint for establishing Carson's authority as Founder & Principal 
 
 ## Part 0: Voice & Anti-Slop Guardrails (Mandatory)
 - **Connection Note Character Cap**: Strictly `<= 200` characters (aim for `160–185` chars so it fits LinkedIn's 200-char limit without truncation).
-- **Zero LinkedIn Broetry**: Read `C:\Users\purav\.gemini\config\skills\stop-slop\SKILL.md` before drafting any post or DM. No em-dashes (`—`), no one-sentence-per-line dramatic pauses, no `#HashtagSoup`, no `🥂/🚀/👉` emojis, and no fake engagement bait. Write in Carson's direct first-person engineering voice.
+- **Zero LinkedIn Broetry**: Read `<AGENT_SKILLS>/stop-slop/SKILL.md` before drafting any post or DM. No em-dashes (`—`), no one-sentence-per-line dramatic pauses, no `#HashtagSoup`, no `🥂/🚀/👉` emojis, and no fake engagement bait. Write in Carson's direct first-person engineering voice.
 
 ---
 
@@ -157,5 +157,5 @@ Use these for direct outreach to agency founders, CEOs, and CTOs.
 2. **Company Page Setup**:
    - Once logged in, visit [linkedin.com/company/setup/new/](https://www.linkedin.com/company/setup/new/) and paste the exact text from Part 1 above.
 3. **Automated Social Distribution**:
-   - All text, graphics, and URLs are pre-formatted and stored in `A:\projects\orbit-security\marketing\`.
+   - All text, graphics, and URLs are pre-formatted and stored in `<REPO_ROOT>\marketing\`.
    - When ready for scheduled automated posting, we can integrate via Buffer, Hootsuite, or the LinkedIn Marketing API using Python scripts.

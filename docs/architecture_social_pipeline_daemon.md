@@ -171,7 +171,7 @@ All daily quotas are evaluated against current UTC time:
 ### 5.2 Complete Database Schema (DDL)
 
 ```sql
--- SQLite Schema: A:\projects\orbit-security\data\orbit_social.db
+-- SQLite Schema: <REPO_ROOT>\data\orbit_social.db
 
 PRAGMA journal_mode = WAL;
 PRAGMA synchronous = NORMAL;
@@ -336,7 +336,7 @@ def acquire_social_daemon_mutex() -> bool:
 ```
 
 ### 7.1 PID Verification & Stale Lock Protection
-In addition to the kernel mutex, the daemon maintains a state heartbeat in `A:\projects\orbit-security\data\social_daemon_state.json`:
+In addition to the kernel mutex, the daemon maintains a state heartbeat in `<REPO_ROOT>\data\social_daemon_state.json`:
 - Records `pid`, `start_time`, `heartbeat_time`, `status`.
 - If an existing process died ungracefully without closing its handle, the Win32 kernel automatically cleans up the mutex object upon process termination.
 - If PID recycling occurs, `psutil.Process(pid).create_time()` is verified against `start_time` to guarantee true process identity.
@@ -375,10 +375,10 @@ The child process automatically inherits:
 
 ## 9. Complete Production Implementation Architecture
 
-The system is decomposed into four modular, production-ready source files in `A:\projects\orbit-security`:
+The system is decomposed into four modular, production-ready source files in `<REPO_ROOT>`:
 
 ```
-A:\projects\orbit-security\
+<REPO_ROOT>\
 ├── src\
 │   └── orbit_security\
 │       ├── social_state.py          # SQLite WAL persistence, dedup cache, rollover engine
@@ -400,7 +400,7 @@ A:\projects\orbit-security\
 ### 10.1 CLI Commands
 ```powershell
 # Run social daemon in background loop (supervised or standalone)
-cd A:\projects\orbit-security
+cd <REPO_ROOT>
 uv run python scripts\run_social_daemon.py --daemon
 
 # Execute single hourly cycle for testing and immediate exit

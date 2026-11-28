@@ -1,4 +1,4 @@
-# Orbit Security Project Guidelines (`A:\projects\orbit-security`)
+# Orbit Security Project Guidelines (`<REPO_ROOT>`)
 ====================================================================
 This document governs development, audits, and autonomous remediation in Project ORBIT.
 

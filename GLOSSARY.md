@@ -1,6 +1,6 @@
 # Orbit Security — Domain Glossary
 
-Canonical domain language for `A:\projects\orbit-security`. Use these exact terms in specs, code, ADRs, and PRs.
+Canonical domain language for `<REPO_ROOT>`. Use these exact terms in specs, code, ADRs, and PRs.
 
 ## Language
 

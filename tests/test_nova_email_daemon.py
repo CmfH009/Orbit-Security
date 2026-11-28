@@ -28,8 +28,8 @@ def temp_daemon_env(tmp_path):
     inbox_pending.mkdir(parents=True)
 
     daemon = NovaEmailDaemon(
-        account="ravenova9@gmail.com",
-        operator_email="carsonmail009@gmail.com",
+        account="recovery@example.com",
+        operator_email="operator@example.com",
         state_file=str(state_file),
         queue_dir=str(queue_dir),
         pending_inbox_dir=str(inbox_pending),
@@ -41,7 +41,7 @@ def temp_daemon_env(tmp_path):
 def test_classify_task_directive_from_operator(temp_daemon_env):
     daemon, state_file, queue_dir, inbox_pending = temp_daemon_env
     msg = EmailMessage(
-        sender="carsonmail009@gmail.com",
+        sender="operator@example.com",
         subject="[TASK] Audit Orbit Security DNS records",
         body="Hey Nova, please run a full DNS scan on our portfolio and generate client reports.",
         message_id="msg-101",
@@ -59,7 +59,7 @@ def test_classify_task_directive_from_operator(temp_daemon_env):
         task_data = json.load(f)
     assert task_data["source"] == "email_directive"
     assert "Audit Orbit Security DNS records" in task_data["title"]
-    assert task_data["sender"] == "carsonmail009@gmail.com"
+    assert task_data["sender"] == "operator@example.com"
 
 
 def test_classify_ai_service_alert(temp_daemon_env):
@@ -67,7 +67,7 @@ def test_classify_ai_service_alert(temp_daemon_env):
     msg = EmailMessage(
         sender="google-cloud-noreply@google.com",
         subject="Your Google AI Pro Subscription Confirmation",
-        body="Thank you for subscribing to Google AI Pro for ravenova9@gmail.com. Your 3-month access is now active.",
+        body="Thank you for subscribing to Google AI Pro for recovery@example.com. Your 3-month access is now active.",
         message_id="msg-102",
     )
 
@@ -101,7 +101,7 @@ def test_offline_queue_processing(temp_daemon_env):
     queue_file = queue_dir / "test_incoming.json"
     queue_file.write_text(
         json.dumps({
-            "sender": "carsonmail009@gmail.com",
+            "sender": "operator@example.com",
             "subject": "Deploy latest landing portal changes",
             "body": "Nova, push the latest client portals to production.",
             "message_id": "queue-001"
@@ -130,7 +130,7 @@ def test_status_report(temp_daemon_env):
     daemon, state_file, queue_dir, inbox_pending = temp_daemon_env
     status = daemon.get_status()
 
-    assert status["account"] == "ravenova9@gmail.com"
+    assert status["account"] == "recovery@example.com"
     assert status["status"] == "active"
     assert "tasks_dispatched" in status
     assert "total_processed" in status

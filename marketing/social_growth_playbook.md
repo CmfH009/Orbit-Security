@@ -6,7 +6,7 @@
 ---
 
 ## 0. Voice & Anti-Slop Guardrails (Mandatory)
-- **X & LinkedIn Voice**: Read `C:\Users\purav\.gemini\config\skills\stop-slop\SKILL.md` before drafting any post or reply.
+- **X & LinkedIn Voice**: Read `<AGENT_SKILLS>/stop-slop/SKILL.md` before drafting any post or reply.
 - **Hard Caps**: LinkedIn connection notes `<= 200` chars; rapid-fire X posts `<= 200` chars.
 - **Formatting**: No em-dashes (`—`), no hashtag blocks, no thread/shield/rocket emojis (`🧵👇 🛡️ 🚀`), and no forced engagement questions. Ground every post in concrete DNS/DMARC/CNAME engineering facts.
 

@@ -41,7 +41,7 @@ cd Orbit-Security
 On macOS or Linux, use `python3` in place of `.venv\Scripts\python.exe`. The command that produced *this* page was:
 
 ```bash
-A:\projects\orbit-security\.venv\Scripts\python.exe scripts/run_benchmark.py --repeat 5 --out docs\benchmark\benchmark_results.json<!--bind:command_line raw-->
+uv run python scripts/run_benchmark.py --repeat 5 --out docs\benchmark\benchmark_results.json<!--bind:command_line raw-->
 ```
 
 The harness is deterministic and read-only with respect to the scanner source, the tests and the stored audits. It only writes the JSON file, and it writes `null` plus a reason for anything it could not measure. To benchmark a client estate you are authorised to scan, pass a target file - one domain per line, `#` comments allowed:
